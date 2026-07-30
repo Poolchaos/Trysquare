@@ -202,3 +202,11 @@ verified evidence, in writing, here.
   `tests/fixtures/fake-claude.mjs`, so the suite is hermetic and spends no
   model usage. A fake only proves the code agrees with our beliefs about the
   CLI, so an opt-in real-CLI suite (TRYSQUARE_REAL_CLI=1) checks the beliefs.
+- 2026-07-30 FIXED (WP-E, found by CI): the stage transcript write stream had
+  no error handler, so a stream failure became an uncaught exception. CI's
+  timing exposed it (the temp directory was removed while the stream was still
+  opening, giving ENOENT); locally it never fired. In the running app the same
+  fault would take down the server rather than fail one stage. The stream now
+  has a handler, and a lost transcript is reported on the stage outcome without
+  aborting the run, since the transcript is evidence rather than the review
+  itself. This is why CI runs the same gate rather than a reduced one.

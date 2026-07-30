@@ -240,3 +240,15 @@ describe("what the engine actually invokes", () => {
     expect(record.args[record.args.indexOf("--resume") + 1]).toBe("abc-123");
   });
 });
+
+describe("transcript failures", () => {
+  it("does not crash the process when the transcript cannot be written", async () => {
+    // A stream error with no handler becomes an uncaught exception, which in
+    // the running app would take down the server rather than fail one stage.
+    // Writing to a path that is a directory fails deterministically.
+    const outcome = await run("success", { logPath: workDir });
+
+    expect(outcome.result.is_error).toBe(false);
+    expect(outcome.transcriptError).toBeDefined();
+  });
+});

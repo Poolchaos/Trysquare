@@ -44,6 +44,8 @@ export interface StageOutcome {
   /** The toolset the CLI reported, so the read-only claim is verifiable. */
   toolsGranted: string[];
   rateLimit?: { status: string; resetsAt?: number; limitType?: string };
+  /** Set when the transcript could not be written. The run still stands. */
+  transcriptError?: string;
 }
 
 /** Messages the CLI produces when usage limits stop a run. */
@@ -76,6 +78,17 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
 
   await mkdir(dirname(options.logPath), { recursive: true });
   const log = createWriteStream(options.logPath, { flags: "a" });
+
+  // A write stream opens asynchronously and can fail at any point: the disk
+  // fills, the path is not writable, the directory disappears. Without a
+  // handler that becomes an uncaught exception, which would take down the
+  // server rather than failing one stage. The transcript is evidence, not the
+  // review itself, so losing it is reported and does not abort the run.
+  let logError: Error | null = null;
+  log.on("error", (error: Error) => {
+    logError = error;
+  });
+
   log.write(`# ${command} ${args.map((a) => JSON.stringify(a)).join(" ")}\n# cwd=${options.cwd}\n`);
 
   return new Promise<StageOutcome>((resolve, reject) => {
@@ -226,6 +239,7 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
           sessionId,
           toolsGranted,
           ...(rateLimit === undefined ? {} : { rateLimit }),
+          ...(logError === null ? {} : { transcriptError: (logError as Error).message }),
         });
       });
     });
