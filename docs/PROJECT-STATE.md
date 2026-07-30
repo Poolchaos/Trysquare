@@ -11,8 +11,8 @@ Last verified: 2026-07-30
   ACTIVE. Build order: `plans/BUILD-PLAN.md`.
 - WP-A (scaffold and gates) complete and verified 2026-07-30, not yet
   committed (commits happen only when the maintainer asks).
-- Next up: WP-D (ruleset domain) and WP-E (engine) are unblocked. WP-F
-  (pipeline) needs both.
+- Next up: WP-D (ruleset domain). WP-F (pipeline) needs it, and everything
+  else it needs is now built.
 - The two external AI plans have not arrived. They fold in as spec
   amendments when they do; they do not block the build.
 
@@ -49,6 +49,11 @@ Playwright browsers installed.
   exported symbols.
 - `src/server/gitops/` - the only code that spawns git: clone, fetch, refs,
   worktrees, bundle builder.
+- `src/lib/engine/` - CLI event schemas and command construction (pure).
+- `src/server/engine/` - the only code that spawns claude: stage runner,
+  stream decoding, model probing, auth status.
+- `tests/fixtures/fake-claude.mjs` - stand-in CLI so engine tests are
+  hermetic and cost nothing.
 - `drizzle/` - the committed initial migration.
 - `src/app/` - Next App Router (placeholder page only).
 - `src/server/`, `src/components/` - not created yet.
