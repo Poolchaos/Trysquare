@@ -11,8 +11,11 @@ Last verified: 2026-07-30
   ACTIVE. Build order: `plans/BUILD-PLAN.md`.
 - WP-A (scaffold and gates) complete and verified 2026-07-30, not yet
   committed (commits happen only when the maintainer asks).
-- Next up: WP-F, the pipeline that ties the parts together into a review.
-  Everything it depends on is now built.
+- WP-F is part built: the review pipeline runs end to end against a scripted
+  stage runner, with sweeps, reconciliation, the quotation check and the
+  coverage audit all enforced and mutation-tested. Still to do in WP-F: wiring
+  the real engine into it, the job manager with progress and resume, and the
+  linked-review symbol dispositions.
 - The two external AI plans have not arrived. They fold in as spec
   amendments when they do; they do not block the build.
 
@@ -54,6 +57,9 @@ Playwright browsers installed.
   stream decoding, model probing, auth status.
 - `src/lib/rulesets/` - protocol import with a fidelity gate, markdown
   export, prompt composition, and rule/file batch planning.
+- `src/lib/review/` - mechanical sweeps, the quotation check, stage output
+  schemas, and stage reconciliation.
+- `src/server/review/` - the pipeline orchestrator.
 - `tests/fixtures/example-protocol.md` - the public sample protocol the
   fidelity gate runs against.
 - `tests/fixtures/fake-claude.mjs` - stand-in CLI so engine tests are

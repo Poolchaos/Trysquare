@@ -234,3 +234,25 @@ verified evidence, in writing, here.
   is now built by one shared `pairKey` function used by both producer and
   consumer, and `check-style.mjs` fails on any control character in a source
   file, proven by deliberately planting one.
+- 2026-07-30 DECIDED (WP-F): the pipeline reconciles each stage's answer
+  against what it was given, in both directions. Something unaccounted for
+  means work was skipped while the review looked complete; something reported
+  that was never asked for means the stage is describing a change set that
+  does not exist, which makes the rest of its output unsafe to trust. Both
+  fail the run.
+- 2026-07-30 DECIDED (WP-F): a verified finding is byte-checked against the
+  file it cites before it is stored as verified. The verification stage says
+  it opened the file and quotes what it found; the program then confirms that
+  quotation really is what stands at those lines. A mismatch kills the finding
+  regardless of the verifier's confidence, because a citation that does not
+  match the code is not evidence. The comparison forgives only what carries no
+  meaning (trailing whitespace, a trailing newline, lost common indentation,
+  carriage returns), since anything looser would let a paraphrase pass as a
+  quotation.
+- 2026-07-30 DECIDED (WP-F): a candidate the verification stage never ruled on
+  becomes an open question, never a silent pass. Verification returning fewer
+  verdicts than it was given findings is a gap, and a gap must be visible.
+- 2026-07-30 DECIDED (WP-F): the stage runner is injected. The real one spawns
+  the CLI; tests supply a scripted one, so the orchestration is exercised end
+  to end against answers that are wrong, incomplete, or invented, without
+  spending model usage or depending on what a model happens to say today.
