@@ -185,9 +185,14 @@ lifecycle helpers; everything else private.
    `interrupted`. Transition to `running` (setCurrentStage null) via the
    state machine; `paused_limit/interrupted -> running` is already legal.
 2. Resolve projects (primary, linked if `linkedProjectId`). Fetch both bare
-   clones (`fetchAll`). Re-resolve every pinned commit with `resolveCommit`;
-   a commit that no longer resolves fails the run with a message naming it.
+   clones (`fetchAll`), writing `lastFetchedAt`. This fetch keeps the pinned
+   commits reachable after a prune or a restart; it deliberately does not
+   re-pin (D-28). Re-resolve every pinned commit with `resolveCommit`; a
+   commit that no longer resolves fails the run with a message naming it.
    Nothing re-pins: the review describes the commits it was created with.
+   Freshness is guaranteed one step earlier instead, at creation, where the
+   draft pins from refs fetched moments before (D-27); that is the only
+   place a tip may move, and T10 owns it.
 3. Slugs: `repoSlug(project.name)` for each side; if equal, suffix the
    linked one with `-dep` (deterministic, recorded in a run note).
 4. Ensure worktrees: for each side, if `worktreeRepoDir` is missing,
@@ -381,7 +386,7 @@ maintainer at the top of the demo output directory:
 | W  | Contents                                              | Depends on |
 | -- | ----------------------------------------------------- | ---------- |
 | W1 | migrations 0002-0003, stage-executions and rulesets repos, setCurrentStage, deleteAllForReview, stageSchemaFor export | DONE |
-| W2 | fake CLI script mode and FAIL_AT, ideal-answers helper, quality-gate refactor to use it | -  |
+| W2 | fake CLI script mode and FAIL_AT, ideal-answers helper, quality-gate refactor to use it | DONE |
 | W3 | checkpointing runner and its tests                    | W1, W2     |
 | W4 | review service, artifact lifecycle, its tests         | W1, W2, W3 |
 | W5 | pause/resume/cancel determinism tests                 | W4         |

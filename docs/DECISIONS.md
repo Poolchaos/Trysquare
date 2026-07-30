@@ -367,3 +367,46 @@ verified evidence, in writing, here.
   alone and says so where it is defined. Findings are the record of human
   decisions, and deleting them anywhere else would destroy the one thing this
   app treats as authoritative.
+- 2026-07-30 DECIDED (D-27, from the user): a review pins its commits from
+  refs fetched moments earlier, never from whatever the last clone left
+  behind. Creating a draft fetches every clone involved, including both
+  sides of a linked pair, and only then resolves the branch tips. A stale
+  pin is the worst failure this app can have: the run completes, the report
+  reads as authoritative, and it describes code the branch has moved past.
+  A fetch that fails blocks creation rather than falling back to stale refs.
+  Recorded against T10 and surfaced in the T12 pre-flight, which shows when
+  the refs behind the pins were fetched.
+- 2026-07-30 DECIDED (D-28): the run-time fetch in the review service still
+  never re-pins. Once a review exists it describes fixed commits, and a
+  resume that quietly moved to a newer tip would review something other than
+  what its findings already record, leaving the coverage ledger counting two
+  different change sets.
+- 2026-07-30 DECIDED (D-29): branch pickers fetch before listing and show
+  how fresh the list is, with a manual refresh. Listing may fall back to
+  cached refs when the remote is unreachable and must say so; browsing
+  offline is reasonable, starting a review from stale refs is not.
+- 2026-07-30 DECIDED (W2): the fake CLI resolves candidate placeholders
+  against the prompt it was actually given, rather than emitting the sentinel
+  finding id the plan proposed. The sentinel does not survive contact with the
+  pipeline: a verdict whose finding id matches no candidate leaves that
+  candidate stranded, and the pipeline marks stranded candidates as open
+  questions. Every finding in a scripted run would have come back unresolved,
+  so the service tests would have been asserting about a run in which
+  verification effectively never happened. Resolving by place in the code
+  keeps the answers writable in advance and still exercises the real
+  verification path. An unresolved placeholder is a hard error naming the
+  placeholder, because silently passing it through is the failure this
+  replaces.
+- 2026-07-30 DECIDED (W2): the fake gained FAKE_CLAUDE_RECORD_DIR, which
+  records the argument vector of every call rather than only the last one.
+  A run makes several calls and what a later one was told matters as much as
+  what the first was; W3 needs this to prove a resumed stage rejoined the
+  recorded session.
+- 2026-07-30 DECIDED (W2): added `scripted-pipeline.test.ts`, which the plan
+  did not list. The shared helper exists so the in-process and file-driven
+  answers cannot drift, and nothing proved they agree. It drives the real
+  engine runner and the real pipeline through the fake and asserts the same
+  verified defects and the same clean coverage the in-process gate asserts.
+  It also proves at the command line that verification is spawned without
+  --resume while the four chained stages carry it, which is the independence
+  the stage exists for.

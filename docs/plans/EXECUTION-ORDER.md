@@ -201,6 +201,12 @@ items block on it.
 `src/app/api/`: projects CRUD (+ clone kickoff and status, branch list,
 links CRUD), reviews (create draft, start, get, list, events SSE, cancel,
 resume, delete), findings (confirm, dismiss with reason), report
+The branch list fetches before it lists, and creating a draft fetches every
+clone involved and then pins from the refs that fetch produced, so a review
+can never be pinned to a tip the remote has moved past (D-27, D-29). Both
+endpoints record `lastFetchedAt` and return it. A fetch that fails blocks
+creation and is reported verbatim; the branch list may fall back to cached
+refs and must mark the response as stale when it does.
 (rendered, export), rulesets (list, get, update rule enabled/severity,
 import, export, version bump), models (list, probe one, probe all),
 settings (get, set), auth status. All request/response shapes are zod
@@ -232,9 +238,12 @@ default branch, ruleset multi-select grouped by tier with rule counts,
 model dropdown from the probed registry (recommended first, unavailable
 disabled with reason and probe age, probe-now button), linked-project
 toggle with same-name branch suggestion, advanced fold (engine mode,
-profile downgrade), pre-flight panel (commits pinned, merge base, file and
-hunk counts, sweep hits, changed symbols, token estimate vs context window,
-profile and estimated request count), Start button.
+profile downgrade), pre-flight panel (commits pinned, when the refs behind
+them were fetched, merge base, file and hunk counts, sweep hits, changed
+symbols, token estimate vs context window, profile and estimated request
+count), Start button. The pickers show how fresh the branch list is and
+offer a refresh; the pre-flight shows the pinned commit subjects, so a
+stale pin is visible before the run rather than inferred from the report.
 Proof: `./verify.sh --build` plus a driven dev-server session capturing
 screenshots into `review/<date>-m3-ui/`; component logic (pickers,
 pre-flight assembly) unit-tested.
@@ -386,6 +395,30 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
   auto-deletes (existing decision restated for the driver).
 - D-20 verify.sh stays the single gate; e2e joins it only behind `--e2e`
   (CI runs it; local default stays fast).
+- D-27 A review pins its commits from refs that were fetched moments
+  earlier, never from whatever the last clone left behind. Creating a draft
+  fetches the primary clone, and the linked clone when one is attached,
+  before resolving the from-branch and into-branch tips, and the response
+  reports the fetch time so the screen can say when the pins were taken.
+  A stale pin is the worst failure this app has: the run completes, the
+  report looks authoritative, and it describes code the branch moved past.
+  Fetch failure blocks creation rather than falling back to stale refs,
+  because a review nobody can trust is worse than a review that did not
+  start. Both sides of a linked pair are fetched even when only one has
+  typing changes, so the pair is pinned at one moment in time.
+- D-28 The run-time fetch in the review service (W4 step 2) exists to make
+  the pinned commits reachable after a prune or a restart, and it still
+  never re-pins. Once a review exists it describes fixed commits; a resume
+  that silently moved to a newer tip would review something other than what
+  the findings already recorded, and the coverage ledger would be counting
+  two different change sets.
+- D-29 Branch pickers show what the remote has now. The branch-list
+  endpoint fetches before listing, `lastFetchedAt` is written on every
+  fetch, and the picker shows that time with a manual refresh control.
+  Listing is allowed to fall back to cached refs when the remote is
+  unreachable, and says so in the response, because browsing offline is
+  reasonable; starting a review that way is not, which is why D-27 blocks
+  instead.
 
 ## 6. Progress table
 

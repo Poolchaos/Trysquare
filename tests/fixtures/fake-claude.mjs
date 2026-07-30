@@ -12,13 +12,32 @@
  * exact argv and environment the engine used.
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const args = process.argv.slice(2);
 const scenario = process.env.FAKE_CLAUDE_SCENARIO ?? "success";
 const recordPath = process.env.FAKE_CLAUDE_RECORD;
+
+// FAKE_CLAUDE_RECORD keeps only the last call, which is enough for a test
+// that makes one. A run makes several, and what a later call was told matters
+// as much as what the first was, so this keeps all of them. Calls are
+// sequential, so the file count is the call number.
+const recordDir = process.env.FAKE_CLAUDE_RECORD_DIR;
+if (recordDir) {
+  mkdirSync(recordDir, { recursive: true });
+  let existing = 0;
+  try {
+    existing = readdirSync(recordDir).length;
+  } catch {
+    existing = 0;
+  }
+  writeFileSync(
+    join(recordDir, `call-${String(existing + 1).padStart(3, "0")}.json`),
+    JSON.stringify({ args, cwd: process.cwd() }, null, 2),
+  );
+}
 
 if (recordPath) {
   writeFileSync(
@@ -238,6 +257,95 @@ switch (scenario) {
     // a test can drive the answer a stage gets without changing this file.
     emit(initEvent);
     emit(resultEvent({ result: process.env.FAKE_CLAUDE_RESULT ?? "{}" }));
+    process.exit(0);
+    break;
+  }
+
+  case "script": {
+    // Answers a whole pipeline: the Nth invocation returns the Nth file in
+    // FAKE_CLAUDE_DIR. Real runs make many calls, and a fake that can only
+    // answer one of them cannot exercise resume at all.
+    const dir = process.env.FAKE_CLAUDE_DIR;
+    if (!dir) {
+      process.stderr.write("fake-claude: script scenario needs FAKE_CLAUDE_DIR\n");
+      process.exit(2);
+    }
+
+    const counterPath = process.env.FAKE_CLAUDE_COUNTER ?? join(tmpdir(), "fake-claude-calls.txt");
+    let previousCalls = 0;
+    try {
+      previousCalls = Number(readFileSync(counterPath, "utf8")) || 0;
+    } catch {
+      previousCalls = 0;
+    }
+    const call = previousCalls + 1;
+    writeFileSync(counterPath, String(call));
+
+    const failAt = process.env.FAKE_CLAUDE_FAIL_AT
+      ? Number(process.env.FAKE_CLAUDE_FAIL_AT)
+      : undefined;
+
+    if (failAt === call) {
+      // Fails the way a usage limit does, and consumes no answer: the call
+      // after a resume asks the same question again and gets this file.
+      process.stderr.write("Claude usage limit reached. Your limit resets at 3pm.\n");
+      process.exit(1);
+    }
+
+    // One failure shifts every later call back by one file, so the sequence
+    // continues where it stopped rather than skipping the answer it never gave.
+    const fileNumber = failAt !== undefined && call > failAt ? call - 1 : call;
+    const answerPath = join(dir, `${String(fileNumber).padStart(3, "0")}.json`);
+
+    let answer;
+    try {
+      answer = readFileSync(answerPath, "utf8");
+    } catch {
+      // Loud rather than hanging: an unexpected extra call means the pipeline
+      // asked something the test did not plan for, and that is the finding.
+      process.stderr.write(
+        `fake-claude: call ${call} wanted ${answerPath}, which does not exist\n`,
+      );
+      process.exit(2);
+    }
+
+    // Candidate ids are minted while the pipeline runs, so an answer written
+    // in advance names the place in the code instead and this resolves it
+    // against the question actually asked.
+    const tokenPattern = /<<candidate:(.+?):(\d+)>>/g;
+    if (tokenPattern.test(answer)) {
+      const prompt = valueOf("-p") ?? "";
+      const start = prompt.indexOf("{");
+      const end = prompt.lastIndexOf("}");
+      let candidates = [];
+      if (start !== -1 && end > start) {
+        try {
+          candidates = JSON.parse(prompt.slice(start, end + 1)).candidates ?? [];
+        } catch {
+          candidates = [];
+        }
+      }
+      let unresolved = null;
+      answer = answer.replace(tokenPattern, (whole, path, line) => {
+        const match = candidates.find(
+          (candidate) => candidate.path === path && String(candidate.lineStart) === line,
+        );
+        if (!match) {
+          unresolved ??= whole;
+          return whole;
+        }
+        return match.findingId;
+      });
+      if (unresolved) {
+        process.stderr.write(
+          `fake-claude: call ${call} was not asked about ${unresolved}\n`,
+        );
+        process.exit(2);
+      }
+    }
+
+    emit(initEvent);
+    emit(resultEvent({ result: answer }));
     process.exit(0);
     break;
   }
