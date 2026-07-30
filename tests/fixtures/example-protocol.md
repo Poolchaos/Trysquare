@@ -254,6 +254,86 @@ compounds over a large enough basket.
 
 **Severity:** CRITICAL
 
+## Temporal Anti-Patterns
+
+### 9. Date Boundary Ignores Timezone
+
+**Rule:** Flag a comparison of a date-only boundary that is computed in the
+machine's local timezone rather than the one the data belongs to.
+
+**Violation Example:**
+
+```ts
+const startOfDay = new Date(year, month, day);
+return records.filter((record) => record.at >= startOfDay);
+```
+
+**Correct Pattern:**
+
+```ts
+const startOfDay = zonedStartOfDay(year, month, day, account.timeZone);
+return records.filter((record) => record.at >= startOfDay);
+```
+
+**Detection:** A Date built from parts, or a midnight boundary, used to filter
+or bucket records that belong to a user or account with its own timezone.
+
+**Why This Matters:** The report is correct on the machine that wrote it and
+wrong by a day for anyone else, which is the hardest kind of bug to see.
+
+**Severity:** CRITICAL
+
+## Testing Anti-Patterns
+
+### 10. Weakened Test Assertion
+
+**Rule:** Flag an assertion that was made less specific, or a test that was
+skipped, in the same change that altered the behaviour it covers.
+
+**Violation Example:**
+
+```ts
+expect(total).toBeDefined();
+```
+
+**Correct Pattern:**
+
+```ts
+expect(total).toBe(1025);
+```
+
+**Detection:** An assertion changed from an exact comparison to an existence
+check, a removed expectation, or a test marked skipped or exclusive.
+
+**Why This Matters:** A test that no longer fails on the old bug is not
+evidence the bug is fixed. It is evidence that nobody will notice next time.
+
+**Severity:** WARNING
+
+## Deletion Anti-Patterns
+
+### 11. Removed Guard
+
+**Rule:** Flag the removal of a check that prevented an unsafe path: a
+permission test, a null check, an early return, or a cleanup.
+
+**Violation Example:**
+
+```ts
+export function open(document: Document, user: User) {
+  return document.contents;
+}
+```
+
+**Detection:** A deleted conditional that threw, returned early, or refused an
+action. Read the removed code, not only the code that replaced it.
+
+**Why This Matters:** The diff shows what is gone but not who relied on it.
+A removed guard is the classic regression that no test covers, because the
+test was written for the behaviour that remains.
+
+**Severity:** CRITICAL
+
 ## Review Output
 
 Report confirmed findings grouped by severity, most severe first. State what

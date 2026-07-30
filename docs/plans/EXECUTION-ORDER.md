@@ -391,7 +391,7 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
 | T3   | T1         | DONE   |
 | T4   | T1         | DONE   |
 | T5   | T4         | DONE   |
-| T6   | -          | TODO   |
+| T6   | -          | DONE   |
 | T7   | T1-T6      | TODO   |
 | T8   | T5         | TODO   |
 | T9   | T8         | TODO   |

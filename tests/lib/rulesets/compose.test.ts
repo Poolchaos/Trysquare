@@ -150,15 +150,19 @@ describe("the completeness invariant", () => {
   });
 
   it("records what a narrowing profile left out, with a reason", () => {
-    // A React rule genuinely should not be applied to a markdown file, but a
-    // reduced review must never be indistinguishable from a complete one.
+    // A React rule genuinely should not be applied to a markdown file, and a
+    // test-assertion rule does not apply to a file that is not a test. Both
+    // are legitimate; a reduced review being indistinguishable from a complete
+    // one is not.
     const plan = planRuleBatches(ruleset.rules, FILES, "decomposed");
     expect(plan.excluded.length).toBeGreaterThan(0);
     for (const pair of plan.excluded) {
       expect(pair.reason).toMatch(/does not apply/);
     }
-    // Every exclusion is for a file the theme really does not fit.
-    expect(plan.excluded.every((pair) => pair.file === "docs/notes.md")).toBe(true);
+    // The markdown file, which matches almost no theme, is among them.
+    expect(plan.excluded.some((pair) => pair.file === "docs/notes.md")).toBe(true);
+    // And every exclusion names a file that was actually in the change set.
+    expect(plan.excluded.every((pair) => FILES.includes(pair.file))).toBe(true);
   });
 
   it("never both covers and excludes the same pair", () => {

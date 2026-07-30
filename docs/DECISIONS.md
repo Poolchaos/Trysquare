@@ -309,3 +309,21 @@ verified evidence, in writing, here.
   "finding" verdict must be backed by a finding citing the symbol's file or a
   named consumer, which then faces the quotation check like any other. A
   verdict without evidence reads as handled and points at nothing.
+- 2026-07-30 DECIDED (T6): the seeded fixture's manifest is derived, not
+  written by hand. Each defect declares the text that identifies it, and the
+  builder finds the line by locating that text in the file it just wrote. A
+  hand-counted manifest would drift the first time a fixture file changed, and
+  a drifted manifest fails the quality gate for the wrong reason.
+- 2026-07-30 DECIDED (T6): a seeded defect declares how it arrives in the
+  change: as added code, as removed code, or as neither. The third kind is the
+  cross-repo case, where the defective line does not change at all and the
+  contract underneath it does, in the other repository. Writing the fixture
+  forced this distinction: the test first assumed every defect appears as an
+  added line, which is false for a removed guard and false again for an
+  unmigrated consumer. Those are the two defect classes a naive review misses,
+  so the fixture models them explicitly.
+- 2026-07-30 DECIDED (T6): the example protocol gained rules 9, 10 and 11
+  (timezone-dependent date boundary, weakened test assertion, removed guard),
+  because every seeded defect must have a rule to violate. A defect with no
+  matching rule would test the model's instincts rather than the protocol,
+  which is not what the gate is for.
