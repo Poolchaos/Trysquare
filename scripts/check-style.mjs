@@ -34,6 +34,24 @@ const EXCLUDED_DIRS = new Set(["node_modules", ".next", "fixtures", "coverage", 
 
 const TEXT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".css", ".md", ".json"]);
 
+/**
+ * Built from character codes rather than written literally, so this file
+ * does not contain the characters it forbids.
+ */
+const CONTROL_CHARACTERS = new RegExp(
+  "[" +
+    String.fromCharCode(0) +
+    "-" +
+    String.fromCharCode(8) +
+    String.fromCharCode(11) +
+    String.fromCharCode(12) +
+    String.fromCharCode(14) +
+    "-" +
+    String.fromCharCode(31) +
+    String.fromCharCode(127) +
+    "]",
+);
+
 const CHECKS = [
   {
     // Written as an escape, not the literal character, so this file does not
@@ -44,6 +62,14 @@ const CHECKS = [
   {
     name: "Emojis are not permitted in code, docs, or user-facing strings",
     pattern: /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}]/u,
+  },
+  {
+    // A NUL or stray control character is invisible in an editor and in a
+    // diff, but changes what the code does. One was introduced here by a
+    // scripted edit and turned a string separator into something that looked
+    // right and matched nothing, breaking a coverage check silently.
+    name: "Control characters are not permitted in source files",
+    pattern: CONTROL_CHARACTERS,
   },
 ];
 

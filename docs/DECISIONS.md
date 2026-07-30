@@ -210,3 +210,27 @@ verified evidence, in writing, here.
   has a handler, and a lost transcript is reported on the stage outcome without
   aborting the run, since the transcript is evidence rather than the review
   itself. This is why CI runs the same gate rather than a reduced one.
+- 2026-07-30 DECIDED (WP-D): the protocol importer keeps each block's verbatim
+  markdown alongside its parsed fields. The parsed fields drive composition;
+  the raw text is what proves the import lost nothing, via a byte-exact round
+  trip against the source document. Without that, an importer that silently
+  failed to understand a rule would produce a review claiming to apply a
+  protocol it had partly discarded.
+- 2026-07-30 DECIDED (WP-D): rule text reaches the model verbatim. Summarising
+  a rule to save tokens would change what is being checked while looking like
+  an optimisation.
+- 2026-07-30 DECIDED (WP-D, correcting docs/06): the completeness invariant is
+  "every rule/file pair is either checked or recorded as deliberately
+  excluded", not "every rule against every file". The stricter wording was
+  incoherent: the decomposed profile narrows by technology, so a React rule is
+  never applied to a markdown file. Narrowing is legitimate; narrowing
+  invisibly is not, so `planRuleBatches` returns the exclusions with reasons
+  and `assertBatchesCoverEverything` refuses any pair that is neither covered
+  nor named. Only the decomposed profile may exclude anything at all.
+- 2026-07-30 FIXED (WP-D): a scripted edit wrote a NUL byte into
+  `compose.ts`, replacing the separator in a coverage key. Every key looked
+  correct in an editor and matched nothing at runtime, so a complete plan was
+  reported as covering none of its pairs. Two changes came out of it: the key
+  is now built by one shared `pairKey` function used by both producer and
+  consumer, and `check-style.mjs` fails on any control character in a source
+  file, proven by deliberately planting one.

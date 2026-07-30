@@ -11,8 +11,8 @@ Last verified: 2026-07-30
   ACTIVE. Build order: `plans/BUILD-PLAN.md`.
 - WP-A (scaffold and gates) complete and verified 2026-07-30, not yet
   committed (commits happen only when the maintainer asks).
-- Next up: WP-D (ruleset domain). WP-F (pipeline) needs it, and everything
-  else it needs is now built.
+- Next up: WP-F, the pipeline that ties the parts together into a review.
+  Everything it depends on is now built.
 - The two external AI plans have not arrived. They fold in as spec
   amendments when they do; they do not block the build.
 
@@ -52,6 +52,10 @@ Playwright browsers installed.
 - `src/lib/engine/` - CLI event schemas and command construction (pure).
 - `src/server/engine/` - the only code that spawns claude: stage runner,
   stream decoding, model probing, auth status.
+- `src/lib/rulesets/` - protocol import with a fidelity gate, markdown
+  export, prompt composition, and rule/file batch planning.
+- `tests/fixtures/example-protocol.md` - the public sample protocol the
+  fidelity gate runs against.
 - `tests/fixtures/fake-claude.mjs` - stand-in CLI so engine tests are
   hermetic and cost nothing.
 - `drizzle/` - the committed initial migration.
