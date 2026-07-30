@@ -12,7 +12,9 @@
  * exact argv and environment the engine used.
  */
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const args = process.argv.slice(2);
 const scenario = process.env.FAKE_CLAUDE_SCENARIO ?? "success";
@@ -194,6 +196,49 @@ switch (scenario) {
   case "hang": {
     emit(initEvent);
     setTimeout(() => process.exit(0), 60_000);
+    break;
+  }
+
+  case "then-valid": {
+    // Answers with FAKE_CLAUDE_RESULT first and FAKE_CLAUDE_RESULT_2 after,
+    // so a repair round can be driven. The call count lives in a file because
+    // every invocation is a separate process.
+    // Configurable so concurrent test files cannot share a counter.
+    const counterPath = process.env.FAKE_CLAUDE_COUNTER ?? join(tmpdir(), "fake-claude-calls.txt");
+    let calls = 0;
+    try {
+      calls = Number(readFileSync(counterPath, "utf8")) || 0;
+    } catch {
+      calls = 0;
+    }
+    writeFileSync(counterPath, String(calls + 1));
+
+    const isRepair = calls > 0;
+    if (isRepair && process.env.FAKE_CLAUDE_RECORD_2) {
+      writeFileSync(
+        process.env.FAKE_CLAUDE_RECORD_2,
+        JSON.stringify({ args, cwd: process.cwd() }, null, 2),
+      );
+    }
+
+    emit(initEvent);
+    emit(
+      resultEvent({
+        result: isRepair
+          ? (process.env.FAKE_CLAUDE_RESULT_2 ?? "{}")
+          : (process.env.FAKE_CLAUDE_RESULT ?? "{}"),
+      }),
+    );
+    process.exit(0);
+    break;
+  }
+
+  case "json-result": {
+    // Returns whatever FAKE_CLAUDE_RESULT holds as the run's result text, so
+    // a test can drive the answer a stage gets without changing this file.
+    emit(initEvent);
+    emit(resultEvent({ result: process.env.FAKE_CLAUDE_RESULT ?? "{}" }));
+    process.exit(0);
     break;
   }
 

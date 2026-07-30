@@ -36,23 +36,20 @@ against a scripted stage runner. 272 tests, CI green.
 Known gaps inside the built code, found by self-review and carried here so
 they are fixed deliberately rather than rediscovered:
 
-- G-1: `pipeline.ts` matches a sweep hit to its finding by path alone and
-  falls back to an empty finding id when nothing matches. Must become
-  nearest-finding-by-line, and a `finding` disposition with no matching
-  candidate must fail reconciliation, not attach to `""`.
-- G-2: The one-repair-round rule from `03-REVIEW-PIPELINE.md` is not
-  implemented anywhere: a stage answer that fails schema validation throws
-  immediately.
-- G-3: Stage prompts carry no change content. The model has Read access to
-  the worktree, but the diff, inventory, sweep-hit list, and pre-change
-  copies live in the bundle directory outside its toolset. Content must be
-  inlined into each stage's user prompt (decision D-7).
+- G-1: FIXED (T3). Sweep hits now match the finding containing their line,
+  nearest by line otherwise, and a `finding` disposition with no candidate
+  in that file stops the run.
+- G-2: FIXED (T2). One repair round in the engine runner, in the same
+  session, naming the exact validation errors; a second failure is final.
+- G-3: FIXED (T1). `content.ts` inlines the change set into each stage's
+  prompt, with post-change line numbers given rather than left to be counted.
 - G-4: `BatchPlan` (profiles) exists and is proven complete, but the
   pipeline runs S3 as exactly one call. Profile batching is not wired.
 - G-5: No linked-review symbol dispositions in the pipeline, though the
   schema and the changed-symbol extraction both exist.
-- G-6: The engine (`runStage`) and the pipeline (`StageRunner`) are not
-  connected; nothing composes real prompts or extracts JSON from a result.
+- G-6: FIXED (T1). `engine-runner.ts` connects them, composes prompts,
+  extracts JSON, keeps the session strategy, and re-checks the toolset per
+  call.
 - G-7: No S0 service: nothing yet fetches, pins commits, creates worktrees,
   builds bundles, or asserts the worktree clean around a pipeline run.
 - G-8: No job manager, no SSE, no resume/cancel/pause-on-limit wiring, no
@@ -389,9 +386,9 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
 
 | Item | Blocked on | Status |
 | ---- | ---------- | ------ |
-| T1   | -          | TODO   |
-| T2   | T1         | TODO   |
-| T3   | T1         | TODO   |
+| T1   | -          | DONE   |
+| T2   | T1         | DONE   |
+| T3   | T1         | DONE   |
 | T4   | T1         | TODO   |
 | T5   | T4         | TODO   |
 | T6   | -          | TODO   |

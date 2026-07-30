@@ -265,3 +265,22 @@ verified evidence, in writing, here.
   is a decision already made) and D-12 (the review worktree is removed when a
   review reaches a terminal status rather than at pipeline end, so the
   confirmation screen can show real file context).
+- 2026-07-30 DECIDED (T1): stage prompts give post-change line numbers on
+  every line rather than leaving the model to count them. Counting is exactly
+  where citations drift, and a drifted citation is what the quotation check
+  then has to kill. Removed lines get no number, since they are not in the
+  file a finding would cite.
+- 2026-07-30 DECIDED (T1): the toolset is re-checked on every stage call, not
+  once per review. A session that gained a tool part way through would
+  otherwise pass unnoticed.
+- 2026-07-30 DECIDED (T2): exactly one repair round, in the same session,
+  quoting the precise validation errors and instructing the model to fix only
+  the shape and change no judgement. Refusing to ask at all wastes a whole
+  stage over a missing field; asking twice is how a stage becomes an argument
+  that burns the budget. Usage from both attempts is summed, so a failure does
+  not understate what the review cost.
+- 2026-07-30 DECIDED (T3): a sweep hit dispositioned as a finding must match a
+  finding in the same file, chosen by line containment and then by nearest
+  line. Attaching an empty id, as the first implementation did, left a hit
+  that reads as handled in the ledger and points at nothing, which is worse
+  than an open hit because it cannot be traced.
