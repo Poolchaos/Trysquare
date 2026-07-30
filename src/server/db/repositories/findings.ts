@@ -163,6 +163,23 @@ export function dismissFinding(db: Db, findingId: string, reason: string): Findi
   return transitionFinding(db, findingId, "dismissed", { dismissReason: reason });
 }
 
+/**
+ * Removes every finding for a review.
+ *
+ * Exists for exactly one caller: the resume path, which recreates findings
+ * deterministically by replaying the stored stage answers. Every finding is
+ * derived from those answers, so wiping and rebuilding is exact, whereas
+ * leaving them would duplicate each one on every resume.
+ *
+ * It must not be used anywhere else. Discarding findings outside a replay
+ * would destroy decisions a human made, which is the one thing this app
+ * treats as authoritative.
+ */
+export function deleteAllForReview(db: Db, reviewId: string): number {
+  const result = db.delete(findings).where(eq(findings.reviewId, reviewId)).run();
+  return result.changes;
+}
+
 export function listFindings(db: Db, reviewId: string): Finding[] {
   return db.select().from(findings).where(eq(findings.reviewId, reviewId)).all();
 }

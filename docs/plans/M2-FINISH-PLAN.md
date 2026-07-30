@@ -380,7 +380,7 @@ maintainer at the top of the demo output directory:
 
 | W  | Contents                                              | Depends on |
 | -- | ----------------------------------------------------- | ---------- |
-| W1 | migration 0002, stage-executions and rulesets repos, setCurrentStage, deleteAllForReview, stageSchemaFor export | -  |
+| W1 | migrations 0002-0003, stage-executions and rulesets repos, setCurrentStage, deleteAllForReview, stageSchemaFor export | DONE |
 | W2 | fake CLI script mode and FAIL_AT, ideal-answers helper, quality-gate refactor to use it | -  |
 | W3 | checkpointing runner and its tests                    | W1, W2     |
 | W4 | review service, artifact lifecycle, its tests         | W1, W2, W3 |

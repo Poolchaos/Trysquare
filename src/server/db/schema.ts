@@ -86,6 +86,18 @@ export const rules = sqliteTable(
     notes: text("notes"),
     /** JSON string[] of regex sources run by the deterministic sweep. */
     sweepPatterns: text("sweep_patterns").notNull().default("[]"),
+    /** The section heading the rule sat under, which is what tags it. */
+    groupHeading: text("group_heading").notNull().default(""),
+    /**
+     * The rule's verbatim markdown, and where it came from.
+     *
+     * Kept because the parsed fields are a lossy view of what the author
+     * wrote: this is what proves an import dropped nothing, and what an
+     * export regenerates from.
+     */
+    rawMarkdown: text("raw_markdown").notNull().default(""),
+    sourceStartLine: integer("source_start_line").notNull().default(0),
+    sourceEndLine: integer("source_end_line").notNull().default(0),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     sortOrder: integer("sort_order").notNull(),
   },
@@ -110,6 +122,10 @@ export const processDirectives = sqliteTable(
     section: text("section").notNull(),
     title: text("title").notNull(),
     contentMd: text("content_md").notNull(),
+    /** Verbatim source, for the same reason the rules keep theirs. */
+    rawMarkdown: text("raw_markdown").notNull().default(""),
+    sourceStartLine: integer("source_start_line").notNull().default(0),
+    sourceEndLine: integer("source_end_line").notNull().default(0),
     sortOrder: integer("sort_order").notNull(),
   },
   (table) => [index("process_directives_ruleset_idx").on(table.rulesetId)],
@@ -201,9 +217,19 @@ export const stageExecutions = sqliteTable(
       .references(() => reviews.id, { onDelete: "cascade" }),
     stage: text("stage").notNull(),
     attempt: integer("attempt").notNull().default(1),
+    /**
+     * Hash of the prompt this attempt answered.
+     *
+     * A pinned review composes the same prompt every time, so this identifies
+     * the request rather than the occasion. A resumed run finds the stored
+     * answer by it and replays instead of paying for the stage again.
+     */
+    promptHash: text("prompt_hash").notNull().default(""),
     /** CLI session id, kept so an interrupted stage can resume rather than restart. */
     sessionId: text("session_id"),
     status: text("status").notNull(),
+    /** The stage's validated answer, kept so a resume can replay it. */
+    outputJson: text("output_json"),
     inputTokens: integer("input_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
     costEquivalentUsd: real("cost_equivalent_usd").notNull().default(0),
@@ -213,7 +239,10 @@ export const stageExecutions = sqliteTable(
     startedAt: text("started_at").notNull(),
     endedAt: text("ended_at"),
   },
-  (table) => [index("stage_executions_review_idx").on(table.reviewId, table.stage)],
+  (table) => [
+    index("stage_executions_review_idx").on(table.reviewId, table.stage),
+    index("stage_executions_replay_idx").on(table.reviewId, table.stage, table.promptHash),
+  ],
 );
 
 export const ledgerFiles = sqliteTable(

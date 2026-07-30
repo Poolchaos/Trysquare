@@ -349,3 +349,21 @@ verified evidence, in writing, here.
   on resume (pays twice, and 01-ARCHITECTURE forbids it) and persisting a
   resumable program counter inside the pipeline (a second state machine to
   keep honest against the first).
+- 2026-07-30 DECIDED (W1): the rules and process_directives tables store the
+  verbatim markdown each record came from, alongside its parsed fields. Found
+  while writing the unchanged-content check: a reload could never equal an
+  import, because the parsed columns are a lossy view of what the author
+  wrote. Storing the source makes the comparison honest, gives the rulesets
+  screen an export that still matches its origin, and is now proven by a test
+  that parses, stores, reloads and exports the example protocol byte for byte.
+  Rejected: comparing only the persisted subset, which would have made the
+  version-bump check quietly weaker than it appears.
+- 2026-07-30 DECIDED (W1): stage_executions is the resume mechanism as well as
+  the audit trail, so a stored answer is keyed by the hash of the prompt it
+  answered, not by the stage alone. A stage whose prompt changed is a
+  different request and runs live, which is what stops a resume replaying
+  yesterday's answer to a question the review is no longer asking.
+- 2026-07-30 DECIDED (W1): `deleteAllForReview` exists for the resume path
+  alone and says so where it is defined. Findings are the record of human
+  decisions, and deleting them anywhere else would destroy the one thing this
+  app treats as authoritative.

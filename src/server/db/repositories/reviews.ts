@@ -179,6 +179,17 @@ export function addReviewUsage(
   return requireReview(db, reviewId);
 }
 
+/**
+ * Records which stage a running review is on.
+ *
+ * Deliberately not a transition: moving from one stage to the next is not a
+ * change of status, and routing it through the state machine would either
+ * invent illegal self-transitions or tempt callers to write status directly.
+ */
+export function setCurrentStage(db: Db, reviewId: string, stage: ReviewStage | null): void {
+  db.update(reviews).set({ currentStage: stage }).where(eq(reviews.id, reviewId)).run();
+}
+
 export interface RunNote {
   at: string;
   kind: "batch-split" | "excluded-pairs" | "oversized-prompt" | "note";

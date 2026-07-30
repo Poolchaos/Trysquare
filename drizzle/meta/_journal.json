@@ -15,6 +15,20 @@
       "when": 1785414318809,
       "tag": "0001_rapid_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785417327853,
+      "tag": "0002_gray_martin_li",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785417602753,
+      "tag": "0003_silly_mephisto",
+      "breakpoints": true
     }
   ]
 }
