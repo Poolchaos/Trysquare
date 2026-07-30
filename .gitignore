@@ -1,0 +1,18 @@
+.env
+.env.*
+*.key
+*.pem
+node_modules/
+review/
+.next/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+.data/
+next-env.d.ts
+*.tsbuildinfo
+
+# Private working material that must never reach the public repo:
+# customer or employer protocols, real rulesets, anything proprietary.
+docs/private/

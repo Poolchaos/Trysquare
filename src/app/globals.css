@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/*
+ * Both themes are first-class (docs/04-UI-DESIGN.md). Tokens live here so
+ * components never hardcode a colour; the full design system lands at WP-K.
+ */
+@theme {
+  --color-surface: oklch(99% 0.002 250);
+  --color-surface-raised: oklch(97% 0.003 250);
+  --color-border: oklch(90% 0.005 250);
+  --color-ink: oklch(25% 0.01 250);
+  --color-ink-muted: oklch(50% 0.01 250);
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-surface: oklch(19% 0.008 250);
+    --color-surface-raised: oklch(23% 0.009 250);
+    --color-border: oklch(32% 0.01 250);
+    --color-ink: oklch(94% 0.004 250);
+    --color-ink-muted: oklch(70% 0.008 250);
+  }
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}

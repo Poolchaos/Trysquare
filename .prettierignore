@@ -1,0 +1,12 @@
+.next/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+drizzle/
+tests/fixtures/
+package-lock.json
+
+# Markdown is hand-wrapped for readability and reviewed by the house-style
+# gate in verify.sh. Prettier reflows tables into unreadably long lines.
+*.md

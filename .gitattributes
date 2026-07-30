@@ -1,0 +1,11 @@
+# Normalise line endings so a checkout on Windows does not produce a diff
+# in every file, and so the house-style gate sees the same bytes everywhere.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary
+*.sqlite binary
+
+package-lock.json linguist-generated=true -diff
