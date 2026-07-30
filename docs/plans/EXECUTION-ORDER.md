@@ -45,8 +45,8 @@ they are fixed deliberately rather than rediscovered:
   prompt, with post-change line numbers given rather than left to be counted.
 - G-4: FIXED (T4). S3 runs one request per batch, splitting further when a
   prompt would not fit, with every split and exclusion recorded on the review.
-- G-5: No linked-review symbol dispositions in the pipeline, though the
-  schema and the changed-symbol extraction both exist.
+- G-5: FIXED (T5). Every changed exported symbol must be dispositioned, in
+  both directions, and each verdict must carry the evidence it claims.
 - G-6: FIXED (T1). `engine-runner.ts` connects them, composes prompts,
   extracts JSON, keeps the session strategy, and re-checks the toolset per
   call.
@@ -390,7 +390,7 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
 | T2   | T1         | DONE   |
 | T3   | T1         | DONE   |
 | T4   | T1         | DONE   |
-| T5   | T4         | TODO   |
+| T5   | T4         | DONE   |
 | T6   | -          | TODO   |
 | T7   | T1-T6      | TODO   |
 | T8   | T5         | TODO   |

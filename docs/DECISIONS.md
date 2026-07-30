@@ -297,3 +297,15 @@ verified evidence, in writing, here.
   one request per batch and does not split. Guessing at a limit would either
   waste requests or fail anyway, and the model's own refusal is a clearer
   signal than a number invented in the app.
+- 2026-07-30 DECIDED (T5): a changed exported symbol in a linked dependency
+  has three possible verdicts, not two: all consumers verified, no consumers
+  found, or a finding. Folding "no consumers" into "all verified" with an
+  empty list would have made the check meaningless, because the app could no
+  longer tell looking-and-finding-nothing apart from not looking. A newly
+  exported symbol genuinely has no consumers, and that answer stays available
+  without weakening the other two.
+- 2026-07-30 DECIDED (T5): each symbol verdict must carry the evidence it
+  claims. "All consumers verified" must name at least one consumer, and a
+  "finding" verdict must be backed by a finding citing the symbol's file or a
+  named consumer, which then faces the quotation check like any other. A
+  verdict without evidence reads as handled and points at nothing.

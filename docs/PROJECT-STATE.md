@@ -16,7 +16,11 @@ Last verified: 2026-07-30
   coverage audit all enforced and mutation-tested.
 - All remaining work is planned in detail as `docs/plans/EXECUTION-ORDER.md`
   (items T1-T19, three founder gates, decisions D-1..D-20 pre-resolved). The
-  driver works it top to bottom without asking between gates. Next item: T1.
+  driver works it top to bottom without asking between gates.
+- T1 to T5 are DONE: the engine spine is complete. The pipeline composes real
+  prompts, drives the CLI, repairs one bad answer, batches by profile with a
+  context guard, and enforces cross-repo contract dispositions. Next: T6, the
+  seeded fixture repositories.
 - The two external AI plans have not arrived. They fold in as spec
   amendments when they do; they do not block the build.
 
