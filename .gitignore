@@ -3,9 +3,13 @@
 *.key
 *.pem
 node_modules/
-review/
+# Anchored to the repository root on purpose. Unanchored, this matched every
+# directory named "review" at any depth, which silently excluded the review
+# engine and its tests from the repository for several commits while CI stayed
+# green over what was left. This is only meant to ignore the top-level scratch
+# directory that screenshots and manual review evidence are written to.
+/review/
 .next/
-node_modules/
 coverage/
 playwright-report/
 test-results/

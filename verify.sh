@@ -81,6 +81,7 @@ run "Format check" npm run --silent format:check
 run "Type check" npm run --silent typecheck
 run "House style" node scripts/check-style.mjs
 run "No private material" node scripts/check-no-private.mjs
+run "Nothing hidden from git" node scripts/check-nothing-hidden.mjs
 run "Unit tests" npm run --silent test
 
 if [ "$WITH_BUILD" -eq 1 ]; then
