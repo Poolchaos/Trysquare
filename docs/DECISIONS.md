@@ -134,3 +134,21 @@ verified evidence, in writing, here.
   owned reviews let a shared package be deleted while a linked review still
   depended on it, surfacing a raw SQLite foreign-key error instead of the
   actionable one the UI needs to offer bulk deletion.
+- 2026-07-30 DECIDED (WP-C): the diff parser is fixtured against output from a
+  real git binary rather than hand-written patches. This immediately paid for
+  itself: mode-only changes and binary files emit no `---`/`+++` lines at all,
+  so the first implementation dropped them from the inventory entirely, which
+  is the silent-skip failure the coverage ledger exists to prevent.
+- 2026-07-30 DECIDED (WP-C): changed-symbol detection also attributes context
+  lines and the hunk header's enclosing declaration, not just added and
+  removed lines. Renaming a field inside an exported interface never touches
+  the `export interface` line, so a purely line-based scan missed the single
+  most dangerous cross-repo contract change: one that still compiles where it
+  is declared and only breaks at the consumer. The scan deliberately
+  over-reports; a spurious symbol costs one disposition, a missed one costs a
+  contract nobody checked.
+- 2026-07-30 DECIDED (WP-C): git URLs are validated before use, rejecting the
+  `ext::` and `fd::` transports (which execute an arbitrary command) and any
+  URL beginning with a dash (which git parses as an option). Arguments are
+  always passed as an array, never through a shell, and `--` separates
+  options from operands on clone.
