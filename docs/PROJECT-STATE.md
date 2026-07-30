@@ -17,10 +17,11 @@ Last verified: 2026-07-30
 - All remaining work is planned in detail as `docs/plans/EXECUTION-ORDER.md`
   (items T1-T19, three founder gates, decisions D-1..D-20 pre-resolved). The
   driver works it top to bottom without asking between gates.
-- T1 to T5 are DONE: the engine spine is complete. The pipeline composes real
-  prompts, drives the CLI, repairs one bad answer, batches by profile with a
-  context guard, and enforces cross-repo contract dispositions. Next: T6, the
-  seeded fixture repositories.
+- T1 to T7 are DONE. The engine spine is complete and the quality gate is in
+  place: a correct review of the seeded fixture carries through the pipeline
+  intact, a misquoted finding is discarded, and the clean files stay clean.
+  The gate is mutation-proven and runs in verify.sh. Next: T8, the review
+  service that fetches, pins commits, builds worktrees and bundles.
 - The two external AI plans have not arrived. They fold in as spec
   amendments when they do; they do not block the build.
 

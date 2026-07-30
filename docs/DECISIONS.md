@@ -327,3 +327,14 @@ verified evidence, in writing, here.
   because every seeded defect must have a rule to violate. A defect with no
   matching rule would test the model's instincts rather than the protocol,
   which is not what the gate is for.
+- 2026-07-30 DECIDED (T7): the quality gate is driven by a reviewer built from
+  the manifest rather than by a model, so it measures the pipeline rather than
+  today's model behaviour. Whether a model finds these defects is a separate
+  question, answered at FG-2 and again at T18 with the real engine; whether a
+  correct review survives the pipeline intact is this gate's question, and it
+  must be answerable without spending usage or waiting on a network.
+- 2026-07-30 DECIDED (T7): the gate states plainly what the quotation check
+  does and does not do. It catches misquotation, not misjudgement. A finding
+  that is wrong but accurately quoted survives to the confirmation screen,
+  because deciding whether a correctly quoted concern is real is the human's
+  job. A test asserts each behaviour, so neither is mistaken for the other.
