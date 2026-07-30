@@ -13,7 +13,7 @@
  */
 
 import type { RepoRole } from "@/lib/domain/enums";
-import { addedLineNumbers, type ParsedFile, type ParsedHunk } from "@/lib/git/diff";
+import type { ParsedFile, ParsedHunk } from "@/lib/git/diff";
 import type { ChangedSymbol } from "@/lib/git/symbols";
 
 export interface ChangedFileEntry {

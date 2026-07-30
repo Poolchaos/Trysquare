@@ -410,3 +410,28 @@ verified evidence, in writing, here.
   It also proves at the command line that verification is spawned without
   --resume while the four chained stages carry it, which is the independence
   the stage exists for.
+- 2026-07-30 DECIDED (W3): the hash that identifies a question covers the
+  system prompt as well as the stage and the prompt, where the plan called for
+  the stage and prompt alone. The rules a stage judges against travel in the
+  system prompt, so two identical prompts judged against different rules are
+  different questions. Including it costs nothing and closes the case where a
+  ruleset edit would have replayed an answer given under the old rules.
+- 2026-07-30 DECIDED (W3): a stage_executions row is a call the engine
+  actually made, so the failure is recorded differently depending on what
+  failed. An unreadable answer means every call reported back and the last
+  one's answer was the problem, so the last row carries the error and no row
+  is added. Any other failure means a call died without reporting, so it gets
+  a row of its own with no usage, because the CLI produced no result to take
+  usage from. The alternative, always appending a verdict row, would have made
+  the attempt count overstate how many times the model was asked.
+- 2026-07-30 DECIDED (W3): the checkpointing runner refuses to answer two
+  questions at once, with an error rather than a silent queue. Its attempt
+  buffer belongs to one call, and two in flight would attribute one stage's
+  cost to another. The pipeline asks sequentially, so this asserts the
+  assumption instead of relying on it.
+- 2026-07-30 DECIDED (W3): the wrapper is the only writer of stage_executions
+  rows and the only caller of addReviewUsage. Two writers would eventually
+  disagree about what a stage returned or what it cost, and usage is the
+  number the user makes decisions with. A replay writes no row and adds no
+  usage, which is what keeps a resumed review's total equal to what was
+  actually spent.
