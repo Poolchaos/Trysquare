@@ -1,0 +1,128 @@
+import { describe, expect, it } from "vitest";
+import {
+  ACTIVE_REVIEW_STATUSES,
+  FINDING_STATUSES,
+  IllegalTransitionError,
+  REVIEW_STATUSES,
+  RESUMABLE_REVIEW_STATUSES,
+  assertFindingTransition,
+  assertReviewTransition,
+  canTransitionFinding,
+  canTransitionReview,
+  findingTransitionsFrom,
+  isReportableFindingStatus,
+  isTerminalFindingStatus,
+  isTerminalReviewStatus,
+  reviewTransitionsFrom,
+} from "@/lib/domain/state-machines";
+
+describe("review status machine", () => {
+  it("walks the happy path from draft to complete", () => {
+    const path = ["draft", "running", "verifying", "awaiting_confirmation", "complete"] as const;
+    for (let i = 0; i < path.length - 1; i += 1) {
+      const from = path[i]!;
+      const to = path[i + 1]!;
+      expect(canTransitionReview(from, to), `${from} -> ${to}`).toBe(true);
+    }
+  });
+
+  it("cannot skip verification on the way to the report", () => {
+    expect(canTransitionReview("running", "awaiting_confirmation")).toBe(false);
+    expect(canTransitionReview("running", "complete")).toBe(false);
+    expect(canTransitionReview("verifying", "complete")).toBe(false);
+  });
+
+  it("allows every interruption from an active status", () => {
+    for (const active of ACTIVE_REVIEW_STATUSES) {
+      for (const interruption of ["paused_limit", "interrupted", "failed", "cancelled"] as const) {
+        expect(canTransitionReview(active, interruption), `${active} -> ${interruption}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it("resumes a paused or interrupted review back into running", () => {
+    for (const resumable of RESUMABLE_REVIEW_STATUSES) {
+      expect(canTransitionReview(resumable, "running")).toBe(true);
+    }
+  });
+
+  it("does not let a resumed review re-enter confirmation without running again", () => {
+    expect(canTransitionReview("interrupted", "awaiting_confirmation")).toBe(false);
+    expect(canTransitionReview("paused_limit", "verifying")).toBe(false);
+  });
+
+  it("treats complete, failed and cancelled as final", () => {
+    for (const terminal of ["complete", "failed", "cancelled"] as const) {
+      expect(isTerminalReviewStatus(terminal)).toBe(true);
+      expect(reviewTransitionsFrom(terminal)).toHaveLength(0);
+      for (const status of REVIEW_STATUSES) {
+        expect(canTransitionReview(terminal, status), `${terminal} -> ${status}`).toBe(false);
+      }
+    }
+  });
+
+  it("cannot interrupt a review that is waiting on a human", () => {
+    expect(canTransitionReview("awaiting_confirmation", "paused_limit")).toBe(false);
+    expect(canTransitionReview("awaiting_confirmation", "interrupted")).toBe(false);
+    expect(canTransitionReview("awaiting_confirmation", "cancelled")).toBe(true);
+  });
+
+  it("never allows a status to transition to itself", () => {
+    for (const status of REVIEW_STATUSES) {
+      expect(canTransitionReview(status, status), `${status} -> itself`).toBe(false);
+    }
+  });
+
+  it("throws a message naming what was allowed", () => {
+    expect(() => assertReviewTransition("draft", "complete")).toThrow(IllegalTransitionError);
+    expect(() => assertReviewTransition("draft", "complete")).toThrow(/running, cancelled/);
+    expect(() => assertReviewTransition("complete", "running")).toThrow(/final/);
+  });
+
+  it("accepts a legal transition silently", () => {
+    expect(() => assertReviewTransition("draft", "running")).not.toThrow();
+  });
+});
+
+describe("finding status machine", () => {
+  it("lets verification decide a candidate's fate", () => {
+    expect(findingTransitionsFrom("candidate")).toEqual(["verified", "killed", "open_question"]);
+  });
+
+  it("requires verification before a human can confirm", () => {
+    expect(canTransitionFinding("candidate", "confirmed")).toBe(false);
+    expect(canTransitionFinding("candidate", "dismissed")).toBe(false);
+    expect(canTransitionFinding("verified", "confirmed")).toBe(true);
+  });
+
+  it("lets an open question be resolved either way by a human", () => {
+    expect(canTransitionFinding("open_question", "confirmed")).toBe(true);
+    expect(canTransitionFinding("open_question", "dismissed")).toBe(true);
+  });
+
+  it("keeps a killed finding dead so it cannot be revived into a report", () => {
+    expect(isTerminalFindingStatus("killed")).toBe(true);
+    for (const status of FINDING_STATUSES) {
+      expect(canTransitionFinding("killed", status), `killed -> ${status}`).toBe(false);
+    }
+  });
+
+  it("treats a decided finding as final", () => {
+    for (const decided of ["confirmed", "dismissed"] as const) {
+      expect(isTerminalFindingStatus(decided)).toBe(true);
+    }
+  });
+
+  it("reports only what a human confirmed", () => {
+    for (const status of FINDING_STATUSES) {
+      expect(isReportableFindingStatus(status), status).toBe(status === "confirmed");
+    }
+  });
+
+  it("throws on an illegal transition", () => {
+    expect(() => assertFindingTransition("killed", "verified")).toThrow(IllegalTransitionError);
+    expect(() => assertFindingTransition("verified", "confirmed")).not.toThrow();
+  });
+});

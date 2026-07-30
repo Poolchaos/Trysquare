@@ -11,8 +11,8 @@ Last verified: 2026-07-30
   ACTIVE. Build order: `plans/BUILD-PLAN.md`.
 - WP-A (scaffold and gates) complete and verified 2026-07-30, not yet
   committed (commits happen only when the maintainer asks).
-- Next up: WP-B (data layer), WP-C (git layer), WP-E (engine) are all
-  unblocked; WP-D needs WP-B.
+- Next up: WP-C (git layer) and WP-E (engine) are unblocked, and WP-D
+  (ruleset domain) is now unblocked by WP-B.
 - The two external AI plans have not arrived. They fold in as spec
   amendments when they do; they do not block the build.
 
@@ -41,7 +41,11 @@ Playwright browsers installed.
 ## Structure
 
 - `CLAUDE.md` - charter. `docs/` - specs, ledgers, plans.
-- `src/lib/` - pure domain logic (currently `paths.ts`).
+- `src/lib/` - pure domain logic: `paths.ts`, `ids.ts`, `domain/enums.ts`,
+  `domain/state-machines.ts` (review and finding state machines).
+- `src/server/db/` - schema (14 tables), client, migrations, and
+  repositories for projects, reviews, ledger, findings, models, settings.
+- `drizzle/` - the committed initial migration.
 - `src/app/` - Next App Router (placeholder page only).
 - `src/server/`, `src/components/` - not created yet.
 - `scripts/check-style.mjs` - house-style gate.

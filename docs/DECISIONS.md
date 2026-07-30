@@ -115,3 +115,22 @@ verified evidence, in writing, here.
   test whose input is gitignored would make `./verify.sh` unrunnable for every
   contributor and turn the single definition of "verified" into something only
   one machine can produce.
+- 2026-07-30 DECIDED (WP-B): `rules.code` is UNIQUE per ruleset at the
+  database level, not merely indexed. A duplicate code would make
+  `findings.ruleCode` ambiguous and would run that rule's sweep patterns
+  twice, and without the unique constraint an idempotent importer has no
+  valid ON CONFLICT target. The initial migration was regenerated rather
+  than amended by a second one, which is safe only because no database
+  exists anywhere yet. Once any database exists, migrations are append-only.
+- 2026-07-30 DECIDED (WP-B): the audit gate `assertCoverageComplete` checks
+  all four conditions in `03-REVIEW-PIPELINE.md` S6: hunks dispositioned,
+  sweep hits dispositioned, changed files reviewed, and candidate findings
+  resolved. The file check is load-bearing on its own because a deleted or
+  renamed file has no hunks, so checking hunks alone would let a whole
+  deleted file pass the gate unreviewed, which is the exact regression class
+  the deletion stage exists to catch.
+- 2026-07-30 DECIDED (WP-B): `deleteProject` counts reviews that reference a
+  project either as the primary or as the linked dependency. Counting only
+  owned reviews let a shared package be deleted while a linked review still
+  depended on it, surfacing a raw SQLite foreign-key error instead of the
+  actionable one the UI needs to offer bulk deletion.
