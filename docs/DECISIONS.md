@@ -338,3 +338,14 @@ verified evidence, in writing, here.
   that is wrong but accurately quoted survives to the confirmation screen,
   because deciding whether a correctly quoted concern is real is the human's
   job. A test asserts each behaviour, so neither is mistaken for the other.
+- 2026-07-30 DECIDED: T8, T9 and the FG-2 demo are planned to commit level in
+  `plans/M2-FINISH-PLAN.md` (W1-W8), fixing the resume design in advance:
+  stage outputs are checkpointed in `stage_executions` keyed by
+  (stage, sha256(prompt)), S0 seeding is idempotent, and findings are wiped
+  and deterministically recreated on re-entry. Chosen over making every
+  pipeline write individually idempotent because findings are wholly derived
+  from checkpointed outputs, so wipe-and-replay is exact, cheap, and leaves
+  `runReviewPipeline` almost untouched. Rejected: re-running completed stages
+  on resume (pays twice, and 01-ARCHITECTURE forbids it) and persisting a
+  resumable program counter inside the pipeline (a second state machine to
+  keep honest against the first).

@@ -149,6 +149,9 @@ against.
 Proof: the test itself; it joins `verify.sh`'s unit gate.
 
 **T8. S0 review service and run lifecycle (fixes G-7).**
+Implementation detail, including the resume design (checkpointed stage
+outputs, idempotent S0, findings wiped and recreated on re-entry), is in
+[M2-FINISH-PLAN.md](M2-FINISH-PLAN.md), work items W1 to W5.
 `src/server/review/service.ts`: given a draft review row, performs fetch,
 commit pinning (already stored at creation; re-resolve and fail loudly if a
 branch vanished), worktree add (single or dual layout via `repoSlug`),
@@ -163,6 +166,8 @@ awaiting_confirmation; usage accumulates; worktree is gone afterwards;
 `markOrphanedReviewsInterrupted` recovery test.
 
 **T9. Job manager, SSE, pause and resume (fixes G-8).**
+Implementation detail in [M2-FINISH-PLAN.md](M2-FINISH-PLAN.md), items W6 to
+W8, including the FG-2 demo script.
 `src/server/jobs/manager.ts` singleton (created in `instrumentation.ts`):
 one running review at a time (D-4), queue for the rest, an in-process event
 bus per review (stage started/finished, tool activity, usage tick, limit

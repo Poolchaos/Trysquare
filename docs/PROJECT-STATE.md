@@ -20,8 +20,10 @@ Last verified: 2026-07-30
 - T1 to T7 are DONE. The engine spine is complete and the quality gate is in
   place: a correct review of the seeded fixture carries through the pipeline
   intact, a misquoted finding is discarded, and the clean files stay clean.
-  The gate is mutation-proven and runs in verify.sh. Next: T8, the review
-  service that fetches, pins commits, builds worktrees and bundles.
+  The gate is mutation-proven and runs in verify.sh.
+- T8, T9 and the FG-2 demo are planned to commit level in
+  `docs/plans/M2-FINISH-PLAN.md` (work items W1-W8): resume via checkpointed
+  stage outputs, the job manager and SSE, and the demo script. Next: W1.
 - The two external AI plans have not arrived. They fold in as spec
   amendments when they do; they do not block the build.
 
