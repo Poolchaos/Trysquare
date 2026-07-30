@@ -43,8 +43,8 @@ they are fixed deliberately rather than rediscovered:
   session, naming the exact validation errors; a second failure is final.
 - G-3: FIXED (T1). `content.ts` inlines the change set into each stage's
   prompt, with post-change line numbers given rather than left to be counted.
-- G-4: `BatchPlan` (profiles) exists and is proven complete, but the
-  pipeline runs S3 as exactly one call. Profile batching is not wired.
+- G-4: FIXED (T4). S3 runs one request per batch, splitting further when a
+  prompt would not fit, with every split and exclusion recorded on the review.
 - G-5: No linked-review symbol dispositions in the pipeline, though the
   schema and the changed-symbol extraction both exist.
 - G-6: FIXED (T1). `engine-runner.ts` connects them, composes prompts,
@@ -389,7 +389,7 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
 | T1   | -          | DONE   |
 | T2   | T1         | DONE   |
 | T3   | T1         | DONE   |
-| T4   | T1         | TODO   |
+| T4   | T1         | DONE   |
 | T5   | T4         | TODO   |
 | T6   | -          | TODO   |
 | T7   | T1-T6      | TODO   |

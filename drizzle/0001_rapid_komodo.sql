@@ -1,0 +1,1 @@
+ALTER TABLE `reviews` ADD `run_notes` text DEFAULT '[]' NOT NULL;

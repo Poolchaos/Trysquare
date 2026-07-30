@@ -152,6 +152,13 @@ export const reviews = sqliteTable(
     /** Informational only: what the same work would have cost at API rates. */
     costEquivalentUsd: real("cost_equivalent_usd").notNull().default(0),
 
+    /**
+     * Dated notes about how the run was carried out: batch splits, rule/file
+     * pairs a narrowing profile excluded, oversized prompts. Append-only JSON
+     * array. Narrowing is only legitimate when it is visible, and this is
+     * where it becomes visible.
+     */
+    runNotes: text("run_notes").notNull().default("[]"),
     mergedDetectedAt: text("merged_detected_at"),
     createdAt: text("created_at").notNull(),
     startedAt: text("started_at"),

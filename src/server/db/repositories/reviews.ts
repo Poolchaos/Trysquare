@@ -8,6 +8,7 @@
  */
 
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 import { newId, nowIso } from "@/lib/ids";
 import type { EngineMode, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
 import {
@@ -18,6 +19,7 @@ import {
 } from "@/lib/domain/state-machines";
 import type { Db } from "../client";
 import { reviews } from "../schema";
+import { parseJsonColumn, serialiseJsonColumn } from "./json";
 
 export class ReviewNotFoundError extends Error {
   constructor(readonly reviewId: string) {
@@ -90,6 +92,7 @@ export function createReview(db: Db, input: CreateReviewInput): Review {
     usageInputTokens: 0,
     usageOutputTokens: 0,
     costEquivalentUsd: 0,
+    runNotes: "[]",
     mergedDetectedAt: null,
     createdAt: now,
     startedAt: null,
@@ -174,6 +177,42 @@ export function addReviewUsage(
     .where(eq(reviews.id, reviewId))
     .run();
   return requireReview(db, reviewId);
+}
+
+export interface RunNote {
+  at: string;
+  kind: "batch-split" | "excluded-pairs" | "oversized-prompt" | "note";
+  message: string;
+}
+
+const runNotesSchema = z.array(
+  z.object({
+    at: z.string(),
+    kind: z.enum(["batch-split", "excluded-pairs", "oversized-prompt", "note"]),
+    message: z.string(),
+  }),
+);
+
+export function readRunNotes(review: Review): RunNote[] {
+  return parseJsonColumn("reviews.run_notes", review.runNotes, runNotesSchema);
+}
+
+/**
+ * Records how a run was carried out.
+ *
+ * Append-only, because these are the record of what a run did differently:
+ * how it split its work, and what a narrowing profile decided not to check.
+ * A review that quietly narrowed itself would be indistinguishable from a
+ * complete one, so the narrowing is written down here and shown.
+ */
+export function appendRunNote(db: Db, reviewId: string, note: Omit<RunNote, "at">): void {
+  const review = requireReview(db, reviewId);
+  const existing = readRunNotes(review);
+  existing.push({ ...note, at: nowIso() });
+  db.update(reviews)
+    .set({ runNotes: serialiseJsonColumn(existing) })
+    .where(eq(reviews.id, reviewId))
+    .run();
 }
 
 export function markReviewMerged(db: Db, reviewId: string, detectedAt = nowIso()): void {

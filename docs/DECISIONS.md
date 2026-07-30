@@ -284,3 +284,16 @@ verified evidence, in writing, here.
   line. Attaching an empty id, as the first implementation did, left a hit
   that reads as handled in the ledger and points at nothing, which is worse
   than an open hit because it cannot be traced.
+- 2026-07-30 DECIDED (T4): how a run divided its work is recorded on the
+  review itself, in an append-only `run_notes` column: which batches were
+  split to fit the context window, which rule/file pairs a narrowing profile
+  did not check, and any prompt too large to fit even alone. A run that
+  quietly did less than another would otherwise be indistinguishable from it.
+- 2026-07-30 DECIDED (T4): a prompt too large to divide further is sent
+  anyway and reported, rather than being trimmed or skipped. Being told by the
+  model that a request is too large is recoverable and visible; deciding here
+  not to review a file is neither.
+- 2026-07-30 DECIDED (T4): with no probed context window the pipeline makes
+  one request per batch and does not split. Guessing at a limit would either
+  waste requests or fail anyway, and the model's own refusal is a clearer
+  signal than a number invented in the app.
