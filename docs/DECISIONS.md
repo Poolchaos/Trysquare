@@ -256,3 +256,12 @@ verified evidence, in writing, here.
   the CLI; tests supply a scripted one, so the orchestration is exercised end
   to end against answers that are wrong, incomplete, or invented, without
   spending model usage or depending on what a model happens to say today.
+- 2026-07-30 DECIDED: all remaining work is sequenced in
+  `plans/EXECUTION-ORDER.md` as a standing execution order (T1-T19) with
+  founder gates FG-2/FG-3/FG-4 as the only stopping points and decisions
+  D-1..D-20 pre-resolved so the driver does not ask between gates. Two of
+  those decisions adjust earlier records: D-11 (a report includes every
+  finding the human confirmed, NITPICKs included, because a confirmed finding
+  is a decision already made) and D-12 (the review worktree is removed when a
+  review reaches a terminal status rather than at pipeline end, so the
+  confirmation screen can show real file context).

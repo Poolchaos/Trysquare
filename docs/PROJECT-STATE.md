@@ -13,9 +13,10 @@ Last verified: 2026-07-30
   committed (commits happen only when the maintainer asks).
 - WP-F is part built: the review pipeline runs end to end against a scripted
   stage runner, with sweeps, reconciliation, the quotation check and the
-  coverage audit all enforced and mutation-tested. Still to do in WP-F: wiring
-  the real engine into it, the job manager with progress and resume, and the
-  linked-review symbol dispositions.
+  coverage audit all enforced and mutation-tested.
+- All remaining work is planned in detail as `docs/plans/EXECUTION-ORDER.md`
+  (items T1-T19, three founder gates, decisions D-1..D-20 pre-resolved). The
+  driver works it top to bottom without asking between gates. Next item: T1.
 - The two external AI plans have not arrived. They fold in as spec
   amendments when they do; they do not block the build.
 

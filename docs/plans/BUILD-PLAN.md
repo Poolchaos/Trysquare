@@ -29,6 +29,11 @@ Work top to bottom through unblocked items; skip blocked, never wait.
 
 ## 1. Work packages
 
+The remaining packages (WP-F through WP-L) are broken down into a detailed
+standing execution order with pre-resolved decisions in
+[EXECUTION-ORDER.md](EXECUTION-ORDER.md). The driver works that document top
+to bottom; this table stays the summary of record.
+
 | WP   | Scope                                                                                                                                                                                                                                                                                  | Blocked on | Status |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ |
 | WP-A | Scaffold + gates: Next.js/TS/Tailwind/Drizzle/Vitest/Playwright pinned; layout per 01 section 4; verify.sh with both failure branches proven; CLAUDE.md section 3+8 filled with proven commands and ratified stack                                                                     | G0         | DONE (uncommitted 2026-07-30; verify.sh green incl. --build, four failure branches proven, app serves HTTP 200) |

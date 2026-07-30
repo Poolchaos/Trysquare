@@ -27,7 +27,8 @@ then `GATES.md`, then only what the active gate needs.
 | Doc                                              | What it is                                                                                   |
 | ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
 | [plans/APP-PLAN.md](plans/APP-PLAN.md)           | The app plan: feasibility verdict, architecture proposal, resolved questions. DRAFT.         |
-| [plans/BUILD-PLAN.md](plans/BUILD-PLAN.md)       | Work packages WP-A..L for the Opus driver, milestones, founder gates, standing rails. DRAFT. |
+| [plans/BUILD-PLAN.md](plans/BUILD-PLAN.md)       | Work packages WP-A..L, milestones, founder gates, standing rails. |
+| [plans/EXECUTION-ORDER.md](plans/EXECUTION-ORDER.md) | STANDING EXECUTION ORDER: remaining work T1-T19, dependencies, founder gates, pre-resolved decisions D-1..D-20. |
 | [plans/PLAN-TEMPLATE.md](plans/PLAN-TEMPLATE.md) | Template for multi-step plan docs (work packages, decision gates, done tracking).            |
 | [plans/idea-inbox.md](plans/idea-inbox.md)       | One-line dated idea capture. Ideas are not expanded until the active gate passes.            |
 
@@ -54,3 +55,6 @@ reality disagree, reality wins and both get fixed in the same session.
   subscription-based review runs in progress.
 - 2026-07-30: Feasibility confirmed; decisions logged; spec set 01-05 and
   `plans/BUILD-PLAN.md` drafted; gates G1-G3 defined. All DRAFT pending G0.
+- 2026-07-30: `plans/EXECUTION-ORDER.md` added: the standing order for all
+  remaining work with pre-resolved decisions, so the driver does not ask
+  between founder gates.
