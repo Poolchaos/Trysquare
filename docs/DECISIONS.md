@@ -742,3 +742,22 @@ verified evidence, in writing, here.
   the sentence explaining the problem. A report cannot make prose out of a
   comment full of code, so the instruction belongs where the comment is
   written rather than where it is rendered.
+- 2026-07-31 DECIDED (V6, D-41): merged detection reads the refs the clone
+  already has rather than fetching, and runs when a review is opened or listed.
+  It is a convenience, not a fact the app owes the network on every page load,
+  so a branch that merged is noticed at the next fetch, which is what someone
+  does anyway when they open a branch list.
+- 2026-07-31 DECIDED (V6): every review except one that is mid-run is checked
+  for a merge. The first version checked only finished reviews and missed the
+  clearest case there is: a draft of a branch that has since merged is stale
+  before it ever ran, and is exactly what someone would want to delete. A
+  review in flight is the only one where the answer is noise.
+- 2026-07-31 DECIDED (V6, D-43): the settings API accepts only catalogued
+  keys, each validated by its own schema, and refuses anything else by name. A
+  settings table that accepts whatever it is handed is where typos live
+  silently, and a reader cannot tell which keys are real.
+- 2026-07-31 FIXED (V6): `readAuthStatus` parsed the CLI's output without a
+  guard, so any binary that printed something unexpected threw out of a status
+  check whose whole job is to answer a question calmly. Found by pointing
+  TRYSQUARE_CLAUDE_PATH at the fake and watching the route return a JSON
+  syntax error instead of "not signed in".

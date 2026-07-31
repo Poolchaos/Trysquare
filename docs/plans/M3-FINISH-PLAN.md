@@ -348,7 +348,7 @@ confirms the wiring.
 | V3 | project detail page, fetch-now, links CRUD, project delete    | V1         | DONE   |
 | V4 | preflight route and panel, linked toggle with suggestion      | V3         | DONE   |
 | V5 | report renderer, report/export routes, report UI              | V2         | DONE   |
-| V6 | resume/queued/merged/delete UI, settings editor, probe buttons | V2         |        |
+| V6 | resume/queued/merged/delete UI, settings editor, probe buttons | V2         | DONE   |
 | V7 | rulesets detail, enable toggle, snapshot filter, export       | V1         |        |
 | V8 | e2e journey, theme screenshots, design audit, CI --e2e        | V2-V7      |        |
 | V9 | PROJECT-STATE, indexes, FG-2 checklist and evidence, G1 row   | V8         |        |

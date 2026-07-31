@@ -90,6 +90,19 @@ export function recordProbeFailure(db: Db, id: string, error: string): void {
     .run();
 }
 
+export class ModelNotFoundError extends Error {
+  constructor(readonly modelId: string) {
+    super(`No model called "${modelId}" is registered.`);
+    this.name = "ModelNotFoundError";
+  }
+}
+
+export function requireModel(db: Db, id: string): ModelRow {
+  const row = getModel(db, id);
+  if (!row) throw new ModelNotFoundError(id);
+  return row;
+}
+
 export function listModels(db: Db): ModelRow[] {
   return db.select().from(models).orderBy(asc(models.sortOrder), asc(models.id)).all();
 }

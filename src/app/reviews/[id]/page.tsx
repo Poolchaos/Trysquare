@@ -43,6 +43,7 @@ interface Snapshot {
     effort: string;
     intent: string | null;
     pausedReason: string | null;
+    mergedDetectedAt: string | null;
     usageInputTokens: number;
     usageOutputTokens: number;
     usageCacheReadTokens: number;
@@ -52,6 +53,7 @@ interface Snapshot {
   notes: { kind: string; message: string; at: string }[];
   findings: Finding[];
   running: boolean;
+  queued: boolean;
 }
 
 export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
@@ -60,6 +62,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [live, setLive] = useState<string[]>([]);
   const [report, setReport] = useState<string | null>(null);
   const [exported, setExported] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   async function reload() {
     const response = await fetch(`/api/reviews/${id}`);
@@ -174,27 +178,85 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         }
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
-            <Badge tone={statusTone(review.status)}>{review.status.replace(/_/g, " ")}</Badge>
+            <Badge tone={statusTone(review.status)}>
+              {snapshot.queued ? "queued" : review.status.replace(/_/g, " ")}
+            </Badge>
+            {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}
             <Sha value={review.fromCommit} />
             <span>{review.model}</span>
             <span>effort {review.effort}</span>
           </span>
         }
         actions={
-          snapshot.running ? (
-            <Button
-              onClick={async () => {
-                await fetch(`/api/reviews/${id}/cancel`, { method: "POST" });
-                await reload();
-              }}
-            >
-              Cancel
-            </Button>
-          ) : null
+          <>
+            {review.status === "paused_limit" || review.status === "interrupted" ? (
+              <Button
+                variant="primary"
+                onClick={async () => {
+                  // No ruleset needed: a resumed review already carries the
+                  // one it was frozen with.
+                  await fetch(`/api/reviews/${id}/start`, { method: "POST" });
+                  await reload();
+                }}
+              >
+                Resume
+              </Button>
+            ) : null}
+
+            {snapshot.running || snapshot.queued ? (
+              <Button
+                onClick={async () => {
+                  await fetch(`/api/reviews/${id}/cancel`, { method: "POST" });
+                  await reload();
+                }}
+              >
+                Cancel
+              </Button>
+            ) : null}
+
+            {!snapshot.running && !snapshot.queued ? (
+              confirmingDelete ? (
+                <>
+                  <Button
+                    variant="primary"
+                    onClick={async () => {
+                      const response = await fetch(`/api/reviews/${id}`, { method: "DELETE" });
+                      if (response.ok) window.location.href = "/reviews";
+                      else
+                        setActionError(
+                          ((await response.json()) as { error?: string }).error ??
+                            "The review could not be deleted.",
+                        );
+                    }}
+                  >
+                    Yes, delete
+                  </Button>
+                  <Button variant="quiet" onClick={() => setConfirmingDelete(false)}>
+                    Keep
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setConfirmingDelete(true)}>Delete</Button>
+              )
+            ) : null}
+          </>
         }
       />
       <PageBody>
+        {actionError ? <Problem>{actionError}</Problem> : null}
         {review.pausedReason ? <Problem>{review.pausedReason}</Problem> : null}
+        {review.mergedDetectedAt ? (
+          <p className="mb-4 text-sm text-[var(--color-ink-muted)]">
+            This branch has since merged into {review.intoBranch}. The review is kept until you
+            delete it.
+          </p>
+        ) : null}
+        {snapshot.queued ? (
+          <p className="mb-4 text-sm text-[var(--color-ink-muted)]">
+            Waiting for the running review to finish. One runs at a time, because two would race for
+            the same usage limit.
+          </p>
+        ) : null}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
           <div className="min-w-0">

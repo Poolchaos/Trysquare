@@ -18,6 +18,7 @@ import {
 import { createReview, listActiveReviews } from "@/server/db/repositories/reviews";
 import { fetchAll, mergeBase, resolveCommit } from "@/server/gitops/repo";
 import { created, handler, ok, readJson } from "@/server/api/respond";
+import { detectMerged } from "@/server/review/merged";
 import { runtime } from "@/server/runtime";
 import { listProjects } from "@/server/db/repositories/projects";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
@@ -44,6 +45,15 @@ const body = z.object({
 export function GET(): Promise<Response> {
   return handler(async () => {
     const { db } = runtime();
+
+    // Checked when the list is opened rather than on a timer: there is no
+    // moment a background poll would be right for, and a stale badge is worse
+    // than a late one (D-19).
+    await detectMerged(
+      db,
+      listProjects(db).flatMap((project) => listReviewsForProject(db, project.id)),
+    );
+
     const reviews = listProjects(db).flatMap((project) =>
       listReviewsForProject(db, project.id).map((review) => ({
         ...review,

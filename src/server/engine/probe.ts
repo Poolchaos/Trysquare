@@ -91,7 +91,17 @@ export async function readAuthStatus(
   );
   if (!outcome.ok) return { loggedIn: false, usesSubscription: false };
 
-  const parsed = authStatusSchema.safeParse(JSON.parse(outcome.stdout.trim() || "{}"));
+  // Parsed defensively: this reads whatever binary TRYSQUARE_CLAUDE_PATH
+  // names, and a CLI that printed something unexpected would otherwise throw
+  // out of a status check whose entire job is to answer a question calmly.
+  let raw: unknown;
+  try {
+    raw = JSON.parse(outcome.stdout.trim() || "{}");
+  } catch {
+    return { loggedIn: false, usesSubscription: false };
+  }
+
+  const parsed = authStatusSchema.safeParse(raw);
   if (!parsed.success) return { loggedIn: false, usesSubscription: false };
 
   const status = parsed.data;

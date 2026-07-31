@@ -14,6 +14,7 @@ interface Row {
   intoBranch: string;
   status: string;
   createdAt: string;
+  mergedDetectedAt: string | null;
 }
 
 export default function ReviewsPage() {
@@ -48,6 +49,7 @@ export default function ReviewsPage() {
                       <Badge tone={statusTone(review.status)}>
                         {review.status.replace(/_/g, " ")}
                       </Badge>
+                      {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}
                       <span className="text-sm font-medium">{review.projectName}</span>
                       <Mono className="truncate text-xs text-[var(--color-ink-muted)]">
                         {review.fromBranch} into {review.intoBranch}
