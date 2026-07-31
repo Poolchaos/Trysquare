@@ -30,6 +30,7 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/BUILD-PLAN.md](plans/BUILD-PLAN.md)       | Work packages WP-A..L, milestones, founder gates, standing rails. |
 | [plans/EXECUTION-ORDER.md](plans/EXECUTION-ORDER.md) | STANDING EXECUTION ORDER: remaining work T1-T19, dependencies, founder gates, pre-resolved decisions D-1..D-20. |
 | [plans/M2-FINISH-PLAN.md](plans/M2-FINISH-PLAN.md) | Implementation plan for T8, T9 and the FG-2 demo: commit map W1-W8, the resume design, decisions D-21..D-26. |
+| [plans/M3-FINISH-PLAN.md](plans/M3-FINISH-PLAN.md) | Implementation plan for the usable app (T10-T17 remainder plus W8 leftovers): commit map V1-V9, spend-safety and confirmation-loop design, decisions D-30..D-44. |
 | [plans/PLAN-TEMPLATE.md](plans/PLAN-TEMPLATE.md) | Template for multi-step plan docs (work packages, decision gates, done tracking).            |
 | [plans/idea-inbox.md](plans/idea-inbox.md)       | One-line dated idea capture. Ideas are not expanded until the active gate passes.            |
 

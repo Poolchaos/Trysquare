@@ -431,8 +431,8 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
 | T5   | T4         | DONE   |
 | T6   | -          | DONE   |
 | T7   | T1-T6      | DONE   |
-| T8   | T5         | TODO   |
-| T9   | T8         | TODO   |
+| T8   | T5         | DONE   |
+| T9   | T8         | DONE   |
 | FG-2 | T9 (+T7)   | GATE   |
 | T10  | T9         | TODO   |
 | T11  | T8         | TODO   |
@@ -446,3 +446,10 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
 | T18  | T7, T9     | TODO   |
 | T19  | T17, T18   | TODO   |
 | FG-4 | T18, T19   | GATE   |
+
+T10 and T12 are partially built (routes for projects, branches, reviews,
+rulesets, models, events; screens for projects, new review, live review,
+reviews list, rulesets import, settings). The remainder of T10-T17, the FG-2
+evidence, and the defects found in the shipped slice are planned to commit
+level in [M3-FINISH-PLAN.md](M3-FINISH-PLAN.md) (V1-V9, decisions
+D-30..D-44). That plan is the driver's working order for M3.
