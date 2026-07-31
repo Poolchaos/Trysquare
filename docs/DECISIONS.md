@@ -604,3 +604,13 @@ verified evidence, in writing, here.
   prompt hash. Editing it after a review has started means the stages are asked
   again rather than replayed, which is correct: a review judged against a
   different account of the change is a different review.
+- 2026-07-31 PROVEN (W7 step zero): tsx resolves the `@/` alias from
+  tsconfig, so the demo script runs directly with no build step and the
+  `tsconfig.scripts.json` fallback the plan held in reserve is not needed.
+- 2026-07-31 DECIDED (W7): the demo prints numbers with its own grouping rather
+  than toLocaleString. The output is captured as gate evidence, and a
+  locale-dependent separator would make two runs on two machines look
+  different when nothing about the review changed.
+- 2026-07-31 DECIDED (W7): no colour in the demo output. Escape sequences are
+  control characters, which the house style gate refuses, and the output is
+  written to a file as evidence where escapes are noise rather than emphasis.
