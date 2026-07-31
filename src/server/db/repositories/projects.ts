@@ -81,6 +81,16 @@ export function setCloneStatus(
     .run();
 }
 
+/**
+ * Where the bare clone lives.
+ *
+ * Set after the row exists, because the path is derived from the project id
+ * and the id is minted by the insert.
+ */
+export function setClonePath(db: Db, projectId: string, clonePath: string): void {
+  db.update(projects).set({ clonePath }).where(eq(projects.id, projectId)).run();
+}
+
 export function recordFetch(db: Db, projectId: string, at = nowIso()): void {
   db.update(projects).set({ lastFetchedAt: at }).where(eq(projects.id, projectId)).run();
 }

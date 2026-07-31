@@ -236,6 +236,20 @@ export function loadRuleset(db: Db, rulesetId: string): ImportedRuleset {
   };
 }
 
+export class RulesetNotFoundError extends Error {
+  constructor(readonly rulesetId: string) {
+    super(`Ruleset ${rulesetId} was not found.`);
+    this.name = "RulesetNotFoundError";
+  }
+}
+
+/** The ruleset row itself: its name, tier and version, not its rules. */
+export function requireRuleset(db: Db, rulesetId: string): RulesetRow {
+  const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
+  if (!row) throw new RulesetNotFoundError(rulesetId);
+  return row;
+}
+
 export function listRulesets(db: Db): RulesetRow[] {
   return db.select().from(rulesets).orderBy(asc(rulesets.name)).all();
 }
