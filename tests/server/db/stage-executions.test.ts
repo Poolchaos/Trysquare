@@ -274,3 +274,26 @@ describe("the record of what a review spent", () => {
     expect(listForReview(db, reviewId)).toEqual([]);
   });
 });
+
+describe("the order a timeline reads in", () => {
+  it("keeps one call's rows in attempt order, whatever their ids sort like", () => {
+    // Every row a single call writes shares one startedAt, and ULIDs are not
+    // monotonic inside a millisecond: the second of two generated in the same
+    // millisecond sorts before the first about half the time. Ordering by id
+    // returned them at random, which passed locally and failed in CI.
+    const startedAt = "2026-07-31T10:00:00.000Z";
+    for (const attempt of [1, 2, 3]) {
+      recordAttempt(db, {
+        reviewId,
+        stage: "s1_risk",
+        promptHash: "same-question",
+        attempt,
+        status: attempt === 3 ? "failed" : "succeeded",
+        outputJson: attempt === 3 ? null : "{}",
+        startedAt,
+      });
+    }
+
+    expect(listForReview(db, reviewId).map((row) => row.attempt)).toEqual([1, 2, 3]);
+  });
+});

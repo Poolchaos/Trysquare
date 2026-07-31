@@ -125,13 +125,23 @@ export function latestChainedSession(db: Db, reviewId: string): string | undefin
   );
 }
 
-/** Everything this review has asked, oldest first, for the timeline. */
+/**
+ * Everything this review has asked, oldest first, for the timeline.
+ *
+ * Ordered by attempt within a timestamp, not by id. Every row a single call
+ * writes shares one startedAt, and ULIDs are not monotonic inside a
+ * millisecond: measured over twenty thousand pairs, the second of two ids
+ * generated in the same millisecond sorts before the first almost exactly half
+ * the time. Ordering by id therefore returned one call's rows in a random
+ * order, which showed up as a test that passed here and failed in CI. Attempt
+ * numbers are the real sequence, so they are what the sequence is read from.
+ */
 export function listForReview(db: Db, reviewId: string): StageExecution[] {
   return db
     .select()
     .from(stageExecutions)
     .where(eq(stageExecutions.reviewId, reviewId))
-    .orderBy(asc(stageExecutions.startedAt), asc(stageExecutions.id))
+    .orderBy(asc(stageExecutions.startedAt), asc(stageExecutions.attempt), asc(stageExecutions.id))
     .all();
 }
 

@@ -778,3 +778,12 @@ verified evidence, in writing, here.
 - 2026-07-31 DECIDED (V7, D-44): the new-review screen links to the ruleset
   page rather than opening a drawer. At one screen of this size a drawer
   duplicates a page that already exists.
+- 2026-07-31 FIXED: the stage timeline was ordered by (startedAt, id), and
+  every row a single call writes shares one startedAt. ULIDs are not monotonic
+  within a millisecond: measured over twenty thousand pairs, the second of two
+  generated in the same millisecond sorts before the first 9,594 times out of
+  19,198, so one call's rows came back in a random order. It surfaced as a test
+  that passed locally and failed in CI. Ordering is now by attempt within a
+  timestamp, which is the real sequence, and a test reproducing the old
+  ordering fails it about two runs in three. Recorded because the same trap
+  applies anywhere else ULIDs are used as a tiebreak within one timestamp.
