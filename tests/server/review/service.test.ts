@@ -931,3 +931,31 @@ describe("what is left on disk after a run stops", () => {
     expect(existsSync(worktreeRootDir(dataDir, reviewId))).toBe(true);
   }, 120_000);
 });
+
+describe("a rule someone switched off", () => {
+  it("never reaches the model, and its sweep patterns never run", async () => {
+    // The end of the chain: the flag is only meaningful if the rule's text is
+    // absent from what the CLI is actually handed.
+    const { saveImportedRuleset, setRuleEnabled, writeReviewSnapshot } =
+      await import("@/server/db/repositories/rulesets");
+    const { rulesetId } = saveImportedRuleset(db, {
+      name: "Example protocol",
+      tier: "global",
+      imported: PROTOCOL,
+    });
+    const dropped = PROTOCOL.rules[0]!;
+    setRuleEnabled(db, rulesetId, dropped.code, false);
+
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    // Frozen from the edited ruleset, which is what starting a review does.
+    writeReviewSnapshot(db, reviewId, rulesetId);
+    await prepareAndRun(db, reviewId, { dataDir, claudePath: FAKE_CLI });
+
+    // The adversarial stage is the one carrying the full rule text.
+    const adversarial = recordedArgv()[2] ?? [];
+    const systemPrompt = adversarial[adversarial.indexOf("--system-prompt") + 1] ?? "";
+    expect(systemPrompt).toContain(PROTOCOL.rules[1]!.ruleText);
+    expect(systemPrompt).not.toContain(dropped.ruleText);
+  }, 120_000);
+});

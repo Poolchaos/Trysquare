@@ -335,7 +335,10 @@ function NewReview() {
               </Select>
             </Field>
 
-            <Field label="Rules" hint="What the change is judged against, frozen at the start.">
+            <Field
+              label="Rules"
+              hint="What the change is judged against, frozen when the review starts."
+            >
               <Select value={rulesetId} onChange={(event) => setRulesetId(event.target.value)}>
                 {rulesets.length === 0 ? <option value="">No rulesets imported yet</option> : null}
                 {rulesets.map((ruleset) => (
@@ -344,6 +347,14 @@ function NewReview() {
                   </option>
                 ))}
               </Select>
+              {rulesetId ? (
+                <Link
+                  href={`/rulesets/${rulesetId}`}
+                  className="text-xs text-[var(--color-accent)] hover:underline"
+                >
+                  See which rules apply
+                </Link>
+              ) : null}
             </Field>
 
             <Field label="Model">

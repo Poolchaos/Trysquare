@@ -761,3 +761,20 @@ verified evidence, in writing, here.
   check whose whole job is to answer a question calmly. Found by pointing
   TRYSQUARE_CLAUDE_PATH at the fake and watching the route return a JSON
   syntax error instead of "not signed in".
+- 2026-07-31 DECIDED (V7, D-40): switching a rule off bumps the ruleset
+  version. A review's frozen snapshot names the version, so without the bump
+  two different sets of rules would share a name and a number, and a report
+  saying which version it used would not identify what the review was actually
+  judged against. Toggling to the value a rule already has moves nothing.
+- 2026-07-31 DECIDED (V7): the frozen snapshot stores enabled rules only, and
+  the exported document always contains every rule. That is the difference
+  between the document and the choice this app made about applying it: the
+  export has to reproduce what was imported, byte for byte, and a rule someone
+  switched off is not part of what a new review is judged against.
+- 2026-07-31 DECIDED (V7): freezing a ruleset with nothing enabled is refused.
+  A review judged against no rules comes back clean and reads exactly like a
+  review that found nothing wrong, which is the same hazard the empty-import
+  guard exists for.
+- 2026-07-31 DECIDED (V7, D-44): the new-review screen links to the ruleset
+  page rather than opening a drawer. At one screen of this size a drawer
+  duplicates a page that already exists.

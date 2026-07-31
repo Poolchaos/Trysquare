@@ -9,7 +9,7 @@
  * review.
  */
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { newId, nowIso } from "@/lib/ids";
 import { severitySchema, type RulesetTier, directiveSectionSchema } from "@/lib/domain/enums";
@@ -189,7 +189,19 @@ export function saveImportedRuleset(
 }
 
 /** Reads a ruleset back into the shape the composer and pipeline expect. */
-export function loadRuleset(db: Db, rulesetId: string): ImportedRuleset {
+/**
+ * A ruleset as it was imported.
+ *
+ * Every rule by default, disabled ones included, because the export has to
+ * reproduce the document that was imported. A review's frozen snapshot asks
+ * for the enabled subset instead: that is the difference between the document
+ * and the choice someone made about which parts of it to apply.
+ */
+export function loadRuleset(
+  db: Db,
+  rulesetId: string,
+  options: { enabledOnly?: boolean } = {},
+): ImportedRuleset {
   const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
   if (!row) throw new Error(`No ruleset with id "${rulesetId}".`);
 
@@ -198,7 +210,8 @@ export function loadRuleset(db: Db, rulesetId: string): ImportedRuleset {
     .from(rules)
     .where(eq(rules.rulesetId, rulesetId))
     .orderBy(asc(rules.sortOrder))
-    .all();
+    .all()
+    .filter((rule) => (options.enabledOnly ? rule.enabled : true));
 
   const directiveRows = db
     .select()
@@ -264,7 +277,17 @@ export function writeReviewSnapshot(db: Db, reviewId: string, rulesetId: string)
   const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
   if (!row) throw new Error(`No ruleset with id "${rulesetId}".`);
 
-  const snapshot = toSnapshot(row.name, row.version, loadRuleset(db, rulesetId));
+  // Only the enabled rules: the snapshot is what this review is judged
+  // against, and a rule someone switched off is not part of that judgement.
+  const enabled = loadRuleset(db, rulesetId, { enabledOnly: true });
+  if (enabled.rules.length === 0) {
+    throw new Error(
+      `Ruleset "${row.name}" has no enabled rules, so a review using it would check nothing ` +
+        "and report a clean result for the wrong reason.",
+    );
+  }
+
+  const snapshot = toSnapshot(row.name, row.version, enabled);
   db.insert(reviewRulesets)
     .values({
       reviewId,
@@ -275,6 +298,46 @@ export function writeReviewSnapshot(db: Db, reviewId: string, rulesetId: string)
     })
     .onConflictDoNothing()
     .run();
+}
+
+/**
+ * Switches one rule on or off, and moves the ruleset's version.
+ *
+ * The version moves because a review's frozen snapshot names it. Without the
+ * bump, two different sets of rules would share a name and a number, and a
+ * report saying "Example protocol version 3" would not identify what the
+ * review was actually judged against.
+ */
+export function setRuleEnabled(
+  db: Db,
+  rulesetId: string,
+  code: string,
+  enabled: boolean,
+): { version: number } {
+  const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
+  if (!row) throw new RulesetNotFoundError(rulesetId);
+
+  const rule = db
+    .select()
+    .from(rules)
+    .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, code)))
+    .get();
+  if (!rule) throw new Error(`Ruleset "${row.name}" has no rule ${code}.`);
+
+  if (rule.enabled === enabled) return { version: row.version };
+
+  const version = row.version + 1;
+  db.transaction((tx) => {
+    tx.update(rules)
+      .set({ enabled })
+      .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, code)))
+      .run();
+    tx.update(rulesets)
+      .set({ version, updatedAt: nowIso() })
+      .where(eq(rulesets.id, rulesetId))
+      .run();
+  });
+  return { version };
 }
 
 export function hasReviewSnapshot(db: Db, reviewId: string): boolean {

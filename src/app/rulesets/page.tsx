@@ -8,6 +8,7 @@
  * than saving it out first.
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PageBody, PageHeader } from "@/components/page";
 import {
@@ -140,8 +141,13 @@ export default function RulesetsPage() {
               <ul className="grid gap-2">
                 {rulesets.map((ruleset) => (
                   <li key={ruleset.id}>
-                    <Card className="flex items-center justify-between gap-3 p-3">
-                      <span className="font-medium">{ruleset.name}</span>
+                    <Card className="flex items-center justify-between gap-3 p-3 hover:border-[var(--color-border-strong)]">
+                      <Link
+                        href={`/rulesets/${ruleset.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {ruleset.name}
+                      </Link>
                       <span className="flex items-center gap-2">
                         <Badge>{ruleset.tier}</Badge>
                         <span className="text-xs text-[var(--color-ink-muted)]">
