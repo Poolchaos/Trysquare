@@ -346,7 +346,7 @@ confirms the wiring.
 | V1 | budget cap, engine note, no-auto-probe, worktree cleanup, 404 unlink, activity cap | -          | DONE   |
 | V2 | confirm/dismiss/complete/context routes, confirmation UI, keyboard map | V1         | DONE   |
 | V3 | project detail page, fetch-now, links CRUD, project delete    | V1         | DONE   |
-| V4 | preflight route and panel, linked toggle with suggestion      | V3         |        |
+| V4 | preflight route and panel, linked toggle with suggestion      | V3         | DONE   |
 | V5 | report renderer, report/export routes, report UI              | V2         |        |
 | V6 | resume/queued/merged/delete UI, settings editor, probe buttons | V2         |        |
 | V7 | rulesets detail, enable toggle, snapshot filter, export       | V1         |        |

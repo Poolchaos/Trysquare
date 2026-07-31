@@ -30,6 +30,31 @@ interface Ruleset {
   version: number;
 }
 
+interface Link {
+  id: string;
+  dependencyProjectId: string;
+  dependencyName: string;
+  packageName: string;
+}
+
+interface Preflight {
+  pins: {
+    primary: { fromCommit: string; mergeBaseCommit: string; subject: string; files: number };
+    linked?: { fromCommit: string; subject: string; files: number };
+  };
+  files: number;
+  hunks: number;
+  sweepHits: number;
+  sweepProblems: string[];
+  changedSymbols: number;
+  estimatedTokens: number;
+  contextWindow: number | null;
+  withinWindow: boolean | null;
+  requests: number;
+  excludedPairs: number;
+  profile: string;
+}
+
 interface Model {
   id: string;
   displayName: string;
@@ -70,6 +95,14 @@ function NewReview() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
 
+  const [links, setLinks] = useState<Link[]>([]);
+  const [includeLink, setIncludeLink] = useState<string>("");
+  const [linkBranches, setLinkBranches] = useState<Branch[]>([]);
+  const [linkFrom, setLinkFrom] = useState("");
+  const [linkInto, setLinkInto] = useState("");
+  const [preflight, setPreflight] = useState<Preflight | null>(null);
+  const [preflightError, setPreflightError] = useState("");
+
   // One effect, one guarded async body. Everything this screen needs is
   // fetched together so the form does not appear a field at a time.
   useEffect(() => {
@@ -77,12 +110,15 @@ function NewReview() {
     let cancelled = false;
 
     void (async () => {
-      const [branchList, rulesetList, modelList] = await Promise.all([
+      const [branchList, rulesetList, modelList, detail] = await Promise.all([
         fetch(`/api/projects/${projectId}/branches`).then((response) => response.json()),
         fetch("/api/rulesets").then((response) => response.json()),
         fetch("/api/models").then((response) => response.json()),
+        fetch(`/api/projects/${projectId}`).then((response) => response.json()),
       ]);
       if (cancelled) return;
+
+      setLinks(detail.links ?? []);
 
       setBranches(branchList.branches ?? []);
       setStale(branchList.stale ?? null);
@@ -102,6 +138,71 @@ function NewReview() {
     };
   }, [projectId]);
 
+  // The dependency's own branches, once one is included.
+  useEffect(() => {
+    if (includeLink === "") return;
+    let cancelled = false;
+    void (async () => {
+      const response = await fetch(`/api/projects/${includeLink}/branches`);
+      if (!response.ok || cancelled) return;
+      const body = (await response.json()) as { branches: Branch[]; defaultBranch: string };
+      setLinkBranches(body.branches);
+      // Suggested, never assumed: a dependency branch with the same name as
+      // the one being reviewed is almost always the other half of the change,
+      // and almost always is not always.
+      const sameName = body.branches.find((branch) => branch.name === fromBranch);
+      setLinkFrom((current) => current || sameName?.name || "");
+      setLinkInto((current) => current || body.defaultBranch);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [includeLink, fromBranch]);
+
+  // The size of the review, recomputed whenever the decisions that change it
+  // do. Free and read-only, so it can run on every change without a thought.
+  const readyToPreflight =
+    projectId !== "" && fromBranch !== "" && intoBranch !== "" && rulesetId !== "" && model !== "";
+
+  useEffect(() => {
+    if (!readyToPreflight) return;
+    let cancelled = false;
+    void (async () => {
+      const response = await fetch("/api/reviews/preflight", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId,
+          fromBranch,
+          intoBranch,
+          rulesetId,
+          model,
+          ...(includeLink && linkFrom && linkInto
+            ? { linked: { projectId: includeLink, fromBranch: linkFrom, intoBranch: linkInto } }
+            : {}),
+        }),
+      });
+      if (cancelled) return;
+      const body = await response.json();
+      setPreflight(response.ok ? (body as Preflight) : null);
+      setPreflightError(
+        response.ok ? "" : ((body as { error?: string }).error ?? "The pre-flight failed."),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    readyToPreflight,
+    projectId,
+    fromBranch,
+    intoBranch,
+    rulesetId,
+    model,
+    includeLink,
+    linkFrom,
+    linkInto,
+  ]);
+
   async function start(event: React.FormEvent) {
     event.preventDefault();
     setError("");
@@ -116,6 +217,9 @@ function NewReview() {
           model,
           effort,
           ...(intent.trim() === "" ? {} : { intent }),
+          ...(includeLink && linkFrom && linkInto
+            ? { linked: { projectId: includeLink, fromBranch: linkFrom, intoBranch: linkInto } }
+            : {}),
         }),
       });
       const body = (await created.json()) as { review?: { id: string }; error?: string };
@@ -280,6 +384,139 @@ function NewReview() {
             />
           </Field>
 
+          {links.length > 0 ? (
+            <Card className="p-4">
+              <h2 className="text-sm font-medium">Review a dependency at the same time</h2>
+              <p className="mt-1 mb-3 text-xs text-[var(--color-ink-muted)]">
+                A change to an exported type only breaks at the consumer, so reviewing both halves
+                together is the only way to catch one that never migrated.
+              </p>
+              <div className="grid gap-3">
+                {links.map((link) => (
+                  <label key={link.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={includeLink === link.dependencyProjectId}
+                      onChange={(event) => {
+                        setIncludeLink(event.target.checked ? link.dependencyProjectId : "");
+                        setLinkBranches([]);
+                        setLinkFrom("");
+                        setLinkInto("");
+                      }}
+                    />
+                    <span>
+                      Include {link.dependencyName}{" "}
+                      <Mono className="text-xs text-[var(--color-ink-muted)]">
+                        {link.packageName}
+                      </Mono>
+                    </span>
+                  </label>
+                ))}
+
+                {includeLink !== "" && linkBranches.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field
+                      label="Its branch"
+                      hint={
+                        linkBranches.some((branch) => branch.name === fromBranch)
+                          ? "Suggested: it has a branch of the same name."
+                          : undefined
+                      }
+                    >
+                      <Select
+                        value={linkFrom}
+                        onChange={(event) => setLinkFrom(event.target.value)}
+                      >
+                        <option value="">Choose a branch</option>
+                        {linkBranches.map((branch) => (
+                          <option key={branch.name} value={branch.name}>
+                            {branch.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Field label="Compare against">
+                      <Select
+                        value={linkInto}
+                        onChange={(event) => setLinkInto(event.target.value)}
+                      >
+                        {linkBranches.map((branch) => (
+                          <option key={branch.name} value={branch.name}>
+                            {branch.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+                ) : null}
+              </div>
+            </Card>
+          ) : null}
+
+          {readyToPreflight && preflightError ? <Problem>{preflightError}</Problem> : null}
+
+          {readyToPreflight && preflight ? (
+            <Card className="p-4">
+              <h2 className="mb-3 text-sm font-medium">What this review will examine</h2>
+              <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
+                <Row label="Files changed" value={String(preflight.files)} />
+                <Row label="Hunks" value={String(preflight.hunks)} />
+                <Row label="Sweep hits" value={String(preflight.sweepHits)} />
+                {preflight.changedSymbols > 0 ? (
+                  <Row label="Changed exports" value={String(preflight.changedSymbols)} />
+                ) : null}
+                <Row label="Model requests" value={String(preflight.requests)} />
+                <Row
+                  label="Estimated tokens"
+                  value={preflight.estimatedTokens.toLocaleString("en-US")}
+                />
+                <Row
+                  label="Reviewing"
+                  value={`${preflight.pins.primary.fromCommit.slice(0, 8)} ${preflight.pins.primary.subject}`}
+                />
+                {preflight.pins.linked ? (
+                  <Row
+                    label="With dependency"
+                    value={`${preflight.pins.linked.fromCommit.slice(0, 8)} ${preflight.pins.linked.subject}`}
+                  />
+                ) : null}
+              </dl>
+
+              {preflight.contextWindow === null ? (
+                <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+                  This model has not been probed, so its context window is unknown and the review
+                  will send each batch as one request without splitting.
+                </p>
+              ) : preflight.withinWindow === false ? (
+                <p className="mt-3 text-xs text-[var(--color-warning)]">
+                  The prompt is larger than this model&apos;s usable window, so the review will be
+                  split into more, smaller requests.
+                </p>
+              ) : null}
+
+              {preflight.sweepProblems.length > 0 ? (
+                <div className="mt-3">
+                  <Problem>
+                    {preflight.sweepProblems.length} sweep pattern(s) could not run, so the review
+                    would refuse to start: {preflight.sweepProblems[0]}
+                  </Problem>
+                </div>
+              ) : null}
+
+              {preflight.excludedPairs > 0 ? (
+                <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+                  {preflight.excludedPairs} rule and file pair(s) are outside this profile and will
+                  be recorded as deliberately not checked.
+                </p>
+              ) : null}
+
+              <p className="mt-3 text-xs text-[var(--color-ink-faint)]">
+                The commits are pinned again when the review starts, so these counts are a preview
+                rather than a promise.
+              </p>
+            </Card>
+          ) : null}
+
           {error ? <Problem>{error}</Problem> : null}
 
           <div className="flex items-center gap-3">
@@ -305,9 +542,30 @@ function NewReview() {
   );
 }
 
-export default function NewReviewPage() {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <Suspense fallback={null}>
+    <div className="flex justify-between gap-4">
+      <dt className="text-[var(--color-ink-muted)]">{label}</dt>
+      <dd className="min-w-0 truncate text-right">{value}</dd>
+    </div>
+  );
+}
+
+export default function NewReviewPage() {
+  // The Suspense boundary is required because this screen reads search
+  // params. A null fallback would render a blank page until the client took
+  // over, so it falls back to the header it is about to show anyway.
+  return (
+    <Suspense
+      fallback={
+        <>
+          <PageHeader title="New review" />
+          <PageBody>
+            <p className="text-sm text-[var(--color-ink-muted)]">Fetching the latest branches...</p>
+          </PageBody>
+        </>
+      }
+    >
       <NewReview />
     </Suspense>
   );

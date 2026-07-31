@@ -26,6 +26,7 @@ let routes: {
   project: typeof import("@/app/api/projects/[id]/route");
   links: typeof import("@/app/api/projects/[id]/links/route");
   fetchNow: typeof import("@/app/api/projects/[id]/fetch/route");
+  preflight: typeof import("@/app/api/reviews/preflight/route");
 };
 
 const post = (url: string, body: unknown) =>
@@ -48,6 +49,7 @@ beforeAll(async () => {
     project: await import("@/app/api/projects/[id]/route"),
     links: await import("@/app/api/projects/[id]/links/route"),
     fetchNow: await import("@/app/api/projects/[id]/fetch/route"),
+    preflight: await import("@/app/api/reviews/preflight/route"),
   };
 
   const created = await routes.projects.POST(
@@ -322,5 +324,95 @@ describe("deleting a project", () => {
     // only the clone passed while an empty directory was left behind for every
     // project ever deleted.
     expect(existsSync(dirname(project.clonePath))).toBe(false);
+  }, 120_000);
+});
+
+describe("looking before you pay", () => {
+  it("reports the size of the review without running or writing anything", async () => {
+    // Free and read-only on purpose: git and arithmetic, no model calls. A
+    // review is expensive enough that seeing its size first is worth a round
+    // trip.
+    const protocol = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/x", {
+        name: "Preflight rules",
+        tier: "global",
+        markdown: protocol,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+
+    const response = await routes.preflight.POST(
+      post("http://localhost/api/reviews/preflight", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        rulesetId,
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    expect(response.status).toBe(200);
+
+    const body = (await response.json()) as {
+      pins: { primary: { fromCommit: string; mergeBaseCommit: string; subject: string } };
+      files: number;
+      hunks: number;
+      sweepHits: number;
+      sweepProblems: string[];
+      estimatedTokens: number;
+      requests: number;
+      contextWindow: number | null;
+    };
+
+    // The same commits creating a review would pin, and the same counts the
+    // pipeline would go on to account for.
+    expect(body.pins.primary.fromCommit).toBe(fixture.appHead);
+    expect(body.pins.primary.mergeBaseCommit).toBe(fixture.appBase);
+    expect(body.pins.primary.subject.length).toBeGreaterThan(0);
+    expect(body.files).toBe(fixture.appFiles.length);
+    expect(body.hunks).toBeGreaterThan(0);
+    // Zero hits is the truth for this fixture: six patterns run and none of
+    // them match its changed lines. What matters is that they all ran, because
+    // a pattern that could not run means an incomplete sweep, which the
+    // pipeline refuses outright rather than treating as a clean result.
+    expect(body.sweepHits).toBe(0);
+    expect(body.sweepProblems).toEqual([]);
+    expect(body.estimatedTokens).toBeGreaterThan(0);
+    expect(body.requests).toBeGreaterThanOrEqual(1);
+    // No probe has run in this suite, so the window is honestly unknown
+    // rather than guessed at.
+    expect(body.contextWindow).toBeNull();
+
+    // Nothing was written: no review row appeared.
+    const reviews = (await (await routes.reviews.GET()).json()) as { reviews: unknown[] };
+    const after = (await (await routes.reviews.GET()).json()) as { reviews: unknown[] };
+    expect(after.reviews.length).toBe(reviews.reviews.length);
+  }, 120_000);
+
+  it("says which branch it could not find, rather than a bare failure", async () => {
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/x", {
+        name: "Preflight rules 2",
+        tier: "global",
+        markdown: await (
+          await import("node:fs/promises")
+        ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8"),
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+
+    const response = await routes.preflight.POST(
+      post("http://localhost/api/reviews/preflight", {
+        projectId,
+        fromBranch: "no-such-branch",
+        intoBranch: "main",
+        rulesetId,
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { error: string }).error).toMatch(/no-such-branch/);
   }, 120_000);
 });

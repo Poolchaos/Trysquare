@@ -691,3 +691,21 @@ verified evidence, in writing, here.
   the branch already chosen. Arriving at a form that has forgotten the choice
   just made is the kind of small friction that makes a tool feel like
   paperwork.
+- 2026-07-31 DECIDED (V4, D-37): the pre-flight endpoint is read-only and free.
+  Git and arithmetic only: it fetches, diffs, parses, runs the sweep and
+  estimates tokens, and writes nothing except the fetch timestamp. Its pins are
+  advisory and the screen says so, because creating the review fetches and pins
+  again (D-27); the numbers are a preview rather than a promise.
+- 2026-07-31 DECIDED (V4): the pre-flight reports sweep problems separately
+  from sweep hits. A pattern that could not run means an incomplete sweep,
+  which the pipeline refuses outright, and seeing that before paying is worth
+  more than the hit count itself.
+- 2026-07-31 NOTED (V4): the seeded fixture produces zero sweep hits against
+  the example protocol. Six patterns run and none match its changed lines.
+  Measured rather than assumed: a test asserting hits were non-zero failed, and
+  the expectation was wrong rather than the code. What the test asserts now is
+  that every pattern ran.
+- 2026-07-31 DECIDED (V4): a dependency is never included in a review
+  automatically. When the dependency has a branch of the same name as the one
+  being reviewed it is preselected and labelled as suggested, because that is
+  almost always the other half of the change, and almost always is not always.
