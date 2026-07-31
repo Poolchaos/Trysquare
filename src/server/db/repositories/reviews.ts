@@ -57,6 +57,8 @@ export interface CreateReviewInput {
   model: string;
   profileId: ReviewProfile;
   effort?: ReviewEffort;
+  /** What the author says the change was meant to do. */
+  intent?: string;
   engineMode: EngineMode;
   linked?: {
     projectId: string;
@@ -87,6 +89,7 @@ export function createReview(db: Db, input: CreateReviewInput): Review {
     model: input.model,
     profileId: input.profileId,
     effort: input.effort ?? "high",
+    intent: input.intent?.trim() || null,
     usageCacheCreationTokens: 0,
     usageCacheReadTokens: 0,
     contextWindow: null,

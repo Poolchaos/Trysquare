@@ -105,6 +105,8 @@ export interface PipelineInput {
   rules: readonly ImportedRule[];
   /** Decides how the adversarial work is divided. See docs/06. */
   profile: ReviewProfile;
+  /** What the author says the change was meant to do, if they said. */
+  intent?: string | undefined;
   /**
    * The model's probed context window. Given, the pipeline splits a stage
    * whose prompt would not fit; absent, it makes one request per batch and
@@ -207,6 +209,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
 
   const content: StageContentInput = {
     files: input.files,
+    ...(input.intent === undefined ? {} : { intent: input.intent }),
     sweepHits: listSweepHits(db, reviewId).map((hit) => ({
       path: hit.path,
       line: hit.line,

@@ -50,6 +50,13 @@
       "when": 1785477203424,
       "tag": "0006_yellow_phil_sheldon",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1785477537018,
+      "tag": "0007_wise_harpoon",
+      "breakpoints": true
     }
   ]
 }

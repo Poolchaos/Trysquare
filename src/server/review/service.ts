@@ -301,6 +301,7 @@ export async function prepareAndRun(
       // code does not know would otherwise reach the batch planner as a
       // silently unrecognised value.
       profile: reviewProfileSchema.parse(review.profileId),
+      ...(review.intent === null ? {} : { intent: review.intent }),
       ...(contextWindow === undefined ? {} : { contextWindow }),
       changedSymbols: bundle.inventory.changedExportedSymbols,
       systemPromptFor: (stage, batch) =>

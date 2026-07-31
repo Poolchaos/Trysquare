@@ -155,6 +155,9 @@ export const reviews = sqliteTable(
     linkedIntoCommit: text("linked_into_commit"),
     linkedMergeBaseCommit: text("linked_merge_base_commit"),
 
+    /** What the author says the change was meant to do. Optional, free text. */ intent:
+      text("intent"),
+
     model: text("model").notNull(),
     profileId: text("profile_id").notNull(),
     engineMode: text("engine_mode").notNull(),

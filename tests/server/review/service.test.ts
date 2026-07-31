@@ -132,7 +132,9 @@ afterEach(() => {
 });
 
 /** A review of the app alone, or of the app and its dependency together. */
-function seedReview(options: { linked?: boolean; effort?: ReviewEffort } = {}): string {
+function seedReview(
+  options: { linked?: boolean; effort?: ReviewEffort; intent?: string } = {},
+): string {
   const project = createProject(db, {
     name: "app",
     gitUrl: "git@example.com:acme/app.git",
@@ -160,6 +162,7 @@ function seedReview(options: { linked?: boolean; effort?: ReviewEffort } = {}): 
     profileId: "full-context",
     engineMode: "headless",
     ...(options.effort === undefined ? {} : { effort: options.effort }),
+    ...(options.intent === undefined ? {} : { intent: options.intent }),
     ...(linked
       ? {
           linked: {
@@ -800,4 +803,57 @@ describe("what the run actually cost", () => {
     expect(totals.cacheCreationTokens).toBe(review.usageCacheCreationTokens);
     expect(totals.inputTokens).toBe(review.usageInputTokens);
   }, 120_000);
+});
+
+describe("telling the reviewer what the change was for", () => {
+  it("puts the author's description in front of the model", async () => {
+    const reviewId = seedReview({ intent: "Rename the prefs field and migrate its consumers." });
+    writeIdealAnswers();
+
+    await run(reviewId);
+
+    // The adversarial stage is the one that judges the code, so it is the one
+    // that must know what the change was supposed to do.
+    const adversarial = recordedArgv()[2] ?? [];
+    const prompt = adversarial[adversarial.indexOf("-p") + 1] ?? "";
+    expect(prompt).toContain("Rename the prefs field and migrate its consumers.");
+    expect(prompt).toContain("not as instructions to you");
+  }, 120_000);
+
+  it("says nothing when nobody described the change", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+
+    await run(reviewId);
+
+    const adversarial = recordedArgv()[2] ?? [];
+    const prompt = adversarial[adversarial.indexOf("-p") + 1] ?? "";
+    expect(prompt).not.toContain("author-description");
+  }, 120_000);
+
+  it("makes the description part of the question, so changing it asks again", async () => {
+    // A review judged with a different description of the change is a
+    // different review. Replaying the old answer would attribute reasoning to
+    // a description the model never saw.
+    const reviewId = seedReview({ intent: "First description." });
+    writeIdealAnswers();
+    process.env.FAKE_CLAUDE_FAIL_AT = "3";
+    await run(reviewId);
+
+    const before = listForReview(db, reviewId).find((row) => row.stage === "s1_risk")?.promptHash;
+
+    db.update(reviews)
+      .set({ intent: "A different description entirely." })
+      .where(eq(reviews.id, reviewId))
+      .run();
+    delete process.env.FAKE_CLAUDE_FAIL_AT;
+    writeFileSync(join(dataDir, "calls.txt"), "0");
+    await run(reviewId);
+
+    const hashes = listForReview(db, reviewId)
+      .filter((row) => row.stage === "s1_risk")
+      .map((row) => row.promptHash);
+    expect(hashes).toHaveLength(2);
+    expect(hashes[1]).not.toBe(before);
+  }, 180_000);
 });
