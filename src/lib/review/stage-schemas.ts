@@ -41,6 +41,7 @@ const candidateFindingSchema = z.object({
   severity: z.enum(SEVERITIES),
   ruleCode: z.string().nullable(),
   issue: z.string().min(1),
+  /** Plain language, no code: what is wrong and what it breaks. */
   comment: z.string().min(1),
   /** Input, mechanism, wrong output. A finding without one is a guess. */
   mechanism: z.string().min(1),

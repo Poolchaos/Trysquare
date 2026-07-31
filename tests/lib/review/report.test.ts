@@ -81,6 +81,43 @@ describe("what the report says was found", () => {
   it("carries the quoted code that was checked against the file", () => {
     expect(renderReport(BASE)).toContain("  repository.save(order);");
   });
+
+  it("uses the labelled structure the protocol defines", () => {
+    // File, lines, issue and comment, each findable without reading a
+    // paragraph, because a finding is read by someone deciding what to fix.
+    const report = renderReport(BASE);
+    expect(report).toContain("File: app/src/orders/save.ts");
+    expect(report).toContain("Lines: 4");
+    expect(report).toContain("Rule: 1");
+    expect(report).toContain("Issue: The await was removed, so the save is not waited for.");
+    expect(report).toContain(
+      "Comment: The caller returns before the write lands, and a failure is unobservable.",
+    );
+  });
+
+  it("gives a range only when the finding spans more than one line", () => {
+    expect(renderReport(BASE)).toContain("Lines: 4");
+    expect(renderReport(BASE)).not.toContain("Lines: 4 - 4");
+    expect(
+      renderReport({ ...BASE, confirmed: [{ ...FINDING, lineStart: 4, lineEnd: 9 }] }),
+    ).toContain("Lines: 4 - 9");
+  });
+
+  it("keeps code out of the comment line and in the quotation", () => {
+    // The comment is what a person reads to decide; the code is the evidence
+    // underneath it, quoted and byte-checked.
+    const report = renderReport(BASE);
+    const commentLine = report.split("\n").find((line) => line.startsWith("Comment: "));
+    expect(commentLine).toBeDefined();
+    expect(commentLine).not.toContain("repository.save");
+    expect(report).toContain("repository.save(order);");
+  });
+
+  it("omits the rule line when a finding carries no rule code", () => {
+    expect(renderReport({ ...BASE, confirmed: [{ ...FINDING, ruleCode: null }] })).not.toContain(
+      "Rule:",
+    );
+  });
 });
 
 describe("what the report says was examined", () => {

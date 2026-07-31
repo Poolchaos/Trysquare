@@ -729,3 +729,16 @@ verified evidence, in writing, here.
   worktrees, bundle and logs that deleting a review removes. The filename uses
   the UTC day and turns branch slashes into hyphens, so a second export the
   same day replaces the first rather than accumulating near-identical files.
+- 2026-07-31 FIXED (maintainer question): the report renders each finding in
+  the labelled structure the example protocol defines, File, Lines, Issue,
+  Comment, rather than as a markdown heading and prose. It did not before, and
+  the tests passed both before and after the change, which means they were
+  asserting on the text of a finding and never on its shape. They pin the
+  format now. Lines is a single number, or a range only when the finding
+  genuinely spans more than one line.
+- 2026-07-31 FIXED: the adversarial prompt now says what a comment is for.
+  Nothing told the model that the comment must be plain language a
+  non-author can follow, or that code belongs in the quotation rather than in
+  the sentence explaining the problem. A report cannot make prose out of a
+  comment full of code, so the instruction belongs where the comment is
+  written rather than where it is rendered.

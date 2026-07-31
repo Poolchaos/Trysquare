@@ -247,6 +247,12 @@ export function renderAdversarialPrompt(
     "Cite line numbers exactly as shown in the left column above: those are the",
     "line numbers in the file as it stands after the change. A hunk you do not",
     "mention is treated as unreviewed and fails the run.",
+    "",
+    "For each finding: the issue is one sentence naming the problem, and the",
+    "comment explains what is wrong and what it breaks in plain language that",
+    "someone who did not write the code can follow. Put no code in the comment;",
+    "the code that proves the finding is quoted separately and checked against",
+    "the file.",
   ].join("\n");
 }
 

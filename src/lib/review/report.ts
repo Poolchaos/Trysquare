@@ -172,23 +172,32 @@ function completeness(input: ReportInput): string {
   );
 }
 
+/**
+ * One finding, in the structure the protocol defines.
+ *
+ * Labelled fields rather than prose, because a finding is read by someone
+ * deciding what to fix: the file, the lines, what is wrong and what it breaks,
+ * each findable without reading a paragraph. The comment is plain language by
+ * contract; the code that proves it sits below, quoted and byte-checked,
+ * rather than inside the sentence explaining it.
+ */
 function renderFinding(finding: ReportFinding): string[] {
-  const rule = finding.ruleCode ? ` (rule ${finding.ruleCode})` : "";
   return [
-    `#### ${finding.filePath}:${lineRange(finding)}${rule}`,
+    `File: ${finding.filePath}`,
+    `Lines: ${lineRange(finding)}`,
+    ...(finding.ruleCode ? [`Rule: ${finding.ruleCode}`] : []),
+    `Issue: ${finding.issue}`,
+    `Comment: ${finding.comment}`,
+    ...(finding.mechanism ? [`Mechanism: ${finding.mechanism}`] : []),
     "",
-    `**${finding.issue}**`,
-    "",
-    finding.comment,
-    "",
-    ...(finding.mechanism ? [`How it fails: ${finding.mechanism}`, ""] : []),
     ...(finding.quotedCode ? ["```", finding.quotedCode, "```", ""] : []),
   ];
 }
 
+/** A single line, or a range when the finding genuinely spans one. */
 function lineRange(finding: ReportFinding): string {
   return finding.lineEnd > finding.lineStart
-    ? `${finding.lineStart}-${finding.lineEnd}`
+    ? `${finding.lineStart} - ${finding.lineEnd}`
     : String(finding.lineStart);
 }
 
