@@ -32,6 +32,8 @@ let routes: {
   confirm: typeof import("@/app/api/findings/[id]/confirm/route");
   dismiss: typeof import("@/app/api/findings/[id]/dismiss/route");
   rulesets: typeof import("@/app/api/rulesets/import/route");
+  report: typeof import("@/app/api/reviews/[id]/report/route");
+  exportReport: typeof import("@/app/api/reviews/[id]/export/route");
 };
 
 let reviewId: string;
@@ -76,6 +78,8 @@ beforeAll(async () => {
     confirm: await import("@/app/api/findings/[id]/confirm/route"),
     dismiss: await import("@/app/api/findings/[id]/dismiss/route"),
     rulesets: await import("@/app/api/rulesets/import/route"),
+    report: await import("@/app/api/reviews/[id]/report/route"),
+    exportReport: await import("@/app/api/reviews/[id]/export/route"),
   };
 
   // A project, its rules, and a review of the seeded branch pair.
@@ -255,5 +259,43 @@ describe("deciding, then closing the review", () => {
       params(reviewId),
     );
     expect(response.status).toBe(404);
+  }, 120_000);
+});
+
+describe("the report a completed review produces", () => {
+  it("names what was found, what was examined, and what was dismissed", async () => {
+    // Built from a review that actually ran, so the counts are the pipeline's
+    // own rather than numbers a fixture asserted into place.
+    const response = await routes.report.GET(new Request("http://localhost"), params(reviewId));
+    expect(response.status).toBe(200);
+
+    const { markdown } = (await response.json()) as { markdown: string };
+    expect(markdown).toContain("# Review: app feature/rename-prefs into main");
+    expect(markdown).toContain("confirmed finding(s)");
+    expect(markdown).toContain("## What was examined");
+    expect(markdown).toContain("hunk(s) were read");
+    expect(markdown).toContain("## Dismissed");
+    expect(markdown).toContain("Deliberate: the wrapper already guards this.");
+    expect(markdown).toContain("Ruleset: Example protocol version 1");
+    expect(markdown).not.toContain(String.fromCharCode(8212));
+  }, 120_000);
+
+  it("writes an export that outlives the review's working files", async () => {
+    // Deleting a review removes its worktrees, bundle and logs. The report is
+    // the thing the review was for, so it lives outside all of that.
+    const response = await routes.exportReport.POST(
+      new Request("http://localhost", { method: "POST" }),
+      params(reviewId),
+    );
+    expect(response.status).toBe(200);
+
+    const { path } = (await response.json()) as { path: string };
+    expect(path).toContain("exports");
+    expect(path).toMatch(/app--feature-rename-prefs--into--main--\d{4}-\d{2}-\d{2}\.md$/);
+    expect(existsSync(path)).toBe(true);
+    expect(path.startsWith(join(dataDir, "runs"))).toBe(false);
+
+    const written = readFileSync(path, "utf8");
+    expect(written).toContain("# Review: app");
   }, 120_000);
 });

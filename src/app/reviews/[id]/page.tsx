@@ -58,6 +58,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const { id } = use(params);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [live, setLive] = useState<string[]>([]);
+  const [report, setReport] = useState<string | null>(null);
+  const [exported, setExported] = useState("");
 
   async function reload() {
     const response = await fetch(`/api/reviews/${id}`);
@@ -221,6 +223,16 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               </ol>
             </Card>
 
+            {review.status === "complete" ? (
+              <ReportPanel
+                reviewId={id}
+                report={report}
+                exported={exported}
+                onLoaded={setReport}
+                onExported={setExported}
+              />
+            ) : null}
+
             {review.status === "awaiting_confirmation" && reported.length > 0 ? (
               <ConfirmationQueue
                 reviewId={id}
@@ -274,6 +286,87 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         </div>
       </PageBody>
     </>
+  );
+}
+
+/**
+ * The report, once a person has decided everything.
+ *
+ * Fetched on demand rather than with the page: it is the last thing anyone
+ * looks at, and a review that is still running has no report to speak of.
+ */
+function ReportPanel({
+  reviewId,
+  report,
+  exported,
+  onLoaded,
+  onExported,
+}: {
+  reviewId: string;
+  report: string | null;
+  exported: string;
+  onLoaded: (markdown: string) => void;
+  onExported: (path: string) => void;
+}) {
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (report !== null) return;
+    let cancelled = false;
+    void (async () => {
+      const response = await fetch(`/api/reviews/${reviewId}/report`);
+      const body = (await response.json()) as { markdown?: string; error?: string };
+      if (cancelled) return;
+      if (response.ok && body.markdown) onLoaded(body.markdown);
+      else setError(body.error ?? "The report could not be built.");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reviewId, report, onLoaded]);
+
+  return (
+    <section className="mb-6">
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">Report</h2>
+        <span className="flex items-center gap-2">
+          <Button
+            onClick={() => {
+              if (report) void navigator.clipboard?.writeText(report);
+            }}
+            disabled={!report}
+          >
+            Copy
+          </Button>
+          <Button
+            variant="primary"
+            onClick={async () => {
+              const response = await fetch(`/api/reviews/${reviewId}/export`, { method: "POST" });
+              const body = (await response.json()) as { path?: string; error?: string };
+              if (response.ok && body.path) onExported(body.path);
+              else setError(body.error ?? "The report could not be exported.");
+            }}
+          >
+            Export
+          </Button>
+        </span>
+      </header>
+
+      {error ? <Problem>{error}</Problem> : null}
+      {exported ? (
+        <p className="mb-2 text-xs text-[var(--color-good)]">Written to {exported}</p>
+      ) : null}
+
+      {report === null ? (
+        <p className="text-sm text-[var(--color-ink-muted)]">Building the report...</p>
+      ) : (
+        <Card className="max-h-[32rem] overflow-auto p-4">
+          <pre className="text-xs leading-5 whitespace-pre-wrap">
+            <code className="font-[family-name:var(--font-mono)]">{report}</code>
+          </pre>
+        </Card>
+      )}
+    </section>
   );
 }
 

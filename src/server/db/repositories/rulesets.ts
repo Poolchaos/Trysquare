@@ -289,6 +289,31 @@ export function hasReviewSnapshot(db: Db, reviewId: string): boolean {
  * Several rulesets can be frozen onto one review, so their rules and
  * directives are concatenated in a stable order.
  */
+/**
+ * What the review was judged against, by name and version.
+ *
+ * The report names these so a reader can tell which edition of a ruleset
+ * produced the findings, without having to parse the frozen snapshot itself.
+ */
+export function readReviewSnapshotMeta(
+  db: Db,
+  reviewId: string,
+): { rulesetName: string; rulesetVersion: number } {
+  const row = db
+    .select()
+    .from(reviewRulesets)
+    .where(eq(reviewRulesets.reviewId, reviewId))
+    .orderBy(asc(reviewRulesets.rulesetName))
+    .get();
+
+  if (!row) {
+    throw new Error(
+      `Review "${reviewId}" has no frozen ruleset, so there is nothing to report it against.`,
+    );
+  }
+  return { rulesetName: row.rulesetName, rulesetVersion: row.rulesetVersion };
+}
+
 export function readReviewSnapshot(db: Db, reviewId: string): ImportedRuleset {
   const rows = db
     .select()

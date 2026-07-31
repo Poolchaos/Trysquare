@@ -709,3 +709,23 @@ verified evidence, in writing, here.
   automatically. When the dependency has a branch of the same name as the one
   being reviewed it is preselected and labelled as suggested, because that is
   almost always the other half of the change, and almost always is not always.
+- 2026-07-31 DECIDED (V5, D-38): the report is the app's own rendering of the
+  finding format, and a protocol's prose about output format is not parsed.
+  Rendering arbitrary instructions is not tractable, and a report whose shape
+  depended on prompt-shaped text would change meaning without anyone editing
+  the code that writes it.
+- 2026-07-31 DECIDED (V5): the report states what was examined as well as what
+  was found. A reader cannot otherwise tell "nothing is wrong" from "nothing
+  was looked at", and that distinction is the whole value of a review. The
+  counts come from the coverage ledger the pipeline already reconciled, not
+  from anything a model claimed.
+- 2026-07-31 DECIDED (V5): dismissed findings appear in the report with their
+  reasons. A dismissal is evidence about the engine rather than an absence of
+  one, and dropping it would throw away the only signal that says which
+  prompts need work. Confirmed NITPICKs are kept too (D-11): what a person
+  chose to keep is not the report's to second-guess.
+- 2026-07-31 DECIDED (V5, D-39): exports are written under the data root's
+  exports directory, outside the run directory, so a report outlives the
+  worktrees, bundle and logs that deleting a review removes. The filename uses
+  the UTC day and turns branch slashes into hyphens, so a second export the
+  same day replaces the first rather than accumulating near-identical files.
