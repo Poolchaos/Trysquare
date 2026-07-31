@@ -656,3 +656,24 @@ verified evidence, in writing, here.
   confirmation; complete joins the cleanup list when the confirmation flow
   lands (D-12 as implemented). Cleanup is best effort: a failure to remove
   becomes a run note, never a mask over the outcome that matters.
+- 2026-07-31 DECIDED (V2, D-34): dismissing a finding requires a reason;
+  confirming does not. Accepting the engine's case adds nothing to it, while a
+  dismissal without a reason leaves no record of whether the engine was wrong
+  or the reviewer was in a hurry, and those two are the difference between a
+  prompt that needs fixing and one that does not.
+- 2026-07-31 DECIDED (V2, D-35): a review completes only when every finding is
+  decided, enforced by the complete route with the undecided count in the
+  message. The human gatekeeper is a rule about the data, so a script calling
+  the API directly meets the same wall the screen does.
+- 2026-07-31 DECIDED (V2, D-36): the file-context endpoint serves only paths a
+  finding in that review actually cites, and only while the review awaits
+  confirmation. Without the first guard it is a way to read any file on the
+  machine; without the second it promises a checkout that D-12 has already
+  removed. Proving the first guard needed a test using a file that genuinely
+  exists in the checkout: an absent path 404s from the failed read whether the
+  guard is there or not, and the first version of that test passed with the
+  guard deleted.
+- 2026-07-31 DECIDED (V2): completing a review removes its worktrees, joining
+  cancelled and failed from V1 (D-12 now fully implemented). The confirmation
+  screen was the last thing that needed the checkout; the bundle and the logs
+  stay as the evidence behind the report.

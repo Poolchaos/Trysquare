@@ -10,6 +10,7 @@
  */
 
 import { use, useEffect, useState } from "react";
+import { ConfirmationQueue, type Finding } from "@/components/confirmation";
 import { PageBody, PageHeader } from "@/components/page";
 import {
   Badge,
@@ -49,16 +50,7 @@ interface Snapshot {
   };
   stages: { stage: string; status: string; attempt: number }[];
   notes: { kind: string; message: string; at: string }[];
-  findings: {
-    id: string;
-    filePath: string;
-    lineStart: number;
-    severity: string;
-    issue: string;
-    comment: string;
-    status: string;
-    quotedCode: string;
-  }[];
+  findings: Finding[];
   running: boolean;
 }
 
@@ -119,6 +111,54 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     snapshot.stages.filter((row) => row.status === "succeeded").map((r) => r.stage),
   );
   const reported = findings.filter((finding) => finding.status !== "killed");
+
+  /**
+   * The findings as a list you can only read.
+   *
+   * Used while a review is still running, and after it is complete. Between
+   * those two the confirmation queue takes over, because that is the one
+   * moment the findings are a thing to act on rather than a thing to look at.
+   */
+  const renderReadOnly = () =>
+    reported.length === 0 ? (
+      <Empty title={snapshot.running ? "Nothing reported yet" : "No findings"}>
+        {snapshot.running
+          ? "Findings appear once the adversarial pass has run and each one has been checked against the file."
+          : "Every hunk was accounted for and nothing survived verification."}
+      </Empty>
+    ) : (
+      <ul className="grid gap-3">
+        {reported.map((finding) => (
+          <li key={finding.id}>
+            <Card className="p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={severityTone(finding.severity)}>{finding.severity}</Badge>
+                {finding.status === "confirmed" ? <Badge tone="good">confirmed</Badge> : null}
+                {finding.status === "dismissed" ? <Badge tone="neutral">dismissed</Badge> : null}
+                {finding.status === "open_question" ? (
+                  <Badge tone="question">open question</Badge>
+                ) : null}
+                <Mono className="text-xs text-[var(--color-ink-muted)]">
+                  {finding.filePath}:{finding.lineStart}
+                </Mono>
+              </div>
+              <p className="mt-2 font-medium">{finding.issue}</p>
+              <p className="mt-1 text-sm text-[var(--color-ink-muted)]">{finding.comment}</p>
+              {finding.dismissReason ? (
+                <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
+                  Dismissed: {finding.dismissReason}
+                </p>
+              ) : null}
+              {finding.quotedCode ? (
+                <pre className="mt-3 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs">
+                  <code className="font-[family-name:var(--font-mono)]">{finding.quotedCode}</code>
+                </pre>
+              ) : null}
+            </Card>
+          </li>
+        ))}
+      </ul>
+    );
 
   return (
     <>
@@ -181,45 +221,19 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               </ol>
             </Card>
 
-            <h2 className="mb-3 text-sm font-semibold">
-              Findings{reported.length > 0 ? ` (${reported.length})` : ""}
-            </h2>
-
-            {reported.length === 0 ? (
-              <Empty title={snapshot.running ? "Nothing reported yet" : "No findings"}>
-                {snapshot.running
-                  ? "Findings appear once the adversarial pass has run and each one has been checked against the file."
-                  : "Every hunk was accounted for and nothing survived verification."}
-              </Empty>
+            {review.status === "awaiting_confirmation" && reported.length > 0 ? (
+              <ConfirmationQueue
+                reviewId={id}
+                findings={findings}
+                onChanged={() => void reload()}
+              />
             ) : (
-              <ul className="grid gap-3">
-                {reported.map((finding) => (
-                  <li key={finding.id}>
-                    <Card className="p-4">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge tone={severityTone(finding.severity)}>{finding.severity}</Badge>
-                        {finding.status === "open_question" ? (
-                          <Badge tone="question">open question</Badge>
-                        ) : null}
-                        <Mono className="text-xs text-[var(--color-ink-muted)]">
-                          {finding.filePath}:{finding.lineStart}
-                        </Mono>
-                      </div>
-                      <p className="mt-2 font-medium">{finding.issue}</p>
-                      <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-                        {finding.comment}
-                      </p>
-                      {finding.quotedCode ? (
-                        <pre className="mt-3 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs">
-                          <code className="font-[family-name:var(--font-mono)]">
-                            {finding.quotedCode}
-                          </code>
-                        </pre>
-                      ) : null}
-                    </Card>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <h2 className="mb-3 text-sm font-semibold">
+                  Findings{reported.length > 0 ? ` (${reported.length})` : ""}
+                </h2>
+                {renderReadOnly()}
+              </>
             )}
           </div>
 

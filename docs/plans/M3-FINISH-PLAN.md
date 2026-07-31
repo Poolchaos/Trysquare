@@ -344,7 +344,7 @@ confirms the wiring.
 | V  | Contents                                                     | Depends on | Status |
 | -- | ------------------------------------------------------------ | ---------- | ------ |
 | V1 | budget cap, engine note, no-auto-probe, worktree cleanup, 404 unlink, activity cap | -          | DONE   |
-| V2 | confirm/dismiss/complete/context routes, confirmation UI, keyboard map | V1         |        |
+| V2 | confirm/dismiss/complete/context routes, confirmation UI, keyboard map | V1         | DONE   |
 | V3 | project detail page, fetch-now, links CRUD, project delete    | V1         |        |
 | V4 | preflight route and panel, linked toggle with suggestion      | V3         |        |
 | V5 | report renderer, report/export routes, report UI              | V2         |        |
