@@ -6,11 +6,21 @@
  * anyone running a generator first.
  */
 
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import type { Db } from "./client";
 
-const MIGRATIONS_FOLDER = fileURLToPath(new URL("../../../drizzle", import.meta.url));
+// Assembled from parts rather than written as one URL literal, because a
+// bundler reads `new URL("../../../drizzle", import.meta.url)` as a module it
+// should resolve and fails the build. This is a directory read at run time.
+const MIGRATIONS_FOLDER = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "..",
+  "drizzle",
+);
 
 export function runMigrations(db: Db, migrationsFolder: string = MIGRATIONS_FOLDER): void {
   migrate(db, { migrationsFolder });

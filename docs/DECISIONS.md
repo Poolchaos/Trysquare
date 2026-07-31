@@ -539,3 +539,31 @@ verified evidence, in writing, here.
   proved the value was recorded and not that it was the value used. Making the
   wrong thing unreachable is the stronger answer, and the batching behaviour
   itself is already covered by the pipeline's own context-window tests.
+- 2026-07-31 DECIDED (W6): the job queue lives in memory only. On a restart it
+  is empty and the reviews that were waiting are still drafts. That is the
+  honest behaviour for a local tool: nothing was promised to them and nothing
+  was spent on them, and persisting a queue would mean a crash could start
+  expensive work nobody was watching.
+- 2026-07-31 DECIDED (W6): the manager announces only what the database already
+  says, and reads the row before emitting. An event that arrived before the row
+  it describes would let the screen show a stage as started while the database
+  still said draft, and reloading the page would appear to undo it.
+- 2026-07-31 DECIDED (W6): the bus swallows a listener's error rather than
+  letting it escape. A browser that disconnected mid-write must not stop the
+  other watchers being told and must not fail the review it was watching.
+  Listeners are copied before iteration, because a done-event listener
+  unsubscribes itself and mutating the set mid-iteration would skip whoever
+  came after it.
+- 2026-07-31 DECIDED (W6): migrations run in `instrumentation.ts`, not in the
+  manager. Startup migrates, the manager schedules. It also keeps `migrate.ts`
+  out of the SSE route's import graph, which matters because Turbopack reads
+  `new URL("../../../drizzle", import.meta.url)` as a module it must resolve
+  and fails the build over a directory that is only ever read at run time. The
+  path is now assembled with join for the same reason.
+- 2026-07-31 DECIDED (W6): every import in `instrumentation.ts` is inside
+  `register()` and behind the runtime check. Next builds that file for its edge
+  runtime too, where none of it can load, and a top-level import of anything
+  reaching node:path fails the production build.
+- 2026-07-31 DECIDED (W6): the SSE stream takes a narrow watcher, not the
+  manager. It reads a picture and listens for changes; nothing reachable from a
+  route handler should be able to start or cancel a review.

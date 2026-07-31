@@ -400,7 +400,7 @@ maintainer at the top of the demo output directory:
 | W3 | checkpointing runner and its tests                          | W1, W2     | DONE   |
 | W4 | review service, artifact lifecycle, its tests               | W1, W2, W3 | DONE   |
 | W5 | pause/resume/cancel determinism tests                       | W4         | DONE   |
-| W6 | bus, manager, instrumentation, SSE route, tests             | W4         |        |
+| W6 | bus, manager, instrumentation, SSE route, tests             | W4         | DONE   |
 | W7 | demo script, tsx alias proof, npm script                    | W2, W6     |        |
 | W8 | docs, gate evidence, FG-2 checklist                         | W7         |        |
 
