@@ -7,10 +7,11 @@
  * these tests point it at a temporary data directory before importing them.
  */
 
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { cloneBare } from "@/server/gitops/repo";
 import { buildFixture, type SeededFixture } from "../../helpers/seeded-fixture";
 
 let fixture: SeededFixture;
@@ -22,6 +23,9 @@ let routes: {
   branches: typeof import("@/app/api/projects/[id]/branches/route");
   reviews: typeof import("@/app/api/reviews/route");
   rulesets: typeof import("@/app/api/rulesets/import/route");
+  project: typeof import("@/app/api/projects/[id]/route");
+  links: typeof import("@/app/api/projects/[id]/links/route");
+  fetchNow: typeof import("@/app/api/projects/[id]/fetch/route");
 };
 
 const post = (url: string, body: unknown) =>
@@ -41,6 +45,9 @@ beforeAll(async () => {
     branches: await import("@/app/api/projects/[id]/branches/route"),
     reviews: await import("@/app/api/reviews/route"),
     rulesets: await import("@/app/api/rulesets/import/route"),
+    project: await import("@/app/api/projects/[id]/route"),
+    links: await import("@/app/api/projects/[id]/links/route"),
+    fetchNow: await import("@/app/api/projects/[id]/fetch/route"),
   };
 
   const created = await routes.projects.POST(
@@ -210,4 +217,110 @@ describe("importing a ruleset", () => {
     );
     expect(response.status).toBeGreaterThanOrEqual(400);
   });
+});
+
+describe("a project's dependency links", () => {
+  it("links another project, and refuses a duplicate with the reason", async () => {
+    // The link is what makes a two-repository review possible: it names the
+    // package the primary consumes.
+    const dependency = await routes.projects.POST(
+      post("http://localhost/api/projects", {
+        gitUrl: `file://${fixture.coreClone}`,
+        name: "shared-core",
+      }),
+    );
+    const { project: core } = (await dependency.json()) as { project: { id: string } };
+    await projectReady(core.id);
+
+    const linked = await routes.links.POST(
+      post("http://localhost/x", {
+        dependencyProjectId: core.id,
+        packageName: "@acme/shared-core",
+      }),
+      params(projectId),
+    );
+    expect(linked.status).toBe(201);
+
+    const again = await routes.links.POST(
+      post("http://localhost/x", {
+        dependencyProjectId: core.id,
+        packageName: "@acme/shared-core",
+      }),
+      params(projectId),
+    );
+    expect(again.status).toBe(400);
+    expect(((await again.json()) as { error: string }).error).toMatch(/already linked/i);
+  }, 120_000);
+
+  it("offers only projects that are not already linked to itself", async () => {
+    const body = (await (
+      await routes.project.GET(new Request("http://localhost"), params(projectId))
+    ).json()) as {
+      links: { dependencyName: string }[];
+      linkable: { id: string }[];
+    };
+
+    expect(body.links[0]?.dependencyName).toBe("shared-core");
+    // Itself and the one already linked are both excluded, so the form cannot
+    // offer a choice the repository would refuse.
+    expect(body.linkable.some((candidate) => candidate.id === projectId)).toBe(false);
+    expect(body.linkable).toHaveLength(0);
+  }, 120_000);
+});
+
+describe("fetching a project on demand", () => {
+  it("records when the refs were last brought up to date", async () => {
+    const before = (await (
+      await routes.project.GET(new Request("http://localhost"), params(projectId))
+    ).json()) as { project: { lastFetchedAt: string | null } };
+
+    const response = await routes.fetchNow.POST(new Request("http://localhost"), params(projectId));
+    expect(response.status).toBe(200);
+
+    const body = (await response.json()) as { lastFetchedAt: string };
+    expect(body.lastFetchedAt).not.toBeNull();
+    expect(body.lastFetchedAt >= (before.project.lastFetchedAt ?? "")).toBe(true);
+  }, 120_000);
+});
+
+describe("deleting a project", () => {
+  it("refuses while a review still refers to it, and says how many", async () => {
+    // Deleting the reviews silently would discard the history they exist for.
+    const response = await routes.project.DELETE(
+      new Request("http://localhost"),
+      params(projectId),
+    );
+    expect(response.status).toBe(409);
+    expect(((await response.json()) as { error: string }).error).toMatch(/still has \d+ review/);
+  }, 120_000);
+
+  it("removes the row and the clone together when nothing refers to it", async () => {
+    // A clone with no row is disk nobody can account for, and a row with no
+    // clone is a project every screen offers and nothing can use.
+    // A genuinely separate repository: a project is its remote, and a URL
+    // that only differs by a fragment is the same remote wearing a hat.
+    const throwawayRemote = join(dataDir, "throwaway.git");
+    await cloneBare(fixture.appClone, throwawayRemote);
+
+    const created = await routes.projects.POST(
+      post("http://localhost/api/projects", {
+        gitUrl: `file://${throwawayRemote}`,
+        name: "throwaway",
+      }),
+    );
+    const { project } = (await created.json()) as { project: { id: string; clonePath: string } };
+    await projectReady(project.id);
+    expect(existsSync(project.clonePath)).toBe(true);
+
+    const response = await routes.project.DELETE(
+      new Request("http://localhost"),
+      params(project.id),
+    );
+    expect(response.status).toBe(200);
+    expect(existsSync(project.clonePath)).toBe(false);
+    // The project's directory too, not just the bare repo inside it. Checking
+    // only the clone passed while an empty directory was left behind for every
+    // project ever deleted.
+    expect(existsSync(dirname(project.clonePath))).toBe(false);
+  }, 120_000);
 });

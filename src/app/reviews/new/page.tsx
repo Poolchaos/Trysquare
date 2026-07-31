@@ -48,7 +48,11 @@ const EFFORTS = [
 
 function NewReview() {
   const router = useRouter();
-  const projectId = useSearchParams().get("projectId") ?? "";
+  const search = useSearchParams();
+  const projectId = search.get("projectId") ?? "";
+  // Arrived from a branch row on the project page, which already made this
+  // choice; making it again would be busywork.
+  const prefilledBranch = search.get("fromBranch") ?? "";
 
   const [branches, setBranches] = useState<Branch[] | null>(null);
   const [stale, setStale] = useState<string | null>(null);
@@ -56,7 +60,7 @@ function NewReview() {
   const [models, setModels] = useState<Model[]>([]);
   const [filter, setFilter] = useState("");
 
-  const [fromBranch, setFromBranch] = useState("");
+  const [fromBranch, setFromBranch] = useState(prefilledBranch);
   const [intoBranch, setIntoBranch] = useState("");
   const [rulesetId, setRulesetId] = useState("");
   const [model, setModel] = useState("");

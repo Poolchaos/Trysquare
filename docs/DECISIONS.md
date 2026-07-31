@@ -677,3 +677,17 @@ verified evidence, in writing, here.
   cancelled and failed from V1 (D-12 now fully implemented). The confirmation
   screen was the last thing that needed the checkout; the bundle and the logs
   stay as the evidence behind the report.
+- 2026-07-31 DECIDED (V3): deleting a project removes its whole directory
+  under the data root, not only the bare clone inside it. Found by driving the
+  live server rather than by the test, which asserted on the clone path and so
+  passed while an empty directory was left behind for every project ever
+  deleted. The test now asserts the parent is gone too.
+- 2026-07-31 DECIDED (V3): the project detail endpoint returns the projects
+  that could still be linked, excluding itself and anything already linked, so
+  the form cannot offer a choice the repository would refuse. The repository's
+  own errors for a self-link and a duplicate are passed through verbatim
+  rather than restated in different words on the route.
+- 2026-07-31 DECIDED (V3): a branch row links to the new-review screen with
+  the branch already chosen. Arriving at a form that has forgotten the choice
+  just made is the kind of small friction that makes a tool feel like
+  paperwork.
