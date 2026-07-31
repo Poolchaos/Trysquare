@@ -158,6 +158,8 @@ export const reviews = sqliteTable(
     model: text("model").notNull(),
     profileId: text("profile_id").notNull(),
     engineMode: text("engine_mode").notNull(),
+    /** Reasoning effort, fixed at creation so a resume cannot change it. */
+    effort: text("effort").notNull().default("high"),
 
     status: text("status").notNull(),
     currentStage: text("current_stage"),

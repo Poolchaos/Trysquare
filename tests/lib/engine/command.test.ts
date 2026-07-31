@@ -54,6 +54,13 @@ describe("stage arguments", () => {
     expect(valueAfter(buildStageArgs({ ...base, resumeSessionId: "s-1" }), "--resume")).toBe("s-1");
   });
 
+  it("asks for an effort level only when one was chosen", () => {
+    // Omitted rather than defaulted, so an unset effort leaves the choice to
+    // the CLI instead of this app quietly deciding how hard to think.
+    expect(buildStageArgs(base)).not.toContain("--effort");
+    expect(valueAfter(buildStageArgs({ ...base, effort: "max" }), "--effort")).toBe("max");
+  });
+
   it("passes the model id through untouched", () => {
     expect(valueAfter(buildStageArgs(base), "--model")).toBe("claude-fable-5[1m]");
   });

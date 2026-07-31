@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import type { ReviewEffort } from "@/lib/domain/enums";
 import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
 import { importProtocol } from "@/lib/rulesets/import";
 import { bundleDir, logsDir, runDir, worktreeRepoDir, worktreeRootDir } from "@/lib/paths";
@@ -129,7 +130,7 @@ afterEach(() => {
 });
 
 /** A review of the app alone, or of the app and its dependency together. */
-function seedReview(options: { linked?: boolean } = {}): string {
+function seedReview(options: { linked?: boolean; effort?: ReviewEffort } = {}): string {
   const project = createProject(db, {
     name: "app",
     gitUrl: "git@example.com:acme/app.git",
@@ -156,6 +157,7 @@ function seedReview(options: { linked?: boolean } = {}): string {
     model: "claude-fable-5[1m]",
     profileId: "full-context",
     engineMode: "headless",
+    ...(options.effort === undefined ? {} : { effort: options.effort }),
     ...(linked
       ? {
           linked: {
@@ -618,5 +620,30 @@ describe("cancelling a run", () => {
       "s2_comprehension",
       "s3_adversarial",
     ]);
+  }, 120_000);
+});
+
+describe("how hard the model is asked to think", () => {
+  it("sends the effort the review was created with, on every stage", async () => {
+    const reviewId = seedReview({ effort: "max" });
+    writeIdealAnswers();
+
+    await run(reviewId);
+
+    const calls = recordedArgv();
+    expect(calls).toHaveLength(5);
+    for (const [index, args] of calls.entries()) {
+      expect(args[args.indexOf("--effort") + 1], `call ${index + 1}`).toBe("max");
+    }
+  }, 120_000);
+
+  it("defaults to thinking hard, because that is what a review is for", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+
+    await run(reviewId);
+
+    const first = recordedArgv()[0] ?? [];
+    expect(first[first.indexOf("--effort") + 1]).toBe("high");
   }, 120_000);
 });

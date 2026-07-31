@@ -128,6 +128,8 @@ export interface EngineRunnerOptions {
   /** Full model id. Aliases resolve to a previous generation. */
   model: string;
   timeoutMs: number;
+  /** How hard the model is asked to think. Unset leaves it to the CLI. */
+  effort?: string | undefined;
   directives: readonly ImportedDirective[];
   rules: readonly ImportedRule[];
   claudePath?: string | undefined;
@@ -173,6 +175,7 @@ export function createEngineRunner(options: EngineRunnerOptions): EngineRunner {
       systemPrompt,
       model: options.model,
       outputFormat: "stream-json",
+      ...(options.effort === undefined ? {} : { effort: options.effort }),
       cwd: options.worktreeRoot,
       timeoutMs: options.timeoutMs,
       logPath: join(options.logsDir, `${request.stage}.log`),
@@ -225,6 +228,7 @@ export function createEngineRunner(options: EngineRunnerOptions): EngineRunner {
       systemPrompt,
       model: options.model,
       outputFormat: "stream-json",
+      ...(options.effort === undefined ? {} : { effort: options.effort }),
       cwd: options.worktreeRoot,
       timeoutMs: options.timeoutMs,
       logPath: join(options.logsDir, `${request.stage}.repair.log`),

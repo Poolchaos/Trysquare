@@ -10,3 +10,4 @@ pulled deliberately.
   means storing a credential, which SECURITY.md says the app never does.
   Consider the no-credential route first (export the report and hand it to the
   user's own mail client) with real SMTP as a clearly labelled opt-in.
+- 2026-07-31 Reasoning effort is per review (low/medium/high/max, default high). No tier exists between high and max: the CLI accepts only those four.

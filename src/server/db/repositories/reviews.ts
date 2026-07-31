@@ -10,7 +10,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { newId, nowIso } from "@/lib/ids";
-import type { EngineMode, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
+import type { EngineMode, ReviewEffort, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
 import {
   ACTIVE_REVIEW_STATUSES,
   type ReviewStatus,
@@ -56,6 +56,7 @@ export interface CreateReviewInput {
   mergeBaseCommit: string;
   model: string;
   profileId: ReviewProfile;
+  effort?: ReviewEffort;
   engineMode: EngineMode;
   linked?: {
     projectId: string;
@@ -85,6 +86,7 @@ export function createReview(db: Db, input: CreateReviewInput): Review {
     linkedMergeBaseCommit: input.linked?.mergeBaseCommit ?? null,
     model: input.model,
     profileId: input.profileId,
+    effort: input.effort ?? "high",
     engineMode: input.engineMode,
     status: "draft" satisfies ReviewStatus,
     currentStage: null,

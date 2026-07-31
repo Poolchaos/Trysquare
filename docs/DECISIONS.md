@@ -494,3 +494,19 @@ verified evidence, in writing, here.
   scratch probe from an earlier session that explored this no longer runs. W5
   owns the fix, which is to freeze the context window onto the review the way
   the ruleset is frozen, so a resumed run batches the way the original did.
+- 2026-07-31 DECIDED (maintainer request): a review records how hard the model
+  should think, and the engine passes it as `--effort` on every stage. The
+  levels are low, medium, high and max, read from the CLI's own validator on
+  2026-07-31 rather than from its help text, which lists only the first three
+  and is out of date. There is no tier between high and max, so the four
+  levels asked for (medium, hard, extra hard, max) map to three.
+- 2026-07-31 DECIDED: effort is fixed when a review is created, not changed
+  while one runs. The resume key covers the question a stage was asked, not
+  how hard it was asked to think, so a stage answered at low effort and
+  replayed after a change to max would report a thoroughness the answer never
+  had. Choosing differently means starting a new review.
+- 2026-07-31 DECIDED: the default effort is high. This app exists to find
+  defects a careful reviewer would find, so the cheap default is the wrong
+  one; max stays a deliberate choice because it costs materially more.
+  Unset passes no flag at all, leaving the decision to the CLI, rather than
+  this app quietly deciding on the user's behalf.

@@ -27,7 +27,12 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import type { EngineEvent } from "@/lib/engine/events";
-import { reviewProfileSchema, type ReviewStage, type RulesetTier } from "@/lib/domain/enums";
+import {
+  reviewEffortSchema,
+  reviewProfileSchema,
+  type ReviewStage,
+  type RulesetTier,
+} from "@/lib/domain/enums";
 import {
   ACTIVE_REVIEW_STATUSES,
   canTransitionReview,
@@ -438,6 +443,7 @@ function buildRunner(
     logsDir: logsDirFor(dataDir, reviewId),
     model: review.model,
     timeoutMs: timeoutMinutes * 60_000,
+    effort: reviewEffortSchema.parse(review.effort),
     directives: snapshot.directives,
     rules: snapshot.rules,
     ...((options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH)

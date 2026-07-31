@@ -56,6 +56,19 @@ export const REVIEW_PROFILES = [
 export const reviewProfileSchema = z.enum(REVIEW_PROFILES);
 export type ReviewProfile = z.infer<typeof reviewProfileSchema>;
 
+/**
+ * How hard the model is asked to think.
+ *
+ * These four are what the CLI accepts, read from its own validator rather than
+ * its help text, which is out of date and omits `max`. There is no tier
+ * between high and max. Fixed when a review is created rather than changeable
+ * while one runs: a stage answered at one effort and replayed at another would
+ * report a thoroughness the answer never had.
+ */
+export const REVIEW_EFFORTS = ["low", "medium", "high", "max"] as const;
+export const reviewEffortSchema = z.enum(REVIEW_EFFORTS);
+export type ReviewEffort = z.infer<typeof reviewEffortSchema>;
+
 /** The AI stages, in execution order. S0 is deterministic and has no row. */
 export const REVIEW_STAGES = [
   "s1_risk",

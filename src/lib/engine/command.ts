@@ -19,6 +19,8 @@ export interface StageCommandOptions {
   resumeSessionId?: string | undefined;
   /** Empty disables every tool, which is what a probe wants. */
   tools?: readonly string[];
+  /** How hard to think. Omitted entirely when unset, so the CLI decides. */
+  effort?: string | undefined;
   maxBudgetUsd?: number | undefined;
 }
 
@@ -62,6 +64,11 @@ export function buildStageArgs(options: StageCommandOptions): string[] {
 
   // stream-json only emits events in print mode when verbose is set.
   if (options.outputFormat === "stream-json") args.push("--verbose");
+
+  // Verified against the CLI on 2026-07-31: it accepts low, medium, high and
+  // max, and rejects anything else at argument parsing. Its --help text lists
+  // only the first three, so max is undocumented rather than unsupported.
+  if (options.effort !== undefined) args.push("--effort", options.effort);
 
   if (options.resumeSessionId) args.push("--resume", options.resumeSessionId);
   if (options.maxBudgetUsd !== undefined) {

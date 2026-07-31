@@ -1,0 +1,1 @@
+ALTER TABLE `reviews` ADD `effort` text DEFAULT 'high' NOT NULL;
