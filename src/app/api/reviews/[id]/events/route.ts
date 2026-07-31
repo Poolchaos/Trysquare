@@ -5,8 +5,8 @@
  * SQLite handle and spawns processes, neither of which the edge runtime can do.
  */
 
-import { jobManager } from "@/server/jobs/manager";
 import { reviewEventStream } from "@/server/jobs/stream";
+import { runtime as appRuntime } from "@/server/runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,5 +16,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const { id } = await context.params;
-  return reviewEventStream(jobManager(), id, request);
+  // Through runtime() like every other handler, so a stream opened as the
+  // first request after a restart still finds an initialised manager.
+  return reviewEventStream(appRuntime().manager, id, request);
 }

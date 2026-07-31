@@ -614,3 +614,26 @@ verified evidence, in writing, here.
 - 2026-07-31 DECIDED (W7): no colour in the demo output. Escape sequences are
   control characters, which the house style gate refuses, and the output is
   written to a file as evidence where escapes are noise rather than emphasis.
+- 2026-07-31 FIXED: the dev server flagged instrumentation.ts on every
+  compile ("A Node.js module is loaded ('node:os') which is not supported in
+  the Edge Runtime"). Next compiles the instrumentation hook for its edge
+  runtime as well as Node, and the edge compiler statically flags any node:
+  import it can see, including one inside the NEXT_RUNTIME guard's untaken
+  branch. The hook now imports nothing: it guards, then dynamically imports
+  instrumentation-node.ts, which simply calls runtime(), the same idempotent
+  door every route handler uses. The SSE events route previously bypassed
+  that door by calling jobManager() directly, and would have thrown if it
+  were the first request after a restart; it goes through runtime() now.
+- 2026-07-31 ACCEPTED: one Turbopack build warning remains ("Encountered
+  unexpected file in NFT list"). Root cause established, not assumed: the
+  engine's process spawner opens per-review log streams at paths only known
+  at run time, and Next's file tracer treats a filesystem operation with a
+  dynamic path as "the whole project might ship", so the standalone output
+  manifest over-includes. The paths cannot be static, because they live
+  under the user's data directory per review. The consequence is confined
+  to the standalone-output file manifest, which this app does not use: it
+  runs with next start from the repository. A second cause, the migrations
+  folder joined from import.meta.url up to the repository root, was real
+  and is fixed with the documented turbopackIgnore comment. Re-check
+  trigger: if the app ever adopts output "standalone", this acceptance is
+  void and the warning must be resolved.

@@ -13,9 +13,12 @@ import type { Db } from "./client";
 
 // Assembled from parts rather than written as one URL literal, because a
 // bundler reads `new URL("../../../drizzle", import.meta.url)` as a module it
-// should resolve and fails the build. This is a directory read at run time.
+// should resolve and fails the build. The ignore comment stops Turbopack's
+// file tracer from reading a join that reaches the repository root as "the
+// whole repository ships": this is a directory read at run time, never
+// bundled.
 const MIGRATIONS_FOLDER = join(
-  dirname(fileURLToPath(import.meta.url)),
+  /* turbopackIgnore: true */ dirname(fileURLToPath(import.meta.url)),
   "..",
   "..",
   "..",

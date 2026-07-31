@@ -1,29 +1,20 @@
 /**
  * What runs once, when the server starts.
  *
- * Next calls `register()` a single time per server process, which is the only
- * hook that fits work that must not run per request: opening the database,
- * migrating it, and recovering reviews that a previous process left marked as
- * running. A review in that state cannot be running, because nothing survived
- * the restart that could be running it, and until it is recovered it can
- * neither be started nor cancelled.
+ * Next compiles this file for its edge runtime as well as for Node, and the
+ * edge compiler statically flags any node: import it can see, including one
+ * inside an unreached branch. So this file imports nothing at all: the guard
+ * decides the runtime, and the Node-only work lives in `instrumentation-node`,
+ * reached through a dynamic import the edge build does not follow.
  *
- * Every import is inside the function and behind the runtime check. Next builds
- * this file for its edge runtime as well, where none of it can load, and a
- * top-level import of anything touching node:path fails that build.
+ * The work itself is opening the database, migrating it, and recovering
+ * reviews a previous process left marked as running. A review in that state
+ * cannot be running, because nothing survived the restart that could be
+ * running it, and until it is recovered it can neither be started nor
+ * cancelled.
  */
 
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-
-  const { homedir } = await import("node:os");
-  const { dbPath, resolveDataDir } = await import("@/lib/paths");
-  const { createDb } = await import("@/server/db/client");
-  const { runMigrations } = await import("@/server/db/migrate");
-  const { jobManager } = await import("@/server/jobs/manager");
-
-  const dataDir = resolveDataDir(process.env, homedir());
-  const db = createDb(dbPath(dataDir));
-  runMigrations(db);
-  jobManager().init({ db, dataDir });
+  await import("./instrumentation-node");
 }
