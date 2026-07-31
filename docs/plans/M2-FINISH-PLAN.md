@@ -252,6 +252,16 @@ FAKE_CLAUDE_RECORD of a live stage).
 
 ### W5. Pause, resume, and determinism proofs
 
+First, the defect W4 found and recorded: a resumed review re-asks the
+verification stage, because candidates are recreated with fresh ids and the
+verification prompt embeds them, so its prompt hash moves. Fix it by keying
+the verification contract on place in the code (path and line range) rather
+than on a candidate id, which is the shape the fake CLI and the ideal-answers
+helper already use, and which removes the dependency on id stability
+altogether. The existing test that records the current behaviour flips to
+asserting that every stage replays and that a fully resumed run makes no
+model call at all.
+
 Service-level tests that exercise section 0 end to end, all with
 `FAKE_CLAUDE_FAIL_AT`:
 
@@ -388,7 +398,7 @@ maintainer at the top of the demo output directory:
 | W1 | migrations 0002-0003, stage-executions and rulesets repositories, setCurrentStage, deleteAllForReview, stageSchemaFor export | -          | DONE   |
 | W2 | fake CLI script mode and FAIL_AT, ideal-answers helper, quality-gate refactor onto it | -          | DONE   |
 | W3 | checkpointing runner and its tests                          | W1, W2     | DONE   |
-| W4 | review service, artifact lifecycle, its tests               | W1, W2, W3 |        |
+| W4 | review service, artifact lifecycle, its tests               | W1, W2, W3 | DONE   |
 | W5 | pause/resume/cancel determinism tests                       | W4         |        |
 | W6 | bus, manager, instrumentation, SSE route, tests             | W4         |        |
 | W7 | demo script, tsx alias proof, npm script                    | W2, W6     |        |

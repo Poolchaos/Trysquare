@@ -140,39 +140,54 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   const { db, reviewId } = input;
 
   // S0: everything deterministic, before any model is involved.
-  const ledgerFiles = recordChangedFiles(
-    db,
-    reviewId,
-    input.files.map((entry) => ({
-      repo: entry.repo,
-      path: qualified(entry.slug, entry.file.path),
-      changeType: entry.file.changeType,
-      oldPath: entry.file.oldPath ?? null,
-      hunks: entry.file.hunks.map((hunk) => ({
-        hunkIndex: hunk.hunkIndex,
-        oldStart: hunk.oldStart,
-        oldLines: hunk.oldLines,
-        newStart: hunk.newStart,
-        newLines: hunk.newLines,
-      })),
-    })),
-  );
+  //
+  // Seeded once per review, not once per run. The inventory is derived from
+  // commits that cannot move, so a resumed run would insert a second identical
+  // set of rows, and every count the coverage report makes would then be
+  // double what the change set actually contains. Existing rows are the same
+  // rows this would have written, and the dispositions already recorded
+  // against them are the ones being resumed.
+  const alreadySeeded = listLedgerFiles(db, reviewId).length > 0;
+
+  const ledgerFiles = alreadySeeded
+    ? listLedgerFiles(db, reviewId)
+    : recordChangedFiles(
+        db,
+        reviewId,
+        input.files.map((entry) => ({
+          repo: entry.repo,
+          path: qualified(entry.slug, entry.file.path),
+          changeType: entry.file.changeType,
+          oldPath: entry.file.oldPath ?? null,
+          hunks: entry.file.hunks.map((hunk) => ({
+            hunkIndex: hunk.hunkIndex,
+            oldStart: hunk.oldStart,
+            oldLines: hunk.oldLines,
+            newStart: hunk.newStart,
+            newLines: hunk.newLines,
+          })),
+        })),
+      );
 
   const sweepOutcome = runSweeps(
     input.files.map((entry) => ({ repo: entry.repo, file: entry.file })),
     input.rules,
   );
   // A partial sweep finds fewer hits, and fewer hits looks like cleaner code.
+  // Run on every entry, resumed or not: it is the check on the sweep itself,
+  // and skipping it would let a resumed run proceed on an unverified sweep.
   assertSweepComplete(sweepOutcome);
 
-  recordSweepHits(
-    db,
-    reviewId,
-    sweepOutcome.hits.map((hit) => {
-      const entry = input.files.find((f) => f.file.path === hit.path && f.repo === hit.repo);
-      return { ...hit, path: qualified(entry?.slug ?? "", hit.path) };
-    }),
-  );
+  if (!alreadySeeded) {
+    recordSweepHits(
+      db,
+      reviewId,
+      sweepOutcome.hits.map((hit) => {
+        const entry = input.files.find((f) => f.file.path === hit.path && f.repo === hit.repo);
+        return { ...hit, path: qualified(entry?.slug ?? "", hit.path) };
+      }),
+    );
+  }
 
   const content: StageContentInput = {
     files: input.files,

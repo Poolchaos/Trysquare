@@ -435,3 +435,62 @@ verified evidence, in writing, here.
   number the user makes decisions with. A replay writes no row and adds no
   usage, which is what keeps a resumed review's total equal to what was
   actually spent.
+- 2026-07-30 FOUND (W4, fix owed by W5): resuming a review re-asks the
+  verification stage, breaking the architecture's promise that a completed
+  stage is never re-run. Candidates are wiped and recreated on re-entry and
+  each is given a fresh ULID, so the verification prompt, which embeds those
+  ids, is a different question from the one the interrupted run asked. The
+  checkpointing runner then correctly refuses to replay across that change.
+  Confirmed empirically, not inferred: a review paused at verification and
+  resumed records two verification rows whose prompt hashes differ, while
+  every earlier stage replays. Correctness is unaffected, cost is not: this
+  re-pays for the most expensive stage. The fix belongs with W5, which owns
+  resume determinism, and is either deterministic candidate ids derived from
+  the finding's content or a verification contract keyed by place in the code
+  rather than by id. The second is the better shape, because the fake CLI and
+  the ideal-answers helper already match verdicts to candidates by path and
+  line, and it removes the dependency on id stability altogether.
+- 2026-07-30 DECIDED (W4): S0 seeding runs once per review, not once per run.
+  The inventory is derived from commits that cannot move, so a resumed run was
+  inserting a second identical set of ledger files and hunks, and every count
+  the coverage report states about the change set would have been double what
+  the change set contains. Found by running a resume rather than by reading:
+  the mutation that restores the old behaviour fails the resume test.
+- 2026-07-30 DECIDED (W4): the plan's single `removeReviewArtifacts` is split
+  in two. Removing the run directory on every terminal transition would delete
+  the bundle and the stage logs at exactly the moment someone wants to read
+  them, and T8 requires that evidence be kept until the review is deleted.
+  `removeReviewWorktrees` removes the checked-out copies and the worktree
+  root; `removeReviewArtifacts` removes the evidence too and is for deletion
+  alone.
+- 2026-07-30 DECIDED (W4): the review's frozen ruleset is settled before the
+  review is transitioned to running. A review that was never going to be able
+  to start should not first look started and then fail.
+- 2026-07-30 FIXED (W4): a cancel arriving between stages was dropped, and the
+  run finished and reported itself completed. The engine hands the abort signal
+  to the process it spawns, which covers a cancel arriving while a stage is in
+  flight; between stages there is no child to kill and nothing was checking.
+  Found by a reproduction left from an earlier session, which passed, meaning
+  it was documenting the bug rather than the fix. The runner now checks the
+  signal at every stage boundary and once more before a review is called
+  finished. The stage already in flight still completes and is checkpointed,
+  so cancelling loses nothing that was paid for.
+- 2026-07-30 DECIDED (W4): recording how a run ended never throws. A cancel
+  from the job manager can land while a run is failing, and cancelled is
+  terminal, so transitioning anyway would throw from inside the catch block
+  and replace a real diagnosis with a state-machine complaint. The outcome
+  returned still describes what actually went wrong; the terminal status
+  stands.
+- 2026-07-30 DECIDED (W4): a review that names a linked repository but records
+  no pinned commits for it is refused rather than run. Reviewing the primary
+  alone would look complete while the half of the change that motivated
+  linking the two repositories went unread.
+- 2026-07-30 FOUND (W4, fix owed by W5): the resume key is sensitive to the
+  model registry as well as to the review. `contextWindowFor` returns
+  undefined when a model's probe has gone stale, which changes how the
+  adversarial stage batches, which changes its prompts, which changes their
+  hashes. A review resumed after its model's probe expired therefore re-asks
+  the adversarial stage. Read from the code rather than proven by a test; the
+  scratch probe from an earlier session that explored this no longer runs. W5
+  owns the fix, which is to freeze the context window onto the review the way
+  the ruleset is frozen, so a resumed run batches the way the original did.
