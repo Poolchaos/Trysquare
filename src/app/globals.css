@@ -35,7 +35,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  @theme {
+  :root {
     --color-surface: oklch(19% 0.008 250);
     --color-surface-raised: oklch(23% 0.009 250);
     --color-surface-sunken: oklch(16% 0.007 250);

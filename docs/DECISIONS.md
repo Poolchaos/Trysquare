@@ -787,3 +787,28 @@ verified evidence, in writing, here.
   timestamp, which is the real sequence, and a test reproducing the old
   ordering fails it about two runs in three. Recorded because the same trap
   applies anywhere else ULIDs are used as a tiebreak within one timestamp.
+- 2026-07-31 FIXED (V8): the light theme never rendered. Tailwind 4's `@theme`
+  does not honour being nested in a media query, so the dark block overwrote
+  the light values unconditionally and the built CSS contained no
+  prefers-color-scheme rule at all. The dark values are plain custom-property
+  overrides on `:root` now, which is what the components' var() references
+  actually read. Found by photographing both themes and noticing that the file
+  named light was dark, which is the whole reason the design doc calls both
+  themes first-class and says both are screenshotted.
+- 2026-07-31 DECIDED (V8): the browser journey is one test with named steps
+  rather than several tests. Playwright gives every test a fresh page, so a
+  journey split into tests is a journey that starts over each time. Its steps
+  depend on each other because the flow does.
+- 2026-07-31 DECIDED (V8): the e2e web server is never reused
+  (`reuseExistingServer: false`). Reusing one would run the journey against a
+  server started without the fake engine, which is exactly the mistake that
+  spent real usage on 2026-07-31. A port already in use fails loudly instead.
+- 2026-07-31 DECIDED (V8): screenshots capture the body element with
+  animations frozen, not the full page. The rail polls for a running review, so
+  the page is never idle and a full-page capture intermittently failed
+  mid-repaint; freezing animations also makes two photographs of one screen
+  identical, which is what evidence has to be.
+- 2026-07-31 NOTED (V8): a test asserting the light theme was itself wrong
+  before it was right. Chromium reports these colours as `lab()`, where the
+  first channel is lightness on a 0 to 100 scale; summing the channels read
+  98.8 as "dark". The helper now normalises lab, oklch and rgb to one scale.

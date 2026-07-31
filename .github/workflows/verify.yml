@@ -18,6 +18,12 @@ jobs:
 
       - run: npm ci
 
-      # The same gate contributors run locally, including the production
-      # build. Nothing is checked here that ./verify.sh does not check.
-      - run: ./verify.sh --build
+      # The browser the journey runs in. Only chromium: the app is a local
+      # tool, and a second engine would double the run for no question it
+      # answers.
+      - run: npx playwright install --with-deps chromium
+
+      # The same gate contributors run locally, plus the production build and
+      # the browser journey. Nothing is checked here that ./verify.sh does not
+      # check; the local default stays fast by leaving these two off.
+      - run: ./verify.sh --build --e2e
