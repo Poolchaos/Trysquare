@@ -351,7 +351,7 @@ confirms the wiring.
 | V6 | resume/queued/merged/delete UI, settings editor, probe buttons | V2         | DONE   |
 | V7 | rulesets detail, enable toggle, snapshot filter, export       | V1         | DONE   |
 | V8 | e2e journey, theme screenshots, design audit, CI --e2e        | V2-V7      | DONE   |
-| V9 | PROJECT-STATE, indexes, FG-2 checklist and evidence, G1 row   | V8         |        |
+| V9 | PROJECT-STATE, indexes, FG-2 checklist and evidence, G1 row   | V8         | DONE   |
 
 ## 3. Decisions fixed by this plan (append to DECISIONS.md as work lands)
 

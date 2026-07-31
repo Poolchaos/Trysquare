@@ -812,3 +812,8 @@ verified evidence, in writing, here.
   before it was right. Chromium reports these colours as `lab()`, where the
   first channel is lightness on a 0 to 100 scale; summing the channels read
   98.8 as "dark". The helper now normalises lab, oklch and rgb to one scale.
+- 2026-07-31 DECIDED (V9): gate G1 is recorded as AWAITING VERDICT rather than
+  passed. The fake-engine half is complete and its evidence is captured, but
+  the half that decides whether findings are worth reading needs a real model
+  and the maintainer's usage. Nothing in this repository marks a gate passed,
+  which is the point of a gate.

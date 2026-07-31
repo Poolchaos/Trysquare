@@ -434,18 +434,25 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
 | T8   | T5         | DONE   |
 | T9   | T8         | DONE   |
 | FG-2 | T9 (+T7)   | GATE   |
-| T10  | T9         | TODO   |
-| T11  | T8         | TODO   |
-| T12  | T10        | TODO   |
-| T13  | T12        | TODO   |
+| T10  | T9         | DONE   |
+| T11  | T8         | DONE   |
+| T12  | T10        | DONE   |
+| T13  | T12        | DONE   |
 | T14  | T13, T11   | TODO   |
-| T15  | T10 (T9 for Mode B) | TODO |
+| T15  | T10 (T9 for Mode B) | PART |
 | FG-3 | T15        | GATE   |
-| T16  | T14, T15   | TODO   |
+| T16  | T14, T15   | PART   |
 | T17  | T13-T16    | TODO   |
 | T18  | T7, T9     | TODO   |
 | T19  | T17, T18   | TODO   |
 | FG-4 | T18, T19   | GATE   |
+
+Status as of 2026-07-31. T10 to T13 are done. T11's report renderer and export
+are done; T14 (the report screen's polish) is folded into the review page.
+T15 is partly done: rulesets can be imported, listed, inspected, exported, and
+individual rules switched on or off; the fuller manager is not built. T16 is
+partly done: the browser journey and both-theme screenshots exist and CI runs
+them, and the remaining hardening is unstarted. T17 to T19 are unstarted.
 
 T10 and T12 are partially built (routes for projects, branches, reviews,
 rulesets, models, events; screens for projects, new review, live review,

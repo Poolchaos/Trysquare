@@ -3,38 +3,31 @@
 The live cache. Current facts only; if a change makes a line here wrong,
 fixing it is part of that change. Dates are absolute (YYYY-MM-DD).
 
-Last verified: 2026-07-30
+Last verified: 2026-07-31
 
 ## Status
 
 - Gate G0 (brief and plan) PASSED 2026-07-30. Gate G1 (working pipeline) is
-  ACTIVE. Build order: `plans/BUILD-PLAN.md`.
-- WP-A (scaffold and gates) complete and verified 2026-07-30, not yet
-  committed (commits happen only when the maintainer asks).
-- WP-F is part built: the review pipeline runs end to end against a scripted
-  stage runner, with sweeps, reconciliation, the quotation check and the
-  coverage audit all enforced and mutation-tested.
-- All remaining work is planned in detail as `docs/plans/EXECUTION-ORDER.md`
-  (items T1-T19, three founder gates, decisions D-1..D-20 pre-resolved). The
-  driver works it top to bottom without asking between gates.
-- T1 to T7 are DONE. The engine spine is complete and the quality gate is in
-  place: a correct review of the seeded fixture carries through the pipeline
-  intact, a misquoted finding is discarded, and the clean files stay clean.
-  The gate is mutation-proven and runs in verify.sh.
-- T8, T9 and the FG-2 demo are planned to commit level in
-  `docs/plans/M2-FINISH-PLAN.md` (work items W1-W8): resume via checkpointed
-  stage outputs, the job manager and SSE, and the demo script. Next: W1.
-- The two external AI plans have not arrived. They fold in as spec
-  amendments when they do; they do not block the build.
+  ACTIVE and its evidence is ready: see `plans/FG2-CHECKLIST.md`. The verdict
+  is the maintainer's, and nothing in this repository marks it passed.
+- The app is usable end to end. A person can add a project from a git URL, see
+  its branches, set up a review with a pre-flight estimate, watch it run,
+  decide every finding, complete it, and export a report.
+- Milestone M2 is finished: `plans/M2-FINISH-PLAN.md` items W1-W8 are DONE,
+  including checkpointed resume, the job manager, SSE, and the demo script.
+- Milestone M3 is finished apart from these records:
+  `plans/M3-FINISH-PLAN.md` items V1-V8 are DONE. V9 is this file and the
+  FG-2 checklist.
+- The two external AI plans never arrived. They fold in as spec amendments if
+  they do; they did not block the build.
 
-## Stack (installed and proven 2026-07-30)
+## Stack (installed and proven 2026-07-31)
 
 Node 22.22.1, npm 11.17.0, git 2.43.0, Claude Code 2.1.71 on Linux.
 
 next ^16.2.12, react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
-drizzle-kit ^0.31.10, better-sqlite3 ^13.0.2 (native binding verified
-working), zod ^4.4.3, tailwindcss ^4.3.3, vitest ^4.1.10,
-@playwright/test ^1.62.0 (browsers NOT yet installed), eslint ^9.39.5,
+drizzle-kit ^0.31.10, better-sqlite3 ^13.0.2, zod ^4.4.3, tailwindcss ^4.3.3,
+vitest ^4.1.10, @playwright/test ^1.62.0 (chromium installed), eslint ^9.39.5,
 prettier ^3.9.6, ulid ^3.0.2.
 
 TypeScript runs strict plus `noUncheckedIndexedAccess`,
@@ -42,56 +35,94 @@ TypeScript runs strict plus `noUncheckedIndexedAccess`,
 
 ## Commands
 
-See `CLAUDE.md` section 3. `./verify.sh` is the single gate and passes as of
-2026-07-30, including `--build`. Its failure branches are proven, not
-assumed: non-zero exit, error marker printed while exiting 0, step timeout,
-and house-style violations (em dash and emoji) each fail the gate; a clean
-tree passes. `--e2e` has never run: there are no e2e specs yet and no
-Playwright browsers installed.
+See `CLAUDE.md` section 3. `./verify.sh` is the single gate. As of 2026-07-31
+it passes with `--build --e2e`: 566 unit tests passing and 6 skipped across 38
+files, plus 15 browser tests. CI runs `./verify.sh --build --e2e`; the local
+default leaves both off so it stays fast.
+
+`npm run demo:fixture -- --fake` reviews the seeded fixture end to end with no
+model and no money, scoring the result against the fixture's manifest.
+
+## Environment
+
+- `TRYSQUARE_DATA` - the data root, default `~/.local/share/trysquare`. Holds
+  `db.sqlite`, `projects/`, `runs/` and `exports/`.
+- `TRYSQUARE_CLAUDE_PATH` - the binary reviews run through, default `claude`
+  on PATH. Every run records which one it used as a run note.
+
+## Settings
+
+Stored in the `settings` table, edited on the settings screen. Only these keys
+are accepted; anything else is refused by name.
+
+- `maxConcurrentReviews` (default 1). Two reviews share one usage limit.
+- `stageTimeoutMinutes` (default 20).
+- `stageMaxBudgetUsd` (default 15). A ceiling on any single model call; zero
+  removes the ceiling.
 
 ## Structure
 
 - `CLAUDE.md` - charter. `docs/` - specs, ledgers, plans.
-- `src/lib/` - pure domain logic: `paths.ts`, `ids.ts`, `domain/enums.ts`,
-  `domain/state-machines.ts` (review and finding state machines).
-- `src/server/db/` - schema (14 tables), client, migrations, and
-  repositories for projects, reviews, ledger, findings, models, settings.
-- `src/lib/git/` - pure git logic: diff parsing, URL validation, changed
-  exported symbols.
-- `src/server/gitops/` - the only code that spawns git: clone, fetch, refs,
-  worktrees, bundle builder.
-- `src/lib/engine/` - CLI event schemas and command construction (pure).
-- `src/server/engine/` - the only code that spawns claude: stage runner,
-  stream decoding, model probing, auth status.
-- `src/lib/rulesets/` - protocol import with a fidelity gate, markdown
-  export, prompt composition, and rule/file batch planning.
-- `src/lib/review/` - mechanical sweeps, the quotation check, stage output
-  schemas, and stage reconciliation.
-- `src/server/review/` - the pipeline orchestrator.
+- `src/lib/` - pure and I/O free: paths, ids, domain enums and state machines,
+  git diff and URL parsing, changed exported symbols, mechanical sweeps, the
+  quotation check, stage schemas, budget arithmetic, ruleset import with a
+  fidelity gate, prompt composition, batch planning, and the report renderer.
+- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0007, and
+  repositories for projects, reviews, ledger, findings, models, rulesets,
+  settings and stage executions.
+- `src/server/gitops/` - the only code that spawns git.
+- `src/server/engine/` - the only code that spawns claude.
+- `src/server/review/` - the pipeline, the engine runner, the checkpointing
+  runner that makes a resumed stage free, the service that runs a review from
+  a row, merged detection, and the report assembler.
+- `src/server/jobs/` - the event bus, the job manager, and the SSE stream.
+- `src/server/api/` - one response shape for every route.
+- `src/app/api/` - 27 route handlers. `src/app/` - 9 screens.
+- `src/components/` - the shared UI vocabulary, the left rail, and the
+  confirmation queue.
+- `scripts/` - the house-style gate, the leak gate, the nothing-hidden gate,
+  and the fixture demo.
 - `tests/fixtures/example-protocol.md` - the public sample protocol the
   fidelity gate runs against.
-- `tests/fixtures/fake-claude.mjs` - stand-in CLI so engine tests are
-  hermetic and cost nothing.
-- `drizzle/` - the committed initial migration.
-- `src/app/` - Next App Router (placeholder page only).
-- `src/server/`, `src/components/` - not created yet.
-- `scripts/check-style.mjs` - house-style gate.
-- `tests/` - unit tests. `e2e/` - not created yet.
+- `tests/fixtures/fake-claude.mjs` - stand-in CLI, so tests are hermetic and
+  cost nothing.
+- `tests/` - unit and integration tests. `e2e/` - the browser journey and the
+  theme pass. `drizzle/` - eight committed migrations.
 - `verify.sh` - the gate.
 
-Runtime layout the app will create on disk is specced in
-`01-ARCHITECTURE.md` section 5 and implemented by `src/lib/paths.ts`.
+Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and
+implemented by `src/lib/paths.ts`.
+
+## Screens
+
+`/projects`, `/projects/[id]`, `/reviews`, `/reviews/new`, `/reviews/[id]`,
+`/rulesets`, `/rulesets/[id]`, `/settings`. The root redirects to projects.
 
 ## Known issues
 
+- One Turbopack build warning remains, traced to the engine's per-review log
+  paths, which cannot be static. It affects only the standalone output
+  manifest, which this app does not use. Adopting `output: "standalone"`
+  voids that acceptance; the re-check trigger is in `DECISIONS.md`.
 - 9 high npm advisories remain, all the same `brace-expansion` DoS reached
   through minimatch 3.x inside eslint and eslint-config-next's plugins. No
   compatible patched version exists; forcing the patched 5.0.8 breaks eslint
-  (verified). Lint-time dev dependency only. Reasoning and re-check trigger
-  in `DECISIONS.md` (2026-07-30 ACCEPTED RISK).
+  (verified). Lint-time dev dependency only. Reasoning and re-check trigger in
+  `DECISIONS.md` (2026-07-30 ACCEPTED RISK).
 - Next's build rewrites `tsconfig.json` (sets `jsx: react-jsx`, adds
   `.next/dev/types`). Run prettier on it after a build or the format gate
   fails on the next run.
+- An interrupted Playwright run can leave its server holding port 3100, and
+  the next `--e2e` then fails saying the port is in use. Reusing an existing
+  server is deliberately not allowed, because it would run the journey
+  against a server started without the fake engine.
+
+## Not built
+
+- More than one dependency per review: the model and the screens take a
+  single linked project.
+- Emailing a report (`plans/idea-inbox.md`).
+- Any authentication. This is a local, single-user tool by design.
 
 ## External services
 
