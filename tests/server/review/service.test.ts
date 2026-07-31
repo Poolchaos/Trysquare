@@ -26,9 +26,11 @@ import {
   createReview,
   getReview,
   markOrphanedReviewsInterrupted,
+  readRunNotes,
   requireReview,
   transitionReview,
 } from "@/server/db/repositories/reviews";
+import { SETTING_KEYS, writeSetting } from "@/server/db/repositories/settings";
 import { models, reviews } from "@/server/db/schema";
 import { recordProbeSuccess, registerCandidate } from "@/server/db/repositories/models";
 import { listLedgerFiles } from "@/server/db/repositories/ledger";
@@ -856,4 +858,76 @@ describe("telling the reviewer what the change was for", () => {
     expect(hashes).toHaveLength(2);
     expect(hashes[1]).not.toBe(before);
   }, 180_000);
+});
+
+describe("what a run is allowed to spend", () => {
+  it("caps every engine call at the configured budget", async () => {
+    // The ceiling exists for the call nothing else bounds: a runaway stage.
+    // Per call rather than per review, because the CLI flag is per call.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    const calls = recordedArgv();
+    expect(calls).toHaveLength(5);
+    for (const [index, args] of calls.entries()) {
+      expect(args[args.indexOf("--max-budget-usd") + 1], `call ${index + 1}`).toBe("15");
+    }
+  }, 120_000);
+
+  it("omits the ceiling only when someone set it to zero on purpose", async () => {
+    writeSetting(db, SETTING_KEYS.stageMaxBudgetUsd, 0);
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    for (const args of recordedArgv()) expect(args).not.toContain("--max-budget-usd");
+  }, 120_000);
+});
+
+describe("what the run says about itself", () => {
+  it("records which engine binary answered, with the model and effort", async () => {
+    // A fake-versus-real mixup must be readable from the run itself, not
+    // deduced from token counts afterwards.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    const note = readRunNotes(requireReview(db, reviewId)).find((entry) =>
+      entry.message.startsWith("Engine:"),
+    );
+    expect(note?.message).toContain("fake-claude.mjs");
+    expect(note?.message).toContain("claude-fable-5[1m]");
+    expect(note?.message).toContain("effort high");
+  }, 120_000);
+});
+
+describe("what is left on disk after a run stops", () => {
+  it("removes the worktrees when a run is cancelled, and keeps the evidence", async () => {
+    // D-12: cancelled will not resume, so the checkout goes; the bundle and
+    // logs stay, because a stopped run is exactly when someone reads them.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    const controller = new AbortController();
+    await run(reviewId, {
+      signal: controller.signal,
+      onStageLifecycle: (event: StageLifecycleEvent) => {
+        if (event.stage === "s2_comprehension") controller.abort();
+      },
+    });
+
+    expect(requireReview(db, reviewId).status).toBe("cancelled");
+    expect(existsSync(worktreeRootDir(dataDir, reviewId))).toBe(false);
+    expect(existsSync(join(bundleDir(dataDir, reviewId), "inventory.json"))).toBe(true);
+  }, 120_000);
+
+  it("keeps the worktrees while a run is paused, because it will resume", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    process.env.FAKE_CLAUDE_FAIL_AT = "3";
+    await run(reviewId);
+
+    expect(requireReview(db, reviewId).status).toBe("paused_limit");
+    expect(existsSync(worktreeRootDir(dataDir, reviewId))).toBe(true);
+  }, 120_000);
 });

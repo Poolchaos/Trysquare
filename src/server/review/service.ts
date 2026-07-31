@@ -87,6 +87,15 @@ import { runReviewPipeline, type PipelineResult, type StageRequest } from "./pip
 /** Twenty minutes. A stage that reads a large change set is not quick. */
 const DEFAULT_STAGE_TIMEOUT_MINUTES = 20;
 
+/**
+ * The default USD-equivalent ceiling per engine call.
+ *
+ * High enough that no honest stage on a large change set hits it, low enough
+ * that a runaway one is bounded. Zero in the setting disables the flag, which
+ * is a choice someone has to make on purpose.
+ */
+const DEFAULT_STAGE_BUDGET_USD = 15;
+
 export class ReviewNotRunnableError extends Error {
   constructor(
     readonly reviewId: string,
@@ -229,6 +238,16 @@ export async function prepareAndRun(
 
   transitionReview(db, reviewId, "running", { currentStage: null });
 
+  // Which binary answers matters as much as which model: a fake-versus-real
+  // mixup must be readable from the run itself, not deduced from token counts.
+  const enginePath = options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH;
+  appendRunNote(db, reviewId, {
+    kind: "note",
+    message:
+      `Engine: ${enginePath ?? "claude on PATH"}, model ${review.model}, ` +
+      `effort ${review.effort}.`,
+  });
+
   try {
     const sides = sidesOf(review, project, linkedProject, dataDir, reviewId);
     if (sides.length === 2 && repoSlug(project.name) === repoSlug(linkedProject?.name ?? "")) {
@@ -337,7 +356,7 @@ export async function prepareAndRun(
     transitionReview(db, reviewId, "awaiting_confirmation", { currentStage: null });
     return { kind: "completed", result };
   } catch (error) {
-    return recordFailure(db, reviewId, error, options.signal);
+    return recordFailure(db, reviewId, dataDir, error, options.signal);
   }
 }
 
@@ -431,6 +450,12 @@ function buildRunner(
     z.number().int().positive(),
     DEFAULT_STAGE_TIMEOUT_MINUTES,
   );
+  const budget = readSettingOr(
+    db,
+    SETTING_KEYS.stageMaxBudgetUsd,
+    z.number().nonnegative(),
+    DEFAULT_STAGE_BUDGET_USD,
+  );
 
   const noteStage = (stage: ReviewStage, kind: "live" | "replayed"): void => {
     setCurrentStage(db, reviewId, stage);
@@ -452,6 +477,7 @@ function buildRunner(
     effort: reviewEffortSchema.parse(review.effort),
     directives: snapshot.directives,
     rules: snapshot.rules,
+    ...(budget > 0 ? { maxBudgetUsd: budget } : {}),
     ...((options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH)
       ? { claudePath: options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH }
       : {}),
@@ -500,12 +526,13 @@ function ensureVerifying(db: Db, reviewId: string): void {
   }
 }
 
-function recordFailure(
+async function recordFailure(
   db: Db,
   reviewId: string,
+  dataDir: string,
   error: unknown,
   signal: AbortSignal | undefined,
-): RunOutcome {
+): Promise<RunOutcome> {
   const message = error instanceof Error ? error.message : String(error);
   const errorClass = error instanceof StageFailedError ? error.errorClass : undefined;
   const logPath = error instanceof StageFailedError ? error.detail.logPath : undefined;
@@ -517,6 +544,7 @@ function recordFailure(
 
   if (errorClass === "cancelled" || signal?.aborted === true) {
     settle(db, reviewId, "cancelled");
+    await discardWorktrees(db, reviewId, dataDir);
     return { kind: "cancelled", reason: message };
   }
 
@@ -525,7 +553,25 @@ function recordFailure(
     message: logPath ? `${message} The stage log is at ${logPath}.` : message,
   });
   settle(db, reviewId, "failed");
+  await discardWorktrees(db, reviewId, dataDir);
   return { kind: "failed", reason: message, logPath };
+}
+
+/**
+ * Removes the checked-out copies after a run that will not resume (D-12:
+ * cancelled and failed here, complete when the confirmation flow lands).
+ * Best effort on purpose: a cleanup failure becomes a note, never a mask
+ * over the outcome that actually matters.
+ */
+async function discardWorktrees(db: Db, reviewId: string, dataDir: string): Promise<void> {
+  try {
+    await removeReviewWorktrees(db, reviewId, dataDir);
+  } catch (error) {
+    appendRunNote(db, reviewId, {
+      kind: "note",
+      message: `The worktrees could not be removed: ${error instanceof Error ? error.message : String(error)}`,
+    });
+  }
 }
 
 /**

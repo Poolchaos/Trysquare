@@ -91,10 +91,13 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         detail?: string;
       };
 
-      if (parsed.kind === "stage")
-        setLive((lines) => [...lines, `${parsed.stage} ${parsed.phase}`]);
-      if (parsed.kind === "engine") setLive((lines) => [...lines, `  ${parsed.detail}`]);
-      if (parsed.kind === "note") setLive((lines) => [...lines, `note: ${parsed.note?.message}`]);
+      // Kept as a bounded tail: a long run emits thousands of engine lines,
+      // and the page only ever shows the most recent of them. The archive is
+      // the event log, not component state.
+      const push = (line: string) => setLive((lines) => [...lines, line].slice(-200));
+      if (parsed.kind === "stage") push(`${parsed.stage} ${parsed.phase}`);
+      if (parsed.kind === "engine") push(`  ${parsed.detail}`);
+      if (parsed.kind === "note") push(`note: ${parsed.note?.message}`);
 
       // Durable facts are written before they are announced, so a read here
       // always finds the row already changed.

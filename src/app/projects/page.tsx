@@ -122,16 +122,7 @@ export default function ProjectsPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        {project.cloneStatus === "ready" ? (
-                          <Link
-                            href={`/projects/${project.id}`}
-                            className="font-medium hover:underline"
-                          >
-                            {project.name}
-                          </Link>
-                        ) : (
-                          <span className="font-medium">{project.name}</span>
-                        )}
+                        <span className="font-medium">{project.name}</span>
                         {project.cloneStatus === "pending" ? (
                           <Badge tone="accent">cloning</Badge>
                         ) : project.cloneStatus === "failed" ? (

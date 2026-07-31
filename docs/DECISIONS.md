@@ -637,3 +637,22 @@ verified evidence, in writing, here.
   and is fixed with the documented turbopackIgnore comment. Re-check
   trigger: if the app ever adopts output "standalone", this acceptance is
   void and the warning must be resolved.
+- 2026-07-31 DECIDED (V1, D-30): every engine call carries --max-budget-usd
+  from the stageMaxBudgetUsd setting, default 15 USD-equivalent. Zero
+  disables the flag, which is a choice someone makes on purpose rather than
+  a default they fell into. Per call rather than per review, because the CLI
+  flag is per call; a runaway stage is bounded even when nothing else goes
+  wrong.
+- 2026-07-31 DECIDED (V1, D-31): nothing spends model usage without an
+  explicit user action: starting a review, pressing a probe button, or
+  running the demo without --fake. There is no automatic probing at startup
+  or anywhere else. Reason: the 2026-07-31 incident where a manual test
+  silently used the real CLI and spent about 0.50 USD-equivalent.
+- 2026-07-31 DECIDED (V1, D-32): every run opens with a run note naming the
+  engine binary it will use, the model and the effort, so a fake-versus-real
+  mixup is readable from the run itself instead of deduced from token counts.
+- 2026-07-31 DECIDED (V1, D-33): worktrees are removed when a run settles
+  cancelled or failed, and kept while it is paused, interrupted or awaiting
+  confirmation; complete joins the cleanup list when the confirmation flow
+  lands (D-12 as implemented). Cleanup is best effort: a failure to remove
+  becomes a run note, never a mask over the outcome that matters.

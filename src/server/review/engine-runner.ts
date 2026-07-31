@@ -130,6 +130,8 @@ export interface EngineRunnerOptions {
   timeoutMs: number;
   /** How hard the model is asked to think. Unset leaves it to the CLI. */
   effort?: string | undefined;
+  /** USD-equivalent ceiling per CLI call. Unset passes no flag. */
+  maxBudgetUsd?: number | undefined;
   directives: readonly ImportedDirective[];
   rules: readonly ImportedRule[];
   claudePath?: string | undefined;
@@ -182,6 +184,7 @@ export function createEngineRunner(options: EngineRunnerOptions): EngineRunner {
       model: options.model,
       outputFormat: "stream-json",
       ...(options.effort === undefined ? {} : { effort: options.effort }),
+      ...(options.maxBudgetUsd === undefined ? {} : { maxBudgetUsd: options.maxBudgetUsd }),
       cwd: options.worktreeRoot,
       timeoutMs: options.timeoutMs,
       logPath: join(options.logsDir, `${request.stage}.log`),
@@ -235,6 +238,7 @@ export function createEngineRunner(options: EngineRunnerOptions): EngineRunner {
       model: options.model,
       outputFormat: "stream-json",
       ...(options.effort === undefined ? {} : { effort: options.effort }),
+      ...(options.maxBudgetUsd === undefined ? {} : { maxBudgetUsd: options.maxBudgetUsd }),
       cwd: options.worktreeRoot,
       timeoutMs: options.timeoutMs,
       logPath: join(options.logsDir, `${request.stage}.repair.log`),

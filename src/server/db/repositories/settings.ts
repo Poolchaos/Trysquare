@@ -33,6 +33,8 @@ export function writeSetting(db: Db, key: string, value: unknown): void {
 export const SETTING_KEYS = {
   maxConcurrentReviews: "maxConcurrentReviews",
   stageTimeoutMinutes: "stageTimeoutMinutes",
+  /** USD-equivalent ceiling per engine call. Zero disables the ceiling. */
+  stageMaxBudgetUsd: "stageMaxBudgetUsd",
   defaultModel: "defaultModel",
   defaultEngineMode: "defaultEngineMode",
 } as const;
