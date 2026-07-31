@@ -95,10 +95,18 @@ describe("review lifecycle", () => {
   it("accumulates usage across stages without touching status", () => {
     const review = seedReview(db, seedProject(db).id);
     transitionReview(db, review.id, "running");
-    addReviewUsage(db, review.id, { inputTokens: 100, outputTokens: 20, costEquivalentUsd: 0.5 });
+    addReviewUsage(db, review.id, {
+      inputTokens: 100,
+      outputTokens: 20,
+      cacheCreationTokens: 0,
+      cacheReadTokens: 0,
+      costEquivalentUsd: 0.5,
+    });
     const after = addReviewUsage(db, review.id, {
       inputTokens: 50,
       outputTokens: 5,
+      cacheCreationTokens: 1200,
+      cacheReadTokens: 8000,
       costEquivalentUsd: 0.25,
     });
     expect(after.usageInputTokens).toBe(150);

@@ -60,6 +60,10 @@ describe("running a stage", () => {
     expect(usageOf(outcome.result)).toEqual({
       inputTokens: 100,
       outputTokens: 20,
+      // Reported separately by the CLI, and carried through rather than
+      // folded into the input count or dropped.
+      cacheCreationTokens: 300,
+      cacheReadTokens: 2000,
       costEquivalentUsd: 0.0042,
     });
     expect(contextWindowOf(outcome.result)).toBe(1_000_000);

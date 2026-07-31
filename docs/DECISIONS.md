@@ -567,3 +567,19 @@ verified evidence, in writing, here.
 - 2026-07-31 DECIDED (W6): the SSE stream takes a narrow watcher, not the
   manager. It reads a picture and listens for changes; nothing reachable from a
   route handler should be able to start or cancel a review.
+- 2026-07-31 FIXED: cached tokens are counted. The CLI reports
+  `cache_creation_input_tokens` and `cache_read_input_tokens` separately, the
+  event schema already parsed both, and `usageOf` then dropped them. A chained
+  stage sends most of its prompt as a cached read, so the recorded input count
+  was a small fraction of what the model actually read, and there was no way to
+  show how much the session chaining saved. Both are now carried to the stage
+  rows and the review totals. Counted separately rather than folded into the
+  input count, because a cached read costs a fraction of a fresh one and adding
+  them together would overstate the price.
+- 2026-07-31 NOTED: prompt caching itself is the CLI's, not this app's. What
+  this app controls is whether consecutive stages share a session, and they do:
+  S1 to S4 resume into one conversation, which is what lets the whole
+  accumulated context be a cached read rather than a fresh send. S5 is
+  deliberately excluded and pays full price for its prompt, which is the cost
+  of an independent check and is worth it. The `--resume` flags that make this
+  true are asserted at the command line by the scripted-pipeline test.

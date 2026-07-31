@@ -83,7 +83,13 @@ export interface StageResponse {
   /** The stage's JSON answer, still unvalidated. */
   output: unknown;
   sessionId: string;
-  usage?: { inputTokens: number; outputTokens: number; costEquivalentUsd: number };
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
+    costEquivalentUsd: number;
+  };
 }
 
 export type StageRunner = (request: StageRequest) => Promise<StageResponse>;

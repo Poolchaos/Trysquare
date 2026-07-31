@@ -32,7 +32,7 @@ import {
 import { models, reviews } from "@/server/db/schema";
 import { recordProbeSuccess, registerCandidate } from "@/server/db/repositories/models";
 import { listLedgerFiles } from "@/server/db/repositories/ledger";
-import { listForReview } from "@/server/db/repositories/stage-executions";
+import { listForReview, usageTotals } from "@/server/db/repositories/stage-executions";
 import { cloneBare, diffText, mergeBase, resolveCommit } from "@/server/gitops/repo";
 import { addWorktree } from "@/server/gitops/worktree";
 import {
@@ -770,5 +770,34 @@ describe("the window a review batches against", () => {
     await run(reviewId);
 
     expect(requireReview(db, reviewId).contextWindow).toBeNull();
+  }, 120_000);
+});
+
+describe("what the run actually cost", () => {
+  it("counts the cached tokens as well as the fresh ones", async () => {
+    // The CLI reports cached reads separately, and they are most of what a
+    // chained stage sends. Folding them into the input count would overstate
+    // the price; dropping them, which this used to do, understates what the
+    // model read and hides how much the session chaining saved.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    const review = requireReview(db, reviewId);
+    expect(review.usageInputTokens).toBe(500);
+    expect(review.usageCacheCreationTokens).toBe(5 * 300);
+    expect(review.usageCacheReadTokens).toBe(5 * 2000);
+  }, 120_000);
+
+  it("adds up to the same totals the stage rows hold", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    const totals = usageTotals(db, reviewId);
+    const review = requireReview(db, reviewId);
+    expect(totals.cacheReadTokens).toBe(review.usageCacheReadTokens);
+    expect(totals.cacheCreationTokens).toBe(review.usageCacheCreationTokens);
+    expect(totals.inputTokens).toBe(review.usageInputTokens);
   }, 120_000);
 });

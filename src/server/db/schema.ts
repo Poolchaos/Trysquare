@@ -171,6 +171,8 @@ export const reviews = sqliteTable(
     pausedReason: text("paused_reason"),
 
     usageInputTokens: integer("usage_input_tokens").notNull().default(0),
+    usageCacheCreationTokens: integer("usage_cache_creation_tokens").notNull().default(0),
+    usageCacheReadTokens: integer("usage_cache_read_tokens").notNull().default(0),
     usageOutputTokens: integer("usage_output_tokens").notNull().default(0),
     /** Informational only: what the same work would have cost at API rates. */
     costEquivalentUsd: real("cost_equivalent_usd").notNull().default(0),
@@ -238,6 +240,8 @@ export const stageExecutions = sqliteTable(
     /** The stage's validated answer, kept so a resume can replay it. */
     outputJson: text("output_json"),
     inputTokens: integer("input_tokens").notNull().default(0),
+    cacheCreationTokens: integer("cache_creation_tokens").notNull().default(0),
+    cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
     costEquivalentUsd: real("cost_equivalent_usd").notNull().default(0),
     errorClass: text("error_class"),

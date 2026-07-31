@@ -190,6 +190,8 @@ export function toEngineEvent(raw: unknown): EngineEvent {
 export interface StageUsage {
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
   costEquivalentUsd: number;
 }
 
@@ -197,6 +199,12 @@ export function usageOf(result: ResultEvent): StageUsage {
   return {
     inputTokens: result.usage?.input_tokens ?? 0,
     outputTokens: result.usage?.output_tokens ?? 0,
+    // Reported separately by the CLI and counted separately here. A cached
+    // read is most of what a chained stage sends and a fraction of the price,
+    // so folding it into the input count would overstate what the stage cost,
+    // and dropping it, as this did, understates what the model actually read.
+    cacheCreationTokens: result.usage?.cache_creation_input_tokens ?? 0,
+    cacheReadTokens: result.usage?.cache_read_input_tokens ?? 0,
     costEquivalentUsd: result.total_cost_usd,
   };
 }

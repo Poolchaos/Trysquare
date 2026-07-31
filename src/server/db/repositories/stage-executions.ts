@@ -34,7 +34,13 @@ export interface RecordAttemptInput {
   sessionId?: string | null;
   /** Present only on a succeeded attempt; it is what a replay returns. */
   outputJson?: string | null;
-  usage?: { inputTokens: number; outputTokens: number; costEquivalentUsd: number };
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
+    costEquivalentUsd: number;
+  };
   errorClass?: StageErrorClass | null;
   errorText?: string | null;
   logPath?: string | null;
@@ -54,6 +60,8 @@ export function recordAttempt(db: Db, input: RecordAttemptInput): StageExecution
     status: input.status,
     outputJson: input.outputJson ?? null,
     inputTokens: input.usage?.inputTokens ?? 0,
+    cacheCreationTokens: input.usage?.cacheCreationTokens ?? 0,
+    cacheReadTokens: input.usage?.cacheReadTokens ?? 0,
     outputTokens: input.usage?.outputTokens ?? 0,
     costEquivalentUsd: input.usage?.costEquivalentUsd ?? 0,
     errorClass: input.errorClass ?? null,
@@ -151,6 +159,8 @@ export function nextAttemptNumber(
 export interface UsageTotals {
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
   costEquivalentUsd: number;
   liveAttempts: number;
 }
@@ -165,6 +175,8 @@ export function usageTotals(db: Db, reviewId: string): UsageTotals {
   const rows = listForReview(db, reviewId);
   return {
     inputTokens: rows.reduce((total, row) => total + row.inputTokens, 0),
+    cacheCreationTokens: rows.reduce((total, row) => total + row.cacheCreationTokens, 0),
+    cacheReadTokens: rows.reduce((total, row) => total + row.cacheReadTokens, 0),
     outputTokens: rows.reduce((total, row) => total + row.outputTokens, 0),
     costEquivalentUsd: rows.reduce((total, row) => total + row.costEquivalentUsd, 0),
     liveAttempts: rows.length,

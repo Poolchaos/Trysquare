@@ -21,6 +21,8 @@ import type { RunNote } from "../db/repositories/reviews";
 export interface StageUsage {
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
   costEquivalentUsd: number;
 }
 

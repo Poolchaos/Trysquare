@@ -39,7 +39,13 @@ beforeEach(() => {
 
 afterEach(() => ctx.cleanup());
 
-const usage = { inputTokens: 100, outputTokens: 20, costEquivalentUsd: 0.5 };
+const usage = {
+  inputTokens: 100,
+  outputTokens: 20,
+  cacheCreationTokens: 0,
+  cacheReadTokens: 0,
+  costEquivalentUsd: 0.5,
+};
 
 const ask = (overrides: Partial<StageRequest> = {}): StageRequest => ({
   stage: "s1_risk",

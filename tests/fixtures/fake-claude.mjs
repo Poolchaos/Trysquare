@@ -96,8 +96,11 @@ const resultEvent = (overrides = {}) => ({
   usage: {
     input_tokens: 100,
     output_tokens: 20,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: 0,
+    // Non-zero on purpose. A chained stage sends most of its prompt as a
+    // cached read, and a test that only ever saw zeros here could not tell
+    // the counters were being dropped.
+    cache_creation_input_tokens: Number(process.env.FAKE_CLAUDE_CACHE_CREATION ?? 300),
+    cache_read_input_tokens: Number(process.env.FAKE_CLAUDE_CACHE_READ ?? 2000),
   },
   modelUsage: {
     [valueOf("--model") ?? "unknown"]: {

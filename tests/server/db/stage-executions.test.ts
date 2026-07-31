@@ -22,7 +22,13 @@ beforeEach(() => {
 
 afterEach(() => ctx.cleanup());
 
-const usage = { inputTokens: 100, outputTokens: 20, costEquivalentUsd: 0.5 };
+const usage = {
+  inputTokens: 100,
+  outputTokens: 20,
+  cacheCreationTokens: 0,
+  cacheReadTokens: 0,
+  costEquivalentUsd: 0.5,
+};
 
 describe("replaying a stage", () => {
   it("finds the stored answer for the same request", () => {
@@ -203,6 +209,8 @@ describe("the record of what a review spent", () => {
     expect(usageTotals(db, reviewId)).toEqual({
       inputTokens: 200,
       outputTokens: 40,
+      cacheCreationTokens: 0,
+      cacheReadTokens: 0,
       costEquivalentUsd: 1,
       liveAttempts: 2,
     });

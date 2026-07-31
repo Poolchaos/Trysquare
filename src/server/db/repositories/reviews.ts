@@ -87,6 +87,8 @@ export function createReview(db: Db, input: CreateReviewInput): Review {
     model: input.model,
     profileId: input.profileId,
     effort: input.effort ?? "high",
+    usageCacheCreationTokens: 0,
+    usageCacheReadTokens: 0,
     contextWindow: null,
     engineMode: input.engineMode,
     status: "draft" satisfies ReviewStatus,
@@ -181,12 +183,20 @@ export function setContextWindow(db: Db, reviewId: string, window: number | null
 export function addReviewUsage(
   db: Db,
   reviewId: string,
-  usage: { inputTokens: number; outputTokens: number; costEquivalentUsd: number },
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
+    costEquivalentUsd: number;
+  },
 ): Review {
   const review = requireReview(db, reviewId);
   db.update(reviews)
     .set({
       usageInputTokens: review.usageInputTokens + usage.inputTokens,
+      usageCacheCreationTokens: review.usageCacheCreationTokens + usage.cacheCreationTokens,
+      usageCacheReadTokens: review.usageCacheReadTokens + usage.cacheReadTokens,
       usageOutputTokens: review.usageOutputTokens + usage.outputTokens,
       costEquivalentUsd: review.costEquivalentUsd + usage.costEquivalentUsd,
     })

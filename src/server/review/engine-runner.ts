@@ -141,7 +141,13 @@ export interface EngineRunnerOptions {
         stage: ReviewStage;
         sessionId: string;
         attempt: number;
-        usage: { inputTokens: number; outputTokens: number; costEquivalentUsd: number };
+        usage: {
+          inputTokens: number;
+          outputTokens: number;
+          cacheCreationTokens: number;
+          cacheReadTokens: number;
+          costEquivalentUsd: number;
+        };
       }) => void)
     | undefined;
 }
@@ -276,6 +282,8 @@ export function createEngineRunner(options: EngineRunnerOptions): EngineRunner {
       sessionId: repair.sessionId,
       usage: {
         inputTokens: usage.inputTokens + repairUsage.inputTokens,
+        cacheCreationTokens: usage.cacheCreationTokens + repairUsage.cacheCreationTokens,
+        cacheReadTokens: usage.cacheReadTokens + repairUsage.cacheReadTokens,
         outputTokens: usage.outputTokens + repairUsage.outputTokens,
         costEquivalentUsd: usage.costEquivalentUsd + repairUsage.costEquivalentUsd,
       },
