@@ -510,3 +510,18 @@ verified evidence, in writing, here.
   one; max stays a deliberate choice because it costs materially more.
   Unset passes no flag at all, leaving the decision to the CLI, rather than
   this app quietly deciding on the user's behalf.
+- 2026-07-31 FIXED (W5): the verification stage no longer names candidates by
+  database id. Candidates are wiped and recreated whenever a review is
+  resumed, so an id made the question different on every re-entry and the
+  stage could never be replayed, breaking the architecture's promise that a
+  completed stage is never re-run. Each candidate now carries a label,
+  C1, C2 and so on, assigned by position when the prompt is built. Position is
+  fixed by the stage answers that produced the candidates, and those are
+  replayed byte for byte, so the question is stable. The change also removed a
+  test helper that had to read an id back out of the database to answer a
+  verification prompt.
+- 2026-07-31 DECIDED (W5): the label is positional rather than derived from
+  path and line range. Two candidates can legitimately sit on the same lines
+  under different rules, so a location is not unique, and disambiguating it
+  would have reintroduced ordering as a hidden dependency anyway. Position
+  states the dependency plainly.

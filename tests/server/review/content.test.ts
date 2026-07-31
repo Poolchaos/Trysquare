@@ -218,7 +218,7 @@ describe("cross-repo contract changes", () => {
 describe("the verification prompt", () => {
   const candidates = [
     {
-      findingId: "f1",
+      ref: "f1",
       path: "app/orders.ts",
       lineStart: 11,
       lineEnd: 11,

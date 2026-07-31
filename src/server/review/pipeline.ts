@@ -132,6 +132,16 @@ export interface PipelineResult {
 }
 
 /** Paths in the ledger are qualified by repository, as the model sees them. */
+/** The label a candidate is given in the verification prompt. */
+function refFor(index: number): string {
+  return `C${index + 1}`;
+}
+
+function indexOfRef(ref: string): number {
+  const parsed = Number.parseInt(ref.replace(/^C/i, ""), 10);
+  return Number.isFinite(parsed) ? parsed - 1 : -1;
+}
+
 function qualified(slug: string, path: string): string {
   return `${slug}/${path}`;
 }
@@ -372,8 +382,12 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         stage: "s5_verification",
         systemPrompt: input.systemPromptFor("s5_verification"),
         prompt: renderVerificationPrompt(
-          candidates.map((finding) => ({
-            findingId: finding.id,
+          candidates.map((finding, index) => ({
+            // Positional, because the candidate order is fixed by the stage
+            // answers that produced it, and those are replayed byte for byte.
+            // A database id here would change on every resume and the
+            // verification stage could never be replayed.
+            ref: refFor(index),
             path: finding.filePath,
             lineStart: finding.lineStart,
             lineEnd: finding.lineEnd,
@@ -392,7 +406,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   let killedByQuoteCheck = 0;
 
   for (const verdict of verification.verdicts) {
-    const finding = candidates.find((candidate) => candidate.id === verdict.findingId);
+    const finding = candidates[indexOfRef(verdict.ref)];
     if (!finding) continue;
 
     if (verdict.verdict === "killed") {

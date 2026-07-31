@@ -56,14 +56,14 @@ export interface IdealAnswerInput {
 }
 
 /**
- * A verdict the reviewer wants to give, before it knows what the finding will
- * be called.
+ * A verdict the reviewer wants to give, before it knows what the prompt will
+ * call each candidate.
  *
- * Candidate ids are database ids minted while the pipeline runs, so an answer
- * written in advance cannot name them. These are keyed by the place in the
- * code instead, and resolved to real ids at the moment the verification stage
- * asks its question. This is test plumbing, not product behaviour: a real
- * reviewer is handed the ids in its prompt.
+ * Labels are assigned by position when the verification prompt is built, so an
+ * answer written in advance cannot name them. These are keyed by the place in
+ * the code instead, and resolved to labels at the moment the stage asks its
+ * question. This is test plumbing, not product behaviour: a real reviewer is
+ * handed the labels in its prompt.
  */
 export interface VerdictByLine {
   path: string;
@@ -78,7 +78,7 @@ export interface IdealStageOutputs {
   s2: unknown;
   s3: unknown;
   s4: unknown;
-  /** Resolved to finding ids at run time; see VerdictByLine. */
+  /** Resolved to prompt labels at run time; see VerdictByLine. */
   s5ByLine: VerdictByLine[];
 }
 
@@ -229,12 +229,12 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
  */
 export function candidatesInPrompt(
   prompt: string,
-): { findingId: string; path: string; lineStart: number }[] {
+): { ref: string; path: string; lineStart: number }[] {
   const start = prompt.indexOf("{");
   const end = prompt.lastIndexOf("}");
   if (start === -1 || end === -1) return [];
   const parsed = JSON.parse(prompt.slice(start, end + 1)) as {
-    candidates?: { findingId: string; path: string; lineStart: number }[];
+    candidates?: { ref: string; path: string; lineStart: number }[];
   };
   return parsed.candidates ?? [];
 }
@@ -249,7 +249,7 @@ export function verdictsForPrompt(
       (verdict) => verdict.path === candidate.path && verdict.lineStart === candidate.lineStart,
     );
     return {
-      findingId: candidate.findingId,
+      ref: candidate.ref,
       verdict: wanted?.verdict ?? "open_question",
       quotedCode: wanted?.quotedCode ?? "",
       lineStart: candidate.lineStart,
@@ -285,8 +285,9 @@ export function idealRunner(
 }
 
 /**
- * The token the fake CLI replaces with the real id of the candidate at a
- * place in the code. Shared with `fake-claude.mjs`, which does the replacing.
+ * The token the fake CLI replaces with the label the prompt gave the candidate
+ * at a place in the code. Shared with `fake-claude.mjs`, which does the
+ * replacing.
  */
 export function candidateToken(path: string, lineStart: number): string {
   return `<<candidate:${path}:${lineStart}>>`;
@@ -308,7 +309,7 @@ export function answerSequence(outputs: IdealStageOutputs): unknown[] {
     outputs.s4,
     {
       verdicts: outputs.s5ByLine.map((verdict) => ({
-        findingId: candidateToken(verdict.path, verdict.lineStart),
+        ref: candidateToken(verdict.path, verdict.lineStart),
         verdict: verdict.verdict,
         quotedCode: verdict.quotedCode,
         lineStart: verdict.lineStart,

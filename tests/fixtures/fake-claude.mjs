@@ -309,9 +309,9 @@ switch (scenario) {
       process.exit(2);
     }
 
-    // Candidate ids are minted while the pipeline runs, so an answer written
-    // in advance names the place in the code instead and this resolves it
-    // against the question actually asked.
+    // Candidates are labelled by position when the prompt is built, so an
+    // answer written in advance names the place in the code instead and this
+    // resolves it against the question actually asked.
     const tokenPattern = /<<candidate:(.+?):(\d+)>>/g;
     if (tokenPattern.test(answer)) {
       const prompt = valueOf("-p") ?? "";
@@ -334,7 +334,7 @@ switch (scenario) {
           unresolved ??= whole;
           return whole;
         }
-        return match.findingId;
+        return match.ref;
       });
       if (unresolved) {
         process.stderr.write(

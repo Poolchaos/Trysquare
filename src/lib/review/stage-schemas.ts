@@ -109,7 +109,14 @@ export const deletionStageSchema = z.object({
 export const verificationStageSchema = z.object({
   verdicts: z.array(
     z.object({
-      findingId: z.string(),
+      /**
+       * Which candidate this answers, by the label the prompt gave it.
+       *
+       * Deliberately not a database id. Candidates are recreated whenever a
+       * review is resumed, so an id would make the question different every
+       * time and the stage could never be replayed.
+       */
+      ref: z.string(),
       verdict: z.enum(["verified", "killed", "open_question"]),
       /** Required for a verified finding: it is what gets byte-checked. */
       quotedCode: z.string(),

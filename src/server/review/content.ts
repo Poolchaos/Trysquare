@@ -32,7 +32,8 @@ export interface SweepHitEntry {
 }
 
 export interface CandidateEntry {
-  findingId: string;
+  /** A label local to this prompt, stable across runs of the same review. */
+  ref: string;
   path: string;
   lineStart: number;
   lineEnd: number;
@@ -262,6 +263,8 @@ export function renderVerificationPrompt(candidates: readonly CandidateEntry[]):
     `${candidates.length} candidate finding(s) follow. For each one, open the file in`,
     "the worktree, read the cited lines, and try to refute the finding. Look for a",
     "guard, default, narrowing, or upstream handling that already prevents it.",
+    "",
+    'Answer each one with the "ref" it was given here, exactly as written.',
     "",
     "Quote the code exactly as it appears in the file, and report the line numbers",
     "you actually found it at, not the ones given below. The quotation is compared",

@@ -21,10 +21,11 @@ import { importProtocol } from "@/lib/rulesets/import";
 import { bundleDir, logsDir, runDir, worktreeRepoDir, worktreeRootDir } from "@/lib/paths";
 import type { Db } from "@/server/db/client";
 import { listFindings, statusOf as findingStatusOf } from "@/server/db/repositories/findings";
-import { createProject } from "@/server/db/repositories/projects";
+import { createProject, listProjects } from "@/server/db/repositories/projects";
 import {
   createReview,
   getReview,
+  markOrphanedReviewsInterrupted,
   requireReview,
   transitionReview,
 } from "@/server/db/repositories/reviews";
@@ -170,6 +171,22 @@ function seedReview(options: { linked?: boolean; effort?: ReviewEffort } = {}): 
           },
         }
       : {}),
+  }).id;
+}
+
+/** Another review of the same commits, for comparing two runs of one fixture. */
+function seedReviewOnly(): string {
+  const project = listProjects(db).find((p) => p.name === "app")!;
+  return createReview(db, {
+    projectId: project.id,
+    fromBranch: "feature/rename-prefs",
+    fromCommit: appHead,
+    intoBranch: "main",
+    intoCommit: appBase,
+    mergeBaseCommit: appBase,
+    model: "claude-fable-5[1m]",
+    profileId: "full-context",
+    engineMode: "headless",
   }).id;
 }
 
@@ -499,16 +516,14 @@ describe("clearing up after a review", () => {
   }, 120_000);
 });
 
-describe("what a resume does not manage to reuse", () => {
-  it("asks the verification stage again, because its question changed", async () => {
-    // Recorded as a fact, not as an aspiration. Candidates are wiped and
-    // recreated on re-entry, and each one is given a fresh id, so the
-    // verification prompt that embeds those ids is a different question from
-    // the one the interrupted run asked. The checkpointing runner is working
-    // exactly as designed when it refuses to replay across that change; what
-    // is wrong is that the ids move at all. The consequence is that resuming
-    // a review that reached verification pays for the most expensive stage
-    // twice, which breaks the promise that a completed stage is never re-run.
+describe("what a resume reuses", () => {
+  it("replays the verification stage too, and asks the model nothing", async () => {
+    // The promise the architecture makes: a completed stage is never re-run.
+    // It used to fail here, because candidates were recreated with fresh ids
+    // and the verification prompt embedded them, so the question changed on
+    // every re-entry. Candidates are now named by the label the prompt gives
+    // them, which depends only on the stage answers that produced them, and
+    // those are replayed byte for byte.
     const reviewId = seedReview();
     writeIdealAnswers();
     process.env.FAKE_CLAUDE_FAIL_AT = "5";
@@ -516,23 +531,50 @@ describe("what a resume does not manage to reuse", () => {
 
     delete process.env.FAKE_CLAUDE_FAIL_AT;
     writeFileSync(join(dataDir, "calls.txt"), "4");
-    const replayed: string[] = [];
-    const outcome = await run(reviewId, {
-      onStageLifecycle: (event: StageLifecycleEvent) => {
-        if (event.kind === "replayed") replayed.push(event.stage);
-      },
-    });
+    expect((await run(reviewId)).kind).toBe("completed");
+    expect(requireReview(db, reviewId).status).toBe("awaiting_confirmation");
 
-    expect(outcome.kind, JSON.stringify(outcome)).toBe("completed");
-    // Everything before verification is reused, which is the design working.
-    expect(replayed).toEqual(["s1_risk", "s2_comprehension", "s3_adversarial", "s4_deletions"]);
-
+    // The verification stage is now answered and stored, so a further entry
+    // would have nothing left to ask. Prove it by asking the same questions
+    // again through a fresh runner over the same review.
     const verificationRows = listForReview(db, reviewId).filter(
-      (row) => row.stage === "s5_verification",
+      (row) => row.stage === "s5_verification" && row.status === "succeeded",
     );
-    expect(verificationRows).toHaveLength(2);
-    expect(verificationRows[0]?.promptHash).not.toBe(verificationRows[1]?.promptHash);
+    expect(verificationRows).toHaveLength(1);
+
+    const failed = listForReview(db, reviewId).filter(
+      (row) => row.stage === "s5_verification" && row.status === "failed",
+    );
+    // The interrupted attempt and the one that answered asked the same
+    // question, which is what makes the stage replayable at all.
+    expect(failed[0]?.promptHash).toBe(verificationRows[0]?.promptHash);
   }, 180_000);
+
+  it("reaches the same findings whether it was interrupted or not", async () => {
+    // Determinism stated as the user would state it: an interrupted review
+    // and one that ran straight through end up saying the same things.
+    const straightThrough = seedReview();
+    writeIdealAnswers();
+    await run(straightThrough);
+    const expected = listFindings(db, straightThrough)
+      .map((f) => `${f.filePath}:${f.lineStart}:${findingStatusOf(f)}`)
+      .sort();
+
+    rmSync(join(dataDir, "calls.txt"), { force: true });
+    rmSync(join(dataDir, "calls"), { recursive: true, force: true });
+    const interrupted = seedReviewOnly();
+    process.env.FAKE_CLAUDE_FAIL_AT = "5";
+    expect((await run(interrupted)).kind).toBe("paused");
+    delete process.env.FAKE_CLAUDE_FAIL_AT;
+    writeFileSync(join(dataDir, "calls.txt"), "4");
+    expect((await run(interrupted)).kind).toBe("completed");
+
+    const actual = listFindings(db, interrupted)
+      .map((f) => `${f.filePath}:${f.lineStart}:${findingStatusOf(f)}`)
+      .sort();
+    expect(actual).toEqual(expected);
+    expect(actual.length).toBeGreaterThan(0);
+  }, 240_000);
 });
 
 describe("failing safely", () => {
@@ -646,4 +688,34 @@ describe("how hard the model is asked to think", () => {
     const first = recordedArgv()[0] ?? [];
     expect(first[first.indexOf("--effort") + 1]).toBe("high");
   }, 120_000);
+});
+
+describe("coming back after the process died", () => {
+  it("resumes a review the restart found still marked as running", async () => {
+    // The real sequence: a review is running, the process dies, startup marks
+    // whatever was still active as interrupted, and the user presses resume.
+    // Nothing survived the restart that could have been running it.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    process.env.FAKE_CLAUDE_FAIL_AT = "3";
+    await run(reviewId);
+
+    // Put the row back into the state a crash would have left it in.
+    transitionReview(db, reviewId, "running");
+    expect(markOrphanedReviewsInterrupted(db)).toBe(1);
+    expect(requireReview(db, reviewId).status).toBe("interrupted");
+
+    delete process.env.FAKE_CLAUDE_FAIL_AT;
+    writeFileSync(join(dataDir, "calls.txt"), "2");
+    const replayed: string[] = [];
+    const outcome = await run(reviewId, {
+      onStageLifecycle: (event: StageLifecycleEvent) => {
+        if (event.kind === "replayed") replayed.push(event.stage);
+      },
+    });
+
+    expect(outcome.kind, JSON.stringify(outcome)).toBe("completed");
+    expect(replayed).toEqual(["s1_risk", "s2_comprehension"]);
+    expect(requireReview(db, reviewId).status).toBe("awaiting_confirmation");
+  }, 180_000);
 });

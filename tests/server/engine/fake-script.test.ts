@@ -123,31 +123,31 @@ describe("naming findings the answer could not know in advance", () => {
 
   it("resolves a placeholder to the id in the question it was asked", async () => {
     writeAnswersDir(answersDir, [
-      { verdicts: [{ findingId: candidateToken("app/src/a.ts", 12), verdict: "verified" }] },
+      { verdicts: [{ ref: candidateToken("app/src/a.ts", 12), verdict: "verified" }] },
     ]);
 
     const outcome = await call(
-      prompt([{ findingId: "finding-abc", path: "app/src/a.ts", lineStart: 12 }]),
+      prompt([{ ref: "finding-abc", path: "app/src/a.ts", lineStart: 12 }]),
     );
 
-    const verdicts = answerOf(outcome).verdicts as { findingId: string }[];
-    expect(verdicts[0]?.findingId).toBe("finding-abc");
+    const verdicts = answerOf(outcome).verdicts as { ref: string }[];
+    expect(verdicts[0]?.ref).toBe("finding-abc");
   });
 
   it("refuses to answer about a place the question never mentioned", async () => {
     // Otherwise a stale placeholder would reach the pipeline verbatim, be
     // matched to no candidate, and look like a reviewer that went silent.
     writeAnswersDir(answersDir, [
-      { verdicts: [{ findingId: candidateToken("app/src/gone.ts", 3), verdict: "verified" }] },
+      { verdicts: [{ ref: candidateToken("app/src/gone.ts", 3), verdict: "verified" }] },
     ]);
 
     await expect(
-      call(prompt([{ findingId: "finding-abc", path: "app/src/a.ts", lineStart: 12 }])),
+      call(prompt([{ ref: "finding-abc", path: "app/src/a.ts", lineStart: 12 }])),
     ).rejects.toThrow(/was not asked about <<candidate:app\/src\/gone\.ts:3>>/);
   });
 
   it("leaves an answer with no placeholders exactly as written", async () => {
-    const answer = { verdicts: [{ findingId: "already-known", verdict: "killed" }] };
+    const answer = { verdicts: [{ ref: "already-known", verdict: "killed" }] };
     writeAnswersDir(answersDir, [answer]);
 
     const outcome = await call(prompt([]));

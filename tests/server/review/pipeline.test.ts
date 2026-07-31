@@ -165,7 +165,7 @@ describe("a complete run", () => {
       s5_verification: {
         verdicts: [
           {
-            findingId: "",
+            ref: "",
             verdict: "verified",
             quotedCode: "  const user = payload as User;",
             lineStart: 2,
@@ -175,7 +175,7 @@ describe("a complete run", () => {
         ],
       },
     });
-    // The scripted verdict carries no id, so it matches nothing and the
+    // The scripted verdict names no candidate, so it matches nothing and the
     // candidate is left stranded, which the pipeline turns into a question.
     expect(result.candidatesRaised).toBe(1);
     expect(result.openQuestions).toBe(1);
@@ -263,15 +263,16 @@ describe("refusing to accept an incomplete stage", () => {
 
 describe("the quotation check", () => {
   async function verifyWith(quote: string, lineStart: number, lineEnd: number) {
-    let candidateId = "";
     const runner = async (request: StageRequest): Promise<StageResponse> => {
       if (request.stage === "s5_verification") {
-        candidateId = listFindings(db, reviewId)[0]?.id ?? "";
         return {
           output: {
             verdicts: [
               {
-                findingId: candidateId,
+                // The first candidate, by the label the prompt gives it. No
+                // database read is needed, because the label does not depend
+                // on ids that change between runs.
+                ref: "C1",
                 verdict: "verified",
                 quotedCode: quote,
                 lineStart,
@@ -299,26 +300,26 @@ describe("the quotation check", () => {
       systemPromptFor: (stage) => `prompt for ${stage}`,
       run: runner,
     });
-    return { result, candidateId };
+    return { result };
   }
 
   it("verifies a finding that quoted the file accurately", async () => {
-    const { result, candidateId } = await verifyWith("  const user = payload as User;", 2, 2);
+    const { result } = await verifyWith("  const user = payload as User;", 2, 2);
     expect(result.verified).toBe(1);
     expect(result.killedByQuoteCheck).toBe(0);
 
-    const finding = listFindings(db, reviewId).find((f) => f.id === candidateId)!;
+    const finding = listFindings(db, reviewId)[0]!;
     expect(statusOf(finding)).toBe("verified");
     expect(finding.quotedCode).toContain("payload as User");
   });
 
   it("kills a finding whose quotation is not what is at those lines", async () => {
     // The dangerous case: a plausible finding citing code that is not there.
-    const { result, candidateId } = await verifyWith("  const user = validate(payload);", 2, 2);
+    const { result } = await verifyWith("  const user = validate(payload);", 2, 2);
     expect(result.verified).toBe(0);
     expect(result.killedByQuoteCheck).toBe(1);
 
-    const finding = listFindings(db, reviewId).find((f) => f.id === candidateId)!;
+    const finding = listFindings(db, reviewId)[0]!;
     expect(statusOf(finding)).toBe("killed");
     expect(finding.verificationNote).toContain("did not match the file");
   });
@@ -330,9 +331,9 @@ describe("the quotation check", () => {
 
   it("kills a finding whose file does not exist", async () => {
     rmSync(join(worktreeRoot, "app", "orders.ts"));
-    const { result, candidateId } = await verifyWith("  const user = payload as User;", 2, 2);
+    const { result } = await verifyWith("  const user = payload as User;", 2, 2);
     expect(result.killedByQuoteCheck).toBe(1);
-    const finding = listFindings(db, reviewId).find((f) => f.id === candidateId)!;
+    const finding = listFindings(db, reviewId)[0]!;
     expect(finding.verificationNote).toContain("could not be read");
   });
 
