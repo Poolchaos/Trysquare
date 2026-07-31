@@ -57,6 +57,7 @@ import {
   appendRunNote,
   deleteReview,
   requireReview,
+  setContextWindow,
   setCurrentStage,
   statusOf,
   transitionReview,
@@ -213,6 +214,16 @@ export async function prepareAndRun(
       ...(options.ruleset.sourceDoc === undefined ? {} : { sourceDoc: options.ruleset.sourceDoc }),
     });
     writeReviewSnapshot(db, reviewId, rulesetId);
+    // Frozen at the same moment and for the same reason as the ruleset. This
+    // is the only place the registry is consulted: everywhere downstream reads
+    // the frozen column, so a probe expiring mid-review cannot change how an
+    // already-started review batches its work.
+    const known = getModel(db, review.model);
+    setContextWindow(
+      db,
+      reviewId,
+      known && availabilityOf(known) === "available" ? (known.contextWindow ?? null) : null,
+    );
   }
   const snapshot = readReviewSnapshot(db, reviewId);
 
@@ -278,7 +289,8 @@ export async function prepareAndRun(
       options,
     });
 
-    const contextWindow = contextWindowFor(db, review.model);
+    // The frozen value, not the registry's current answer.
+    const contextWindow = requireReview(db, reviewId).contextWindow ?? undefined;
     const result = await runReviewPipeline({
       db,
       reviewId,
@@ -398,13 +410,6 @@ async function ensureWorktree(side: RepoSide): Promise<void> {
     await removeWorktree(side.clonePath, side.worktreeDir);
   }
   await addWorktree(side.clonePath, side.worktreeDir, side.headCommit);
-}
-
-/** The window the model actually has, when the registry knows it for certain. */
-function contextWindowFor(db: Db, model: string): number | undefined {
-  const row = getModel(db, model);
-  if (!row || availabilityOf(row) !== "available") return undefined;
-  return row.contextWindow ?? undefined;
 }
 
 function buildRunner(

@@ -87,6 +87,7 @@ export function createReview(db: Db, input: CreateReviewInput): Review {
     model: input.model,
     profileId: input.profileId,
     effort: input.effort ?? "high",
+    contextWindow: null,
     engineMode: input.engineMode,
     status: "draft" satisfies ReviewStatus,
     currentStage: null,
@@ -161,6 +162,19 @@ export function transitionReview(
 
   if (updated.changes === 0) throw new ConcurrentReviewUpdateError(reviewId, from);
   return requireReview(db, reviewId);
+}
+
+/**
+ * Freezes the context window this review batches against.
+ *
+ * Written once, when the ruleset snapshot is written. The window decides how
+ * the adversarial stage divides its work, which decides its prompts, which
+ * decides whether a resumed run can replay them. Reading it live would mean a
+ * model probe expiring between runs silently re-asked a stage that had already
+ * been answered and paid for.
+ */
+export function setContextWindow(db: Db, reviewId: string, window: number | null): void {
+  db.update(reviews).set({ contextWindow: window }).where(eq(reviews.id, reviewId)).run();
 }
 
 /** Adds a stage's usage to the review totals. Never touches status. */

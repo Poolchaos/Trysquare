@@ -29,7 +29,8 @@ import {
   requireReview,
   transitionReview,
 } from "@/server/db/repositories/reviews";
-import { reviews } from "@/server/db/schema";
+import { models, reviews } from "@/server/db/schema";
+import { recordProbeSuccess, registerCandidate } from "@/server/db/repositories/models";
 import { listLedgerFiles } from "@/server/db/repositories/ledger";
 import { listForReview } from "@/server/db/repositories/stage-executions";
 import { cloneBare, diffText, mergeBase, resolveCommit } from "@/server/gitops/repo";
@@ -718,4 +719,56 @@ describe("coming back after the process died", () => {
     expect(replayed).toEqual(["s1_risk", "s2_comprehension"]);
     expect(requireReview(db, reviewId).status).toBe("awaiting_confirmation");
   }, 180_000);
+});
+
+describe("the window a review batches against", () => {
+  it("is frozen with the ruleset, not read live", async () => {
+    // The window decides how the adversarial stage divides its work, which
+    // decides its prompts, which decides whether a resumed run can replay
+    // them. Read live, a model probe expiring between runs would silently
+    // re-ask a stage that had already been answered and paid for.
+    //
+    // This checks that the decision is recorded once and never revised. That
+    // the recorded value is the one the pipeline batches against is enforced
+    // by construction rather than here: the registry is read at exactly one
+    // line in the service, inside the freeze, and the run site can only see
+    // the column. The batching behaviour itself is covered by the pipeline
+    // window tests.
+    registerCandidate(db, {
+      id: "claude-fable-5[1m]",
+      family: "fable",
+      displayName: "Fable",
+      profileId: "full-context",
+    });
+    recordProbeSuccess(db, "claude-fable-5[1m]", {
+      resolvedId: "claude-fable-5",
+      contextWindow: 1_000_000,
+    });
+
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    process.env.FAKE_CLAUDE_FAIL_AT = "3";
+    await run(reviewId);
+
+    expect(requireReview(db, reviewId).contextWindow).toBe(1_000_000);
+
+    // The probe goes stale, or the model is withdrawn entirely.
+    db.delete(models).where(eq(models.id, "claude-fable-5[1m]")).run();
+
+    delete process.env.FAKE_CLAUDE_FAIL_AT;
+    writeFileSync(join(dataDir, "calls.txt"), "2");
+    expect((await run(reviewId)).kind).toBe("completed");
+
+    expect(requireReview(db, reviewId).contextWindow).toBe(1_000_000);
+  }, 180_000);
+
+  it("records that the window is unknown, rather than leaving it undecided", async () => {
+    // No registry row at all. The review still freezes the answer, so a later
+    // probe cannot change how an already-started review batches.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    expect(requireReview(db, reviewId).contextWindow).toBeNull();
+  }, 120_000);
 });

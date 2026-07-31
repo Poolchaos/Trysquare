@@ -525,3 +525,17 @@ verified evidence, in writing, here.
   under different rules, so a location is not unique, and disambiguating it
   would have reintroduced ordering as a hidden dependency anyway. Position
   states the dependency plainly.
+- 2026-07-31 FIXED (W5): the context window a review batches against is frozen
+  onto the review, alongside its ruleset and for the same reason. It was read
+  from the model registry on every run, so a probe expiring between runs
+  changed how the adversarial stage divided its work, which changed its
+  prompts, which changed their hashes, and a stage that had already been
+  answered and paid for was silently re-asked. Null on the column means the
+  window was decided to be unknown, not that it is undecided.
+- 2026-07-31 DECIDED (W5): the registry is consulted at exactly one line, inside
+  the freeze. The standalone helper that read it was deleted rather than left
+  available, so the run site can only see the frozen column. A mutation that
+  restored the live read passed the tests, which said plainly that the tests
+  proved the value was recorded and not that it was the value used. Making the
+  wrong thing unreachable is the stronger answer, and the batching behaviour
+  itself is already covered by the pipeline's own context-window tests.

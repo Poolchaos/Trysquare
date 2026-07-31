@@ -160,6 +160,11 @@ export const reviews = sqliteTable(
     engineMode: text("engine_mode").notNull(),
     /** Reasoning effort, fixed at creation so a resume cannot change it. */
     effort: text("effort").notNull().default("high"),
+    /**
+     * The context window this review batches against, frozen with its ruleset.
+     * Null means it was decided to be unknown, not that it is undecided.
+     */
+    contextWindow: integer("context_window"),
 
     status: text("status").notNull(),
     currentStage: text("current_stage"),
