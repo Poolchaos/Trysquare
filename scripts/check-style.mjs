@@ -104,6 +104,12 @@ function collectFiles(entryPath, acc) {
   const name = basename(entryPath);
   if (EXCLUDED_FILES.has(name)) return acc;
   if (!TEXT_EXTENSIONS.has(extname(name))) return acc;
+  // review/ is scanned for its authored prose. Its .json files are captured
+  // model output (findings, scores): a recording is not subject to the house
+  // style, and editing evidence until a gate passes would falsify it.
+  if (extname(name) === ".json" && relative(ROOT, entryPath).split("/")[0] === "review") {
+    return acc;
+  }
   acc.push(entryPath);
   return acc;
 }
