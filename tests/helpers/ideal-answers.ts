@@ -46,6 +46,13 @@ export interface SeededDefect {
 export interface SeededManifest {
   defects: SeededDefect[];
   cleanFiles: string[];
+  /**
+   * For a change set with no broken consumers (the fixed variant): the
+   * consumer files, per changed symbol, that an ideal reviewer reports as
+   * checked and correct. A symbol absent here, and named by no defect, is
+   * answered no_consumers_found.
+   */
+  verifiedConsumers?: Record<string, string[]>;
 }
 
 /** A changed file as the model sees it: repo-qualified by its worktree slug. */
@@ -190,16 +197,30 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
   // prompt: the worktree path, slug first.
   const linkedSlug = files.find((entry) => entry.repo === "linked")?.slug;
   const symbolPath = (path: string) => (linkedSlug ? `${linkedSlug}/${path}` : path);
+  // Manifest-driven, not name-matched: with two cross-repo defects, a check
+  // hardcoding one symbol would answer no_consumers_found for the other while
+  // a finding cites it, and assertSymbolVerdictsAreBacked would reject that.
   const symbolDispositions = changedExportedSymbols(linkedFiles).map((symbol) => {
-    const broken = manifest.defects.find((defect) => defect.kind === "cross-repo");
-    const isRenamedField = symbol.name === "Prefs";
-    return isRenamedField && broken
+    const broken = manifest.defects.find(
+      (defect) => defect.kind === "cross-repo" && defect.dependsOnSymbol === symbol.name,
+    );
+    if (broken) {
+      return {
+        symbol: symbol.name,
+        path: symbolPath(symbol.path),
+        consumersChecked: [qualify(broken)],
+        verdict: "finding" as const,
+        reason: "One consumer still depends on the contract this symbol had before.",
+      };
+    }
+    const consumers = manifest.verifiedConsumers?.[symbol.name] ?? [];
+    return consumers.length > 0
       ? {
           symbol: symbol.name,
           path: symbolPath(symbol.path),
-          consumersChecked: [qualify(broken)],
-          verdict: "finding" as const,
-          reason: "One consumer still reads the field under its old name.",
+          consumersChecked: consumers,
+          verdict: "all_consumers_verified" as const,
+          reason: "Every consumer read; each is correct under the new contract.",
         }
       : {
           symbol: symbol.name,

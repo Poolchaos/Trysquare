@@ -153,10 +153,16 @@ export function inPeriod(records: Record[], account: Account, day: DayParts): Re
 }
 `,
 
-  "src/settings/prefs.ts": `import type { Prefs } from "@acme/shared-core";
+  // saveTimeoutMs is byte-identical in BEFORE and AFTER, so it is never an
+  // added line: the defect is the dependency halving the default under it.
+  "src/settings/prefs.ts": `import { DEFAULT_TIMEOUT_SECONDS, type Prefs } from "@acme/shared-core";
 
 export function describePrefs(prefs: Prefs): string {
   return prefs.reportAutoNavigate ? "navigates" : "stays";
+}
+
+export function saveTimeoutMs(): number {
+  return DEFAULT_TIMEOUT_SECONDS * 1000;
 }
 `,
 
@@ -237,11 +243,17 @@ export async function refreshSession(): Promise<void> {
 `,
 
   // Defect 7: the dependency renamed this field, and this consumer was not
-  // migrated. It compiles in the package and breaks here.
-  "src/settings/prefs.ts": `import type { Prefs } from "@acme/shared-core";
+  // migrated. It compiles in the package and breaks here. Defect (rule 14):
+  // saveTimeoutMs still multiplies the shared default, which the dependency
+  // silently cut from thirty seconds to five.
+  "src/settings/prefs.ts": `import { DEFAULT_TIMEOUT_SECONDS, type Prefs } from "@acme/shared-core";
 
 export function describePrefs(prefs: Prefs): string {
   return prefs.reportAutoNavigate ? "navigates" : "stays";
+}
+
+export function saveTimeoutMs(): number {
+  return DEFAULT_TIMEOUT_SECONDS * 1000;
 }
 
 export function describeTimeout(seconds: number): string {
@@ -369,6 +381,22 @@ const DEFECTS = [
     // why a single-repo review cannot see this defect.
     kind: "cross-repo",
     dependsOnSymbol: "Prefs",
+    crossRepo: true,
+  },
+  {
+    id: "silently-shortened-default",
+    repo: "app",
+    file: "src/settings/prefs.ts",
+    // Unique to the consumer function: the import line has no "* 1000".
+    marker: "DEFAULT_TIMEOUT_SECONDS * 1000",
+    ruleCode: "14",
+    severity: "WARNING",
+    description:
+      "the dependency cut DEFAULT_TIMEOUT_SECONDS from 30 to 5; this consumer still multiplies it into a save timeout",
+    // The consumer line is identical on both sides of the diff. What changed
+    // is the constant's value in the other repository.
+    kind: "cross-repo",
+    dependsOnSymbol: "DEFAULT_TIMEOUT_SECONDS",
     crossRepo: true,
   },
   {

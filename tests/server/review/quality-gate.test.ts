@@ -174,15 +174,22 @@ describe("a correct review of the seeded fixture", () => {
     }
   }, 60_000);
 
-  it("finds the defect that only exists across the two repositories", async () => {
-    // Neither added nor removed in the app: the contract under it changed.
+  it("finds both defects that exist only across the two repositories", async () => {
+    // Neither line changed in the app; the contract under each moved in the
+    // other repository. The length is pinned so silently dropping one of the
+    // cross-repo plants fails loudly rather than shrinking the answer key.
     await runGate();
-    const crossRepo = manifest.defects.find((defect) => defect.kind === "cross-repo")!;
-    const found = listFindings(db, reviewId).find(
-      (finding) => finding.filePath === qualified(crossRepo),
-    );
-    expect(found).toBeDefined();
-    expect(statusOf(found!)).toBe("verified");
+    const crossRepo = manifest.defects.filter((defect) => defect.kind === "cross-repo");
+    expect(crossRepo).toHaveLength(2);
+
+    for (const defect of crossRepo) {
+      const found = listFindings(db, reviewId).find(
+        (finding) => finding.filePath === qualified(defect) && finding.lineStart === defect.line,
+      );
+      expect(found, `${defect.id} at ${qualified(defect)}:${defect.line}`).toBeDefined();
+      expect(statusOf(found!)).toBe("verified");
+      expect(found!.ruleCode).toBe(defect.ruleCode);
+    }
   }, 60_000);
 
   it("finds the defect that exists only as removed code", async () => {

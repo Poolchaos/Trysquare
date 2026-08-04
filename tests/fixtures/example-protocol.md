@@ -356,6 +356,30 @@ build or run time in a file the review never showed.
 
 **Severity:** CRITICAL
 
+## Dependency Anti-Patterns
+
+### 14. Changed Default Nobody Opted Into
+
+**Rule:** Flag a change to an exported default value when consumers in other
+code take it implicitly and the change is not the stated purpose of the work.
+
+**Violation Example:**
+
+```ts
+export const DEFAULT_TIMEOUT_SECONDS = 5; // was 30
+```
+
+**Detection:** A changed initialiser on an exported constant that other code
+imports without overriding. The consumers keep compiling, which is why the
+diff looks harmless: nothing names the files whose behaviour just changed.
+
+**Why This Matters:** A default is a promise consumers built on without
+writing it down. Tightening a timeout, a limit, or a threshold under them
+changes behaviour at a distance, and the operations that no longer fit the
+new value fail in code the change never touched.
+
+**Severity:** WARNING
+
 ## Review Output
 
 Report confirmed findings grouped by severity, most severe first. State what
