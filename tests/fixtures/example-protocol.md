@@ -334,6 +334,28 @@ test was written for the behaviour that remains.
 
 **Severity:** CRITICAL
 
+### 12. Deleted File With a Live Caller
+
+**Rule:** Flag the deletion of a whole file while code elsewhere still
+imports or calls what it exported.
+
+**Violation Example:**
+
+```ts
+// deleted: src/orders/retry.ts, which exported retryOnce
+// unchanged elsewhere: import { retryOnce } from "./retry";
+```
+
+**Detection:** A file removed in its entirety. Search the rest of the tree
+for imports of it; the caller usually does not appear in the diff at all,
+because deleting a module does not touch the files that depend on it.
+
+**Why This Matters:** The diff lists the deletion but never the breakage.
+Every surviving import now resolves to nothing, and the failure surfaces at
+build or run time in a file the review never showed.
+
+**Severity:** CRITICAL
+
 ## Review Output
 
 Report confirmed findings grouped by severity, most severe first. State what

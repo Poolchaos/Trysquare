@@ -178,8 +178,14 @@ describe("a review waiting on a person", () => {
 });
 
 describe("reading the code a finding is about", () => {
+  /** The one finding whose file the change never touched: it has no hunk. */
+  const callerPath = () =>
+    `app/${fixture.manifest.defects.find((defect) => defect.kind === "deleted-file")!.file}`;
+
   it("returns the lines around the one that was cited", async () => {
-    const [finding] = (await snapshot()).findings;
+    // Picked explicitly: the deleted-module finding sits in a file outside
+    // the diff, and this test is about the hunk riding along.
+    const finding = (await snapshot()).findings.find((entry) => entry.filePath !== callerPath());
     const response = await routes.fileContext.GET(
       new Request(
         `http://localhost/x?path=${encodeURIComponent(finding!.filePath)}&line=${finding!.lineStart}`,
@@ -203,6 +209,29 @@ describe("reading the code a finding is about", () => {
     expect(body.hunk!.lines.some((line) => line.startsWith("+") || line.startsWith("-"))).toBe(
       true,
     );
+  }, 120_000);
+
+  it("serves the file alone when the finding is in code the change never touched", async () => {
+    const finding = (await snapshot()).findings.find((entry) => entry.filePath === callerPath());
+    expect(finding, "the deleted-module finding reaches the confirmation queue").toBeDefined();
+
+    const response = await routes.fileContext.GET(
+      new Request(
+        `http://localhost/x?path=${encodeURIComponent(finding!.filePath)}&line=${finding!.lineStart}`,
+      ),
+      params(reviewId),
+    );
+    expect(response.status).toBe(200);
+
+    const body = (await response.json()) as {
+      lines: { number: number; text: string }[];
+      hunk: { header: string } | null;
+    };
+    expect(body.lines.length).toBeGreaterThan(0);
+    expect(body.lines.some((line) => line.number === finding!.lineStart)).toBe(true);
+    // No hunk to show: the screen renders the worktree lines without a
+    // "what the change did here" panel, and that is correct, not missing.
+    expect(body.hunk).toBeNull();
   }, 120_000);
 
   it("serves the rules the review was frozen with, verbatim", async () => {

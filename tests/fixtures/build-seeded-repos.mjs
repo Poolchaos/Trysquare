@@ -15,7 +15,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const GIT_ENV = {
@@ -40,6 +40,10 @@ function write(root, path, contents) {
   const full = join(root, path);
   mkdirSync(dirname(full), { recursive: true });
   writeFileSync(full, contents);
+}
+
+function remove(root, path) {
+  rmSync(join(root, path));
 }
 
 function commitAll(root, message) {
@@ -93,6 +97,26 @@ export function nameFor(rows: Record<string, string>, row: ReportRow): string {
 export async function saveOrder(order: Order): Promise<string> {
   await persist(order);
   return "saved";
+}
+`,
+
+  // Deleted whole in AFTER (via REMOVED) while dispatch.ts keeps calling it.
+  "src/orders/retry.ts": `export async function retryOnce<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch {
+    return operation();
+  }
+}
+`,
+
+  // Never appears in AFTER, so it is absent from the diff: deleting a module
+  // does not touch the files that import it, which is the whole defect.
+  "src/orders/dispatch.ts": `import { retryOnce } from "./retry";
+
+export async function dispatchOrder(order: Order): Promise<string> {
+  await retryOnce(() => send(order));
+  return "dispatched";
 }
 `,
 
@@ -315,6 +339,23 @@ const DEFECTS = [
     description: "the permission check was removed, so any user can read any document",
   },
   {
+    id: "deleted-module-live-caller",
+    repo: "app",
+    // The finding sits in the surviving caller, which the diff never shows;
+    // the deletion itself is what the review is expected to chase.
+    file: "src/orders/dispatch.ts",
+    marker: "await retryOnce(",
+    kind: "deleted-file",
+    deletedFile: "src/orders/retry.ts",
+    ruleCode: "12",
+    // CRITICAL, and the file must keep sorting after src/auth/guard.ts:
+    // e2e/journey.spec.ts asserts hunk context for the first-sorted CRITICAL
+    // (severity, then path), and this finding has no hunk to show.
+    severity: "CRITICAL",
+    description:
+      "the module was deleted whole while this caller still imports and calls retryOnce",
+  },
+  {
     id: "unmigrated-consumer",
     repo: "app",
     file: "src/settings/prefs.ts",
@@ -340,6 +381,16 @@ const DEFECTS = [
     description: "the exact expectation was replaced with an existence check",
   },
 ];
+
+/**
+ * Files deleted whole on the feature branch, after AFTER is written and
+ * before the commit; `git add -A` stages deletions.
+ *
+ * `diffText` runs `git diff -M -C`, so keep any file added on the branch
+ * dissimilar from these: if git pairs the deletion with an addition as a
+ * rename, the whole-file-deletion defect silently disappears from the diff.
+ */
+const REMOVED = ["src/orders/retry.ts"];
 
 /** Files whose changes are correct. A finding in one of these is a false positive. */
 const CLEAN_FILES = ["src/utils/format.ts", "README.md"];
@@ -375,6 +426,7 @@ export function buildSeededRepos(root) {
   commitAll(appDir, "baseline");
   git(["checkout", "-qb", "feature/rename-prefs"], appDir);
   for (const [path, contents] of Object.entries(AFTER)) write(appDir, path, contents);
+  for (const path of REMOVED) remove(appDir, path);
   commitAll(appDir, "assorted changes");
 
   const manifest = {

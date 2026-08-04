@@ -30,8 +30,9 @@ let manifest: {
     line: number;
     ruleCode: string;
     severity: string;
-    kind: "addition" | "deletion" | "cross-repo";
+    kind: "addition" | "deletion" | "cross-repo" | "deleted-file";
     removedText?: string;
+    deletedFile?: string;
     dependsOnSymbol?: string;
     crossRepo?: boolean;
   }[];
@@ -65,6 +66,20 @@ describe("the seeded change set", () => {
   it("changes every file the manifest talks about", () => {
     const changed = new Set(appFiles.map((file) => file.path));
     for (const defect of manifest.defects.filter((entry) => entry.repo === "app")) {
+      if (defect.kind === "deleted-file") {
+        // The builder is imported without types, so a mistyped field would
+        // otherwise pass silently as undefined.
+        expect(defect.deletedFile, `${defect.id} names its deleted file`).toBeDefined();
+        // Here the diff must show the deletion and must NOT show the caller:
+        // the caller being untouched is the defect's whole point.
+        expect(changed.has(defect.deletedFile!), `${defect.id} deletes ${defect.deletedFile}`).toBe(
+          true,
+        );
+        expect(changed.has(defect.file), `${defect.id} leaves ${defect.file} out of the diff`).toBe(
+          false,
+        );
+        continue;
+      }
       expect(changed.has(defect.file), `${defect.id} in ${defect.file}`).toBe(true);
     }
     for (const clean of manifest.cleanFiles) expect(changed.has(clean), clean).toBe(true);
@@ -89,6 +104,15 @@ describe("the seeded change set", () => {
     const sideOf = (marker: string) => (line: string) => line.includes(marker);
 
     for (const defect of manifest.defects.filter((entry) => entry.repo === "app")) {
+      if (defect.kind === "deleted-file") {
+        // The defect's own file is the untouched caller, so the find below
+        // would fail; the change-side evidence is the deletion itself.
+        const gone = appFiles.find((entry) => entry.path === defect.deletedFile);
+        expect(gone, `${defect.deletedFile} appears in the diff`).toBeDefined();
+        expect(gone!.changeType, defect.id).toBe("deleted");
+        continue;
+      }
+
       const file = appFiles.find((entry) => entry.path === defect.file);
       expect(file, defect.file).toBeDefined();
 
@@ -142,6 +166,25 @@ describe("the seeded change set", () => {
     for (const clean of manifest.cleanFiles) {
       expect(manifest.defects.some((defect) => defect.file === clean)).toBe(false);
     }
+  });
+
+  it("deletes a whole file whose caller the change never touches", () => {
+    const defect = manifest.defects.find((entry) => entry.kind === "deleted-file");
+    expect(defect).toBeDefined();
+
+    const gone = appFiles.find((entry) => entry.path === defect!.deletedFile);
+    expect(gone?.changeType).toBe("deleted");
+    const removed = gone!.hunks.flatMap((hunk) =>
+      hunk.lines.filter((line) => line.startsWith("-")).map((line) => line.slice(1)),
+    );
+    expect(removed.some((line) => line.includes("retryOnce"))).toBe(true);
+
+    // The caller is absent from the diff and still imports the dead module:
+    // exactly the breakage a diff-only review cannot see.
+    expect(appFiles.some((entry) => entry.path === defect!.file)).toBe(false);
+    const caller = readFileSync(join(appDir, defect!.file), "utf8");
+    expect(caller).toContain(`from "./retry"`);
+    expect(caller).toContain("retryOnce(");
   });
 
   it("removes the guard and the await as deletions, not merely edits", () => {

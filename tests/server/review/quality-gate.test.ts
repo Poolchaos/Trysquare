@@ -22,6 +22,7 @@ import { changedExportedSymbols } from "@/lib/git/symbols";
 import { importProtocol } from "@/lib/rulesets/import";
 import type { Db } from "@/server/db/client";
 import { listFindings, statusOf } from "@/server/db/repositories/findings";
+import { listLedgerFiles } from "@/server/db/repositories/ledger";
 import { cloneBare, diffText, mergeBase, resolveCommit } from "@/server/gitops/repo";
 import { addWorktree } from "@/server/gitops/worktree";
 import type { ReviewProfile } from "@/lib/domain/enums";
@@ -191,6 +192,27 @@ describe("a correct review of the seeded fixture", () => {
       (finding) => finding.filePath === qualified(deletion),
     );
     expect(statusOf(found!)).toBe("verified");
+  }, 60_000);
+
+  it("reports the deletion the diff cannot show, from the stage that reads removals", async () => {
+    // The caller is not in the change set at all, so this finding can only
+    // come from S4: an S3 finding citing a file without a hunk is rejected.
+    await runGate();
+    const defect = manifest.defects.find((entry) => entry.kind === "deleted-file")!;
+
+    const found = listFindings(db, reviewId).find(
+      (finding) => finding.filePath === qualified(defect) && finding.lineStart === defect.line,
+    );
+    expect(found, `a verified finding in the untouched caller ${defect.file}`).toBeDefined();
+    expect(statusOf(found!)).toBe("verified");
+
+    // Not just the finding: the deleted file itself is accounted for in the
+    // coverage ledger, which is the S4 bookkeeping being proven.
+    const ledger = listLedgerFiles(db, reviewId).find(
+      (file) => file.path === `app/${defect.deletedFile}`,
+    );
+    expect(ledger, `${defect.deletedFile} has a ledger row`).toBeDefined();
+    expect(ledger?.status).toBe("reviewed");
   }, 60_000);
 
   it("reports nothing about the files that changed correctly", async () => {

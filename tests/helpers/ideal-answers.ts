@@ -14,10 +14,17 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { z } from "zod";
 import type { ParsedFile } from "@/lib/git/diff";
 import { changedExportedSymbols } from "@/lib/git/symbols";
 import type { ImportedRule } from "@/lib/rulesets/model";
 import { runSweeps } from "@/lib/review/sweep";
+import type {
+  adversarialStageSchema,
+  comprehensionStageSchema,
+  deletionStageSchema,
+  riskStageSchema,
+} from "@/lib/review/stage-schemas";
 import { isDeletionCandidate } from "@/server/review/content";
 import type { StageRequest, StageResponse } from "@/server/review/pipeline";
 
@@ -29,7 +36,11 @@ export interface SeededDefect {
   line: number;
   ruleCode: string;
   severity: "CRITICAL" | "WARNING" | "NITPICK";
-  kind: "addition" | "deletion" | "cross-repo";
+  kind: "addition" | "deletion" | "cross-repo" | "deleted-file";
+  /** For a deleted-file defect: the file removed whole, while `file` is its surviving caller. */
+  deletedFile?: string;
+  /** For a cross-repo defect: the dependency symbol whose contract moved. */
+  dependsOnSymbol?: string;
 }
 
 export interface SeededManifest {
@@ -75,16 +86,18 @@ export interface VerdictByLine {
 }
 
 export interface IdealStageOutputs {
-  s1: unknown;
-  s2: unknown;
-  s3: unknown;
-  s4: unknown;
+  s1: z.infer<typeof riskStageSchema>;
+  s2: z.infer<typeof comprehensionStageSchema>;
+  s3: z.infer<typeof adversarialStageSchema>;
+  s4: z.infer<typeof deletionStageSchema>;
   /** Resolved to prompt labels at run time; see VerdictByLine. */
   s5ByLine: VerdictByLine[];
 }
 
-const qualify = (defect: SeededDefect): string =>
-  `${defect.repo === "app" ? "app" : "shared-core"}/${defect.file}`;
+const qualifyIn = (repo: string, path: string): string =>
+  `${repo === "app" ? "app" : "shared-core"}/${path}`;
+
+const qualify = (defect: SeededDefect): string => qualifyIn(defect.repo, defect.file);
 
 export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutputs {
   const { files, manifest, worktreeRoot, rules } = input;
@@ -103,7 +116,11 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
     return { ...hit, path: `${entry?.slug ?? ""}/${hit.path}` };
   });
 
-  const findings = manifest.defects.map((defect) => ({
+  // A deleted-file defect cannot be an S3 finding: its caller is not in the
+  // change set, and the pipeline rejects an S3 finding whose file has no hunk.
+  // It is raised by S4, the stage that reads removals, and faces only the
+  // quote check against the surviving caller in the worktree.
+  const findingFor = (defect: SeededDefect) => ({
     path: qualify(defect),
     lineStart: defect.line,
     lineEnd: defect.line,
@@ -111,8 +128,17 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
     ruleCode: defect.ruleCode,
     issue: `Seeded defect: ${defect.id}`,
     comment: `The change introduces ${defect.id}.`,
-    mechanism: `traced from the change to ${defect.file}:${defect.line}`,
-  }));
+    mechanism:
+      defect.kind === "deleted-file"
+        ? `traced from the deletion of ${defect.deletedFile} to its caller ${defect.file}:${defect.line}`
+        : `traced from the change to ${defect.file}:${defect.line}`,
+  });
+  const findings = manifest.defects
+    .filter((defect) => defect.kind !== "deleted-file")
+    .map(findingFor);
+  const s4Findings = manifest.defects
+    .filter((defect) => defect.kind === "deleted-file")
+    .map(findingFor);
 
   /** The hunk a finding falls in, mirroring how the pipeline maps them. */
   const hunkFor = (path: string, line: number): number => {
@@ -187,7 +213,10 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
   const extras = (input.extraFindings ?? []) as typeof findings;
   const allFindings = [...findings, ...extras];
 
-  const s5ByLine: VerdictByLine[] = allFindings.map((finding) => {
+  // The union: S5 is asked about every candidate whatever stage raised it, so
+  // an S4 finding missing here would surface far away, as an open question
+  // that fails the verified-count assertions.
+  const s5ByLine: VerdictByLine[] = [...allFindings, ...s4Findings].map((finding) => {
     const invented = String(finding.issue ?? "").startsWith("Invented");
     return {
       path: finding.path,
@@ -222,20 +251,37 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
     },
     s3: { findings: allFindings, clearedHunks, sweepDispositions, symbolDispositions },
     s4: {
-      findings: [],
+      findings: s4Findings,
       // Every file the deletion prompt lists, accounted for by name. An
       // ideal reviewer answers for all of them, including the ones it finds
       // harmless, because the pipeline reconciles this list against what it
       // showed and a silent omission is the failure being guarded against.
-      reviewedDeletions: files.filter(isDeletionCandidate).map((entry) => ({
-        path: `${entry.slug}/${entry.file.path}`,
-        behaviourRemoved:
-          entry.file.changeType === "deleted"
-            ? "The whole file, read in full before it was removed."
-            : "The removed lines, read in the surrounding context.",
-        dependents: [],
-        reason: "Searched the worktree for callers; nothing depends on what went.",
-      })),
+      reviewedDeletions: files.filter(isDeletionCandidate).map((entry) => {
+        const path = `${entry.slug}/${entry.file.path}`;
+        const owner = manifest.defects.find(
+          (defect) =>
+            defect.kind === "deleted-file" &&
+            defect.deletedFile !== undefined &&
+            qualifyIn(defect.repo, defect.deletedFile) === path,
+        );
+        if (owner) {
+          return {
+            path,
+            behaviourRemoved: "The whole file, read in full before it was removed.",
+            dependents: [qualify(owner)],
+            reason: `Deleted whole while ${owner.file} still imports and calls it.`,
+          };
+        }
+        return {
+          path,
+          behaviourRemoved:
+            entry.file.changeType === "deleted"
+              ? "The whole file, read in full before it was removed."
+              : "The removed lines, read in the surrounding context.",
+          dependents: [],
+          reason: "Searched the worktree for callers; nothing depends on what went.",
+        };
+      }),
     },
     s5ByLine,
   };
@@ -286,13 +332,13 @@ export function idealRunner(
   return async (request: StageRequest): Promise<StageResponse> => {
     switch (request.stage) {
       case "s1_risk":
-        return { output: outputs.s1 as object, sessionId: "gate" };
+        return { output: outputs.s1, sessionId: "gate" };
       case "s2_comprehension":
-        return { output: outputs.s2 as object, sessionId: "gate" };
+        return { output: outputs.s2, sessionId: "gate" };
       case "s3_adversarial":
-        return { output: outputs.s3 as object, sessionId: "gate" };
+        return { output: outputs.s3, sessionId: "gate" };
       case "s4_deletions":
-        return { output: outputs.s4 as object, sessionId: "gate" };
+        return { output: outputs.s4, sessionId: "gate" };
       case "s5_verification":
         return {
           output: { verdicts: verdictsForPrompt(request.prompt, outputs.s5ByLine) },
