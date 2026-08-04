@@ -567,13 +567,18 @@ Still open, and what a next session should pick up:
 
 - Cancel mid-run through a browser. The limit pause and the delete are
   walked; a cancel is proven at the integration layer only.
-- Fixture work: the fixed-variant branch, the dedicated cross-repo assertion,
-  the duplicated-merge-helper defect, and the whole-file deletion with a
-  surviving caller (deferred from U3, needs a fixture deletion mechanism and
-  a rule for it to violate).
-- Dead exports without a consumer (D-54) and the write-only `risk_tags`
-  column, whose natural reader is 03's risk ordering.
-- README screenshots.
+- Fixture work: the four seeded-fixture gaps, now planned in detail against
+  the live tree and adversarially verified, in
+  [U12-FIXTURE-GAPS.md](U12-FIXTURE-GAPS.md). That document is the driver's
+  working order for the rest of U12.
+- The test-only half of the dead-export sweep (D-54): exports whose only
+  consumer is their own test, each costing a test edit. Listed step by step in
+  [U12-FIXTURE-GAPS.md](U12-FIXTURE-GAPS.md).
+
+Closed since this list was written: the risk ordering that gives `risk_tags`
+its reader (mutation-proved twice), the zero-consumer half of the dead-export
+sweep, README screenshots, axe over both themes, and the failure-path browser
+flows.
 
 Original scope:
 
