@@ -30,6 +30,7 @@ import {
   type SymbolRef,
 } from "@/lib/review/coverage";
 import { checkQuotedCode, describeMismatch } from "@/lib/review/quote-match";
+import { byRiskOrder, riskOrderedPaths } from "@/lib/review/risk-order";
 import {
   type AdversarialStageOutput,
   adversarialStageSchema,
@@ -62,6 +63,7 @@ import {
   assertCoverageComplete,
   clearHunk,
   clearSweepHit,
+  getFileRiskTags,
   attachSweepHitToFinding,
   listHunks,
   listLedgerFiles,
@@ -253,12 +255,58 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     if (ledgerFile) setFileRiskTags(db, ledgerFile.id, entry.riskTags);
   }
 
+  // 03 asks for the highest-risk files first, and S1 has always produced the
+  // tags for it. This is where they are read back.
+  //
+  // Read from the ledger rather than from the answer in memory: that is what
+  // makes the column load-bearing rather than merely written, and a resumed
+  // run whose S1 was replayed gets the same order from the same rows.
+  //
+  // Ranked against `content.files`, never against the ledger's row order:
+  // `listLedgerFiles` is a bare select with no ORDER BY, so ranking its
+  // output would quietly move the equal-risk tie-break from the deterministic
+  // inventory order to whatever order SQLite happened to return.
+  const tagsByPath = new Map(
+    listLedgerFiles(db, reviewId).map((file) => [file.path, getFileRiskTags(file)] as const),
+  );
+  const riskOrder = riskOrderedPaths(
+    content.files.map((entry) => ({
+      path: qualified(entry.slug, entry.file.path),
+      riskTags: tagsByPath.get(qualified(entry.slug, entry.file.path)) ?? [],
+    })),
+  );
+  const ordered: StageContentInput = {
+    ...content,
+    files: [...content.files].sort(
+      byRiskOrder(riskOrder, (entry) => qualified(entry.slug, entry.file.path)),
+    ),
+  };
+  const orderedLedgerFiles = [...ledgerFiles].sort(byRiskOrder(riskOrder, (file) => file.path));
+
+  const tagged = content.files
+    .map((entry) => ({
+      path: qualified(entry.slug, entry.file.path),
+      tags: tagsByPath.get(qualified(entry.slug, entry.file.path)) ?? [],
+    }))
+    .filter((entry) => entry.tags.length > 0);
+  if (tagged.length > 0) {
+    appendRunNote(db, reviewId, {
+      kind: "note",
+      message:
+        `Worked ${tagged.length} risk-tagged file(s) first: ` +
+        tagged
+          .slice(0, 5)
+          .map((entry) => `${entry.path} (${[...new Set(entry.tags)].join(", ")})`)
+          .join("; "),
+    });
+  }
+
   // S2: comprehension. Findings are forbidden here by the prompt; the schema
   // has nowhere to put them, so one cannot arrive by accident either.
   const comprehensionResponse = await input.run({
     stage: "s2_comprehension",
     systemPrompt: input.systemPromptFor("s2_comprehension"),
-    prompt: renderComprehensionPrompt(content),
+    prompt: renderComprehensionPrompt(ordered),
   });
   const comprehension = rejecting("s2_comprehension", () =>
     comprehensionStageSchema.parse(comprehensionResponse.output),
@@ -270,7 +318,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
 
   // S3: the adversarial pass. How it is divided depends on the model; what it
   // must account for does not.
-  const adversarial = await runAdversarialStage(input, content, ledgerFiles);
+  const adversarial = await runAdversarialStage(input, ordered, orderedLedgerFiles);
 
   const expectedHunks: HunkRef[] = ledgerFiles.flatMap((file) =>
     listHunks(db, file.id).map((hunk) => ({ path: file.path, hunkIndex: hunk.hunkIndex })),
@@ -376,7 +424,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   const deletionsResponse = await input.run({
     stage: "s4_deletions",
     systemPrompt: input.systemPromptFor("s4_deletions"),
-    prompt: renderDeletionPrompt(content),
+    prompt: renderDeletionPrompt(ordered),
   });
   const deletions = rejecting("s4_deletions", () => {
     const parsed = deletionStageSchema.parse(deletionsResponse.output);

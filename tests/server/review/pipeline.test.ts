@@ -943,3 +943,132 @@ describe("the deletion stage's account of what was removed", () => {
     expect(struck).toEqual([]);
   });
 });
+
+const RISK_PATCH = ["orders", "billing", "theme", "session"]
+  .map((name) =>
+    [
+      `diff --git a/${name}.ts b/${name}.ts`,
+      "new file mode 100644",
+      "--- /dev/null",
+      `+++ b/${name}.ts`,
+      "@@ -0,0 +1,2 @@",
+      `+export const ${name} = 1;`,
+      `+export const ${name}Extra = 2;`,
+      "",
+    ].join("\n"),
+  )
+  .join("");
+
+const RISK_FILES = parseUnifiedDiff(RISK_PATCH).map((file) => ({
+  repo: "primary" as const,
+  slug: "app",
+  file,
+}));
+
+/**
+ * Tagged so the expected order is none that could arise by accident: not the
+ * inventory order, not its reverse, and not alphabetical either way. Only a
+ * real reading of the risk tags produces it.
+ */
+const RISK_ANSWERS: Record<string, unknown> = {
+  s1_risk: {
+    files: [
+      { path: "app/orders.ts", riskTags: [], reason: "plain" },
+      { path: "app/billing.ts", riskTags: ["money", "destructive"], reason: "money" },
+      { path: "app/theme.ts", riskTags: [], reason: "plain" },
+      { path: "app/session.ts", riskTags: ["auth"], reason: "auth" },
+    ],
+  },
+  s2_comprehension: {
+    files: RISK_FILES.map((entry) => ({
+      path: `app/${entry.file.path}`,
+      summary: "read",
+      chainFilesRead: [],
+      uncertainties: [],
+    })),
+  },
+  s4_deletions: { findings: [], reviewedDeletions: [] },
+  s5_verification: { verdicts: [] },
+};
+
+/** Records every prompt, and clears every hunk so any division reconciles. */
+function runRisk(profile: "full-context" | "decomposed", prompts: string[]) {
+  return runReviewPipeline({
+    db,
+    reviewId,
+    worktreeRoot,
+    files: RISK_FILES,
+    rules: [rule("9", ["typescript"])],
+    profile,
+    systemPromptFor: (stage) => `prompt for ${stage}`,
+    run: async (request) => {
+      prompts.push(`${request.stage} ${request.prompt}`);
+      if (request.stage === "s3_adversarial") {
+        return {
+          output: {
+            findings: [],
+            clearedHunks: RISK_FILES.map((entry) => ({
+              path: `app/${entry.file.path}`,
+              hunkIndex: 0,
+              reason: "Nothing wrong here.",
+            })),
+            sweepDispositions: [],
+          },
+          sessionId: "s",
+        };
+      }
+      return { output: RISK_ANSWERS[request.stage] ?? {}, sessionId: "s" };
+    },
+  });
+}
+
+describe("working the highest-risk files first", () => {
+  it("shows the later stages the risk-tagged files before the untagged ones", async () => {
+    // 03 asks for this and S1 has always produced the tags; nothing read them
+    // back, so the column was written on every review and used by nothing.
+    const prompts: string[] = [];
+    await runRisk("full-context", prompts);
+
+    const comprehension = prompts.find((entry) => entry.startsWith("s2_comprehension"))!;
+    const at = (path: string) => comprehension.indexOf(path);
+    expect(at("app/billing.ts")).toBeLessThan(at("app/session.ts"));
+    expect(at("app/session.ts")).toBeLessThan(at("app/orders.ts"));
+    expect(at("app/orders.ts")).toBeLessThan(at("app/theme.ts"));
+  });
+
+  it("sends the first adversarial request about the highest-risk file", async () => {
+    // Under a profile that works file by file, the order is not merely how the
+    // prompt reads: it is which file the model is asked about first, which is
+    // what high-risk-first has to mean to be worth anything.
+    const prompts: string[] = [];
+    await runRisk("decomposed", prompts);
+
+    const first = prompts.find((entry) => entry.startsWith("s3_adversarial"))!;
+    // Keyed on the hunk header: every request carries the whole change
+    // summary, so every path appears in every prompt.
+    expect(first).toContain("hunk 0 of app/billing.ts");
+    expect(first).not.toContain("hunk 0 of app/theme.ts");
+  });
+
+  it("records on the run which files it worked first", async () => {
+    const prompts: string[] = [];
+    await runRisk("full-context", prompts);
+
+    const note = readRunNotes(requireReview(db, reviewId)).find((entry) =>
+      entry.message.startsWith("Worked "),
+    );
+    expect(note?.message).toContain("app/billing.ts");
+    expect(note?.message).toContain("money");
+    expect(note?.message).toContain("destructive");
+  });
+
+  it("reviews every file whatever the order", async () => {
+    // The invariant ordering must never break: a permutation cannot drop
+    // work, and the coverage audit is what would catch it if it did.
+    const prompts: string[] = [];
+    const result = await runRisk("full-context", prompts);
+    expect(result.coverage.pendingHunks).toBe(0);
+    expect(result.coverage.pendingFiles).toBe(0);
+    expect(listLedgerFiles(db, reviewId)).toHaveLength(RISK_FILES.length);
+  });
+});

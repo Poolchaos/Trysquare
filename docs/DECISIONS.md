@@ -1387,3 +1387,28 @@ verified evidence, in writing, here.
   `SELECTABLE_REVIEW_EFFORTS` is what the picker reads and what the route
   checks. Enforced in both places on purpose: a rule only the screen knows is
   not a rule.
+- 2026-08-04 DECIDED (U12): `ledger_files.risk_tags` gains its reader rather
+  than being dropped by migration. S1 must classify risk whatever happens (03
+  section S1), so removing the column would leave a stage that spends tokens
+  and produces nothing, and would need two ratified specs amended. The reader
+  is the ordering 03 already specifies: after S1's tags are persisted they are
+  read back and used to permute the file list handed to S2, S3 and S4, and the
+  path list handed to `planRuleBatches`.
+  The rank is how many DISTINCT categories a file touches. The protocol lists
+  its seven categories without ranking them, so ordering by severity would
+  mean inventing a severity the protocol does not state, while "how many kinds
+  of risk does this one file carry" is derivable from what S1 actually
+  answers. Distinct, not counted: the stage schema puts no uniqueness
+  constraint on the array, so a model repeating itself would otherwise outrank
+  a file genuinely touching two categories.
+  Coverage is untouched by construction: the result is a permutation, and
+  every reconciliation downstream compares sets rather than sequences.
+  Mutation-proved twice, which matters here because in a normal run the
+  column and the in-memory answer are equal and no black-box test can tell
+  them apart: removing the ordering fails two tests, and reading the S1 answer
+  in memory instead of the ledger fails three.
+- 2026-08-04 DECIDED (U12): the equal-risk tie-break ranks against the
+  inventory order, not against the ledger's rows. `listLedgerFiles` is a bare
+  select with no ORDER BY, so ranking its output would move the tie-break to
+  whatever order SQLite happened to return, and no pure-function test could
+  catch that regression.
