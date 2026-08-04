@@ -16,7 +16,10 @@
   --color-border-strong: oklch(82% 0.008 250);
   --color-ink: oklch(25% 0.01 250);
   --color-ink-muted: oklch(50% 0.01 250);
-  --color-ink-faint: oklch(64% 0.008 250);
+  /* The third tier sits close to the second on purpose. AA contrast is not
+     negotiable against a preference for three distinct greys, and axe
+     measures this pair on every screen in both themes. */
+  --color-ink-faint: oklch(52% 0.008 250);
 
   --color-accent: oklch(52% 0.13 250);
   --color-accent-ink: oklch(99% 0.002 250);
@@ -24,7 +27,10 @@
 
   --color-critical: oklch(52% 0.19 25);
   --color-critical-soft: oklch(95% 0.04 25);
-  --color-warning: oklch(58% 0.13 75);
+  /* Amber reads lighter than red or blue at the same lightness, so this sat
+     at 58% and measured 3.75:1 on its own soft background: the one severity
+     badge that failed AA. Brought into line with the others at 52%. */
+  --color-warning: oklch(49% 0.13 75);
   --color-warning-soft: oklch(95% 0.04 75);
   --color-question: oklch(52% 0.11 250);
   --color-question-soft: oklch(95% 0.03 250);
@@ -32,6 +38,37 @@
   --color-good-soft: oklch(95% 0.04 155);
 
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+
+  /*
+   * Type scale. Five steps, because this app has five things to say: a page
+   * title, a section heading, body text, the dense rows that make up most of
+   * every screen, and the asides under them. A sixth step would be a decision
+   * nobody could make consistently at three in the morning.
+   */
+  --text-title: 1.25rem;
+  --text-heading: 1rem;
+  --text-body: 0.875rem;
+  --text-dense: 0.8125rem;
+  --text-aside: 0.75rem;
+
+  /*
+   * The 4px grid 04 specifies, named so a component asks for a rhythm step
+   * rather than a number. Tailwind's own scale is already this grid; these
+   * exist for the places that reach for a raw value.
+   */
+  --space-hair: 0.25rem;
+  --space-tight: 0.5rem;
+  --space-snug: 0.75rem;
+  --space-base: 1rem;
+  --space-loose: 1.5rem;
+  --space-section: 2rem;
+
+  /* 04 section 4: nothing interactive smaller than this. */
+  --hit-target: 2.5rem;
+
+  /* Functional motion only, 150-200ms, never blocking. */
+  --motion-quick: 150ms;
+  --motion-considered: 200ms;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,7 +80,7 @@
     --color-border-strong: oklch(42% 0.012 250);
     --color-ink: oklch(94% 0.004 250);
     --color-ink-muted: oklch(70% 0.008 250);
-    --color-ink-faint: oklch(58% 0.008 250);
+    --color-ink-faint: oklch(68% 0.008 250);
 
     --color-accent: oklch(70% 0.12 250);
     --color-accent-ink: oklch(17% 0.01 250);
@@ -84,9 +121,22 @@ body {
   animation: trysquare-pulse 1.8s ease-in-out infinite;
 }
 
+/*
+ * Reduced motion means all of it, not just the pulse.
+ *
+ * Every transition in the app is decorative feedback on a state that is also
+ * stated in words, so removing them costs a reader nothing and keeps the
+ * promise 04 makes. Near-zero rather than zero: a 0s transition can skip
+ * transitionend handlers that a component may be relying on.
+ */
 @media (prefers-reduced-motion: reduce) {
-  .pulse {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

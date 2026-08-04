@@ -47,25 +47,38 @@ const FIELDS = [
   },
 ] as const;
 
+interface SystemInfo {
+  dataDir: string;
+  exportsDir: string;
+  counts: { projects: number; reviews: number; rulesets: number };
+  running: number;
+}
+
 export default function SettingsPage() {
   const [models, setModels] = useState<Model[] | null>(null);
   const [settings, setSettings] = useState<Record<string, number> | null>(null);
+  const [system, setSystem] = useState<SystemInfo | null>(null);
   const [auth, setAuth] = useState<Auth | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(false);
   const [probing, setProbing] = useState("");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [confirmingWipe, setConfirmingWipe] = useState(false);
+  const [wiping, setWiping] = useState(false);
+  const [wiped, setWiped] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [modelList, settingList] = await Promise.all([
+      const [modelList, settingList, systemInfo] = await Promise.all([
         fetch("/api/models").then((response) => response.json()),
         fetch("/api/settings").then((response) => response.json()),
+        fetch("/api/system").then((response) => response.json()),
       ]);
       if (cancelled) return;
       setModels(modelList.models);
       setSettings(settingList.settings);
+      setSystem(systemInfo as SystemInfo);
     })();
     return () => {
       cancelled = true;
@@ -109,6 +122,29 @@ export default function SettingsPage() {
     } finally {
       setProbing("");
     }
+  }
+
+  /**
+   * Probes every registered model, one at a time.
+   *
+   * Sequential rather than parallel: each probe is a real call against one
+   * account's rate limit, and firing eight at once is how a convenience
+   * button becomes the reason a review pauses.
+   */
+  async function probeAll() {
+    setError("");
+    for (const model of models ?? []) {
+      setProbing(model.id);
+      try {
+        await fetch(`/api/models/${encodeURIComponent(model.id)}/probe`, { method: "POST" });
+      } catch {
+        // One unreachable model must not stop the rest; its row keeps
+        // whatever the last probe said, and the list below shows it.
+      }
+    }
+    setProbing("");
+    const refreshed = (await (await fetch("/api/models")).json()) as { models: Model[] };
+    setModels(refreshed.models);
   }
 
   return (
@@ -190,11 +226,42 @@ export default function SettingsPage() {
           </Card>
         </div>
 
-        <h2 className="mt-8 mb-1 text-sm font-semibold">Models</h2>
-        <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
-          Probing asks the CLI whether a model is usable and what context window it has. Each probe
-          is a real call, so it happens only when you ask.
-        </p>
+        <Card className="mt-6 p-4">
+          <h2 className="mb-1 text-sm font-semibold">Where everything is kept</h2>
+          {system === null ? (
+            <p className="text-xs text-[var(--color-ink-muted)]">Reading...</p>
+          ) : (
+            <>
+              <p className="mb-2 text-xs text-[var(--color-ink-muted)]">
+                Clones, worktrees, bundles, logs and the database live here. Move it by setting
+                TRYSQUARE_DATA before starting the server.
+              </p>
+              <Mono className="block break-all text-sm">{system.dataDir}</Mono>
+              <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
+                Holding {system.counts.projects} project(s), {system.counts.reviews} review(s) and{" "}
+                {system.counts.rulesets} ruleset(s). Exported reports are written to{" "}
+                <Mono className="break-all">{system.exportsDir}</Mono> and survive deleting any of
+                it.
+              </p>
+            </>
+          )}
+        </Card>
+
+        <div className="mt-8 mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="mb-1 text-sm font-semibold">Models</h2>
+            <p className="text-xs text-[var(--color-ink-muted)]">
+              Probing asks the CLI whether a model is usable and what context window it has. Each
+              probe is a real call, so it happens only when you ask.
+            </p>
+          </div>
+          <Button
+            disabled={probing !== "" || (models?.length ?? 0) === 0}
+            onClick={() => void probeAll()}
+          >
+            {probing === "" ? "Probe all" : "Probing..."}
+          </Button>
+        </div>
 
         {models === null ? null : models.length === 0 ? (
           <Empty title="No models registered yet">
@@ -238,6 +305,62 @@ export default function SettingsPage() {
             ))}
           </ul>
         )}
+
+        <Card className="mt-8 max-w-2xl border-[var(--color-critical)] p-4">
+          <h2 className="mb-1 text-sm font-semibold text-[var(--color-critical)]">Danger zone</h2>
+          <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
+            Deletes every project, review and ruleset, and the clones, worktrees, bundles and logs
+            on disk. Exported reports are kept: a report is the thing a review was for. Refused
+            while a review is running.
+          </p>
+
+          {wiped ? (
+            <p className="mb-3 text-sm text-[var(--color-good)]">{wiped}</p>
+          ) : confirmingWipe ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="primary"
+                disabled={wiping}
+                onClick={async () => {
+                  setError("");
+                  setWiping(true);
+                  try {
+                    const response = await fetch("/api/system/data", { method: "DELETE" });
+                    const body = (await response.json()) as {
+                      deleted?: { projects: number; reviews: number; rulesets: number };
+                      error?: string;
+                    };
+                    if (!response.ok || !body.deleted) {
+                      setError(body.error ?? "The data could not be deleted.");
+                      return;
+                    }
+                    setWiped(
+                      `Deleted ${body.deleted.projects} project(s), ${body.deleted.reviews} ` +
+                        `review(s) and ${body.deleted.rulesets} ruleset(s). Exports were kept.`,
+                    );
+                    setConfirmingWipe(false);
+                    const refreshed = (await (await fetch("/api/system")).json()) as SystemInfo;
+                    setSystem(refreshed);
+                  } finally {
+                    setWiping(false);
+                  }
+                }}
+              >
+                {wiping ? "Deleting..." : "Yes, delete everything"}
+              </Button>
+              <Button variant="quiet" onClick={() => setConfirmingWipe(false)}>
+                Keep it all
+              </Button>
+              <span className="text-xs text-[var(--color-ink-muted)]">
+                {system
+                  ? `${system.counts.projects} project(s), ${system.counts.reviews} review(s), ${system.counts.rulesets} ruleset(s).`
+                  : ""}
+              </span>
+            </div>
+          ) : (
+            <Button onClick={() => setConfirmingWipe(true)}>Delete all data</Button>
+          )}
+        </Card>
       </PageBody>
     </>
   );

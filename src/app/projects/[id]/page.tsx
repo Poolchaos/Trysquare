@@ -67,6 +67,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Set when the delete was refused over review history: the count from the
+  // refusal, driving the offer to remove those reviews first.
+  const [blockingReviews, setBlockingReviews] = useState<number | null>(null);
+  const [confirmingBulk, setConfirmingBulk] = useState(false);
 
   const [dependencyId, setDependencyId] = useState("");
   const [packageName, setPackageName] = useState("");
@@ -357,8 +361,24 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                     variant="primary"
                     disabled={busy}
                     onClick={async () => {
-                      const gone = await call(`/api/projects/${id}`, { method: "DELETE" });
-                      if (gone) window.location.href = "/projects";
+                      setBlockingReviews(null);
+                      const response = await fetch(`/api/projects/${id}`, { method: "DELETE" });
+                      if (response.ok) {
+                        window.location.href = "/projects";
+                        return;
+                      }
+                      const body = (await response.json()) as {
+                        error?: string;
+                        code?: string;
+                        reviewCount?: number;
+                      };
+                      if (body.code === "ProjectHasReviewsError" && body.reviewCount) {
+                        // The remedy 02 promises: offer to remove the history
+                        // first, by its real count, behind its own second step.
+                        setBlockingReviews(body.reviewCount);
+                      } else {
+                        setError(body.error ?? "The project could not be deleted.");
+                      }
                     }}
                   >
                     Yes, delete {project.name}
@@ -370,6 +390,41 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               ) : (
                 <Button onClick={() => setConfirmingDelete(true)}>Delete</Button>
               )}
+
+              {blockingReviews !== null ? (
+                <div className="mt-3 border-t border-[var(--color-border)] pt-3">
+                  <p className="mb-2 text-xs text-[var(--color-ink-muted)]">
+                    {blockingReviews} review(s) refer to this project, including any that included
+                    it as a dependency. Deleting them removes their findings, reports and evidence;
+                    exported reports stay.
+                  </p>
+                  {confirmingBulk ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="primary"
+                        disabled={busy}
+                        onClick={async () => {
+                          const cleared = await call(`/api/projects/${id}/reviews`, {
+                            method: "DELETE",
+                          });
+                          if (!cleared) return;
+                          const gone = await call(`/api/projects/${id}`, { method: "DELETE" });
+                          if (gone) window.location.href = "/projects";
+                        }}
+                      >
+                        Delete {blockingReviews} review(s), then the project
+                      </Button>
+                      <Button variant="quiet" onClick={() => setConfirmingBulk(false)}>
+                        Keep them
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button onClick={() => setConfirmingBulk(true)}>
+                      Delete its {blockingReviews} review(s) first
+                    </Button>
+                  )}
+                </div>
+              ) : null}
             </Card>
           </aside>
         </div>

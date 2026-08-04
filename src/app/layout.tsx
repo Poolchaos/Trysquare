@@ -4,7 +4,9 @@ import { Rail } from "@/components/rail";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Trysquare",
+  // Each segment sets its own title and this suffixes it, so four open tabs
+  // are four different labels rather than four copies of the app's name.
+  title: { default: "Trysquare", template: "%s - Trysquare" },
   description: "Local protocol-driven code review of git branches.",
 };
 

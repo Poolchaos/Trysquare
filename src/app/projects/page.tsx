@@ -22,12 +22,32 @@ interface Project {
   cloneStatus: string;
   cloneError: string | null;
   lastFetchedAt: string | null;
+  reviewCount: number;
+  dependencies: { id: string; name: string; packageName: string }[];
+}
+
+/**
+ * How long ago, in the coarsest useful unit.
+ *
+ * A fetch is stale in a way that matters by the day, so minutes are only
+ * spelled out while they are the whole story.
+ */
+function fetchedInWords(at: string | null): string {
+  if (at === null) return "never fetched";
+  const minutes = Math.floor((Date.now() - Date.parse(at)) / 60_000);
+  if (!Number.isFinite(minutes) || minutes < 0) return "never fetched";
+  if (minutes < 1) return "fetched just now";
+  if (minutes < 60) return `fetched ${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `fetched ${hours} h ago`;
+  return `fetched ${Math.floor(hours / 24)} d ago`;
 }
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [gitUrl, setGitUrl] = useState("");
   const [adding, setAdding] = useState(false);
+  const [fetching, setFetching] = useState("");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -52,7 +72,13 @@ export default function ProjectsPage() {
   }, []);
 
   // Polls only while something is actually cloning, so an idle screen is idle.
-  const cloning = projects?.some((project) => project.cloneStatus === "pending") ?? false;
+  // Both unfinished states, not just pending. Polling on pending alone worked
+  // only while nothing ever wrote "cloning", and would have left a clone in
+  // progress frozen on screen the moment that changed.
+  const cloning =
+    projects?.some(
+      (project) => project.cloneStatus === "pending" || project.cloneStatus === "cloning",
+    ) ?? false;
   useEffect(() => {
     if (!cloning) return;
     const timer = setInterval(() => void load(), 1000);
@@ -133,6 +159,8 @@ export default function ProjectsPage() {
                           <span className="font-medium">{project.name}</span>
                         )}
                         {project.cloneStatus === "pending" ? (
+                          <Badge tone="accent">queued</Badge>
+                        ) : project.cloneStatus === "cloning" ? (
                           <Badge tone="accent">cloning</Badge>
                         ) : project.cloneStatus === "failed" ? (
                           <Badge tone="critical">clone failed</Badge>
@@ -145,10 +173,48 @@ export default function ProjectsPage() {
                       </Mono>
                     </div>
                     {project.cloneStatus === "ready" ? (
-                      <Link href={`/reviews/new?projectId=${project.id}`}>
-                        <Button variant="secondary">Review a branch</Button>
-                      </Link>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Button
+                          disabled={fetching !== ""}
+                          onClick={async () => {
+                            setError("");
+                            setFetching(project.id);
+                            try {
+                              const response = await fetch(`/api/projects/${project.id}/fetch`, {
+                                method: "POST",
+                              });
+                              if (!response.ok) {
+                                const body = (await response.json()) as { error?: string };
+                                setError(body.error ?? "The fetch did not work.");
+                                return;
+                              }
+                              await load();
+                            } finally {
+                              setFetching("");
+                            }
+                          }}
+                        >
+                          {fetching === project.id ? "Fetching..." : "Fetch now"}
+                        </Button>
+                        <Link href={`/reviews/new?projectId=${project.id}`}>
+                          <Button variant="secondary">Review a branch</Button>
+                        </Link>
+                      </span>
                     ) : null}
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-ink-muted)]">
+                    <span>{fetchedInWords(project.lastFetchedAt)}</span>
+                    <span>
+                      {project.reviewCount} review{project.reviewCount === 1 ? "" : "s"}
+                    </span>
+                    {project.dependencies.map((dependency) => (
+                      // The link is what makes a two-repository review
+                      // possible, so the list says which projects have one.
+                      <Badge key={dependency.id} tone="neutral">
+                        {dependency.packageName}
+                      </Badge>
+                    ))}
                   </div>
                   {project.cloneError ? (
                     <pre className="mt-3 overflow-x-auto rounded border border-[var(--color-critical)] bg-[var(--color-critical-soft)] p-3 text-xs text-[var(--color-critical)]">

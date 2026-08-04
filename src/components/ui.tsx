@@ -36,19 +36,26 @@ export function Field({
   );
 }
 
+// min-h is the 04 section 4 floor (40px), applied at the kit rather than per
+// screen: a control that meets it only where someone remembered is a control
+// that does not meet it.
 const CONTROL =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 " +
-  "text-sm outline-none transition-colors focus:border-[var(--color-accent)]";
+  "min-h-[var(--hit-target)] w-full rounded-md border border-[var(--color-border)] " +
+  "bg-[var(--color-surface)] px-3 py-2 text-sm outline-none transition-colors " +
+  "focus:border-[var(--color-accent)]";
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+// Props with `ref`, so a caller that has to move focus (the confirmation
+// queue answers a key with it) can use these rather than hand-rolling a
+// control and drifting from the shared styling.
+export function Input(props: React.ComponentPropsWithRef<"input">) {
   return <input {...props} className={`${CONTROL} ${props.className ?? ""}`} />;
 }
 
-export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea(props: React.ComponentPropsWithRef<"textarea">) {
   return <textarea {...props} className={`${CONTROL} resize-y ${props.className ?? ""}`} />;
 }
 
-export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select(props: React.ComponentPropsWithRef<"select">) {
   return <select {...props} className={`${CONTROL} ${props.className ?? ""}`} />;
 }
 
@@ -70,8 +77,9 @@ export function Button({
     <button
       {...props}
       className={
-        `inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium ` +
-        `transition-all disabled:cursor-not-allowed disabled:opacity-45 ${styles} ${props.className ?? ""}`
+        `inline-flex min-h-[var(--hit-target)] items-center gap-2 rounded-md border px-3 py-2 ` +
+        `text-sm font-medium transition-all disabled:cursor-not-allowed ` +
+        `disabled:opacity-45 ${styles} ${props.className ?? ""}`
       }
     />
   );
