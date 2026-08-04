@@ -53,13 +53,25 @@ describe("review status machine", () => {
     expect(canTransitionReview("paused_limit", "verifying")).toBe(false);
   });
 
-  it("treats complete, failed and cancelled as final", () => {
-    for (const terminal of ["complete", "failed", "cancelled"] as const) {
+  it("treats complete and cancelled as final", () => {
+    for (const terminal of ["complete", "cancelled"] as const) {
       expect(isTerminalReviewStatus(terminal)).toBe(true);
       expect(reviewTransitionsFrom(terminal)).toHaveLength(0);
       for (const status of REVIEW_STATUSES) {
         expect(canTransitionReview(terminal, status), `${terminal} -> ${status}`).toBe(false);
       }
+    }
+  });
+
+  it("lets a failed review run again, and nothing else", () => {
+    // Failure used to be final, which meant the only recovery from a broken
+    // stage was starting over and paying for every stage again. Resuming
+    // replays the answered ones from their checkpoints (D-50).
+    expect(isTerminalReviewStatus("failed")).toBe(false);
+    expect(reviewTransitionsFrom("failed")).toEqual(["running"]);
+    for (const status of REVIEW_STATUSES) {
+      if (status === "running") continue;
+      expect(canTransitionReview("failed", status), `failed -> ${status}`).toBe(false);
     }
   });
 

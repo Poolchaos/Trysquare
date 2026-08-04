@@ -11,12 +11,18 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
+import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { importProtocol } from "@/lib/rulesets/import";
 import type { Db } from "@/server/db/client";
-import { createProject } from "@/server/db/repositories/projects";
-import { createReview, requireReview, transitionReview } from "@/server/db/repositories/reviews";
-import { models } from "@/server/db/schema";
+import { createProject, setCloneStatus } from "@/server/db/repositories/projects";
+import {
+  createReview,
+  deleteReview,
+  requireReview,
+  transitionReview,
+} from "@/server/db/repositories/reviews";
+import { models, projects } from "@/server/db/schema";
 import { JobManager } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
 import {
@@ -155,24 +161,68 @@ describe("stopping a review", () => {
     expect(requireReview(db, reviewId).status).toBe("cancelled");
   }, 120_000);
 
-  it("takes a queued review out of the line without starting it", async () => {
-    // Nothing was spent on it and no status was ever changed, so there is
-    // nothing to unwind.
+  it("takes a queued review out of the line and marks it cancelled", async () => {
+    // Dequeueing alone used to leave the row a draft and tell no one, so the
+    // screen showed a review still waiting for a slot it would never take. A
+    // cancelled queued review must end cancelled, and a watcher must hear it.
     const first = seedReview();
     const second = seedReview();
     start(first);
     start(second);
 
+    const heard: string[] = [];
+    manager.subscribe(second, (event) => {
+      if (event.kind === "status") heard.push(event.status);
+    });
+
     expect(manager.cancel(second)).toBe(true);
     expect(manager.queueDepth()).toBe(0);
-    expect(requireReview(db, second).status).toBe("draft");
+    expect(requireReview(db, second).status).toBe("cancelled");
+    expect(heard).toContain("cancelled");
 
     await manager.settled(first);
-    expect(requireReview(db, second).status).toBe("draft");
+    expect(requireReview(db, second).status).toBe("cancelled");
   }, 240_000);
 
+  it("cancels a draft that never started, without deleting its row", () => {
+    // Previously the only way to be rid of a draft was to delete it, which on
+    // a review that had already run would also discard its findings.
+    const reviewId = seedReview();
+    expect(manager.cancel(reviewId)).toBe(true);
+    expect(requireReview(db, reviewId).status).toBe("cancelled");
+  });
+
+  it("drains the queue past a review that was deleted while it waited", async () => {
+    // The queue holds ids, not rows. A deleted queued review used to throw
+    // from the finally of the run that ended, which escaped as an unhandled
+    // rejection and abandoned the loop, stranding every review behind it in a
+    // queue nothing would drain again.
+    const first = seedReview();
+    const doomed = seedReview();
+    const third = seedReview();
+
+    start(first);
+    start(doomed);
+    start(third);
+    expect(manager.queueDepth()).toBe(2);
+
+    deleteReview(db, doomed);
+
+    await manager.settled(first);
+    // The one behind the hole still runs, which is the whole point.
+    await manager.settled(third);
+    expect(requireReview(db, third).status).toBe("awaiting_confirmation");
+    expect(manager.queueDepth()).toBe(0);
+  }, 360_000);
+
   it("says so when there is nothing to cancel", () => {
-    expect(manager.cancel(seedReview())).toBe(false);
+    // A review that already ended. The manager asks the state machine rather
+    // than keeping its own list, so this is refused for the same reason the
+    // database would refuse it.
+    const reviewId = seedReview();
+    manager.cancel(reviewId);
+    expect(requireReview(db, reviewId).status).toBe("cancelled");
+    expect(manager.cancel(reviewId)).toBe(false);
   });
 });
 
@@ -313,6 +363,32 @@ describe("coming back from a restart", () => {
     fresh.init({ db, dataDir, claudePath: FAKE_CLI });
 
     expect(requireReview(db, reviewId).status).toBe("interrupted");
+  });
+
+  it("fails a clone the last process left in flight, and leaves settled ones alone", () => {
+    // The background task died with the process and nothing restarts it, so
+    // the row would say "cloning" forever and the projects screen would poll
+    // it forever.
+    const seed = (name: string) =>
+      createProject(db, {
+        name,
+        gitUrl: `git@example.com:acme/${name}.git`,
+        defaultBranch: "main",
+        clonePath: "",
+      }).id;
+    const strandedId = seed("mid-clone");
+    setCloneStatus(db, strandedId, "cloning");
+    const readyId = seed("settled");
+    setCloneStatus(db, readyId, "cloning");
+    setCloneStatus(db, readyId, "ready");
+
+    const fresh = new JobManager();
+    fresh.init({ db, dataDir, claudePath: FAKE_CLI });
+
+    const rowOf = (id: string) => db.select().from(projects).where(eq(projects.id, id)).get();
+    expect(rowOf(strandedId)?.cloneStatus).toBe("failed");
+    expect(rowOf(strandedId)?.cloneError).toMatch(/restarted while this clone was in flight/);
+    expect(rowOf(readyId)?.cloneStatus).toBe("ready");
   });
 
   it("registers the models the app knows how to offer", () => {

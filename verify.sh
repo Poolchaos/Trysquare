@@ -75,6 +75,10 @@ require_tool() {
 # machine, not a binary, so it does not exist in a non-interactive script.
 require_tool node
 require_tool npm
+# The git layer's tests, the seeded fixture, and the e2e setup all shell out
+# to git. Without this, a missing git surfaces as an opaque test failure, and
+# the nothing-hidden gate skips itself rather than failing.
+require_tool git
 
 run "Lint" npm run --silent lint
 run "Format check" npm run --silent format:check

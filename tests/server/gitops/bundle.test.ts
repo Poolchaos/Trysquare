@@ -8,7 +8,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildBundle, type Inventory } from "@/server/gitops/bundle";
+import { buildBundle, readBaseContents, type Inventory } from "@/server/gitops/bundle";
 import { cloneBare, mergeBase, resolveCommit } from "@/server/gitops/repo";
 
 let root: string;
@@ -173,5 +173,47 @@ describe("bundle contents", () => {
 
     const legacy = inventory.files.find((f) => f.path === "legacy.ts");
     expect(legacy?.changeType).toBe("deleted");
+  });
+});
+
+describe("reading the bundle back for the deletion stage", () => {
+  it("returns a deleted file's pre-change contents, keyed by the path stages use", async () => {
+    const { contents, missing } = await readBaseContents(bundleDir, [
+      { slug: "shared-core", file: { path: "legacy.ts", changeType: "deleted", isBinary: false } },
+    ]);
+    expect(missing).toEqual([]);
+    expect(contents.get("shared-core/legacy.ts")).toBe("export const removeMe = 1;\n");
+  });
+
+  it("skips files that still exist, because the model can open those itself", async () => {
+    const { contents } = await readBaseContents(bundleDir, [
+      { slug: "shared-core", file: { path: "types.ts", changeType: "modified", isBinary: false } },
+    ]);
+    expect(contents.size).toBe(0);
+  });
+
+  it("skips a deleted binary, whose copy was deliberately never stored", async () => {
+    // The writer stores no base copy for binaries. Reading one anyway would
+    // report a missing copy on every deleted image, and a run note that cries
+    // lost evidence over ordinary behaviour teaches people to ignore it.
+    const { contents, missing } = await readBaseContents(bundleDir, [
+      { slug: "shared-core", file: { path: "logo.png", changeType: "deleted", isBinary: true } },
+    ]);
+    expect(contents.size).toBe(0);
+    expect(missing).toEqual([]);
+  });
+
+  it("reports a copy it could not read instead of throwing", async () => {
+    // The run continues without it and says so in the prompt. Throwing here
+    // would lose a whole review over one unreadable evidence file.
+    const { contents, missing } = await readBaseContents(bundleDir, [
+      {
+        slug: "shared-core",
+        file: { path: "never-existed.ts", changeType: "deleted", isBinary: false },
+      },
+    ]);
+    expect(contents.size).toBe(0);
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.path).toBe("shared-core/never-existed.ts");
   });
 });

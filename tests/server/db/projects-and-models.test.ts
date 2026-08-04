@@ -1,3 +1,4 @@
+import { InvalidCloneTransitionError } from "@/lib/domain/state-machines";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/server/db/client";
 import {
@@ -10,10 +11,9 @@ import {
   listProjects,
   setCloneStatus,
 } from "@/server/db/repositories/projects";
+import { PROBE_FRESHNESS_MS, availabilityOf } from "@/lib/models/availability";
 import {
   ModelAliasRejectedError,
-  PROBE_FRESHNESS_MS,
-  availabilityOf,
   getModel,
   listSelectable,
   recordProbeFailure,
@@ -39,8 +39,26 @@ describe("projects", () => {
     setCloneStatus(db, project.id, "failed", "Permission denied (publickey).");
     expect(listProjects(db)[0]!.cloneError).toBe("Permission denied (publickey).");
 
+    // Through cloning rather than straight to ready, because a retry
+    // re-clones and the transition guard insists on it.
+    setCloneStatus(db, project.id, "cloning");
     setCloneStatus(db, project.id, "ready");
     expect(listProjects(db)[0]!.cloneError).toBeNull();
+  });
+
+  it("refuses a clone status that skips the work it claims to have done", () => {
+    // Straight from failed to ready would mean a clone nobody re-attempted.
+    // Nothing in the app does it; the guard is what keeps that true.
+    const project = seedProject(db);
+    setCloneStatus(db, project.id, "failed", "Permission denied (publickey).");
+    expect(() => setCloneStatus(db, project.id, "ready")).toThrow(InvalidCloneTransitionError);
+  });
+
+  it("refuses to move a ready clone backwards", () => {
+    const project = seedProject(db);
+    setCloneStatus(db, project.id, "cloning");
+    setCloneStatus(db, project.id, "ready");
+    expect(() => setCloneStatus(db, project.id, "pending")).toThrow(InvalidCloneTransitionError);
   });
 
   it("refuses to delete a project that still has review history", () => {

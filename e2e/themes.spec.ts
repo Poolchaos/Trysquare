@@ -10,6 +10,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 const EVIDENCE = join(
@@ -61,14 +62,51 @@ for (const screen of SCREENS) {
   });
 }
 
+/**
+ * The screens that need a thing to exist before they can be seen at all.
+ *
+ * Walked rather than deep-linked, because the ids belong to whatever the
+ * journey created, and walking is also the path a person takes.
+ */
+test("the detail screens photograph on real content", async ({ page }, testInfo) => {
+  const shot = (name: string) => join(EVIDENCE, `${testInfo.project.name}-${name}.png`);
+
+  await page.goto("/projects");
+  await page.getByRole("main").getByRole("link", { name: "app", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Branches" })).toBeVisible({ timeout: 60_000 });
+  await photograph(page, shot("project-detail"));
+
+  await page.getByRole("link", { name: "New review" }).click();
+  await expect(page.getByRole("heading", { name: "New review", level: 1 })).toBeVisible();
+  await expect(page.getByTestId("model-picker")).toBeVisible();
+  await photograph(page, shot("new-review"));
+
+  await page.goto("/rulesets");
+  await page.getByRole("main").getByRole("link").first().click();
+  await expect(page.getByRole("table")).toBeVisible();
+  await photograph(page, shot("ruleset-detail"));
+});
+
 test("a completed review photographs with its report", async ({ page }, testInfo) => {
   await page.goto("/reviews");
-  // The only review the journey left, whatever the project ended up called.
-  await page.getByRole("main").getByRole("link").first().click();
+  await openTheCompletedReview(page);
 
   await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
   await photograph(page, join(EVIDENCE, `${testInfo.project.name}-review.png`));
 });
+
+/**
+ * Opens the one review that reached a report.
+ *
+ * Named rather than taken as "the first row": the failure-path pass leaves a
+ * resumed review and a cancelled one behind, and picking whichever sorted
+ * newest quietly landed on a review with no report at all.
+ */
+async function openTheCompletedReview(page: import("@playwright/test").Page): Promise<void> {
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await row.getByRole("link").click();
+}
 
 test("the theme actually follows the browser's preference", async ({ page }, testInfo) => {
   // Asserted rather than left to the screenshots, because a picture nobody
@@ -97,6 +135,60 @@ function lightnessOf(colour: string): number {
   const [red = 0, green = 0, blue = 0] = numbers;
   return ((red + green + blue) / 3 / 255) * 100;
 }
+
+/**
+ * The contrast and semantics claim 04 section 4 makes, actually checked.
+ *
+ * It was stated as fact for days while nothing checked it, which is the exact
+ * failure the "not built yet" blocks exist to prevent. Both themes, because a
+ * palette that passes light can fail dark on the same tokens.
+ *
+ * Scoped to WCAG 2 A and AA, which is what 04 claims. Best-practice rules are
+ * deliberately not included: they are opinions, and failing the suite on an
+ * opinion trains people to ignore it.
+ */
+for (const screen of SCREENS) {
+  test(`${screen.name} has no accessibility violations`, async ({ page }) => {
+    await page.goto(screen.path);
+    await expect(page.getByRole("heading", { name: screen.title, level: 1 })).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+
+    // Named in the failure rather than counted: "3 violations" sends someone
+    // to a report file, and the rule id and the element are what actually
+    // get it fixed.
+    const summary = results.violations.map(
+      (violation) =>
+        `${violation.id} (${violation.impact}): ${violation.help}\n` +
+        violation.nodes.map((node) => `    ${node.target.join(" ")}`).join("\n"),
+    );
+    expect(summary, `${screen.path} in ${test.info().project.name}`).toEqual([]);
+  });
+}
+
+test("the confirmation queue has no accessibility violations", async ({ page }) => {
+  // The densest screen in the app and the one a person spends longest in, so
+  // it is checked on its own rather than only as part of the list above.
+  await page.goto("/reviews");
+  await openTheCompletedReview(page);
+  await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
+
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(
+    results.violations.map(
+      (violation) =>
+        `${violation.id}: ${violation.help}\n` +
+        violation.nodes
+          .map((node) => `    ${node.target.join(" ")}\n    ${node.failureSummary ?? ""}`)
+          .join("\n"),
+    ),
+    "the completed review screen",
+  ).toEqual([]);
+});
 
 test("the first thing tabbed to is reachable and visibly focused", async ({ page }) => {
   // Focus has to be visible, not merely present: a keyboard user who cannot

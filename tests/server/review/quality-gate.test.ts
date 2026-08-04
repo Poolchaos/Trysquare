@@ -24,6 +24,7 @@ import type { Db } from "@/server/db/client";
 import { listFindings, statusOf } from "@/server/db/repositories/findings";
 import { cloneBare, diffText, mergeBase, resolveCommit } from "@/server/gitops/repo";
 import { addWorktree } from "@/server/gitops/worktree";
+import type { ReviewProfile } from "@/lib/domain/enums";
 import { runReviewPipeline } from "@/server/review/pipeline";
 // @ts-expect-error -- plain JavaScript so it can also be run from a shell.
 import { buildSeededRepos } from "../../fixtures/build-seeded-repos.mjs";
@@ -34,7 +35,7 @@ import {
   type SeededManifest,
 } from "../../helpers/ideal-answers";
 import { makeTestDb, seedProject, type TestDb } from "../db/helpers";
-import { createReview } from "@/server/db/repositories/reviews";
+import { createReview, readRunNotes, requireReview } from "@/server/db/repositories/reviews";
 
 const PROTOCOL = importProtocol(
   readFileSync(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8"),
@@ -117,7 +118,13 @@ beforeEach(() => {
  * answers through the fake CLI, so the two cannot drift apart.
  * `extraFindings` lets a test add something untrue and watch it be discarded.
  */
-function runGate(options: { extraFindings?: Record<string, unknown>[]; misquote?: boolean } = {}) {
+function runGate(
+  options: {
+    extraFindings?: Record<string, unknown>[];
+    misquote?: boolean;
+    profile?: ReviewProfile;
+  } = {},
+) {
   const outputs = buildIdealStageOutputs({
     files: entries(),
     manifest,
@@ -132,7 +139,7 @@ function runGate(options: { extraFindings?: Record<string, unknown>[]; misquote?
     worktreeRoot,
     files: entries(),
     rules: PROTOCOL.ruleset.rules,
-    profile: "full-context",
+    profile: options.profile ?? "full-context",
     changedSymbols: changedExportedSymbols(coreFiles),
     systemPromptFor: () => "system",
     run: idealRunner(outputs),
@@ -277,4 +284,82 @@ describe("a review that reports something untrue", () => {
     const killed = listFindings(db, reviewId).filter((finding) => statusOf(finding) === "killed");
     expect(killed.some((finding) => finding.lineStart === 9000)).toBe(true);
   }, 60_000);
+});
+
+/**
+ * The same change set under every profile that judges.
+ *
+ * docs/06 section 3 promises the completeness invariant does not adapt: a
+ * profile changes how the work is divided into requests, never how much of
+ * the protocol is applied. That is only a claim until the weaker divisions
+ * are measured against the same answer key, which is what this does.
+ */
+describe.each(["full-context", "chunked", "decomposed"] as const)(
+  "a correct review under the %s profile",
+  (profile) => {
+    it("finds every seeded defect and leaves nothing undispositioned", async () => {
+      const result = await runGate({ profile });
+
+      expect(result.coverage.pendingHunks).toBe(0);
+      expect(result.coverage.pendingSweepHits).toBe(0);
+      expect(result.coverage.pendingFiles).toBe(0);
+      expect(result.coverage.unresolvedCandidates).toBe(0);
+      expect(result.killedByQuoteCheck).toBe(0);
+
+      const verified = listFindings(db, reviewId).filter(
+        (finding) => statusOf(finding) === "verified",
+      );
+      for (const defect of manifest.defects) {
+        const match = verified.find(
+          (finding) => finding.filePath === qualified(defect) && finding.lineStart === defect.line,
+        );
+        expect(match, `${defect.id} under ${profile}`).toBeDefined();
+      }
+    }, 120_000);
+
+    it("reports nothing in the files that are deliberately correct", async () => {
+      await runGate({ profile });
+      const verified = listFindings(db, reviewId).filter(
+        (finding) => statusOf(finding) === "verified",
+      );
+      for (const clean of manifest.cleanFiles) {
+        expect(
+          verified.find((finding) => finding.filePath === `app/${clean}`),
+          `${clean} under ${profile}`,
+        ).toBeUndefined();
+      }
+    }, 120_000);
+  },
+);
+
+describe("what a narrower profile costs", () => {
+  it("divides the same work into more requests as the profile narrows", async () => {
+    // The trade docs/06 records: the same rules, applied in more and smaller
+    // requests. If this ever inverts, a profile is dropping work rather than
+    // dividing it.
+    const full = await runGate({ profile: "full-context" });
+    const chunked = await runGate({ profile: "chunked" });
+    const decomposed = await runGate({ profile: "decomposed" });
+
+    expect(chunked.adversarialRequests).toBeGreaterThan(full.adversarialRequests);
+    expect(decomposed.adversarialRequests).toBeGreaterThanOrEqual(chunked.adversarialRequests);
+  }, 180_000);
+
+  it("names every rule and file pair a narrowing profile did not check", async () => {
+    // Narrowing is legitimate; narrowing invisibly is not. This fixture's
+    // change set touches README.md, whose only theme is general, so decomposed
+    // genuinely excludes the technology-themed rules against it; the count
+    // must be real and the pairs must be written onto the run.
+    const full = await runGate({ profile: "full-context" });
+    expect(full.excludedPairs).toBe(0);
+
+    const decomposed = await runGate({ profile: "decomposed" });
+    expect(decomposed.excludedPairs).toBeGreaterThan(0);
+
+    const note = readRunNotes(requireReview(db, reviewId)).find(
+      (entry) => entry.kind === "excluded-pairs",
+    );
+    expect(note?.message).toContain(`${decomposed.excludedPairs} rule/file pair(s)`);
+    expect(note?.message).toContain("README.md");
+  }, 120_000);
 });

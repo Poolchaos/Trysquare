@@ -29,6 +29,7 @@ let routes: {
   start: typeof import("@/app/api/reviews/[id]/start/route");
   complete: typeof import("@/app/api/reviews/[id]/complete/route");
   fileContext: typeof import("@/app/api/reviews/[id]/context/route");
+  rules: typeof import("@/app/api/reviews/[id]/rules/route");
   confirm: typeof import("@/app/api/findings/[id]/confirm/route");
   dismiss: typeof import("@/app/api/findings/[id]/dismiss/route");
   rulesets: typeof import("@/app/api/rulesets/import/route");
@@ -47,8 +48,15 @@ interface Finding {
   filePath: string;
   lineStart: number;
   status: string;
+  ruleCode: string | null;
+  comment: string;
+  editedComment: string | null;
   dismissReason: string | null;
 }
+
+/** Distinctive enough that finding it in the report cannot be a coincidence. */
+const REWRITTEN = "Rewritten while confirming: the retry loop swallows the abort signal.";
+let engineWording = "";
 
 async function snapshot(): Promise<{ review: { status: string }; findings: Finding[] }> {
   const response = await routes.review.GET(new Request("http://localhost"), params(reviewId));
@@ -75,6 +83,7 @@ beforeAll(async () => {
     start: await import("@/app/api/reviews/[id]/start/route"),
     complete: await import("@/app/api/reviews/[id]/complete/route"),
     fileContext: await import("@/app/api/reviews/[id]/context/route"),
+    rules: await import("@/app/api/reviews/[id]/rules/route"),
     confirm: await import("@/app/api/findings/[id]/confirm/route"),
     dismiss: await import("@/app/api/findings/[id]/dismiss/route"),
     rulesets: await import("@/app/api/rulesets/import/route"),
@@ -182,9 +191,36 @@ describe("reading the code a finding is about", () => {
     const body = (await response.json()) as {
       lines: { number: number; text: string }[];
       start: number;
+      hunk: { header: string; lines: string[] } | null;
     };
     expect(body.lines.length).toBeGreaterThan(0);
     expect(body.lines.some((line) => line.number === finding!.lineStart)).toBe(true);
+
+    // The hunk that produced the finding rides along: what changed, beside
+    // what it changed into, is the comparison a decision is made from.
+    expect(body.hunk).not.toBeNull();
+    expect(body.hunk!.header).toMatch(/^@@ -\d+,\d+ \+\d+,\d+ @@/);
+    expect(body.hunk!.lines.some((line) => line.startsWith("+") || line.startsWith("-"))).toBe(
+      true,
+    );
+  }, 120_000);
+
+  it("serves the rules the review was frozen with, verbatim", async () => {
+    // The screen expands these beside a finding: deciding one is usually
+    // deciding whether the rule says what the engine claims, which only the
+    // author's own markdown can answer.
+    const cited = (await snapshot()).findings.find((finding) => finding.ruleCode !== null);
+    expect(cited).toBeDefined();
+
+    const response = await routes.rules.GET(new Request("http://localhost"), params(reviewId));
+    expect(response.status).toBe(200);
+
+    const { rules } = (await response.json()) as {
+      rules: { code: string; title: string; raw: string }[];
+    };
+    const rule = rules.find((entry) => entry.code === cited!.ruleCode);
+    expect(rule).toBeDefined();
+    expect(rule!.raw).toContain(rule!.title);
   }, 120_000);
 
   it("refuses a file this review never raised a finding in", async () => {
@@ -222,7 +258,16 @@ describe("deciding, then closing the review", () => {
     );
     expect(dismissed.status).toBe(200);
 
-    for (const finding of findings.slice(1)) {
+    // One is confirmed with a rewritten comment, the rest as the engine put
+    // them, which is the common case and must stay a bare POST.
+    engineWording = findings[1]!.comment;
+    const rewritten = await routes.confirm.POST(
+      post({ comment: REWRITTEN }),
+      params(findings[1]!.id),
+    );
+    expect(rewritten.status).toBe(200);
+
+    for (const finding of findings.slice(2)) {
       const confirmed = await routes.confirm.POST(post(), params(finding.id));
       expect(confirmed.status).toBe(200);
     }
@@ -232,6 +277,11 @@ describe("deciding, then closing the review", () => {
     const dismissedRow = after.findings.find((f) => f.id === findings[0]!.id);
     expect(dismissedRow?.status).toBe("dismissed");
     expect(dismissedRow?.dismissReason).toContain("Deliberate");
+
+    // Beside, not over: the row carries both wordings.
+    const editedRow = after.findings.find((f) => f.id === findings[1]!.id);
+    expect(editedRow?.editedComment).toBe(REWRITTEN);
+    expect(editedRow?.comment).toBe(engineWording);
   }, 120_000);
 
   it("completes once every finding is decided, and releases the checkout", async () => {
@@ -278,6 +328,10 @@ describe("the report a completed review produces", () => {
     expect(markdown).toContain("Deliberate: the wrapper already guards this.");
     expect(markdown).toContain("Ruleset: Example protocol version 1");
     expect(markdown).not.toContain(String.fromCharCode(8212));
+
+    // The person's wording went into the report; the engine's did not.
+    expect(markdown).toContain(`Comment: ${REWRITTEN}`);
+    expect(markdown).not.toContain(engineWording);
   }, 120_000);
 
   it("writes an export that outlives the review's working files", async () => {

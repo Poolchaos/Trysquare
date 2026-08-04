@@ -3,10 +3,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { exportProtocol, importProtocol } from "@/lib/rulesets/import";
 import type { Db } from "@/server/db/client";
 import {
+  RulesetNameTakenError,
+  duplicateRuleset,
   hasReviewSnapshot,
   loadRuleset,
+  patchRule,
   readReviewSnapshot,
   saveImportedRuleset,
+  setRuleEnabled,
   writeReviewSnapshot,
 } from "@/server/db/repositories/rulesets";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
@@ -109,6 +113,66 @@ describe("storing an imported protocol", () => {
     expect(loadRuleset(db, second.rulesetId).rules.find((r) => r.code === "3")?.ruleText).toBe(
       "A different rule entirely.",
     );
+  });
+
+  it("moves the version when a severity changes, exactly like the toggle", () => {
+    // A WARNING promoted to CRITICAL is a different standard, and a report
+    // naming "version 3" must identify exactly one standard.
+    const { rulesetId, version } = save();
+    const rule = PROTOCOL.rules[0]!;
+    const target = rule.severity === "CRITICAL" ? "WARNING" : "CRITICAL";
+
+    const bumped = patchRule(db, rulesetId, rule.code, { severity: target });
+    expect(bumped.version).toBe(version + 1);
+    expect(loadRuleset(db, rulesetId).rules.find((r) => r.code === rule.code)?.severity).toBe(
+      target,
+    );
+
+    // Saying what is already true is not a change and costs no version.
+    expect(patchRule(db, rulesetId, rule.code, { severity: target }).version).toBe(version + 1);
+  });
+
+  it("copies a ruleset into another tier as its own version 1", () => {
+    // Promotion: a rule proven on one project becomes a standard elsewhere.
+    // The copy carries the toggles as they stand, because what is promoted is
+    // the ruleset as used, not the document as first imported.
+    const { rulesetId } = save();
+    const offCode = PROTOCOL.rules[0]!.code;
+    setRuleEnabled(db, rulesetId, offCode, false);
+
+    const copy = duplicateRuleset(db, rulesetId, { tier: "project", name: "Promoted" });
+    expect(copy.version).toBe(1);
+    expect(copy.rulesetId).not.toBe(rulesetId);
+
+    const copied = loadRuleset(db, copy.rulesetId);
+    expect(copied.rules).toHaveLength(PROTOCOL.rules.length);
+    const enabledCopy = loadRuleset(db, copy.rulesetId, { enabledOnly: true });
+    expect(enabledCopy.rules.some((rule) => rule.code === offCode)).toBe(false);
+    // The original is untouched: same version, same toggles.
+    expect(
+      loadRuleset(db, rulesetId, { enabledOnly: true }).rules.some((r) => r.code === offCode),
+    ).toBe(false);
+  });
+
+  it("refuses a duplicate whose name is taken, instead of overwriting it", () => {
+    // saveImportedRuleset is keyed by name and replaces what it finds, so a
+    // second copy under the same name handed back the FIRST copy's id, wiped
+    // the edits made to it, and reset its version to 1 while past reviews
+    // still named a later one.
+    const { rulesetId } = save();
+    const first = duplicateRuleset(db, rulesetId, { tier: "project", name: "Promoted" });
+    setRuleEnabled(db, first.rulesetId, PROTOCOL.rules[0]!.code, false);
+
+    expect(() => duplicateRuleset(db, rulesetId, { tier: "project", name: "Promoted" })).toThrow(
+      RulesetNameTakenError,
+    );
+
+    // The first copy is exactly as it was left.
+    expect(
+      loadRuleset(db, first.rulesetId, { enabledOnly: true }).rules.some(
+        (rule) => rule.code === PROTOCOL.rules[0]!.code,
+      ),
+    ).toBe(false);
   });
 
   it("drops a rule the document no longer contains", () => {

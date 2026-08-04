@@ -18,6 +18,7 @@ import type { ParsedFile } from "@/lib/git/diff";
 import { changedExportedSymbols } from "@/lib/git/symbols";
 import type { ImportedRule } from "@/lib/rulesets/model";
 import { runSweeps } from "@/lib/review/sweep";
+import { isDeletionCandidate } from "@/server/review/content";
 import type { StageRequest, StageResponse } from "@/server/review/pipeline";
 
 export interface SeededDefect {
@@ -216,7 +217,22 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
       })),
     },
     s3: { findings: allFindings, clearedHunks, sweepDispositions, symbolDispositions },
-    s4: { findings: [], reviewedDeletions: [] },
+    s4: {
+      findings: [],
+      // Every file the deletion prompt lists, accounted for by name. An
+      // ideal reviewer answers for all of them, including the ones it finds
+      // harmless, because the pipeline reconciles this list against what it
+      // showed and a silent omission is the failure being guarded against.
+      reviewedDeletions: files.filter(isDeletionCandidate).map((entry) => ({
+        path: `${entry.slug}/${entry.file.path}`,
+        behaviourRemoved:
+          entry.file.changeType === "deleted"
+            ? "The whole file, read in full before it was removed."
+            : "The removed lines, read in the surrounding context.",
+        dependents: [],
+        reason: "Searched the worktree for callers; nothing depends on what went.",
+      })),
+    },
     s5ByLine,
   };
 }

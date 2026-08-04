@@ -398,6 +398,57 @@ describe("the record it leaves behind", () => {
   });
 });
 
+describe("an answer the pipeline rejected", () => {
+  it("is struck and asked again, instead of being replayed into the same failure", async () => {
+    // The dead loop this exists to prevent: a schema-valid answer is stored as
+    // succeeded, the pipeline's reconciliation then refuses it, and without
+    // the strike every resume replays the refused answer for free and fails
+    // identically forever. The only exit was deleting the review.
+    const engine = fakeEngine(() => ({
+      output: { attempt: engine.asked.length },
+      sessionId: "s-1",
+      usage,
+    }));
+    const runner = createCheckpointingRunner({ db, reviewId, inner: engine.inner });
+
+    await runner.run(ask());
+    runner.invalidate("s1_risk", "The stage skipped app/gone.ts.");
+
+    const retried = await runner.run(ask());
+
+    expect(engine.asked).toHaveLength(2);
+    expect(retried.output).toEqual({ attempt: 2 });
+
+    const rows = listForReview(db, reviewId);
+    expect(rows.map((row) => row.status)).toEqual(["failed", "succeeded"]);
+    expect(rows[0]?.errorClass).toBe("invalid_output");
+    expect(rows[0]?.errorText).toBe("The stage skipped app/gone.ts.");
+  });
+
+  it("strikes only the stage that was rejected", async () => {
+    const engine = fakeEngine((request) => ({
+      output: { stage: request.stage },
+      sessionId: "s-1",
+      usage,
+    }));
+    const runner = createCheckpointingRunner({ db, reviewId, inner: engine.inner });
+
+    await runner.run(ask());
+    await runner.run(ask({ stage: "s2_comprehension", prompt: "Summarise." }));
+    runner.invalidate("s2_comprehension", "Rejected.");
+
+    // The untouched stage still replays free; only the struck one re-asks.
+    await runner.run(ask());
+    await runner.run(ask({ stage: "s2_comprehension", prompt: "Summarise." }));
+
+    expect(engine.asked.map((request) => request.stage)).toEqual([
+      "s1_risk",
+      "s2_comprehension",
+      "s2_comprehension",
+    ]);
+  });
+});
+
 describe("the identity of a question", () => {
   it("is the same for the same question", () => {
     expect(promptHashFor(ask())).toBe(promptHashFor(ask()));

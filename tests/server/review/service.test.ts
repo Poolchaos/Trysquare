@@ -20,7 +20,13 @@ import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
 import { importProtocol } from "@/lib/rulesets/import";
 import { bundleDir, logsDir, runDir, worktreeRepoDir, worktreeRootDir } from "@/lib/paths";
 import type { Db } from "@/server/db/client";
-import { listFindings, statusOf as findingStatusOf } from "@/server/db/repositories/findings";
+import {
+  confirmFinding,
+  listFindings,
+  listFindingsByStatus,
+  requireFinding,
+  statusOf as findingStatusOf,
+} from "@/server/db/repositories/findings";
 import { createProject, listProjects } from "@/server/db/repositories/projects";
 import {
   createReview,
@@ -34,6 +40,8 @@ import { SETTING_KEYS, writeSetting } from "@/server/db/repositories/settings";
 import { models, reviews } from "@/server/db/schema";
 import { recordProbeSuccess, registerCandidate } from "@/server/db/repositories/models";
 import { listLedgerFiles } from "@/server/db/repositories/ledger";
+import { renderReport } from "@/lib/review/report";
+import { buildReportInput } from "@/server/review/report-input";
 import { listForReview, usageTotals } from "@/server/db/repositories/stage-executions";
 import { cloneBare, diffText, mergeBase, resolveCommit } from "@/server/gitops/repo";
 import { addWorktree } from "@/server/gitops/worktree";
@@ -255,6 +263,28 @@ describe("running a review to the point a human looks at it", () => {
     expect(seen.every((e) => e.kind === "live")).toBe(true);
   }, 120_000);
 
+  it("reports the comment a person rewrote, and keeps the engine's on the row", async () => {
+    // The report is read by whoever fixes the code, so it takes the human
+    // wording. The engine's own stays: how well it explained itself is the
+    // measurement of whether the prompts work, and an edit is a data point in
+    // exactly that, so overwriting it would destroy the evidence.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    const [finding] = listFindingsByStatus(db, reviewId, ["verified"]);
+    expect(finding).toBeDefined();
+    const engineWording = finding!.comment;
+    const mine = "Rounds the total down, so an invoice under a cent bills as zero.";
+
+    confirmFinding(db, finding!.id, { comment: mine });
+
+    const report = renderReport(buildReportInput(db, reviewId));
+    expect(report).toContain(`Comment: ${mine}`);
+    expect(report).not.toContain(engineWording);
+    expect(requireFinding(db, finding!.id).comment).toBe(engineWording);
+  }, 120_000);
+
   it("finds the seeded defects, at the file and line the manifest states", async () => {
     const reviewId = seedReview();
     writeIdealAnswers();
@@ -316,6 +346,122 @@ describe("running a review to the point a human looks at it", () => {
       (finding) => finding.filePath === `app/${crossRepo.file}`,
     );
     expect(found).toBeDefined();
+  }, 180_000);
+});
+
+/**
+ * Turns `<<candidate:path:line>>` placeholders into the labels the prompt
+ * actually used, which is what a person reading the prompt would type.
+ */
+function resolveCandidateTokens(answer: string, prompt: string): string {
+  // Only the question, never the whole document: the instructions above it
+  // carry the output contract, which is itself JSON, and scanning from the
+  // first brace in the file finds that instead of the candidate list.
+  const question = prompt.slice(prompt.indexOf("## The question"));
+  const start = question.indexOf("{");
+  const end = question.lastIndexOf("}");
+  if (start === -1 || end <= start) return answer;
+
+  let candidates: { ref: string; path: string; lineStart: number }[] = [];
+  try {
+    candidates =
+      (JSON.parse(question.slice(start, end + 1)) as { candidates?: typeof candidates })
+        .candidates ?? [];
+  } catch {
+    return answer;
+  }
+
+  return answer.replace(/<<candidate:(.+?):(\d+)>>/g, (whole, path: string, line: string) => {
+    const match = candidates.find(
+      (candidate) => candidate.path === path && String(candidate.lineStart) === line,
+    );
+    return match ? match.ref : whole;
+  });
+}
+
+describe("the interactive engine", () => {
+  it("runs a whole review from files on disk, spending nothing", async () => {
+    // Mode B end to end: the app writes each stage's prompt into the bundle,
+    // a person (here, a loop) writes the answer beside it, and the pipeline
+    // reconciles those answers exactly as it would the CLI's. What this
+    // proves is that the second engine is the same review, not a looser one.
+    const project = createProject(db, {
+      name: "app",
+      gitUrl: "git@example.com:acme/app.git",
+      defaultBranch: "main",
+      clonePath: appClone,
+    });
+    const reviewId = createReview(db, {
+      projectId: project.id,
+      fromBranch: "feature/rename-prefs",
+      fromCommit: appHead,
+      intoBranch: "main",
+      intoCommit: appBase,
+      mergeBaseCommit: appBase,
+      model: "claude-fable-5[1m]",
+      profileId: "full-context",
+      engineMode: "interactive",
+    }).id;
+
+    const outputs = buildIdealStageOutputs({
+      files: appFiles.map((file) => ({ repo: "primary" as const, slug: "app", file })),
+      manifest: { ...manifest, defects: manifest.defects.filter((d) => d.kind !== "cross-repo") },
+      worktreeRoot: referenceRoot,
+      rules: PROTOCOL.rules,
+    });
+    const answers = answerSequence(outputs);
+    const bundle = bundleDir(dataDir, reviewId);
+    const stages = [
+      "s1_risk",
+      "s2_comprehension",
+      "s3_adversarial",
+      "s4_deletions",
+      "s5_verification",
+    ] as const;
+
+    // Stands in for the person: waits for each prompt to be written, then
+    // saves that stage's answer next to it.
+    let stopped = false;
+    const answering = (async () => {
+      for (const [index, stage] of stages.entries()) {
+        for (let waited = 0; waited < 600 && !stopped; waited += 1) {
+          if (existsSync(join(bundle, `${stage}-prompt.md`))) break;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        if (stopped) return;
+        // Answered the way a person would: by reading the prompt they were
+        // handed. The verification stage labels each candidate in the prompt
+        // itself, and the ideal answers carry placeholders for those labels
+        // because no fixture can know them in advance. The fake CLI resolves
+        // them from the prompt; here there is no CLI, so this does.
+        const promptText = readFileSync(join(bundle, `${stage}-prompt.md`), "utf8");
+        writeFileSync(
+          join(bundle, `${stage}-output.json`),
+          resolveCandidateTokens(JSON.stringify(answers[index]), promptText),
+          "utf8",
+        );
+      }
+    })();
+
+    const outcome = await prepareAndRun(db, reviewId, {
+      dataDir,
+      // No CLI path at all: Mode B must not spawn anything.
+      ruleset: RULESET,
+    });
+    stopped = true;
+    await answering;
+
+    expect(outcome.kind, JSON.stringify(outcome)).toBe("completed");
+    expect(requireReview(db, reviewId).status).toBe("awaiting_confirmation");
+    // The same findings the headless run produces, verified against the same
+    // worktree bytes.
+    expect(listFindingsByStatus(db, reviewId, ["verified"]).length).toBeGreaterThan(0);
+    // Nothing was spent here: the tokens belong to the session the person ran.
+    expect(requireReview(db, reviewId).usageInputTokens).toBe(0);
+    // And the prompt a person was handed is on disk for every stage.
+    for (const stage of stages) {
+      expect(existsSync(join(bundle, `${stage}-prompt.md`))).toBe(true);
+    }
   }, 180_000);
 });
 
@@ -443,6 +589,61 @@ describe("when a review cannot finish", () => {
     expect(review.pausedReason).toMatch(/usage limit/i);
   }, 120_000);
 
+  it("records when the limit clears, so the pause has an end rather than reading as a hang", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    process.env.FAKE_CLAUDE_FAIL_AT = "3";
+    process.env.FAKE_CLAUDE_RESETS_AT = "1785408600";
+
+    await run(reviewId);
+
+    const review = requireReview(db, reviewId);
+    expect(review.status).toBe("paused_limit");
+    expect(review.pausedResetsAt).toBe(1785408600);
+    delete process.env.FAKE_CLAUDE_RESETS_AT;
+  }, 120_000);
+
+  it("clears the reset time when the review moves on", async () => {
+    // A stale reset time on a running review would tell someone their run is
+    // waiting for a limit it already passed.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    process.env.FAKE_CLAUDE_FAIL_AT = "3";
+    process.env.FAKE_CLAUDE_RESETS_AT = "1785408600";
+    await run(reviewId);
+    delete process.env.FAKE_CLAUDE_FAIL_AT;
+    delete process.env.FAKE_CLAUDE_RESETS_AT;
+
+    await run(reviewId);
+
+    const review = requireReview(db, reviewId);
+    expect(review.pausedResetsAt).toBeNull();
+    expect(review.pausedReason).toBeNull();
+  }, 120_000);
+
+  it("resumes a failed review, paying only for the stage that broke", async () => {
+    // 03 always specced a retry after a stage failure and the state machine
+    // made failed terminal, so the only recovery was starting over and paying
+    // for every stage again.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    process.env.FAKE_CLAUDE_SCENARIO = "error-result";
+
+    const failed = await run(reviewId);
+    expect(failed.kind).toBe("failed");
+    expect(requireReview(db, reviewId).status).toBe("failed");
+
+    delete process.env.FAKE_CLAUDE_SCENARIO;
+    process.env.FAKE_CLAUDE_SCENARIO = "script";
+    const outcome = await run(reviewId);
+
+    expect(outcome.kind).toBe("completed");
+    const review = requireReview(db, reviewId);
+    expect(review.status).toBe("awaiting_confirmation");
+    // A review that ran again has not finished, whatever the failure recorded.
+    expect(review.completedAt).toBeNull();
+  }, 120_000);
+
   it("resumes without asking again for what it already knows", async () => {
     // The whole point of checkpointing, seen from the outside: the second run
     // pays only for the stages the first never reached.
@@ -472,6 +673,48 @@ describe("when a review cannot finish", () => {
     expect(listLedgerFiles(db, reviewId)).toHaveLength(appFiles.length);
     // Two stages replayed, three paid for, and the earlier spend still counted.
     expect(requireReview(db, reviewId).usageInputTokens).toBe(spentAfterPause + 300);
+  }, 180_000);
+
+  it("recovers by resume when its own reconciliation rejected an answer", async () => {
+    // The stage's answer is checkpointed the moment the engine returns valid
+    // JSON, and the pipeline rejects it only afterwards. Left checkpointed as
+    // succeeded, every resume would replay the rejected answer byte for byte
+    // and fail identically forever; the only exit was deleting the review and
+    // paying for all five stages again.
+    const reviewId = seedReview();
+    const files = appFiles.map((file) => ({ repo: "primary" as const, slug: "app", file }));
+    const outputs = buildIdealStageOutputs({
+      files,
+      manifest: { ...manifest, defects: manifest.defects.filter((d) => d.kind !== "cross-repo") },
+      worktreeRoot: referenceRoot,
+      rules: PROTOCOL.rules,
+    });
+    const sequence = answerSequence(outputs);
+    // The first S4 answer accounts for nothing; the correct one waits behind
+    // it for the resume's live re-ask.
+    writeAnswersDir(answersDir, [
+      ...sequence.slice(0, 3),
+      { ...(sequence[3] as object), reviewedDeletions: [] },
+      ...sequence.slice(3),
+    ]);
+
+    const failed = await run(reviewId);
+    expect(failed.kind).toBe("failed");
+    const s4Rows = () => listForReview(db, reviewId).filter((row) => row.stage === "s4_deletions");
+    // The rejected answer must not be sitting there looking replayable.
+    expect(s4Rows().every((row) => row.status === "failed")).toBe(true);
+
+    const replayed: string[] = [];
+    const outcome = await run(reviewId, {
+      onStageLifecycle: (event: StageLifecycleEvent) => {
+        if (event.kind === "replayed") replayed.push(event.stage);
+      },
+    });
+
+    expect(outcome.kind, JSON.stringify(outcome)).toBe("completed");
+    expect(replayed).toEqual(["s1_risk", "s2_comprehension", "s3_adversarial"]);
+    expect(requireReview(db, reviewId).status).toBe("awaiting_confirmation");
+    expect(s4Rows().some((row) => row.status === "succeeded")).toBe(true);
   }, 180_000);
 
   it("refuses to start a review that is already finished", async () => {

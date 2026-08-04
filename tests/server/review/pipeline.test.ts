@@ -11,11 +11,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { parseUnifiedDiff } from "@/lib/git/diff";
-import { StageDidNotAccountError } from "@/lib/review/coverage";
+import { DeletionsNotAccountedError, StageDidNotAccountError } from "@/lib/review/coverage";
 import { SweepIncompleteError } from "@/lib/review/sweep";
 import type { Db } from "@/server/db/client";
 import { listFindings, statusOf } from "@/server/db/repositories/findings";
-import { IncompleteCoverageError, listSweepHits } from "@/server/db/repositories/ledger";
+import {
+  IncompleteCoverageError,
+  listLedgerFiles,
+  listSweepHits,
+} from "@/server/db/repositories/ledger";
 import {
   SweepDispositionUnmatchedError,
   SymbolVerdictUnbackedError,
@@ -794,5 +798,148 @@ describe("cross-repo contract changes", () => {
   it("requires nothing extra of a review with no linked repository", async () => {
     const result = await run({ ...BASE_ANSWERS, s5_verification: { verdicts: [] } });
     expect(result.coverage.pendingHunks).toBe(0);
+  });
+});
+
+/**
+ * A change set that removes a whole file, which nothing else in this suite
+ * covers. A deleted file is the case the ledger cannot notice on its own: it
+ * leaves no hunk in the file it used to be, so if the deletion stage simply
+ * omits it, every other count still adds up.
+ */
+const DELETING_PATCH = [
+  "diff --git a/legacy.ts b/legacy.ts",
+  "deleted file mode 100644",
+  "--- a/legacy.ts",
+  "+++ /dev/null",
+  "@@ -1,3 +0,0 @@",
+  "-export function guardRate(value: number) {",
+  "-  if (value < 0) throw new Error('negative');",
+  "-}",
+  "",
+].join("\n");
+
+const DELETING_FILES = parseUnifiedDiff(DELETING_PATCH).map((file) => ({
+  repo: "primary" as const,
+  slug: "app",
+  file,
+}));
+
+const DELETION_BASE_ANSWERS = {
+  s1_risk: { files: [{ path: "app/legacy.ts", riskTags: [], reason: "removed" }] },
+  s2_comprehension: {
+    files: [
+      {
+        path: "app/legacy.ts",
+        summary: "The whole file goes.",
+        chainFilesRead: [],
+        uncertainties: [],
+      },
+    ],
+  },
+  s3_adversarial: {
+    findings: [],
+    clearedHunks: [
+      { path: "app/legacy.ts", hunkIndex: 0, reason: "The removal itself is the change." },
+    ],
+    sweepDispositions: [],
+  },
+  s5_verification: { verdicts: [] },
+};
+
+function runDeleting(s4: unknown, overrides: Record<string, unknown> = {}) {
+  return runReviewPipeline({
+    db,
+    reviewId,
+    worktreeRoot,
+    files: DELETING_FILES,
+    rules: [rule("9", ["typescript"])],
+    profile: "full-context",
+    systemPromptFor: (stage) => `prompt for ${stage}`,
+    run: scripted({ ...DELETION_BASE_ANSWERS, s4_deletions: s4 }),
+    ...overrides,
+  });
+}
+
+const ACCOUNTED = {
+  path: "app/legacy.ts",
+  behaviourRemoved: "A guard that rejected negative rates.",
+  dependents: [],
+  reason: "Searched the worktree; nothing calls it.",
+};
+
+describe("the deletion stage's account of what was removed", () => {
+  it("completes when every removed file is accounted for", async () => {
+    const result = await runDeleting({ findings: [], reviewedDeletions: [ACCOUNTED] });
+    expect(result.coverage.pendingFiles).toBe(0);
+  });
+
+  it("fails when a removed file is never mentioned", async () => {
+    await expect(runDeleting({ findings: [], reviewedDeletions: [] })).rejects.toThrow(
+      DeletionsNotAccountedError,
+    );
+  });
+
+  it("names the file it was not told about", async () => {
+    await expect(runDeleting({ findings: [], reviewedDeletions: [] })).rejects.toThrow(
+      /app\/legacy\.ts/,
+    );
+  });
+
+  it("fails when a file is accounted for that the change set does not remove", async () => {
+    await expect(
+      runDeleting({
+        findings: [],
+        reviewedDeletions: [ACCOUNTED, { ...ACCOUNTED, path: "app/invented.ts" }],
+      }),
+    ).rejects.toThrow(/does not remove/);
+  });
+
+  it("fails when one file is accounted for twice, which hides another behind it", async () => {
+    await expect(
+      runDeleting({ findings: [], reviewedDeletions: [ACCOUNTED, ACCOUNTED] }),
+    ).rejects.toThrow(/more than once/);
+  });
+
+  it("closes the file in the ledger once its deletion is accounted for", async () => {
+    await runDeleting({ findings: [], reviewedDeletions: [ACCOUNTED] });
+    const [file] = listLedgerFiles(db, reviewId);
+    expect(file?.status).toBe("reviewed");
+  });
+
+  it("leaves the file unreviewed in the ledger when the stage skipped it", async () => {
+    // The run refuses to continue, and the ledger must agree with the refusal:
+    // a file whose deletion nobody accounted for stays open, so the audit and
+    // the coverage panel both still owe it.
+    await expect(runDeleting({ findings: [], reviewedDeletions: [] })).rejects.toThrow(
+      DeletionsNotAccountedError,
+    );
+    const [file] = listLedgerFiles(db, reviewId);
+    expect(file?.status).toBe("pending");
+  });
+
+  it("strikes the rejected answer so a resume asks the stage again", async () => {
+    // Without this, the refused answer sits checkpointed as succeeded, every
+    // resume replays it byte for byte, and the review can never recover.
+    const struck: { stage: string; reason: string }[] = [];
+    await expect(
+      runDeleting(
+        { findings: [], reviewedDeletions: [] },
+        { invalidate: (stage: string, reason: string) => struck.push({ stage, reason }) },
+      ),
+    ).rejects.toThrow(DeletionsNotAccountedError);
+
+    expect(struck).toHaveLength(1);
+    expect(struck[0]?.stage).toBe("s4_deletions");
+    expect(struck[0]?.reason).toMatch(/app\/legacy\.ts/);
+  });
+
+  it("strikes nothing when the answer is accepted", async () => {
+    const struck: string[] = [];
+    await runDeleting(
+      { findings: [], reviewedDeletions: [ACCOUNTED] },
+      { invalidate: (stage: string) => struck.push(stage) },
+    );
+    expect(struck).toEqual([]);
   });
 });

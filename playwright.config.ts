@@ -1,5 +1,12 @@
 import { defineConfig } from "@playwright/test";
-import { ANSWERS_DIR, COUNTER_FILE, DATA_DIR, FAKE_CLI } from "./e2e/setup";
+import {
+  ANSWERS_DIR,
+  COUNTER_FILE,
+  DATA_DIR,
+  FAKE_CLI,
+  LIMIT_TRIGGER,
+  STALL_TRIGGER,
+} from "./e2e/setup";
 
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -27,10 +34,19 @@ export default defineConfig({
     // left behind. Running it twice would fail on its own second attempt to
     // add the same repository, which is correct behaviour and a useless test.
     { name: "journey", testMatch: /journey\.spec\.ts/, use: { colorScheme: "light" } },
+    // The endings that are not success. After the journey, because they reuse
+    // the project and ruleset it leaves behind; before the theme passes, so
+    // the screenshots are of a settled app rather than one mid-experiment.
+    {
+      name: "failure-paths",
+      testMatch: /failure-paths\.spec\.ts/,
+      dependencies: ["journey"],
+      use: { colorScheme: "light" },
+    },
     {
       name: "light",
       testMatch: /themes\.spec\.ts/,
-      dependencies: ["journey"],
+      dependencies: ["failure-paths"],
       use: { colorScheme: "light" },
     },
     // Both themes are first-class, so both are photographed rather than one
@@ -38,7 +54,7 @@ export default defineConfig({
     {
       name: "dark",
       testMatch: /themes\.spec\.ts/,
-      dependencies: ["journey"],
+      dependencies: ["failure-paths"],
       use: { colorScheme: "dark" },
     },
   ],
@@ -54,6 +70,8 @@ export default defineConfig({
       FAKE_CLAUDE_SCENARIO: "script",
       FAKE_CLAUDE_DIR: ANSWERS_DIR,
       FAKE_CLAUDE_COUNTER: COUNTER_FILE,
+      FAKE_CLAUDE_LIMIT_FILE: LIMIT_TRIGGER,
+      FAKE_CLAUDE_STALL_FILE: STALL_TRIGGER,
     },
   },
 });

@@ -12,6 +12,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addedLineNumbers,
   addedLinesOf,
+  formatHunkHeader,
+  hunkForLine,
   parseUnifiedDiff,
   removedLinesOf,
   summariseDiff,
@@ -258,5 +260,48 @@ describe("path unquoting", () => {
     expect(unquoteGitPath('"a\\"b.ts"')).toBe('a"b.ts');
     expect(unquoteGitPath('"a\\\\b.ts"')).toBe("a\\b.ts");
     expect(unquoteGitPath('"a\\tb.ts"')).toBe("a\tb.ts");
+  });
+});
+
+describe("finding the hunk a citation falls in", () => {
+  it("picks the hunk containing a line, not merely the first one", () => {
+    // The confirmation screen shows this beside the finding, so picking the
+    // wrong hunk would put a person's decision next to unrelated code.
+    const file = fileOf("modified.ts");
+    const late = hunkForLine(file, file.hunks[1]!.newStart + 1);
+    expect(late?.hunkIndex).toBe(1);
+
+    const early = hunkForLine(file, file.hunks[0]!.newStart + 1);
+    expect(early?.hunkIndex).toBe(0);
+  });
+
+  it("gives a deletion the one hunk it has, whatever line is cited", () => {
+    // Git emits a deleted file as a single hunk covering all of it, so there
+    // is no second candidate to choose wrongly and no old-side special case
+    // to write. This pins that assumption: if git ever splits a deletion,
+    // the second citation below stops matching the first.
+    const file = fileOf("deleted.ts");
+    expect(file.hunks).toHaveLength(1);
+    expect(file.hunks[0]!.newLines).toBe(0);
+    expect(hunkForLine(file, 1)?.hunkIndex).toBe(0);
+    expect(hunkForLine(file, 500)?.hunkIndex).toBe(0);
+  });
+
+  it("falls back to the first hunk for a line outside every hunk", () => {
+    // A line the change did not touch still sits in a changed file, and the
+    // change is more use to a reader than an empty pane.
+    expect(hunkForLine(fileOf("modified.ts"), 999)?.hunkIndex).toBe(0);
+  });
+
+  it("has nothing to show for a file with no hunks", () => {
+    expect(hunkForLine(fileOf("binary.bin"), 1)).toBeUndefined();
+    expect(hunkForLine(fileOf("mode-only.sh"), 1)).toBeUndefined();
+  });
+
+  it("writes back the header git would have written", () => {
+    // The header is rendered verbatim above the hunk, so it has to be the
+    // real one rather than a plausible-looking reconstruction.
+    const hunk = fileOf("modified.ts").hunks[0]!;
+    expect(diffText).toContain(formatHunkHeader(hunk));
   });
 });

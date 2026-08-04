@@ -22,6 +22,16 @@ export const DATA_DIR = join(E2E_ROOT, "data");
 export const ANSWERS_DIR = join(E2E_ROOT, "answers");
 export const COUNTER_FILE = join(E2E_ROOT, "calls.txt");
 export const FIXTURE_DIR = join(E2E_ROOT, "fixture");
+/**
+ * Arms the next CLI call to fail with a usage limit.
+ *
+ * A file rather than an environment variable because the browser suite boots
+ * one server for the whole run: a test cannot change the server's environment,
+ * but it can write a file the next spawned CLI reads.
+ */
+export const LIMIT_TRIGGER = join(E2E_ROOT, "arm-limit.json");
+/** Arms the next CLI call to stall, so a run is still going when Cancel is pressed. */
+export const STALL_TRIGGER = join(E2E_ROOT, "arm-stall.json");
 
 /**
  * The address the journey pastes in.
@@ -72,18 +82,18 @@ export default async function globalSetup(): Promise<void> {
   const head = await resolveCommit(referenceClone, "feature/rename-prefs");
   const files = parseUnifiedDiff(await diffText(referenceClone, base, head));
 
-  helpers.writeAnswersDir(
-    ANSWERS_DIR,
-    helpers.answerSequence(
-      helpers.buildIdealStageOutputs({
-        files: files.map((file) => ({ repo: "primary" as const, slug: "app", file })),
-        manifest: {
-          ...manifest,
-          defects: manifest.defects.filter((defect) => defect.kind !== "cross-repo"),
-        } as never,
-        worktreeRoot: referenceRoot,
-        rules: importProtocol(readFileSync(PROTOCOL_PATH, "utf8")).ruleset.rules,
-      }),
-    ),
+  const sequence = helpers.answerSequence(
+    helpers.buildIdealStageOutputs({
+      files: files.map((file) => ({ repo: "primary" as const, slug: "app", file })),
+      manifest: {
+        ...manifest,
+        defects: manifest.defects.filter((defect) => defect.kind !== "cross-repo"),
+      } as never,
+      worktreeRoot: referenceRoot,
+      rules: importProtocol(readFileSync(PROTOCOL_PATH, "utf8")).ruleset.rules,
+    }),
   );
+  // Twice over: the journey runs one review and the failure-path spec runs
+  // another, and the fake hands out one sequence per directory.
+  helpers.writeAnswersDir(ANSWERS_DIR, [...sequence, ...sequence]);
 }

@@ -27,6 +27,11 @@ let routes: {
   links: typeof import("@/app/api/projects/[id]/links/route");
   fetchNow: typeof import("@/app/api/projects/[id]/fetch/route");
   preflight: typeof import("@/app/api/reviews/preflight/route");
+  review: typeof import("@/app/api/reviews/[id]/route");
+  ruleset: typeof import("@/app/api/rulesets/[id]/route");
+  rule: typeof import("@/app/api/rulesets/[id]/rules/[code]/route");
+  duplicate: typeof import("@/app/api/rulesets/[id]/duplicate/route");
+  projectReviews: typeof import("@/app/api/projects/[id]/reviews/route");
 };
 
 const post = (url: string, body: unknown) =>
@@ -50,6 +55,11 @@ beforeAll(async () => {
     links: await import("@/app/api/projects/[id]/links/route"),
     fetchNow: await import("@/app/api/projects/[id]/fetch/route"),
     preflight: await import("@/app/api/reviews/preflight/route"),
+    review: await import("@/app/api/reviews/[id]/route"),
+    ruleset: await import("@/app/api/rulesets/[id]/route"),
+    rule: await import("@/app/api/rulesets/[id]/rules/[code]/route"),
+    duplicate: await import("@/app/api/rulesets/[id]/duplicate/route"),
+    projectReviews: await import("@/app/api/projects/[id]/reviews/route"),
   };
 
   const created = await routes.projects.POST(
@@ -74,7 +84,12 @@ async function projectReady(id: string): Promise<Record<string, unknown>> {
       projects: { id: string; cloneStatus: string; cloneError: string | null }[];
     };
     const project = body.projects.find((row) => row.id === id);
-    if (project && project.cloneStatus !== "pending") return project;
+    // A terminal state, not merely "not pending": the clone passes through
+    // "cloning" on its way, and returning there would assert on a clone that
+    // has not finished.
+    if (project && (project.cloneStatus === "ready" || project.cloneStatus === "failed")) {
+      return project;
+    }
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw new Error("the clone never finished");
@@ -174,6 +189,101 @@ describe("creating a review", () => {
     expect(review.effort).toBe("high");
   }, 120_000);
 
+  it("takes the profile from the model rather than a default", async () => {
+    // Every review before this resolution existed ran full-context, whatever
+    // model it named, because the route defaulted the field and nothing read
+    // the registry.
+    const response = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-sonnet-5",
+      }),
+    );
+    expect(response.status).toBe(201);
+    const { review } = (await response.json()) as { review: { profileId: string } };
+    expect(review.profileId).toBe("decomposed");
+  }, 120_000);
+
+  it("refuses a profile stronger than the model is registered for", async () => {
+    const response = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-sonnet-5",
+        profileId: "full-context",
+      }),
+    );
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { code: string };
+    expect(body.code).toBe("ProfileStrongerThanModel");
+  }, 120_000);
+
+  it("accepts a deliberate downgrade and says so on the run", async () => {
+    const response = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+        profileId: "decomposed",
+      }),
+    );
+    expect(response.status).toBe(201);
+    const { review } = (await response.json()) as { review: { id: string; profileId: string } };
+    expect(review.profileId).toBe("decomposed");
+
+    const detail = await routes.review.GET(new Request("http://localhost/x"), {
+      params: Promise.resolve({ id: review.id }),
+    });
+    const body = JSON.stringify(await detail.json());
+    expect(body).toContain("downgraded from full-context");
+  }, 120_000);
+
+  it("records both facts when an unregistered model also carries a downgrade", async () => {
+    // These notes were branches of one if, so this combination wrote a note
+    // claiming the review assumed full-context while the row said decomposed.
+    const response = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-test-unregistered-5",
+        profileId: "decomposed",
+      }),
+    );
+    expect(response.status).toBe(201);
+    const { review } = (await response.json()) as { review: { id: string; profileId: string } };
+    expect(review.profileId).toBe("decomposed");
+
+    const detail = await routes.review.GET(new Request("http://localhost/x"), {
+      params: Promise.resolve({ id: review.id }),
+    });
+    const body = JSON.stringify(await detail.json());
+    expect(body).toContain("full-context was assumed as the baseline");
+    expect(body).toContain("downgraded from full-context to decomposed");
+    expect(body).not.toContain("makes one request per batch");
+  }, 120_000);
+
+  it("refuses a model that is registered for mechanical work only", async () => {
+    // Its plan contains no judgment requests, so the run would raise nothing
+    // and then fail with every hunk unaccounted for. Better refused up front.
+    const response = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-haiku-4-5-20251001",
+      }),
+    );
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { code: string; error: string };
+    expect(body.code).toBe("ProfileNotForJudgment");
+    expect(body.error).toMatch(/judge/i);
+  }, 120_000);
+
   it("refuses a branch that does not exist, rather than pinning nothing", async () => {
     const response = await routes.reviews.POST(
       post("http://localhost/api/reviews", {
@@ -202,9 +312,17 @@ describe("importing a ruleset", () => {
     );
     expect(response.status).toBe(201);
 
-    const body = (await response.json()) as { rules: number; directives: number; version: number };
+    const body = (await response.json()) as {
+      rules: number;
+      directives: number;
+      version: number;
+      fidelity: { totalLines: number; mappedLines: number };
+    };
     expect(body.rules).toBeGreaterThan(0);
     expect(body.directives).toBeGreaterThan(0);
+    // The fidelity report travels with the result, and for this document it
+    // says every line was placed.
+    expect(body.fidelity.mappedLines).toBe(body.fidelity.totalLines);
   });
 
   it("refuses a document that produced no rules", async () => {
@@ -218,6 +336,97 @@ describe("importing a ruleset", () => {
       }),
     );
     expect(response.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it("accounts for every line of an awkwardly shaped document", async () => {
+    // D-48 as it stands after checking the importer: the block partitioning
+    // claims every line by construction, so the fidelity numbers are the
+    // positive proof and the route's unmapped block is the trap that fires
+    // only if the importer ever regresses to dropping lines. The awkward
+    // shapes here are the ones that would go unowned if it did.
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const awkward = `A preamble remark before any heading.\n\n${markdown}\n## Unowned appendix\n\nTrailing notes nobody's rule names.\n`;
+
+    const response = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "Awkward",
+        tier: "global",
+        markdown: awkward,
+      }),
+    );
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as {
+      fidelity: { totalLines: number; mappedLines: number };
+    };
+    expect(body.fidelity.mappedLines).toBe(body.fidelity.totalLines);
+  });
+
+  it("edits severity through the same versioned door as the toggle", async () => {
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "Severity edit",
+        tier: "project",
+        markdown,
+      }),
+    );
+    const { rulesetId, version } = (await imported.json()) as {
+      rulesetId: string;
+      version: number;
+    };
+
+    const detailBefore = await routes.ruleset.GET(new Request("http://localhost"), {
+      params: Promise.resolve({ id: rulesetId }),
+    });
+    const before = (await detailBefore.json()) as {
+      rules: { code: string; severity: string }[];
+    };
+    const rule = before.rules[0]!;
+    const target = rule.severity === "CRITICAL" ? "WARNING" : "CRITICAL";
+
+    const patched = await routes.rule.PATCH(
+      new Request("http://localhost", {
+        method: "PATCH",
+        body: JSON.stringify({ severity: target }),
+      }),
+      { params: Promise.resolve({ id: rulesetId, code: rule.code }) },
+    );
+    expect(patched.status).toBe(200);
+    expect(((await patched.json()) as { version: number }).version).toBe(version + 1);
+  });
+
+  it("duplicates a ruleset into another tier as its own version 1", async () => {
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "To promote",
+        tier: "project",
+        markdown,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+
+    const copied = await routes.duplicate.POST(post("http://localhost/x", { tier: "global" }), {
+      params: Promise.resolve({ id: rulesetId }),
+    });
+    expect(copied.status).toBe(201);
+    const copy = (await copied.json()) as { rulesetId: string; version: number };
+    expect(copy.version).toBe(1);
+    expect(copy.rulesetId).not.toBe(rulesetId);
+
+    // A second copy under the same default name is refused rather than
+    // silently replacing the first one's rules.
+    const again = await routes.duplicate.POST(post("http://localhost/x", { tier: "global" }), {
+      params: Promise.resolve({ id: rulesetId }),
+    });
+    expect(again.status).toBe(409);
+    expect(((await again.json()) as { code: string }).code).toBe("RulesetNameTakenError");
   });
 });
 
@@ -293,7 +502,49 @@ describe("deleting a project", () => {
       params(projectId),
     );
     expect(response.status).toBe(409);
-    expect(((await response.json()) as { error: string }).error).toMatch(/still has \d+ review/);
+    const body = (await response.json()) as { error: string; reviewCount: number };
+    expect(body.error).toMatch(/still has \d+ review/);
+    // The count travels as a field, because the screen puts it on the button
+    // that offers the remedy.
+    expect(body.reviewCount).toBeGreaterThan(0);
+  }, 120_000);
+
+  it("offers the remedy: delete the blocking reviews, then the project goes", async () => {
+    // Its own remote, its own review, so deleting them cannot touch the
+    // fixtures the rest of this file depends on.
+    const remote = join(dataDir, "remedied.git");
+    await cloneBare(fixture.appClone, remote);
+    const created = await routes.projects.POST(
+      post("http://localhost/api/projects", { gitUrl: `file://${remote}`, name: "remedied" }),
+    );
+    const { project } = (await created.json()) as { project: { id: string } };
+    await projectReady(project.id);
+
+    const review = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId: project.id,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    expect(review.status).toBe(201);
+
+    const refused = await routes.project.DELETE(
+      new Request("http://localhost"),
+      params(project.id),
+    );
+    expect(refused.status).toBe(409);
+
+    const cleared = await routes.projectReviews.DELETE(
+      new Request("http://localhost"),
+      params(project.id),
+    );
+    expect(cleared.status).toBe(200);
+    expect(((await cleared.json()) as { deleted: number }).deleted).toBe(1);
+
+    const gone = await routes.project.DELETE(new Request("http://localhost"), params(project.id));
+    expect(gone.status).toBe(200);
   }, 120_000);
 
   it("removes the row and the clone together when nothing refers to it", async () => {

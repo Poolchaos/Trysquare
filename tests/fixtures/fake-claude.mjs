@@ -12,7 +12,7 @@
  * exact argv and environment the engine used.
  */
 
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -164,6 +164,24 @@ switch (scenario) {
     break;
   }
 
+  // The same failure, but the CLI reports when the limit clears before it
+  // goes. That is the shape a pause screen can put a time on.
+  case "limit-reached-with-reset": {
+    emit(initEvent);
+    emit({
+      type: "rate_limit_event",
+      session_id: sessionId,
+      rate_limit_info: {
+        status: "rejected",
+        resetsAt: 1785408600,
+        rateLimitType: "five_hour",
+      },
+    });
+    process.stderr.write("Claude usage limit reached. Your limit resets at 3pm.\n");
+    process.exit(1);
+    break;
+  }
+
   case "error-result": {
     emit(initEvent);
     emit(resultEvent({ is_error: true, subtype: "error_during_execution", result: "it broke" }));
@@ -268,6 +286,16 @@ switch (scenario) {
     // Answers a whole pipeline: the Nth invocation returns the Nth file in
     // FAKE_CLAUDE_DIR. Real runs make many calls, and a fake that can only
     // answer one of them cannot exercise resume at all.
+    //
+    // A probe is answered without touching the counter. The picker requires a
+    // fresh probe before a model can be chosen, so the browser journey probes
+    // mid-script, and a probe that consumed a scripted answer would shift the
+    // whole remaining sequence off by one.
+    if (String(valueOf("--system-prompt")).includes("availability probe")) {
+      emit(resultEvent({ result: "ok" }));
+      process.exit(0);
+    }
+
     const dir = process.env.FAKE_CLAUDE_DIR;
     if (!dir) {
       process.stderr.write("fake-claude: script scenario needs FAKE_CLAUDE_DIR\n");
@@ -284,6 +312,69 @@ switch (scenario) {
     const call = previousCalls + 1;
     writeFileSync(counterPath, String(call));
 
+    // A limit that a running server can be told to hit, without restarting it
+    // to change an environment variable. The browser suite needs this: its
+    // server boots once for the whole run, so the only way to walk a pause and
+    // a resume through a real screen is to arm the next call from a test.
+    //
+    // The call is un-counted before failing, so the answer it would have used
+    // is still waiting for the resume. That mirrors a real limit: nothing was
+    // answered, so nothing was consumed.
+    // The same idea for a stage that must still be running when a test
+    // reaches for the Cancel button. The fake normally answers in
+    // milliseconds, which is far too fast to cancel through a browser.
+    const stallFile = process.env.FAKE_CLAUDE_STALL_FILE;
+    if (stallFile) {
+      let stall = null;
+      try {
+        stall = JSON.parse(readFileSync(stallFile, "utf8"));
+      } catch {
+        stall = null;
+      }
+      if (stall) {
+        rmSync(stallFile, { force: true });
+        // Un-counted, so the answer this call would have used is still there
+        // for whoever asks next. A killed process answered nothing.
+        writeFileSync(counterPath, String(previousCalls));
+        emit(initEvent);
+        // Bounded rather than forever: if nothing cancels it, the test should
+        // fail on its own assertion rather than hang the whole suite.
+        setTimeout(() => {
+          process.stderr.write("fake-claude: stalled call was never cancelled\n");
+          process.exit(1);
+        }, Number(stall.ms ?? 30_000));
+        break;
+      }
+    }
+
+    const limitFile = process.env.FAKE_CLAUDE_LIMIT_FILE;
+    if (limitFile) {
+      let armed = null;
+      try {
+        armed = JSON.parse(readFileSync(limitFile, "utf8"));
+      } catch {
+        armed = null;
+      }
+      if (armed) {
+        rmSync(limitFile, { force: true });
+        writeFileSync(counterPath, String(previousCalls));
+        emit(initEvent);
+        if (armed.resetsAt) {
+          emit({
+            type: "rate_limit_event",
+            session_id: sessionId,
+            rate_limit_info: {
+              status: "rejected",
+              resetsAt: Number(armed.resetsAt),
+              rateLimitType: "five_hour",
+            },
+          });
+        }
+        process.stderr.write("Claude usage limit reached. Your limit resets at 3pm.\n");
+        process.exit(1);
+      }
+    }
+
     const failAt = process.env.FAKE_CLAUDE_FAIL_AT
       ? Number(process.env.FAKE_CLAUDE_FAIL_AT)
       : undefined;
@@ -291,6 +382,20 @@ switch (scenario) {
     if (failAt === call) {
       // Fails the way a usage limit does, and consumes no answer: the call
       // after a resume asks the same question again and gets this file.
+      // With FAKE_CLAUDE_RESETS_AT the CLI also announces when the limit
+      // clears, which is the half a pause screen can put a time on.
+      if (process.env.FAKE_CLAUDE_RESETS_AT) {
+        emit(initEvent);
+        emit({
+          type: "rate_limit_event",
+          session_id: sessionId,
+          rate_limit_info: {
+            status: "rejected",
+            resetsAt: Number(process.env.FAKE_CLAUDE_RESETS_AT),
+            rateLimitType: "five_hour",
+          },
+        });
+      }
       process.stderr.write("Claude usage limit reached. Your limit resets at 3pm.\n");
       process.exit(1);
     }

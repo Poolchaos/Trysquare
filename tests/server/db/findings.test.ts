@@ -135,6 +135,40 @@ describe("human decision", () => {
     expect(dismissed.decidedAt).not.toBeNull();
   });
 
+  it("keeps a rewritten comment beside the engine's, never over it", () => {
+    // The report is for whoever fixes the code, so it takes the person's
+    // words. The engine's stay on the row: how well it explained itself is
+    // the only measurement of whether the prompts are working, and an edit
+    // that overwrote them would erase the evidence it is itself a data point
+    // in.
+    const finding = candidate();
+    markVerified(db, finding.id, { quotedCode: "code", lineStart: 1, lineEnd: 1 });
+
+    const confirmed = confirmFinding(db, finding.id, {
+      comment: "Rounds the total down, so an invoice under a cent bills as zero.",
+    });
+
+    expect(confirmed.editedComment).toBe(
+      "Rounds the total down, so an invoice under a cent bills as zero.",
+    );
+    expect(confirmed.comment).toBe(finding.comment);
+  });
+
+  it("records nothing when the comment was left alone", () => {
+    // Otherwise every confirmation would look like an edit, and "edited"
+    // would stop meaning anything on the screen or in the record.
+    const untouched = candidate();
+    const whitespace = candidate({ issue: "Second finding" });
+    const same = candidate({ issue: "Third finding" });
+    for (const f of [untouched, whitespace, same]) {
+      markVerified(db, f.id, { quotedCode: "code", lineStart: 1, lineEnd: 1 });
+    }
+
+    expect(confirmFinding(db, untouched.id).editedComment).toBeNull();
+    expect(confirmFinding(db, whitespace.id, { comment: "   " }).editedComment).toBeNull();
+    expect(confirmFinding(db, same.id, { comment: same.comment }).editedComment).toBeNull();
+  });
+
   it("does not let a decision be reversed silently", () => {
     const finding = candidate();
     markVerified(db, finding.id, { quotedCode: "code", lineStart: 1, lineEnd: 1 });

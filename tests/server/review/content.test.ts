@@ -181,6 +181,47 @@ describe("the deletion prompt", () => {
     expect(prompt).toContain("export const guard = true;");
   });
 
+  it("outfences a deleted file that contains fences of its own", () => {
+    // A deleted README full of ``` examples would otherwise close the block
+    // at its first fence, and the rest of the file would read as prompt text.
+    const body = "Usage:\n\n```ts\nconst x = 1;\n```\n";
+    const input: StageContentInput = {
+      ...inputFor(DELETED),
+      baseContents: new Map([["app/legacy.ts", body]]),
+    };
+    const prompt = renderDeletionPrompt(input);
+    const wrapped = prompt.slice(prompt.indexOf("Contents before deletion:"));
+    expect(wrapped).toContain("````\n" + body + "\n````");
+  });
+
+  it("says outright when it could not open the file it is judging", () => {
+    // The stage falling back to the diff is survivable; doing it quietly is
+    // not, because the transcript would then read like a file that was read.
+    const prompt = renderDeletionPrompt(inputFor(DELETED));
+    expect(prompt).toContain("Contents before deletion were not available");
+    expect(prompt).not.toContain("Contents before deletion:");
+  });
+
+  it("asks for every listed path back, so an omission is detectable", () => {
+    const prompt = renderDeletionPrompt(INPUT);
+    expect(prompt).toContain("must appear exactly once in reviewedDeletions");
+  });
+
+  it("treats a rename as a removal, because the old path stops existing", () => {
+    const renamed = inputFor(
+      [
+        "diff --git a/app/old.ts b/app/new.ts",
+        "similarity index 100%",
+        "rename from app/old.ts",
+        "rename to app/new.ts",
+        "",
+      ].join("\n"),
+    );
+    const prompt = renderDeletionPrompt(renamed);
+    expect(prompt).toContain("app/app/new.ts (renamed, was app/app/old.ts)");
+    expect(prompt).toContain("No line changed");
+  });
+
   it("shows removed lines in context for a file that still exists", () => {
     const prompt = renderDeletionPrompt(INPUT);
     expect(prompt).toContain("app/orders.ts (modified)");

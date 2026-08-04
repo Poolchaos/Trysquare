@@ -129,6 +129,27 @@ describe("failure handling", () => {
     }
   });
 
+  it("carries the reset time out of a limit failure when the CLI reports one", async () => {
+    // Without this the pause has no end in sight and reads like a hang. The
+    // CLI announces the limit state before it exits, so the value is there to
+    // be kept.
+    try {
+      await run("limit-reached-with-reset");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as StageFailedError).detail.resetsAt).toBe(1785408600);
+    }
+  });
+
+  it("leaves the reset time absent when the CLI did not say", async () => {
+    try {
+      await run("limit-reached");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as StageFailedError).detail.resetsAt).toBeUndefined();
+    }
+  });
+
   it("refuses a transcript with a hole in it", async () => {
     // A line that will not parse means output was lost; the results that did
     // arrive cannot be trusted to be all of them.

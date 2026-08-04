@@ -9,30 +9,42 @@
  * that silently finds nothing when its tool is missing is worse than no gate.
  */
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, extname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
+/**
+ * fileURLToPath, never `URL.pathname`: a repository path containing a space
+ * arrives percent-encoded from the URL, so the gate walked a directory that
+ * did not exist, found nothing, and failed as misconfigured on a clean tree.
+ */
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
-const TARGETS = [
-  "src",
-  "tests",
-  "e2e",
-  "docs",
-  "scripts",
-  ".github",
-  "CLAUDE.md",
-  "README.md",
-  "CONTRIBUTING.md",
-  "CODE_OF_CONDUCT.md",
-  "SECURITY.md",
-];
+/**
+ * Directories walked in full. Every authored file at the repository root is
+ * scanned too, by listing the root rather than naming its files, so a config
+ * or a policy document is covered the day it lands.
+ */
+const TARGET_DIRS = ["src", "tests", "e2e", "docs", "scripts", ".github", "review"];
 
-/** Private working material is not authored here and is never committed. */
-const EXCLUDED_FILES = new Set(["REVIEW_PROTOCOL.md"]);
+/**
+ * REVIEW_PROTOCOL.md is private working material. The other two are
+ * generated. Neither kind is authored here.
+ */
+const EXCLUDED_FILES = new Set(["REVIEW_PROTOCOL.md", "package-lock.json", "next-env.d.ts"]);
 const EXCLUDED_DIRS = new Set(["node_modules", ".next", "fixtures", "coverage", "private"]);
 
-const TEXT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs", ".css", ".md", ".json"]);
+const TEXT_EXTENSIONS = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".css",
+  ".md",
+  ".json",
+  ".sh",
+]);
 
 /**
  * Built from character codes rather than written literally, so this file
@@ -89,17 +101,29 @@ function collectFiles(entryPath, acc) {
     return acc;
   }
 
-  const name = entryPath.slice(entryPath.lastIndexOf("/") + 1);
+  const name = basename(entryPath);
   if (EXCLUDED_FILES.has(name)) return acc;
-  const dot = name.lastIndexOf(".");
-  if (dot === -1 || !TEXT_EXTENSIONS.has(name.slice(dot))) return acc;
+  if (!TEXT_EXTENSIONS.has(extname(name))) return acc;
   acc.push(entryPath);
   return acc;
 }
 
 const files = [];
-for (const target of TARGETS) {
-  collectFiles(join(ROOT, target), files);
+for (const target of TARGET_DIRS) {
+  const path = join(ROOT, target);
+  // A declared target that is not there means the gate is looking in the
+  // wrong place, which is how it came to check nothing at all. Missing one
+  // directory is not visible in a file count, so it fails here by name.
+  if (!existsSync(path)) {
+    console.error(
+      `check-style: target '${target}' is missing under ${ROOT}; the gate is misconfigured.`,
+    );
+    process.exit(2);
+  }
+  collectFiles(path, files);
+}
+for (const entry of readdirSync(ROOT, { withFileTypes: true })) {
+  if (entry.isFile()) collectFiles(join(ROOT, entry.name), files);
 }
 
 if (files.length === 0) {
