@@ -93,7 +93,12 @@ Every step below is free until you press Start review.
    nothing wrong. `tests/fixtures/example-protocol.md` is a working sample.
 3. **Set up the review.** Open the project, pick a branch, and press Review on
    its row, or go to New review. Choose the branch to compare against, the
-   ruleset, the model, and the effort. A model can only be chosen while a
+   ruleset, the model, and the effort. The CLI's top effort tier is
+   deliberately not offered and is refused by the server: it is the ultracode
+   setting, extra-high reasoning plus the ability to spawn its own workflows,
+   and a review already fans out across five stages unattended, so that tier
+   would make one review an unbounded amount of usage. A model can only be
+   chosen while a
    probe from the last day vouches for it; anything unprobed or stale shows a
    Probe button instead, and one press (a real but tiny paid call) unlocks it
    and shows its context window, profile, and probe age. Optionally say what

@@ -267,6 +267,41 @@ describe("creating a review", () => {
     expect(body).not.toContain("makes one request per batch");
   }, 120_000);
 
+  it("refuses the ultracode effort tier, whatever model is asked for", async () => {
+    // That tier lets the session spawn its own workflows. A review already
+    // fans out across five stages and as many batches as the profile calls
+    // for, unattended, on a subscription this app is a guest on, so one
+    // review would become an unbounded amount of someone else's usage.
+    for (const model of ["claude-fable-5[1m]", "claude-sonnet-5"]) {
+      const response = await routes.reviews.POST(
+        post("http://localhost/api/reviews", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          model,
+          effort: "max",
+        }),
+      );
+      expect(response.status, model).toBe(400);
+      expect(((await response.json()) as { code: string }).code).toBe("EffortNotAvailable");
+    }
+  }, 120_000);
+
+  it("still accepts the tiers a person can actually pick", async () => {
+    // The guard must refuse one tier, not narrow the field to nothing.
+    const response = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+        effort: "low",
+      }),
+    );
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as { review: { effort: string } }).review.effort).toBe("low");
+  }, 120_000);
+
   it("refuses a model that is registered for mechanical work only", async () => {
     // Its plan contains no judgment requests, so the run would raise nothing
     // and then fail with every hunk unaccounted for. Better refused up front.

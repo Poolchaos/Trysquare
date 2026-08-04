@@ -1375,3 +1375,15 @@ verified evidence, in writing, here.
   finding and none for the dismissed one, whose reason appears only in its own
   section. Counting was the missing half; the report already carried the right
   content, and nothing checked that it carried only that.
+- 2026-08-04 DECIDED (maintainer): the CLI's top effort tier, `max`, is not
+  offered for any model and is refused at the API. It is the ultracode
+  setting: extra-high reasoning plus the ability for the session to spawn its
+  own workflows and sub-agents. A review here already fans out across five
+  stages and as many batches as the profile calls for, runs unattended, and
+  spends a subscription this app is a guest on, so that tier turns one review
+  into an unbounded amount of someone else's usage. The value stays in
+  `REVIEW_EFFORTS` because reviews created before this rule still name it and
+  a row that stopped parsing would take its whole review with it;
+  `SELECTABLE_REVIEW_EFFORTS` is what the picker reads and what the route
+  checks. Enforced in both places on purpose: a rule only the screen knows is
+  not a rule.

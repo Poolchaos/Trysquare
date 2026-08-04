@@ -117,6 +117,13 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
       .getByLabel(/What was this change meant to do/)
       .fill("Rename the prefs field and migrate every consumer.");
 
+    // The CLI's top effort tier is never offered: it lets the session spawn
+    // its own workflows, and a review already fans out across five stages
+    // unattended.
+    const effort = page.getByLabel("Effort");
+    await expect(effort.locator("option")).toHaveCount(3);
+    await expect(effort.locator("option", { hasText: "Max" })).toHaveCount(0);
+
     // The pre-flight is free and read-only, so it appears on its own once the
     // four decisions are made.
     await expect(page.getByText("What this review will examine")).toBeVisible({ timeout: 60_000 });

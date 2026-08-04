@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { SELECTABLE_REVIEW_EFFORTS } from "@/lib/domain/enums";
 import {
   isSelectable,
   pickerOrder,
@@ -88,12 +89,19 @@ interface Model {
   lastError: string | null;
 }
 
-const EFFORTS = [
-  { value: "medium", label: "Medium" },
-  { value: "high", label: "High (recommended)" },
-  { value: "max", label: "Max" },
-  { value: "low", label: "Low" },
-];
+/**
+ * Derived from the shared list rather than restated, so the screen cannot
+ * drift from what the server accepts. The CLI's top tier is deliberately
+ * absent; the server refuses it too.
+ */
+const EFFORT_LABELS: Record<string, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High (recommended)",
+};
+const EFFORTS = ["high", "medium", "low"]
+  .filter((effort) => (SELECTABLE_REVIEW_EFFORTS as readonly string[]).includes(effort))
+  .map((effort) => ({ value: effort, label: EFFORT_LABELS[effort] ?? effort }));
 
 function NewReview() {
   const router = useRouter();

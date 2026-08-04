@@ -93,6 +93,16 @@ reliable ones) mark `claude-fable-5[1m]` and `claude-opus-5[1m]` as the
 defaults; everything else available is selectable but carries its profile's
 warning.
 
+### Effort
+
+The CLI accepts low, medium, high and max. This app offers the first three
+and refuses max (2026-08-04): that tier is the ultracode setting, extra-high
+reasoning plus the ability to spawn its own workflows and sub-agents, and a
+review already fans out across five stages and as many batches as the profile
+calls for, unattended. The tier stays in the enum so reviews created before
+the rule still parse; it is simply never selectable and is refused at the API
+for every model.
+
 ## 3. Review profiles (the model-dependent pipeline)
 
 The maintainer's constraint, 2026-07-30: "Fable I can give this full document and

@@ -9,7 +9,12 @@
  */
 
 import { z } from "zod";
-import { engineModeSchema, reviewEffortSchema, reviewProfileSchema } from "@/lib/domain/enums";
+import {
+  engineModeSchema,
+  isSelectableEffort,
+  reviewEffortSchema,
+  reviewProfileSchema,
+} from "@/lib/domain/enums";
 import {
   listDependencyLinks,
   recordFetch,
@@ -111,6 +116,23 @@ export function POST(request: Request): Promise<Response> {
     // How the work is divided follows from the model, not from a default. The
     // registry knows what each model can absorb; asking for more than that is
     // refused, and asking for less is a deliberate downgrade that is recorded.
+    // Refused for every model, not just the expensive ones: the tier lets the
+    // session spawn its own workflows, and a review already fans out across
+    // five stages unattended. Enforced here as well as in the picker, because
+    // a rule only the screen knows is not a rule.
+    if (!isSelectableEffort(input.effort)) {
+      throw Response.json(
+        {
+          error:
+            `The ${input.effort} effort tier is not available for reviews. It lets the session ` +
+            `spawn its own workflows, which turns one unattended review into an unbounded ` +
+            `amount of usage. Choose high, which is the recommended tier.`,
+          code: "EffortNotAvailable",
+        },
+        { status: 400 },
+      );
+    }
+
     const registered = getModel(db, input.model);
     // Parsed rather than asserted: the column is text, and a profile this code
     // does not know is treated as an unregistered model, which is visible in

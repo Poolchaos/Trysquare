@@ -69,6 +69,26 @@ export const REVIEW_EFFORTS = ["low", "medium", "high", "max"] as const;
 export const reviewEffortSchema = z.enum(REVIEW_EFFORTS);
 export type ReviewEffort = z.infer<typeof reviewEffortSchema>;
 
+/**
+ * What a person may actually pick.
+ *
+ * `max` is the CLI's ultracode tier: extra-high reasoning that also lets the
+ * session spawn its own workflows and sub-agents. A review here already fans
+ * out across five stages and as many batches as the profile calls for, so
+ * that tier turns one review into an unbounded amount of someone else's
+ * usage, spent unattended, on a subscription this app is a guest on. It stays
+ * in the enum because reviews created before this rule still name it and
+ * their rows must keep parsing; it is simply never offered, and refused on
+ * the way in.
+ */
+export const SELECTABLE_REVIEW_EFFORTS = REVIEW_EFFORTS.filter(
+  (effort) => effort !== "max",
+) as readonly ReviewEffort[];
+
+export function isSelectableEffort(effort: ReviewEffort): boolean {
+  return SELECTABLE_REVIEW_EFFORTS.includes(effort);
+}
+
 /** The AI stages, in execution order. S0 is deterministic and has no row. */
 export const REVIEW_STAGES = [
   "s1_risk",
