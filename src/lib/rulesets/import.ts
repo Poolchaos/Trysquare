@@ -184,7 +184,15 @@ function findHeadings(lines: readonly string[]): Heading[] {
  * rule heading owns its body; a group heading owns only the text before its
  * first rule, so no line is claimed twice and none is dropped.
  */
-export function importProtocol(markdown: string): ImportResult {
+export function importProtocol(rawMarkdown: string): ImportResult {
+  // Line endings are normalised before anything reads the text. A document
+  // saved on Windows carries a trailing carriage return on every line, and
+  // JavaScript's `.` does not match one, so `/^(#{1,6})\s+(.*)$/` fails on
+  // every heading in the file. The document then parses as a single directive
+  // with no rules and the import is refused for having no rules, which is
+  // true but says nothing about the cause. Found on a real 2,774-line
+  // protocol whose 56 rules all vanished this way.
+  const markdown = rawMarkdown.replace(/\r\n?/g, "\n");
   const lines = markdown.split("\n");
   const headings = findHeadings(lines);
 

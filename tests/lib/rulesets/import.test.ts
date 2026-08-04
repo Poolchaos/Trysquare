@@ -41,6 +41,25 @@ describe("fidelity", () => {
     expect(exportProtocol(imported.ruleset)).toBe(EXAMPLE);
   });
 
+  it("reads a document saved with Windows line endings the same as any other", () => {
+    // Found on a real 2,774-line protocol: every heading carried a trailing
+    // carriage return, and `.` does not match one in JavaScript, so
+    // /^(#{1,6})\s+(.*)$/ matched nothing. All 56 rules vanished, the file
+    // parsed as a single directive, and the import was refused for having no
+    // rules. The refusal was correct and the reason was useless.
+    const crlf = importProtocol(EXAMPLE.replace(/\n/g, "\r\n"));
+
+    expect(crlf.ruleset.rules.map((rule) => rule.code)).toEqual(
+      imported.ruleset.rules.map((rule) => rule.code),
+    );
+    expect(crlf.ruleset.directives).toHaveLength(imported.ruleset.directives.length);
+    expect(crlf.coverage.unmapped).toEqual([]);
+    // Normalised, not merely tolerated: what is stored has no stray carriage
+    // returns, so a rule's text reads the same wherever it came from.
+    expect(crlf.ruleset.rules[0]!.ruleText).toBe(imported.ruleset.rules[0]!.ruleText);
+    expect(exportProtocol(crlf.ruleset)).toBe(EXAMPLE);
+  });
+
   it("names any line it could not place, rather than dropping it quietly", () => {
     const orphan = "# Title\n\n## Section\n\nbody\n";
     const result = importProtocol(orphan);
