@@ -8,6 +8,10 @@ D-58), `fable-2/` (clean 8/8, no finding texts, predates the capture fix),
 `122319-claude-fable-5-1m/` (clean 8/8 with `findings.json`, the run to
 judge). Known duplication to read past: S4 re-raises the deleted side of
 modifications, so the nine distinct findings appear as eighteen rows (D-59).
+Since those runs, U12 grew the fixture from eight planted defects to eleven
+(rules 12, 13, 14 and their plants, D-60 to D-62), so the captured "8
+planted" and "8/8" transcripts below and in the run directories predate the
+additions; a fresh run reports 11.
 
 Two different questions live in this gate, and conflating them is the main way
 it could be answered wrongly.
@@ -67,9 +71,10 @@ is not a quality claim (D-18); haiku's findings do not represent the product.
 
 Judge these, in this order:
 
-1. **Found and missed.** How many of the eight planted defects the model
-   found, and which it missed. A miss is more interesting than a hit: the
-   manifest says exactly what was there to find.
+1. **Found and missed.** How many of the planted defects the model found
+   (eleven since 2026-08-04; the score prints the total), and which it
+   missed. A miss is more interesting than a hit: the manifest says exactly
+   what was there to find.
 2. **False positives.** Findings raised in `src/utils/format.ts` or
    `README.md`, which are deliberately correct. A review that cries wolf is
    worse than one that misses.

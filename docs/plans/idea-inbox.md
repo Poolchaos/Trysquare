@@ -26,3 +26,22 @@ the line entirely would lose the trail.
   commit 935145a. One detail in the original line was wrong: the usage panel
   belongs on the review screen, not the new-review screen, because there is
   nothing to count before a review has run.
+- 2026-08-04: retag unmigrated-consumer from rule 4 (index signature, which
+  the Prefs interface does not have) to a rule that names the class, possibly
+  a new rule 15.
+- 2026-08-04: a risk-tagged variant of the quality gate, so the risk-first
+  ordering is exercised with non-empty tags somewhere outside the pipeline
+  tests.
+- 2026-08-04: the seeded fixture produces zero sweep hits, so the gate's
+  pendingSweepHits === 0 and the whole sweep-disposition path are vacuous on
+  this fixture; plant a sweepable pattern.
+- 2026-08-04: scripts/demo-fixture.ts scores every defect against
+  app/<file>, so a future shared-core defect would score MISSED forever;
+  qualify by the defect's repo when one is added.
+- 2026-08-04: clearHunk demands a reason while the sweep-clear guard does
+  not; align the two or record why they differ.
+- 2026-08-04: the run screen's usage panel omits cache-creation tokens,
+  which reviews.usage_cache_creation_tokens accumulates; surface it.
+- 2026-08-04: S3 ruleCode arrives from real models as prose ("Rule 11")
+  where the ruleset speaks bare codes ("11"); normalise or validate at the
+  stage boundary (observed in both clean fable runs, D-59).

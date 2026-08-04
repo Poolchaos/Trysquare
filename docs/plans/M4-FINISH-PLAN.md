@@ -563,17 +563,11 @@ banner with the reset time, resume to completion, and deleting a review from
 the list), and the journey now asserts the exported report holds exactly the
 confirmed set and nothing else.
 
-Still open, and what a next session should pick up:
-
-- Cancel mid-run through a browser. The limit pause and the delete are
-  walked; a cancel is proven at the integration layer only.
-- Fixture work: the four seeded-fixture gaps, now planned in detail against
-  the live tree and adversarially verified, in
-  [U12-FIXTURE-GAPS.md](U12-FIXTURE-GAPS.md). That document is the driver's
-  working order for the rest of U12.
-- The test-only half of the dead-export sweep (D-54): exports whose only
-  consumer is their own test, each costing a test edit. Listed step by step in
-  [U12-FIXTURE-GAPS.md](U12-FIXTURE-GAPS.md).
+Still open: nothing. Everything in the list that stood here landed
+2026-08-04: the browser cancel was already walked by the failure-path specs
+(the bullet was stale when written), the four seeded-fixture gaps are built
+(rules 12, 13, 14, the fixed variant, D-60 to D-62), and the test-only half
+of the dead-export sweep is deleted across five commits.
 
 Closed since this list was written: the risk ordering that gives `risk_tags`
 its reader (mutation-proved twice), the zero-consumer half of the dead-export
@@ -639,7 +633,7 @@ verdict on finding quality stays with the maintainer per FG2-CHECKLIST.
 | U9  | rulesets: fidelity block, severity, directives, bulk delete      | U1         | DONE   |
 | U10 | design pass, states, tokens, settings/list completion, FG-4 notes | U6-U9      | DONE   |
 | U11 | Mode B engine, engine-mode setting                               | U8         | DONE   |
-| U12 | axe, failure e2e, fixed-variant fixture, CI artifacts, T19 docs  | U10, U11   | IN PROGRESS (fixture gaps and test-only export deletions remain, `U12-FIXTURE-GAPS.md`) |
+| U12 | axe, failure e2e, fixed-variant fixture, CI artifacts, T19 docs  | U10, U11   | DONE 2026-08-04 |
 | U13 | real-engine proof and G1/G3 evidence                             | maintainer | RUNS DONE 2026-08-04, VERDICT PENDING |
 
 Review round after U4, after U9, and after U12, per the charter.

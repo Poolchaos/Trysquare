@@ -42,7 +42,7 @@ TypeScript runs strict plus `noUncheckedIndexedAccess`,
 ## Commands
 
 See `CLAUDE.md` section 3. `./verify.sh` is the single gate. As of 2026-08-04
-it passes with `--build --e2e`: 664 unit tests passing and 6 skipped across 44
+it passes with `--build --e2e`: 681 unit tests passing and 6 skipped across 45
 files, plus 30 browser tests (the journey, the failure paths, the theme and
 screenshot pass, and axe over every screen in both themes). CI runs `./verify.sh --build --e2e`;
 the local default leaves both off so it stays fast.

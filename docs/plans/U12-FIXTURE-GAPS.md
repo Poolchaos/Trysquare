@@ -1,10 +1,12 @@
 # U12 fixture gaps: the four seeded-fixture defects still owed
 
-Status: RATIFIED PLAN, written 2026-08-04. Produced by a parallel
+Status: EXECUTED 2026-08-04, all phases. Written the same day by a parallel
 investigation of the live tree and then adversarially verified against it, so
 every file path, line number and failure mode below was checked rather than
-recalled. Phases A and B of that investigation are done and committed (risk
-ordering, and the dead-export sweep); this document is what remains.
+recalled. Phase A (risk ordering), Phase B (both dead-export passes), and
+Phase C (gaps a, d, b, c as commits 7261168, 2b7f9a3, 09c479f, 41d5867, with
+records in D-60 to D-62) are all committed. Kept as the record of the working
+order and its measured traps; nothing here is owed anymore.
 
 Read `docs/plans/M4-FINISH-PLAN.md` first for where this sits. The four gaps
 are owed by `docs/05-TESTING.md` section 4 and were deferred once already

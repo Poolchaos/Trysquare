@@ -61,9 +61,10 @@ nothing else in the app needs resetting.
 npm run demo:fixture -- --fake
 ```
 
-This builds two throwaway git repositories with eight defects planted in them
-and two files that are deliberately correct, runs the complete pipeline over
-them with no model at all, and scores the result against the answer key. It
+This builds two throwaway git repositories with eleven defects planted in
+them (measured 2026-08-04: "Built the fixture: 11 planted defect(s)") and two
+files that are deliberately correct, runs the complete pipeline over them
+with no model at all, and scores the result against the answer key. It
 costs nothing and takes 1.5 seconds (measured 2026-08-04 on this machine:
 three runs, 1.45s, 1.46s and 1.54s wall clock, of which the pipeline itself
 reports 0.6s; the rest is npm and tsx starting up). It is the fastest way to

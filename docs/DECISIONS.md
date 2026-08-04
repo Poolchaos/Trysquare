@@ -975,9 +975,10 @@ verified evidence, in writing, here.
   unreadable evidence file is worse than a narrower review; letting the stage
   quietly judge a deletion from its minus lines is worse than both, because
   the transcript then reads like a file that was opened.
-- 2026-08-03 DEFERRED (U3 to U12): the seeded fixture does not yet delete a
-  whole file, so the quality gate exercises the deletion path only through the
-  pipeline tests, which use a real deleting patch. Adding it needs a deletion
+- 2026-08-03 DEFERRED (U3 to U12), discharged 2026-08-04 by D-60: the
+  seeded fixture does not yet delete a whole file, so the quality gate
+  exercises the deletion path only through the pipeline tests, which use a
+  real deleting patch. Adding it needs a deletion
   mechanism in the fixture builder and a new protocol rule for the defect to
   violate, and U12 already owns two other fixture defects. Recorded rather
   than dropped: the gate is the regression net for prompt changes, and until
@@ -1495,3 +1496,36 @@ verified evidence, in writing, here.
   fails two tests by name, removing a candidate fate fails one.
   `canTransitionClone` and `canTransitionFinding` stay exported though only
   self-used: un-exporting working code is churn, not cleanup.
+- 2026-08-04 D-60 (U12): the whole-file deletion defect is raised by S4 and
+  only S4 can raise it. The fixture deletes src/orders/retry.ts while its
+  caller, untouched and absent from the diff, still imports it; an S3 finding
+  citing that caller is rejected because every S3 finding must land in a hunk
+  of the change set. An S4 finding faces no coverage reconciliation at all,
+  by design: it bypasses hunk, sweep and symbol reconciliation and answers
+  only to the quote check against the worktree. This is the first such
+  finding in the fixture, so the property is now stated rather than left to
+  be inferred. This discharges the 2026-08-03 deferral.
+- 2026-08-04 D-61 (U12): the changed-default plant needed a consumer before
+  it was a defect. Rules 12, 13 and 14 take their numbers in document order
+  (deletion, duplication, dependency); prefs.ts consumes
+  DEFAULT_TIMEOUT_SECONDS byte-identically on both sides of the diff so the
+  defect stays cross-repo; and the ideal answers derive symbol dispositions
+  from the manifest because with two broken symbols a hardcoded name check
+  would produce a clear the pipeline itself rejects. The rule-4 retag of
+  unmigrated-consumer (its citation is wrong: the Prefs interface has no
+  index signature) was considered and deferred to the idea inbox rather than
+  ridden along on a four-gap change.
+- 2026-08-04 D-62 (U12): the fixed variant is a third branch,
+  rename-prefs-migrated, cut from the feature branch with exactly one file
+  repaired, so its answer key is the manifest minus the cross-repo pair. Two
+  naming constraints are load-bearing for the browser suite and pinned by
+  test: it sorts after main under the refname tiebreak (the into-branch
+  fallback must keep landing on main) and it does not contain the substring
+  feature/rename-prefs (Playwright hasText matches substrings). HEAD is
+  restored to the feature branch after the build because the bare clone
+  inherits HEAD and the new-review screen's detected default reads it. Its
+  consumer lists are derived by walking the repaired tree, and the gate's
+  claim is precise: the pipeline does not persist symbol dispositions, so
+  what is proven end to end is that a repaired change set produces clears
+  the pipeline accepts, with every claimed consumer existing and using the
+  symbol.

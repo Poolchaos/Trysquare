@@ -11,15 +11,9 @@ these parts of it do not exist yet. They stay here as requirements rather
 than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
 is named.
 
-- Flow 3 of section 3, the failure paths, in a browser: stage failure, limit
-  pause and resume, cancel, and restart recovery. All four are covered at the
-  integration layer instead; D-55 keeps restart recovery there. U12.
-- Axe checks on every screen. None exist. U12.
-- The linked-review gate asserting both seeded contract bugs, and the
-  fixed-variant branch that should produce all-consumers-verified clears
-  (section 4). The gate asserts one, and no fixed variant is built. U12.
-- The duplicated-merge-helper defect from the section 4 minimum list. Eight
-  defects are seeded and none is of that kind. U12.
+- Flow 3 of section 3 is now in a browser for the limit pause with resume
+  and for cancel mid-stage; stage failure stays at the integration layer,
+  and D-55 keeps restart recovery there. U12.
 
 ## 1. verify.sh (lands with the first code commit, WP-A)
 
