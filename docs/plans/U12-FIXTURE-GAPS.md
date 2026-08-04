@@ -61,7 +61,7 @@ New test **"reports the deletion the diff cannot show, from the stage that reads
 
 > **Run `./verify.sh --e2e` before continuing.** This is the first point where an e2e-visible fixture change lands.
 
-**Also note in D-59:** an S4 finding is subject to **no coverage reconciliation at all** - it bypasses hunk, sweep and symbol reconciliation and faces only the quote check (`pipeline.ts:482-500`). By design, but this change introduces the first such finding in the fixture, so a reader should not have to infer it.
+**Also note in D-60 (was D-59 before the 2026-08-04 U13 entries took 57-59):** an S4 finding is subject to **no coverage reconciliation at all** - it bypasses hunk, sweep and symbol reconciliation and faces only the quote check (`pipeline.ts:482-500`). By design, but this change introduces the first such finding in the fixture, so a reader should not have to infer it.
 
 ## Gap (b) - duplicated merge helper
 
@@ -111,7 +111,7 @@ In `beforeAll`, resolve `feature/rename-prefs` and `rename-prefs-migrated` separ
 - `docs/05-TESTING.md`: delete the two "Not built yet" bullets these gaps own (the linked gate asserting both contract bugs plus the fixed variant, and the duplicated-merge-helper defect). Leave the others.
 - `docs/RUNBOOK.md:64` ("eight defects"): replace with the count **measured** by running `npm run demo:fixture -- --fake`, not an arithmetic guess.
 - `docs/plans/FG2-CHECKLIST.md:28,30,62` and the G1 evidence cell in `docs/GATES.md`: **do not rewrite the captured numbers** ("8 planted defect(s)", "8/8") - they are a real 2026-07-31 measurement. Add a dated line saying the fixture now plants N and the transcript predates the U12 additions.
-- `docs/DECISIONS.md`: **D-59** (deletion defect raising its finding from S4, why an S3 finding cannot cite a file outside the change set, and that S4 findings face no reconciliation), **D-60** (second cross-repo defect + rule numbering 12/13/14 and that the rule-4 retag was deliberately deferred), **D-61** (fixed variant as a third branch, both naming constraints, why HEAD is restored). Mark the 2026-08-03 `DEFERRED (U3 to U12)` entry **closed** rather than leaving it reading as owed.
+- `docs/DECISIONS.md`: **D-60** (deletion defect raising its finding from S4, why an S3 finding cannot cite a file outside the change set, and that S4 findings face no reconciliation), **D-61** (second cross-repo defect + rule numbering 12/13/14 and that the rule-4 retag was deliberately deferred), **D-62** (fixed variant as a third branch, both naming constraints, why HEAD is restored). Mark the 2026-08-03 `DEFERRED (U3 to U12)` entry **closed** rather than leaving it reading as owed.
 - `docs/plans/M4-FINISH-PLAN.md`: strike the fixture bullet at 570-573. Update `docs/PROJECT-STATE.md` counts again (re-measure).
 - `docs/plans/idea-inbox.md`, one dated line each: the rule-4 mis-citation retag; a risk-tagged quality-gate variant; **the fixture produces zero sweep hits, so `quality-gate.test.ts`'s `pendingSweepHits === 0` and the whole sweep-disposition path are vacuous on this fixture**; `scripts/demo-fixture.ts:264` scores every defect against `app/${defect.file}`, so a future shared-core defect would score MISSED forever; the `clear_reason` guard incoherence; the missing cache-creation token line.
 

@@ -1445,3 +1445,37 @@ verified evidence, in writing, here.
   `renameProject` is also kept though unreferenced: 02 still carries project
   renaming as an unbuilt requirement, and deleting the function would retire a
   documented requirement by stealth rather than by decision.
+- 2026-08-04 D-57 (U13): the haiku smoke failing is the coverage law working.
+  With the maintainer's go, the real-engine smoke ran first on
+  claude-haiku-4-5-20251001: it reached S3 and the pipeline refused to
+  complete the stage, with one hunk unaccounted for, two changed symbols
+  undispositioned, and two symbols dispositioned that were never in the
+  change set. The score reads "0/8" only because candidates persist after
+  reconciliation, which never happened; the run did not miss quietly, it was
+  stopped loudly. This is D-18 confirmed by a live run (haiku is a plumbing
+  smoke, never a quality claim) and the first empirical proof that the
+  refusal is mechanical rather than prompt-trusted.
+- 2026-08-04 D-58 (U13): a real-run failure of the fake gate's blind class
+  gets an echoing test, not just a fixed expectation. The first fable run
+  answered S3 with substantively perfect dispositions and was refused on
+  spelling: it wrote symbols against their worktree paths
+  ("shared-core/types.ts") while the expectation held repo-relative ones
+  ("types.ts"), because the symbol listing was the one place the prompt still
+  spoke repo-relative paths. The fake suite could never catch this: ideal
+  answers echo the expectation, so prompt and expectation can drift apart
+  invisibly. Fixed (06cf1a7) by qualifying changed symbols at the pipeline
+  boundary like every other path family, mandating in the prompt that paths
+  be copied exactly as printed, and adding two tests, one of which answers
+  with what the prompt actually printed rather than with the expectation.
+- 2026-08-04 D-59 (U13) PROPOSED: scope S4 so a modification is not reported
+  twice. In both clean fable runs, S3 raised the nine distinct defects and
+  S4, whose brief is deleted code, raised the same nine again in different
+  words by reading the deleted side of each modification as a deletion; all
+  eighteen candidates verified, so the confirmation screen would show every
+  defect twice. Proposed: tighten the S4 prompt to deletions without a
+  replacement, and consider a mechanical same-path, same-line cross-stage
+  dedup at candidate creation. Any prompt change goes through the standing
+  rule that the fake quality gate runs first and the real model after.
+  Also observed, recorded, not fixed: fable writes ruleCode as prose
+  ("Rule 11") where the ruleset speaks bare codes ("11"), and the stage
+  schema accepts any string.

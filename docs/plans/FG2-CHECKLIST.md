@@ -1,6 +1,13 @@
 # Founder gate FG-2 (gate G1): does the pipeline work, and is a finding worth reading?
 
-Status: READY FOR THE MAINTAINER, prepared 2026-07-31.
+Status: READY FOR THE MAINTAINER, prepared 2026-07-31. The smoke runs below
+were executed 2026-08-04 with the maintainer's go; what is left is the
+verdict itself. Evidence in `review/2026-08-04-fg2/`: `haiku/` (refused at
+S3, D-57), `fable-1/` (refused at S3 on a product bug fixed the same day,
+D-58), `fable-2/` (clean 8/8, no finding texts, predates the capture fix),
+`122319-claude-fable-5-1m/` (clean 8/8 with `findings.json`, the run to
+judge). Known duplication to read past: S4 re-raises the deleted side of
+modifications, so the nine distinct findings appear as eighteen rows (D-59).
 
 Two different questions live in this gate, and conflating them is the main way
 it could be answered wrongly.

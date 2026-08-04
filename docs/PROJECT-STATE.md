@@ -8,8 +8,11 @@ Last verified: 2026-08-03
 ## Status
 
 - Gate G0 (brief and plan) PASSED 2026-07-30. Gate G1 (working pipeline) is
-  ACTIVE and its evidence is ready: see `plans/FG2-CHECKLIST.md`. The verdict
-  is the maintainer's, and nothing in this repository marks it passed.
+  ACTIVE with all evidence captured, including the 2026-08-04 real-engine
+  smoke runs (haiku refusal D-57, the symbol-path fix D-58, two clean fable
+  runs at 8/8): see `plans/FG2-CHECKLIST.md` and `review/2026-08-04-fg2/`.
+  The verdict is the maintainer's, and nothing in this repository marks it
+  passed.
 - The app is usable end to end. A person can add a project from a git URL, see
   its branches, set up a review with a pre-flight estimate, watch it run,
   decide every finding, complete it, and export a report.

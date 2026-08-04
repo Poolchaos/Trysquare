@@ -610,28 +610,37 @@ Original scope:
 
 Runs only on the maintainer's explicit go, because it spends usage. The
 driver runs the haiku smoke and, on request, the fable run via
-`npm run demo:fixture`, captures `review/<date>-engine/` (defects found
+`npm run demo:fixture`, captures `review/<date>-fg2/` (defects found
 versus manifest, false positives, quote-check kills, tokens, cost, wall
 time), and updates the G1 row. Prompt iteration, if the results demand it,
 follows the standing rule: the fake gate first, the real model after.
+
+Run 2026-08-04 with the maintainer's go, on subscription usage with credits
+off. Haiku refused at S3 (D-57, the coverage law working). Fable run one
+refused at S3 on symbol path spelling, a product bug fixed the same day
+(06cf1a7, D-58). Fable runs two and three, after the fix: 8/8 at the
+manifest's exact lines, clean files clean, zero quote-check kills, zero open
+questions, $0.9616/293.3s and $0.9985/275.7s, the latter with every finding
+text captured. S4 re-raise duplication observed and recorded (D-59). The
+verdict on finding quality stays with the maintainer per FG2-CHECKLIST.
 
 ## 2. Commit map
 
 | U   | Contents                                                        | Blocked on | Status |
 | --- | --------------------------------------------------------------- | ---------- | ------ |
-| U1  | check-style path fix, TARGETS widening, require git              | -          | DONE (uncommitted 2026-08-03) |
-| U2  | records emergency pass, RUNBOOK, spec headers                    | -          | DONE (uncommitted 2026-08-03) |
-| U3  | deletion stage: base contents, reconciliation, evidence-based ledger | U1     | DONE (uncommitted 2026-08-03) |
-| U4  | profile mapping, refusals, per-profile quality gate              | U1         | DONE (uncommitted 2026-08-03) |
-| U5  | resetsAt, failed-resume, clone guard, zod at both boundaries      | U1         | DONE (uncommitted 2026-08-03) |
-| U6  | run screen: S0-S6, per-stage cost, coverage panel, notes, errors, SSE fallback, cancel | U5 | DONE (uncommitted 2026-08-03) |
-| U7  | confirmation: edit-comment, g g, labels, aria-live               | U5         | DONE (uncommitted 2026-08-04) |
-| U8  | new review: advanced fold, picker truth, tier grouping           | U4         | DONE (uncommitted 2026-08-04) |
-| U9  | rulesets: fidelity block, severity, directives, bulk delete      | U1         | DONE (uncommitted 2026-08-04) |
-| U10 | design pass, states, tokens, settings/list completion, FG-4 notes | U6-U9      | TODO   |
-| U11 | Mode B engine, engine-mode setting                               | U8         | TODO   |
-| U12 | axe, failure e2e, fixed-variant fixture, CI artifacts, T19 docs  | U10, U11   | TODO   |
-| U13 | real-engine proof and G1/G3 evidence                             | maintainer | GATE   |
+| U1  | check-style path fix, TARGETS widening, require git              | -          | DONE   |
+| U2  | records emergency pass, RUNBOOK, spec headers                    | -          | DONE   |
+| U3  | deletion stage: base contents, reconciliation, evidence-based ledger | U1     | DONE   |
+| U4  | profile mapping, refusals, per-profile quality gate              | U1         | DONE   |
+| U5  | resetsAt, failed-resume, clone guard, zod at both boundaries      | U1         | DONE   |
+| U6  | run screen: S0-S6, per-stage cost, coverage panel, notes, errors, SSE fallback, cancel | U5 | DONE   |
+| U7  | confirmation: edit-comment, g g, labels, aria-live               | U5         | DONE   |
+| U8  | new review: advanced fold, picker truth, tier grouping           | U4         | DONE   |
+| U9  | rulesets: fidelity block, severity, directives, bulk delete      | U1         | DONE   |
+| U10 | design pass, states, tokens, settings/list completion, FG-4 notes | U6-U9      | DONE   |
+| U11 | Mode B engine, engine-mode setting                               | U8         | DONE   |
+| U12 | axe, failure e2e, fixed-variant fixture, CI artifacts, T19 docs  | U10, U11   | IN PROGRESS (fixture gaps and test-only export deletions remain, `U12-FIXTURE-GAPS.md`) |
+| U13 | real-engine proof and G1/G3 evidence                             | maintainer | RUNS DONE 2026-08-04, VERDICT PENDING |
 
 Review round after U4, after U9, and after U12, per the charter.
 
