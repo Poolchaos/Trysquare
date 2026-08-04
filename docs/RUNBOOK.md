@@ -174,6 +174,14 @@ against a fake CLI committed to the repository.
   cleanly, so sharing `.next` between the two is not the cause.
 - **Port 3000 in use is not an error.** Dev falls back to 3001 and prints the
   URL it actually took. Read the line rather than assuming 3000.
+- **A real protocol document usually needs one edit before it imports:
+  numbered checklist items.** Any heading at level three or deeper that starts
+  with a number and a dot is read as a rule, so a "1. Type Verification" step
+  inside a checklist collides with rule 1 of the catalogue and the import is
+  refused for a duplicate code. Drop the numbers from the checklist headings;
+  they are process guidance the reviewer still reads as a directive, and they
+  were never codes a finding could cite. Windows line endings need no edit:
+  they are normalised on import (D-63).
 
 ## Where things are
 

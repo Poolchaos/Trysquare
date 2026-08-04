@@ -1538,3 +1538,18 @@ verified evidence, in writing, here.
   heavier changes carried their proof when they landed: two mutation proofs
   on the S4 routing and the state-machine tests, and two full
   `./verify.sh --build --e2e` runs at exit 0.
+- 2026-08-04 D-63: a protocol document is normalised for line endings on
+  import, and duplicate rule codes stay refused. The maintainer's real
+  2,774-line protocol imported as zero rules because it was saved with CRLF
+  endings and JavaScript's `.` does not match a carriage return, so not one of
+  its 129 headings matched the heading pattern. Normalisation happens once, at
+  the top of `importProtocol`, so nothing downstream and nothing stored
+  carries a stray return.
+  Fixing that exposed a second refusal: the document numbered five checklist
+  items under a level-4 heading, colliding with real rules 1 to 5. Two ways
+  out were put to the maintainer, and the decision is that documents give way
+  rather than the importer: the five checklist headings were de-numbered in
+  the source document. The alternative, treating only the shallowest numbered
+  heading level as rules, was rejected because a later document adding one
+  shallow numbered heading would silently demote a whole family of real rules
+  to prose, which is the exact failure this module exists to prevent.
