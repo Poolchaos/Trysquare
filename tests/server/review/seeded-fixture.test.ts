@@ -238,6 +238,57 @@ describe("the linked dependency", () => {
   });
 });
 
+describe("the fixed variant branch", () => {
+  it("keeps the branch order and the HEAD the browser suites depend on", () => {
+    // The into-branch fallback picks the first branch that is not the one
+    // under review, ordered by recency then refname; both browser specs
+    // assert that lands on main. All fixture commits share one date, so the
+    // refname tiebreak is what holds this.
+    const order = execFileSync(
+      "git",
+      ["for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads/"],
+      { cwd: appDir, encoding: "utf8" },
+    )
+      .trim()
+      .split("\n");
+    expect(order).toEqual(["feature/rename-prefs", "main", "rename-prefs-migrated"]);
+
+    // Playwright's hasText is a substring match on the from-branch label.
+    expect("rename-prefs-migrated".includes("feature/rename-prefs")).toBe(false);
+
+    // The bare clone inherits HEAD, and the detected default from-branch
+    // comes from it: building the fixed branch must not move it.
+    const head = execFileSync("git", ["symbolic-ref", "--short", "HEAD"], {
+      cwd: appDir,
+      encoding: "utf8",
+    }).trim();
+    expect(head).toBe("feature/rename-prefs");
+  });
+
+  it("repairs both cross-repo defects and nothing else", () => {
+    execFileSync("git", ["checkout", "-q", "rename-prefs-migrated"], { cwd: appDir });
+    try {
+      const prefs = readFileSync(join(appDir, "src/settings/prefs.ts"), "utf8");
+      expect(prefs).toContain("autoNavigateDestination === ");
+      expect(prefs).not.toContain("reportAutoNavigate");
+      expect(prefs).toContain("Math.max(SAVE_TIMEOUT_SECONDS, DEFAULT_TIMEOUT_SECONDS)");
+
+      // Only the repair is new on this branch: every other seeded defect
+      // carries over, which is what makes its answer key main-minus-cross-repo.
+      const diff = execFileSync(
+        "git",
+        ["diff", "--name-only", "feature/rename-prefs...rename-prefs-migrated"],
+        { cwd: appDir, encoding: "utf8" },
+      )
+        .trim()
+        .split("\n");
+      expect(diff).toEqual(["src/settings/prefs.ts"]);
+    } finally {
+      execFileSync("git", ["checkout", "-q", "feature/rename-prefs"], { cwd: appDir });
+    }
+  });
+});
+
 describe("reproducibility", () => {
   it("builds identically twice, so a review of it is comparable over time", () => {
     const second = mkdtempSync(join(tmpdir(), "trysquare-seeded-2-"));

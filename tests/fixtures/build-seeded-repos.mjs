@@ -15,7 +15,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const GIT_ENV = {
@@ -457,8 +457,52 @@ const DEFECTS = [
  */
 const REMOVED = ["src/orders/retry.ts"];
 
+/**
+ * The repaired change set: the feature branch with both cross-repo defects
+ * fixed, and nothing else touched.
+ *
+ * The reviewer of this branch should raise every single-repo defect and
+ * clear both changed symbols as migrated, so the fixture can prove the
+ * all-clear path with a consumer list derived from a real repaired tree
+ * rather than asserted.
+ *
+ * Two constraints on the branch name, each load-bearing for the browser
+ * suite. It must sort after "main" by refname under
+ * `git for-each-ref --sort=-committerdate` (all fixture commits share one
+ * date, so refname is the tiebreak): the new-review screen's into-branch
+ * fallback picks the first branch that is not the from-branch, and both
+ * specs assume that lands on "main". And it must not contain the substring
+ * "feature/rename-prefs": Playwright's hasText matches substrings, and the
+ * journey spec selects the from-branch by that text.
+ */
+const FIXED_BRANCH = "rename-prefs-migrated";
+
+const FIXED = {
+  // Both repairs in one file: the renamed field is read under its new name,
+  // and the save timeout no longer inherits the shortened default blindly.
+  "src/settings/prefs.ts": `import { DEFAULT_TIMEOUT_SECONDS, type Prefs } from "@acme/shared-core";
+
+export function describePrefs(prefs: Prefs): string {
+  return prefs.autoNavigateDestination === "none" ? "stays" : "navigates";
+}
+
+const SAVE_TIMEOUT_SECONDS = 30;
+
+export function saveTimeoutMs(): number {
+  return Math.max(SAVE_TIMEOUT_SECONDS, DEFAULT_TIMEOUT_SECONDS) * 1000;
+}
+
+export function describeTimeout(seconds: number): string {
+  return seconds + "s";
+}
+`,
+};
+
 /** Files whose changes are correct. A finding in one of these is a false positive. */
 const CLEAN_FILES = ["src/utils/format.ts", "README.md"];
+
+/** The two contracts the dependency changes; also used to derive consumers. */
+const CHANGED_SYMBOLS = ["Prefs", "DEFAULT_TIMEOUT_SECONDS"];
 
 function lineOf(root, file, marker) {
   const lines = readFileSync(join(root, file), "utf8").split("\n");
@@ -467,6 +511,29 @@ function lineOf(root, file, marker) {
     throw new Error(`Marker ${JSON.stringify(marker)} not found in ${file}. The fixture is wrong.`);
   }
   return index + 1;
+}
+
+function walkFiles(root, dir = "") {
+  const paths = [];
+  for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+    if (entry.name === ".git") continue;
+    const rel = dir ? `${dir}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) paths.push(...walkFiles(root, rel));
+    else paths.push(rel);
+  }
+  return paths;
+}
+
+/**
+ * Every app file that mentions the symbol, qualified as a reviewer's answer
+ * would qualify it. Derived from the checked-out tree, not asserted, so the
+ * fixed variant's consumer list stays true when the fixture changes.
+ */
+function consumersOf(appRoot, symbolName) {
+  const wordPattern = new RegExp(`\\b${symbolName}\\b`);
+  return walkFiles(appRoot)
+    .filter((path) => wordPattern.test(readFileSync(join(appRoot, path), "utf8")))
+    .map((path) => `app/${path}`);
 }
 
 /**
@@ -494,6 +561,25 @@ export function buildSeededRepos(root) {
   for (const path of REMOVED) remove(appDir, path);
   commitAll(appDir, "assorted changes");
 
+  // The fixed variant branches off the feature branch, so every seeded change
+  // carries over and only the repair is new.
+  git(["checkout", "-qb", FIXED_BRANCH], appDir);
+  for (const [path, contents] of Object.entries(FIXED)) write(appDir, path, contents);
+  commitAll(appDir, "migrate prefs to the new contract");
+  // Lines and consumers are read while this branch is checked out; the
+  // repaired prefs.ts moved every marker below it.
+  const fixedDefects = DEFECTS.filter((defect) => defect.kind !== "cross-repo").map((defect) => ({
+    kind: "addition",
+    ...defect,
+    line: lineOf(appDir, defect.file, defect.marker),
+  }));
+  const verifiedConsumers = Object.fromEntries(
+    CHANGED_SYMBOLS.map((symbol) => [symbol, consumersOf(appDir, symbol)]),
+  );
+  // Restoring HEAD is load-bearing: the bare clone inherits it, and the
+  // new-review screen's detected default from-branch comes from HEAD.
+  git(["checkout", "-q", "feature/rename-prefs"], appDir);
+
   const manifest = {
     builtAt: GIT_ENV.GIT_AUTHOR_DATE,
     branches: { from: "feature/rename-prefs", into: "main" },
@@ -503,7 +589,15 @@ export function buildSeededRepos(root) {
       line: lineOf(defect.repo === "app" ? appDir : coreDir, defect.file, defect.marker),
     })),
     cleanFiles: CLEAN_FILES,
-    changedSymbols: ["Prefs", "DEFAULT_TIMEOUT_SECONDS"],
+    changedSymbols: CHANGED_SYMBOLS,
+    fixedVariant: {
+      branch: FIXED_BRANCH,
+      defects: fixedDefects,
+      // The repaired file is still in the change set, so a finding there is
+      // now a false positive.
+      cleanFiles: [...CLEAN_FILES, "src/settings/prefs.ts"],
+      verifiedConsumers,
+    },
   };
 
   return { appDir, coreDir, manifest };

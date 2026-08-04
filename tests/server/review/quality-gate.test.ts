@@ -42,11 +42,20 @@ const PROTOCOL = importProtocol(
   readFileSync(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8"),
 );
 
+interface FixedVariant {
+  branch: string;
+  defects: Defect[];
+  cleanFiles: string[];
+  verifiedConsumers: Record<string, string[]>;
+}
+
 let root: string;
 let worktreeRoot: string;
-let manifest: SeededManifest;
+let manifest: SeededManifest & { fixedVariant: FixedVariant };
 let appFiles: ParsedFile[];
 let coreFiles: ParsedFile[];
+let fixedAppFiles: ParsedFile[];
+let fixedWorktreeRoot: string;
 
 let ctx: TestDb;
 let db: Db;
@@ -58,6 +67,22 @@ function entries() {
     ...appFiles.map((file) => ({ repo: "primary" as const, slug: "app", file })),
     ...coreFiles.map((file) => ({ repo: "linked" as const, slug: "shared-core", file })),
   ];
+}
+
+/** The repaired change set: the fixed app branch against the same dependency. */
+function fixedEntries() {
+  return [
+    ...fixedAppFiles.map((file) => ({ repo: "primary" as const, slug: "app", file })),
+    ...coreFiles.map((file) => ({ repo: "linked" as const, slug: "shared-core", file })),
+  ];
+}
+
+function fixedManifest(): SeededManifest {
+  return {
+    defects: manifest.fixedVariant.defects,
+    cleanFiles: manifest.fixedVariant.cleanFiles,
+    verifiedConsumers: manifest.fixedVariant.verifiedConsumers,
+  };
 }
 
 function qualified(defect: Defect): string {
@@ -86,6 +111,16 @@ beforeAll(async () => {
   worktreeRoot = join(root, "worktree");
   await addWorktree(appClone, join(worktreeRoot, "app"), appHead);
   await addWorktree(coreClone, join(worktreeRoot, "shared-core"), coreHead);
+
+  // The fixed variant: same dependency change, repaired app branch, its own
+  // checkout. Files, manifest and worktree swap together in runGate.
+  const fixedBranch = manifest.fixedVariant.branch;
+  const fixedBase = await mergeBase(appClone, "main", fixedBranch);
+  const fixedHead = await resolveCommit(appClone, fixedBranch);
+  fixedAppFiles = parseUnifiedDiff(await diffText(appClone, fixedBase, fixedHead));
+  fixedWorktreeRoot = join(root, "worktree-fixed");
+  await addWorktree(appClone, join(fixedWorktreeRoot, "app"), fixedHead);
+  await addWorktree(coreClone, join(fixedWorktreeRoot, "shared-core"), coreHead);
 }, 180_000);
 
 afterAll(() => {
@@ -124,21 +159,27 @@ function runGate(
     extraFindings?: Record<string, unknown>[];
     misquote?: boolean;
     profile?: ReviewProfile;
+    /** "fixed" swaps files, manifest and worktree together; they must never mix. */
+    variant?: "fixed";
   } = {},
 ) {
+  const files = options.variant === "fixed" ? fixedEntries() : entries();
+  const activeManifest = options.variant === "fixed" ? fixedManifest() : manifest;
+  const activeWorktree = options.variant === "fixed" ? fixedWorktreeRoot : worktreeRoot;
+
   const outputs = buildIdealStageOutputs({
-    files: entries(),
-    manifest,
-    worktreeRoot,
-    rules: PROTOCOL.ruleset.rules,
     ...options,
+    files,
+    manifest: activeManifest,
+    worktreeRoot: activeWorktree,
+    rules: PROTOCOL.ruleset.rules,
   });
 
   return runReviewPipeline({
     db,
     reviewId,
-    worktreeRoot,
-    files: entries(),
+    worktreeRoot: activeWorktree,
+    files,
     rules: PROTOCOL.ruleset.rules,
     profile: options.profile ?? "full-context",
     changedSymbols: changedExportedSymbols(coreFiles),
@@ -240,6 +281,41 @@ describe("a correct review of the seeded fixture", () => {
     expect(result.killedByQuoteCheck).toBe(0);
     expect(result.verified).toBe(manifest.defects.length);
   }, 60_000);
+});
+
+describe("the repaired change set", () => {
+  // pipeline.test.ts already drives all_consumers_verified through a whole
+  // linked run against a named consumer. What this adds is the consumer list
+  // derived from a real repaired tree rather than written into the test. The
+  // pipeline does not persist symbol dispositions, so the end-to-end claim
+  // is that a repaired change set produces clears the pipeline accepts.
+  it("completes with both symbols cleared and every remaining defect found", async () => {
+    const result = await runGate({ variant: "fixed" });
+
+    // Completing at all is the symbol proof: a clear whose evidence does not
+    // back it is rejected by assertSymbolVerdictsAreBacked and fails the run.
+    expect(result.coverage.pendingHunks).toBe(0);
+    expect(result.coverage.pendingSweepHits).toBe(0);
+    expect(result.coverage.pendingFiles).toBe(0);
+    expect(result.coverage.unresolvedCandidates).toBe(0);
+    expect(result.killedByQuoteCheck).toBe(0);
+    expect(result.verified).toBe(manifest.fixedVariant.defects.length);
+  }, 60_000);
+
+  it("claims only consumers that exist in the fixed tree and use the symbol", () => {
+    // "All consumers verified" said about an absent or unrelated file would
+    // be a hollow clear; the claim has to be about real code.
+    const { verifiedConsumers } = manifest.fixedVariant;
+    expect(Object.keys(verifiedConsumers).sort()).toEqual(["DEFAULT_TIMEOUT_SECONDS", "Prefs"]);
+
+    for (const [symbol, consumers] of Object.entries(verifiedConsumers)) {
+      expect(consumers.length, `${symbol} has a consumer`).toBeGreaterThan(0);
+      for (const consumer of consumers) {
+        const contents = readFileSync(join(fixedWorktreeRoot, consumer), "utf8");
+        expect(new RegExp(`\\b${symbol}\\b`).test(contents), `${symbol} in ${consumer}`).toBe(true);
+      }
+    }
+  });
 });
 
 describe("a review that reports something untrue", () => {

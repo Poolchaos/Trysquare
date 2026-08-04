@@ -42,6 +42,10 @@ async function startAReview(page: import("@playwright/test").Page): Promise<void
     .filter({ hasText: "feature/rename-prefs" })
     .first()
     .click();
+  // Pinned rather than left to the detected-default fallback: the fixture has
+  // three branches, and a wrong into-branch here would surface as the fake
+  // CLI exiting over an unknown candidate, reading as an engine fault.
+  await page.getByLabel("Compare against").selectOption("main");
   await expect(page.getByText("What this review will examine")).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Start review" }).click();
   await expect(page).toHaveURL(/\/reviews\/[A-Z0-9]+$/i, { timeout: 60_000 });
@@ -85,6 +89,11 @@ test("cancelling a running review stops it and says so", async ({ page }) => {
   await startAReview(page);
 
   await expect(page.getByText("running", { exact: true })).toBeVisible({ timeout: 60_000 });
+  // Cancel during the stalled stage, not merely while "running": the prepare
+  // step precedes any stage, takes real time on a three-branch fixture, and a
+  // cancel landing there leaves no stage to carry the mid-stage note this
+  // test exists to check. The event feed says when the stage is truly open.
+  await expect(page.getByText("s1_risk started")).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Cancel" }).click();
 
   await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });

@@ -106,9 +106,11 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
       .filter({ hasText: "feature/rename-prefs" })
       .first()
       .click();
-    // main is already the only candidate: the branch under review is excluded,
-    // and this fixture's detected default is that same feature branch, so
-    // without the exclusion the form would open on a review of nothing.
+    // The branch under review is excluded, and the fixture's bare-clone HEAD
+    // is that same branch, so the fallback picks the first remaining branch
+    // by recency then refname. That is main only while rename-prefs-migrated
+    // keeps sorting after it; this assertion is what catches a fixture branch
+    // ever sorting ahead.
     await expect(page.getByLabel("Compare against")).toHaveValue("main");
     await expect(
       page.getByLabel("Compare against").locator("option", { hasText: "feature/rename-prefs" }),
