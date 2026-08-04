@@ -1,9 +1,21 @@
 # App brief: Trysquare
 
-Status: DRAFT, captured 2026-07-30 from the maintainer's briefing. Not yet ratified.
+Status: RATIFIED 2026-07-30 at G0, captured that day from the maintainer's briefing.
 Feasibility gate: the app is only built if reviews can run on the maintainer's Claude
 Code subscription (Max tier) instead of pay-per-token API billing. Research in
 progress; verdict goes to `DECISIONS.md`.
+
+## Not built yet
+
+This document specifies the target. Verified against the code on 2026-08-03,
+these parts of it do not exist yet. They stay here as requirements rather
+than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
+is named.
+
+- Tiers composing per review. A ruleset carries a tier, but a review uses
+  exactly one ruleset: the start route takes a single id and the screen is a
+  single-select. Composing several per review is unowned by any current work
+  item and needs a decision before it is built.
 
 ## What it is
 

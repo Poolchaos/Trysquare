@@ -1,7 +1,17 @@
 # 01 Architecture
 
-Status: DRAFT 2026-07-30, pending G0 ratification. Authority: where this doc
-and `plans/APP-PLAN.md` disagree, this doc wins once ratified.
+Status: RATIFIED 2026-07-30 at G0. Authority: where this doc and
+`plans/APP-PLAN.md` disagree, this doc wins.
+
+## Not built yet
+
+This document specifies the target. Verified against the code on 2026-08-03,
+these parts of it do not exist yet. They stay here as requirements rather
+than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
+is named.
+
+- The read-only log viewer (section 8). A failed stage now names its
+  transcript path, but nothing renders the file. U10.
 
 ## 1. Overview
 
@@ -74,7 +84,8 @@ Layering laws:
 ```
 db.sqlite
 projects/<projectId>/repo.git       bare clone (no working tree to damage)
-runs/<reviewId>/worktree/           detached read-only checkout of fromCommit
+runs/<reviewId>/worktree/<slug>/    detached read-only checkout of fromCommit
+runs/<reviewId>/worktree/           parent, and the cwd AI stages are given
 runs/<reviewId>/bundle/             precomputed review inputs (see 03)
 runs/<reviewId>/logs/               subprocess transcripts per stage
 exports/                            saved reports
@@ -93,15 +104,19 @@ Laws:
 ## 6. Engine adapter
 
 ```
-interface ReviewEngine {
-  startStage(req: StageRequest): AsyncIterable<EngineEvent>
-  // EngineEvent: progress | tool-activity | output-chunk | result | error
-}
+// The seam both engines satisfy (server/engine/adapter.ts):
+interface ReviewEngine { mode; run(request); chainSessionId() }
+// Underneath it, Mode A still calls:
+runStage(options: StageRunOptions): Promise<StageOutcome>
+// Events reach the caller through an optional onEvent callback rather
+// than an async iterable: progress | tool-activity | result | error
 ```
 
 - **HeadlessEngine (Mode A, default):** spawns
   `claude -p <prompt> --output-format stream-json --model <alias>` with cwd =
-  worktree, a composed `--append-system-prompt`, and a read-only tool
+  worktree, a composed `--system-prompt` (replacing the default rather than
+  appending, because the review instructions are the whole contract and the
+  default prompt costs thousands of tokens a call), and a read-only tool
   allowlist (Read, Grep, Glob only). Parses stream-json lines into events;
   the final result event carries session id, usage tokens, and
   cost-equivalent USD, all persisted per stage. Exact flag names are
@@ -162,9 +177,11 @@ reaches a report.
 
 ## 8. Errors and observability
 
-- Every stage failure stores: stage, exit code, error class (spawn, timeout,
-  limit, invalid-output, git), stderr tail, and the log file path; the UI
-  shows the real error, never a generic toast.
+- Every stage failure stores: stage, attempt, error class (spawn, timeout,
+  limit, invalid_output, git, cancelled, unknown), error text, and the log
+  file path; the UI shows the real error, never a generic toast. The exit
+  code and stderr tail are carried inside the error text rather than in
+  columns of their own.
 - Structured logs per review under `runs/<id>/logs/`; a debug view in the UI
   renders them read-only.
 - Anomalous artifacts (invalid JSON from a stage, unexpected file in a

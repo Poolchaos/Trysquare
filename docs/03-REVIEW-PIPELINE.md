@@ -1,11 +1,31 @@
 # 03 Review pipeline
 
-Status: DRAFT 2026-07-30, pending G0 ratification. This is the engine
+Status: RATIFIED 2026-07-30 at G0. This is the engine
 specification: how a review executes the maintainer's protocol as verifiable stages.
 The protocol's mandatory execution procedure (REVIEW_PROTOCOL.md) is the
 source; this doc maps each protocol step to either deterministic app code or
 a bounded AI stage. Principle: **everything that can be deterministic is
 deterministic; the AI does judgment, code does bookkeeping.**
+
+## Not built yet
+
+This document specifies the target. Verified against the code on 2026-08-03,
+these parts of it do not exist yet. They stay here as requirements rather
+than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
+is named.
+
+- Giving S4 the pre-change file contents. The bundle writes `base/` and
+  nothing reads it back, so a deleted file is reviewed from its diff rather
+  than from what it contained. U3.
+- Reconciling S4 answers. The stage returns `reviewedDeletions` and the
+  pipeline discards it, then marks every file reviewed unconditionally, which
+  makes the deleted-file invariant unfalsifiable. U3.
+- Ordering later stages high-risk first (section 1). S1 risk tags are stored
+  and never read. U12.
+- Sweeping whole changed files where the protocol asks for it (section 0.4).
+  Sweeps run over added lines only. Unowned.
+- Showing the verbatim rule text and the diff hunk during confirmation
+  (section 7), and bulk dismissal by rule. U7.
 
 ## 0. S0 Prepare (deterministic app code, no AI)
 
@@ -124,17 +144,22 @@ claim). No S2/S3 reasoning is passed. Instruction per finding:
 4. Confirm severity against the ruleset's severity definitions.
    Verdict per finding: verified (with quotedCode + confirmed lines), killed
    (with reason), or open_question (with what would resolve it). App code then
-   re-checks mechanically: cited lines exist in the file, quotedCode is a
-   byte-exact substring of the worktree file at those lines. A mechanical
-   mismatch kills the finding regardless of the AI verdict.
+   re-checks mechanically: the cited lines exist in the file, and quotedCode
+   matches the worktree file at those lines once both sides are normalised.
+   Normalisation forgives only what carries no meaning: CRLF, trailing
+   whitespace, a trailing newline, and lost common indentation. Anything
+   looser would let a paraphrase pass as a quotation. A mechanical mismatch
+   kills the finding regardless of the AI verdict.
 
 ### S6 Coverage self-audit (protocol step 7; deterministic + AI summary)
 
 App code asserts the invariants: all hunks dispositioned, all sweep hits
 dispositioned, all deletions reviewed, all candidates resolved. Any
-violation fails the review (it is a pipeline bug, not a warning). The AI
-then writes the report-level summary and completeness statement. Review
-moves to `awaiting_confirmation`.
+violation fails the review (it is a pipeline bug, not a warning). S6 is
+deterministic only: the summary and completeness statement are rendered
+from the reconciled ledger, not written by a model, because a model
+summarising its own coverage is exactly the claim this app exists to
+distrust (D-52). Review moves to `awaiting_confirmation`.
 
 ## 2. S7 Human confirmation (UI, the user only)
 
@@ -150,8 +175,10 @@ Nothing reaches the report without an explicit confirm.
 Rendered from confirmed findings in the protocol's Review Output Format:
 summary, completeness check (ledger totals: files, hunks, sweeps, chains
 read), findings grouped by severity in the exact finding format, out of
-scope notes, final verdict line. NITPICK findings are excluded from output
-per house policy but kept in the DB. Export: markdown file to `exports/`
+scope notes, final verdict line. Confirmed NITPICK findings are included
+(D-11 supersedes the earlier exclusion: a confirmed finding is a decision
+the human already made). Dismissed findings appear in an appendix with
+their reasons. Export: markdown file to `exports/`
 and clipboard. The report footer records: model, ruleset snapshot names and
 versions, commits reviewed, token usage, duration. No em dashes anywhere in
 generated output (enforced by a lint on the renderer and a unit test).
@@ -162,8 +189,9 @@ Order: (1) process directives (prime directive, junior-dev standard,
 procedure for this stage, scope rule, severity model), (2) rule database
 verbatim (S3 only; S1/S2/S4/S5 get the directives plus the rule index of
 codes+titles), (3) stage instruction, (4) output contract with the JSON
-schema inlined. Composition is a pure function in `lib/review/compose.ts`
-with snapshot tests per stage.
+schema inlined. Composition is a pure function, `composeSystemPrompt` in
+`lib/rulesets/compose.ts`, covered by explicit assertions on the composed
+text rather than by snapshots.
 
 **How the work is divided depends on the model's review profile**
 (`06-MODELS-AND-PROFILES.md`). `full-context` sends the whole ruleset and
@@ -178,9 +206,10 @@ splits the work instead and records the split in the run log.
 
 ## 5. Failure, pause, resume, cancel
 
-- Stage failure after repair round: review `failed` with full error detail;
-  a failed stage can be retried from the UI (new attempt row, same session
-  where resumable).
+- Stage failure after repair round: review `failed` with full error detail.
+  Recovery is by resuming the review rather than retrying one stage (D-50):
+  stages already answered replay for free from their checkpoints and only
+  the failed one runs live, which is the same mechanism as a limit pause.
 - CLI limit/429: review `paused_limit`, CLI message shown verbatim, manual
   resume re-invokes the stage with `--resume <sessionId>`.
 - Cancel: kills the subprocess, marks stage cancelled; worktree and

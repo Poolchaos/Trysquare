@@ -3,7 +3,7 @@
 The live cache. Current facts only; if a change makes a line here wrong,
 fixing it is part of that change. Dates are absolute (YYYY-MM-DD).
 
-Last verified: 2026-07-31
+Last verified: 2026-08-03
 
 ## Status
 
@@ -15,9 +15,12 @@ Last verified: 2026-07-31
   decide every finding, complete it, and export a report.
 - Milestone M2 is finished: `plans/M2-FINISH-PLAN.md` items W1-W8 are DONE,
   including checkpointed resume, the job manager, SSE, and the demo script.
-- Milestone M3 is finished apart from these records:
-  `plans/M3-FINISH-PLAN.md` items V1-V8 are DONE. V9 is this file and the
-  FG-2 checklist.
+- Milestone M3 is finished: `plans/M3-FINISH-PLAN.md` items V1-V9 are DONE.
+- A full audit on 2026-08-03 found the gate red on this machine, two pipeline
+  promises that were decorative rather than enforced, and a records set two
+  milestones behind the code. The verified gap inventory and the remaining
+  work to v1 are in `plans/M4-FINISH-PLAN.md` (items U1 to U13). Of twelve
+  build-plan work packages, six are complete and six are partly built.
 - The two external AI plans never arrived. They fold in as spec amendments if
   they do; they did not block the build.
 
@@ -35,10 +38,11 @@ TypeScript runs strict plus `noUncheckedIndexedAccess`,
 
 ## Commands
 
-See `CLAUDE.md` section 3. `./verify.sh` is the single gate. As of 2026-07-31
-it passes with `--build --e2e`: 566 unit tests passing and 6 skipped across 38
-files, plus 15 browser tests. CI runs `./verify.sh --build --e2e`; the local
-default leaves both off so it stays fast.
+See `CLAUDE.md` section 3. `./verify.sh` is the single gate. As of 2026-08-04
+it passes with `--build --e2e`: 659 unit tests passing and 6 skipped across 43
+files, plus 27 browser tests (the journey, the theme and screenshot pass, and
+axe over every screen in both themes). CI runs `./verify.sh --build --e2e`;
+the local default leaves both off so it stays fast.
 
 `npm run demo:fixture -- --fake` reviews the seeded fixture end to end with no
 model and no money, scoring the result against the fixture's manifest.
@@ -67,17 +71,20 @@ are accepted; anything else is refused by name.
   git diff and URL parsing, changed exported symbols, mechanical sweeps, the
   quotation check, stage schemas, budget arithmetic, ruleset import with a
   fidelity gate, prompt composition, batch planning, and the report renderer.
-- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0007, and
+- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0009, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings and stage executions.
 - `src/server/gitops/` - the only code that spawns git.
-- `src/server/engine/` - the only code that spawns claude.
+- `src/server/engine/` - the only code that spawns claude, plus the
+  `ReviewEngine` seam and the interactive (Mode B) engine, which spawns
+  nothing and exchanges prompt and answer files with a person's own session.
 - `src/server/review/` - the pipeline, the engine runner, the checkpointing
   runner that makes a resumed stage free, the service that runs a review from
   a row, merged detection, and the report assembler.
 - `src/server/jobs/` - the event bus, the job manager, and the SSE stream.
 - `src/server/api/` - one response shape for every route.
-- `src/app/api/` - 27 route handlers. `src/app/` - 9 screens.
+- `src/app/api/` - 32 route handlers. `src/app/` - 9 screens, plus a root
+  error boundary, a not-found page, and a metadata layout per segment.
 - `src/components/` - the shared UI vocabulary, the left rail, and the
   confirmation queue.
 - `scripts/` - the house-style gate, the leak gate, the nothing-hidden gate,
@@ -86,8 +93,9 @@ are accepted; anything else is refused by name.
   fidelity gate runs against.
 - `tests/fixtures/fake-claude.mjs` - stand-in CLI, so tests are hermetic and
   cost nothing.
-- `tests/` - unit and integration tests. `e2e/` - the browser journey and the
-  theme pass. `drizzle/` - eight committed migrations.
+- `tests/` - unit and integration tests. `e2e/` - the browser journey, the
+  theme and screenshot pass, and the axe accessibility pass.
+  `drizzle/` - ten committed migrations.
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and
@@ -104,11 +112,10 @@ implemented by `src/lib/paths.ts`.
   paths, which cannot be static. It affects only the standalone output
   manifest, which this app does not use. Adopting `output: "standalone"`
   voids that acceptance; the re-check trigger is in `DECISIONS.md`.
-- 9 high npm advisories remain, all the same `brace-expansion` DoS reached
-  through minimatch 3.x inside eslint and eslint-config-next's plugins. No
-  compatible patched version exists; forcing the patched 5.0.8 breaks eslint
-  (verified). Lint-time dev dependency only. Reasoning and re-check trigger in
-  `DECISIONS.md` (2026-07-30 ACCEPTED RISK).
+- The 9 high npm advisories accepted on 2026-07-30 are gone. Re-checked
+  2026-08-03: `npm audit` reports 0 vulnerabilities across 586 dependencies
+  (28 production, 520 dev, 187 optional). The accepted risk is discharged; its
+  re-check trigger has fired and needs no further action.
 - Next's build rewrites `tsconfig.json` (sets `jsx: react-jsx`, adds
   `.next/dev/types`). Run prettier on it after a build or the format gate
   fails on the next run.

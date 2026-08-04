@@ -817,3 +817,561 @@ verified evidence, in writing, here.
   the half that decides whether findings are worth reading needs a real model
   and the maintainer's usage. Nothing in this repository marks a gate passed,
   which is the point of a gate.
+- 2026-08-03 FIXED (U1, D-45): gate scripts resolve filesystem paths with
+  `fileURLToPath`, never `URL.pathname`. This directory's name contains a
+  space, which a file URL carries percent-encoded, so `check-style.mjs`
+  walked a path that does not exist, collected nothing, and exited 2 as
+  misconfigured on a clean tree. Measured: the gate checked 0 files before
+  the fix and 180 after, on the same tree. `./verify.sh` was therefore red on
+  the reference machine while CI stayed green, because CI's checkout path has
+  no space, which is the worst version of this bug: the one that only fails
+  where the work happens. Found by running the gate during the 2026-08-03
+  audit rather than by reading it.
+- 2026-08-03 DECIDED (U1): the house-style gate scans the repository root by
+  listing it, instead of naming the root files it covers. The old list named
+  five markdown files and therefore checked no config file, no `package.json`
+  and not `verify.sh` itself. A list is a promise to remember; listing the
+  directory covers a new file the day it lands. `package-lock.json` and
+  `next-env.d.ts` are excluded by name because they are generated, not
+  authored.
+- 2026-08-03 DECIDED (U1): a declared target directory that is missing fails
+  the gate by name with exit 2, rather than being skipped. The empty-result
+  guard alone was too weak: it fires only when every target is missing, so a
+  gate that had lost one directory would still report a healthy file count.
+  The failure that prompted this was invisible in exactly that way.
+- 2026-08-03 FIXED (U6): the run screen shows the coverage ledger. Every count
+  it needed was already reconciled by the pipeline and returned by the job
+  manager's snapshot, and the page's own type discarded it. Without it the
+  screen could not tell a review that found nothing apart from one that looked
+  at nothing, which is the distinction the whole app exists to make.
+- 2026-08-03 DECIDED (U6): the timeline covers S0 and S6 as well as the five
+  model stages. They are deterministic app code and write no
+  `stage_executions` row, so they had been left off entirely, which hid the
+  two halves of a review that cannot be blamed on a model: preparing the
+  change set, and the audit that refuses to finish while anything is
+  outstanding. Their state is derived from the review instead, and the row
+  says what they do rather than pretending to a token count they never had.
+- 2026-08-03 FIXED (U6): per-stage duration, tokens and cost are rendered.
+  `stage_executions` has stored all of it since W3 and the screen showed a
+  status dot, so the one place a person could see where a review's money went
+  was the total at the bottom.
+- 2026-08-03 FIXED (U6): a failed stage shows its error class, its message and
+  the path to its transcript, which 01 section 8 has always required. The
+  transcript is the evidence behind a failure and it is on this machine;
+  naming the file is the difference between a diagnosable run and a shrug.
+- 2026-08-03 FIXED (U6): persisted run notes are rendered. They are how a run
+  records that it split a batch or excluded a rule/file pair, written
+  precisely so a run that quietly did less than another is distinguishable
+  from it, and nothing displayed them: only the live event tail was shown, so
+  the record vanished on reload.
+- 2026-08-03 FIXED (U6, D-15): the SSE polling fallback exists. It was decided
+  when SSE was chosen and never built, so a dropped stream left the page
+  frozen on whatever it last heard and the only way to learn a review had
+  finished was to reload by hand. Two seconds, only while the stream is down,
+  and the page says it is degraded rather than looking healthy.
+- 2026-08-03 DECIDED (U6): cancelling asks the state machine whether a review
+  can be cancelled instead of matching statuses. That covers the draft, the
+  one awaiting a person and the one paused on a limit, all of which the
+  machine has always allowed and none of which had a path, so the only way to
+  be rid of them was deletion, which also discards their findings.
+- 2026-08-03 FIXED (U5, D-53): a usage-limit pause records when the limit
+  clears. The CLI reports it, the engine parsed it into `StageOutcome`, the
+  job manager re-emitted it, and every consumer below that dropped it: there
+  was no column and nothing rendered it, so a paused review was
+  indistinguishable from a hung one. It is stored as unix seconds on the
+  review (migration 0008) and shown beside the pause reason, and it is cleared
+  on any other transition so a running review cannot show a limit it already
+  passed.
+- 2026-08-03 FIXED (U5, D-50): a failed review is resumable. 03 always specced
+  a retry after a stage failure and the state machine made `failed` terminal,
+  so the only recovery was starting over and paying for every stage again.
+  Resuming replays each answered stage from its checkpoint and runs only the
+  one that broke, which is the mechanism a limit pause already used. Chosen
+  over a per-stage retry because the pipeline cannot re-enter partway through
+  a stage anyway, and one recovery path exercised often beats two that are
+  not. `completedAt` is cleared on any transition to running, or the report
+  would describe a run that ended and then kept going.
+- 2026-08-03 DECIDED (U5): `RESUMABLE_REVIEW_STATUSES` is now the single
+  source of the rule, used by the service guard and the Resume button. It was
+  an exported constant with no callers while three places hardcoded the same
+  list, which is how the list and the rule drift apart.
+- 2026-08-03 FIXED (U5): the clone status machine is enforced, and this
+  immediately caught a real bug. `cloning` was declared in the enum from the
+  first migration and never written, so the projects screen polled while a
+  project was `pending` and treated anything else as finished. Writing
+  `cloning` for the first time would have left a clone in progress frozen on
+  screen with no badge, and the route test that caught it had the same
+  weakness: it waited for "not pending" rather than for a terminal state.
+  Both now wait for `ready` or `failed`. A status nothing ever writes lets
+  every reader of it be wrong for free.
+- 2026-08-03 FIXED (U5): `serialiseJsonColumn` validates against the schema
+  its reader uses, so 02's "validated on read and write" is true rather than
+  half true. A wrong shape was stored happily and failed later at a read, in
+  a stack trace pointing at whoever opened the row instead of whoever wrote
+  it. The schema is optional, because a free-form setting value has no reader
+  schema to check against.
+- 2026-08-03 FIXED (U5): the file-context route parses its query with zod,
+  the last route reading input without it. It coerced by hand, so a
+  non-numeric line became NaN and was silently treated as line one, answering
+  a different question than the one asked. A line of zero or "abc" is now a
+  400 rather than a quiet round to the top of the file.
+- 2026-08-03 FIXED (U4, D-47): a review's profile is resolved from the model's
+  registry entry instead of defaulting. The create route defaulted `profileId`
+  to `full-context` and nothing ever read `models.profileId`, so every review
+  this app has ever run divided its work as though the model could hold the
+  whole protocol, whatever model was chosen. The four profiles were fully
+  implemented in the planner and unreachable from the product.
+- 2026-08-03 DECIDED (U4): the override is asymmetric. A downgrade is accepted
+  and recorded as a run note; a profile stronger than the model's registry
+  entry is refused. Sending a model less than it can hold costs requests;
+  sending it more than it can hold loses part of the protocol quietly, and the
+  result reads as a clean review rather than as a failure. The comparison uses
+  the order of `REVIEW_PROFILES` itself rather than a second list, so the two
+  cannot disagree, and a test pins that order because reordering the enum
+  would silently change which overrides are accepted.
+- 2026-08-03 DECIDED (U4, D-46): a model registered `mechanical-only` is
+  refused for a review, and so is asking for that profile explicitly. Its
+  batch plan contains no judgment requests at all, so the run would raise
+  nothing and then fail reconciliation with every hunk unaccounted for. The
+  API accepted it before and failed mid-run, after the worktrees were built.
+- 2026-08-03 DECIDED (U4): a model that is not in the registry resolves to
+  `full-context` and the review records a run note saying so. This is the same
+  stance the pipeline already takes on an unknown context window: make one
+  request per batch and let the model refuse, rather than inventing a limit
+  here. The note is what keeps it from being the silent default it used to be.
+- 2026-08-03 PROVEN (U4): the engine quality gate now runs the seeded fixture
+  under `full-context`, `chunked` and `decomposed`, asserting every planted
+  defect is still found and the clean files stay clean under each. docs/06
+  promised this and it did not exist, so "a narrower profile still finds the
+  seeded bugs" was an assertion rather than a measurement. A second test pins
+  the trade itself: the request count rises as the profile narrows, which is
+  what tells dividing the work apart from dropping it.
+- 2026-08-03 FIXED (U3): the deletion stage now has to account for what was
+  removed, in both directions, like every other stage. It returned
+  `reviewedDeletions` and the pipeline threw the list away, then closed every
+  ledger file unconditionally, so the audit's changed-files check could never
+  fail. A removed file leaves no hunk behind in the file it used to be, which
+  means nothing else in the ledger notices its absence: a stage that simply
+  omitted it produced a review where every other count still added up.
+  Measured by mutation: neutering the new assertion fails four tests that
+  pass with it.
+- 2026-08-03 DECIDED (U3): a rename counts as a removal for the deletion
+  stage. The old path stops existing and whatever imported it breaks, which is
+  the same failure as a deletion and the one a diff hides best, because the
+  content it shows is unchanged. A rename with no content change also has no
+  hunks, so without this it would have been the one file kind nothing at all
+  accounted for.
+- 2026-08-03 DECIDED (U3): a ledger file closes on evidence rather than on
+  reaching the end of the stages: its hunks are dispositioned, and if it
+  removed anything, the deletion stage named it. A file with neither hunks nor
+  removals is a binary blob or a mode change, where there is no text for a
+  reader to account for, so nothing is owed and it closes. Honest about what
+  this is worth: the reconciliation above is what actually catches a skipped
+  deletion, and `pendingFiles` is now a second line of defence that means what
+  it says rather than a rubber stamp.
+- 2026-08-03 DECIDED (U3): a deleted file whose pre-change copy cannot be read
+  is reviewed from the diff and the prompt says so outright, rather than the
+  run failing or the omission passing silently. Losing a whole review over one
+  unreadable evidence file is worse than a narrower review; letting the stage
+  quietly judge a deletion from its minus lines is worse than both, because
+  the transcript then reads like a file that was opened.
+- 2026-08-03 DEFERRED (U3 to U12): the seeded fixture does not yet delete a
+  whole file, so the quality gate exercises the deletion path only through the
+  pipeline tests, which use a real deleting patch. Adding it needs a deletion
+  mechanism in the fixture builder and a new protocol rule for the defect to
+  violate, and U12 already owns two other fixture defects. Recorded rather
+  than dropped: the gate is the regression net for prompt changes, and until
+  this lands its deletion coverage comes from the pipeline tests alone.
+- 2026-08-03 DECIDED (U2): where a spec describes something that is not built,
+  the sentence stays and the document gains a "Not built yet" block naming the
+  gap and the work item that owns it. Only statements that are wrong about a
+  decision already taken are edited in place. Rewriting an unbuilt requirement
+  to match the code would silently delete it, which is how a design loses its
+  accessibility pass and nobody notices: the axe requirement in 04 had already
+  been stated as fact for four days while no axe dependency existed.
+- 2026-08-03 DISCHARGED (U2): the 9 high npm advisories accepted on 2026-07-30
+  are gone. Re-checked with `npm audit`: 0 vulnerabilities across 586
+  dependencies (28 production, 520 dev, 187 optional). The re-check trigger
+  recorded with the original acceptance has fired and closed it.
+- 2026-08-03 CORRECTED (U2): specs 00 to 06 were relabelled from DRAFT to
+  RATIFIED. G0 passed on 2026-07-30 and `GATES.md` says so; only the headers
+  were stale. `plans/APP-PLAN.md` keeps its DRAFT label, which is accurate.
+- 2026-08-03 FOUND (U2): there is no `ReviewEngine` interface. 01 section 6
+  describes one, and the code calls `runStage` on the headless module
+  directly. Mode B therefore has no seam to plug into, and U11 must extract
+  one before it can add a second engine. Recorded because the plan had assumed
+  the interface existed, which would have made U11 look smaller than it is.
+- 2026-08-03 FOUND (U2): the SSE polling fallback decided in D-15 was never
+  built. The review page opens an EventSource and stops updating if it errors;
+  only the left rail polls, and only to notice an active review. Folded into
+  U6 rather than left as a decision nothing implements.
+- 2026-08-03 DECIDED (U1): `verify.sh` requires `git` alongside node and npm.
+  The gitops suite, the seeded fixture and the e2e setup all shell out to it,
+  and `check-nothing-hidden.mjs` deliberately skips itself when git is
+  absent. Without the requirement, a machine without git turns a security
+  gate into a no-op and the rest into opaque test failures.
+- 2026-08-04 FIXED (review round 1, P0): a stage answer the pipeline rejected
+  stayed checkpointed as succeeded, so resuming replayed it byte for byte and
+  failed the same way forever. The checkpointing runner writes a succeeded row
+  the moment the engine returns schema-valid JSON; every reconciliation the
+  pipeline runs happens after that. With `failed -> running` now legal (D-50),
+  the Resume button offered a recovery that could not work: the prompt is
+  pinned, so the hash matches, so the poison answer replays free. One model
+  misspelling of a deleted path made a review unrecoverable except by deleting
+  it and paying for all five stages again. The pipeline now takes an
+  `invalidate` callback, called with the stage and the reason whenever it
+  refuses a stored answer; the runner strikes every succeeded row for that
+  stage (keeping its output and usage, changing only its standing) so the next
+  run asks again. Every answer for the stage is struck rather than one row: a
+  batched stage merges its answers before reconciliation, so which batch was
+  at fault cannot be told apart. Proved by neutering the service wiring and
+  watching the recovery test fail.
+- 2026-08-04 DECIDED (review round 1): the rule behind that fix, stated once
+  so it is not rediscovered per stage. A checkpoint is only safe to replay
+  because everything that judged the answer accepted it. Any new check that
+  can refuse a stored answer must therefore either run before the answer is
+  stored or strike it on refusal. The seam exists so the second is a one-line
+  obligation rather than a redesign.
+- 2026-08-04 FIXED (review round 1, P0): deleting a project while its clone
+  ran took the server down. The clone is deliberately unawaited, and its
+  status writes began asserting the project exists, so a delete mid-clone made
+  the completion write throw `ProjectNotFoundError`, the catch block's own
+  write throw it again, and that second throw escape as an unhandled rejection
+  from a promise nobody held. Under Node's default policy that ends the
+  process. The background clone moved out of the route into
+  `server/projects/clone.ts`, whose stated contract is that it never rejects:
+  a vanished project is recognised, its half-written repository removed, and
+  the task returns. A write that fails for any other reason is reported to
+  stderr rather than swallowed, because it is the last resort for work nothing
+  awaits.
+- 2026-08-04 FIXED (review round 1): the run page polled forever after every
+  finished review. The server closes the stream when a run ends, which a
+  browser can only report as an error, and the D-15 fallback could not tell
+  that apart from a dropped connection: it started a two-second poll that
+  nothing ever stopped, so a finished review re-queried the detail route (with
+  its merge check, which spawns git) every two seconds for as long as the tab
+  stayed open, including throughout the confirmation session. The page now
+  records that it heard `done`, polls only when a live or queued run has no
+  stream to speak for it, and stops as soon as the snapshot says nothing is
+  running. Resuming a review opens a fresh stream, since the one it had was
+  closed by the run that ended.
+- 2026-08-04 FIXED (review round 1): cancelling a queued review dequeued it
+  and changed nothing else, so the row stayed `draft` with its Cancel button
+  intact and a second tab waited on a queue entry that no longer existed. The
+  same click on an unqueued draft cancelled it properly. Dequeueing now falls
+  through to the same state-machine judgment as every other cancel, so the
+  review ends cancelled and a watcher is told.
+- 2026-08-04 FIXED (review round 1): a clone interrupted by a restart was
+  stranded. Reviews have had startup recovery since W5; clones had none, and
+  enforcing the clone machine made `cloning -> pending` illegal, so nothing
+  could move the row and the projects screen polled it every second forever.
+  `markOrphanedClonesFailed` joins `markOrphanedReviewsInterrupted` in the
+  manager's init, failing anything left pending or cloning with a message
+  saying the server restarted. Failed is the honest status and the one with a
+  retry path.
+- 2026-08-04 FIXED (review round 1): every deleted binary produced a run note
+  claiming its pre-change copy was missing. The bundle deliberately stores no
+  base copy for a binary, and the reader checked only that the file was
+  deleted, so the read always failed and the note fired. A note that cries
+  lost evidence over ordinary behaviour teaches people to ignore notes, which
+  is the opposite of what the ledger is for. The reader now skips exactly what
+  the writer skips.
+- 2026-08-04 FIXED (review round 1): a deleted file was inlined inside a bare
+  three-backtick fence, so deleting a document containing its own fences ended
+  the block early and the rest of the file was read as prompt text. The fence
+  is now one backtick longer than the longest run inside the content.
+- 2026-08-04 FIXED (review round 1): an unregistered model that also carried a
+  deliberate profile downgrade got a run note stating the review assumed
+  full-context and made one request per batch, while the row said decomposed
+  and the run made many. The two notes were branches of one conditional; they
+  are two independent facts and are now recorded as such.
+- 2026-08-04 FIXED (review round 1): refusing a judgment profile on a
+  mechanical-only model ended with "a weaker profile is allowed", and every
+  weaker profile is itself refused. The model is the problem, not the profile,
+  so that case is now answered first and says to pick a model probed for
+  review work. The remaining stronger-than-model refusal names the profile
+  that will work, which is honest because that branch is only reachable for a
+  model that can judge.
+- 2026-08-04 FIXED (review round 1): the stage timeline pulsed every
+  unfinished stage, so during preparation all seven pulsed at once and during
+  S3 the four after it did too, on the screen whose purpose is saying what is
+  running. Stage rows are only written when a stage ends, so "not finished"
+  never distinguished the executing stage from the future ones. The pulse now
+  follows `reviews.current_stage`, which is stamped on every stage lifecycle,
+  with preparation before the first lifecycle and the audit after verification
+  answers.
+- 2026-08-04 FIXED (review round 1): the two deterministic rows misread two
+  reachable states. Cancelling a review after its findings were on the table
+  left Audit grey, reading as an audit that never ran when it had passed; and
+  a first attempt that failed left Prepare grey, though nothing can be
+  attempted before the worktree and bundle exist. Both now derive from
+  evidence (any attempt at all; the ledger having nothing outstanding) rather
+  than from a list of statuses.
+- 2026-08-04 FIXED (review round 1): a stage the user cancelled mid-run
+  rendered as a critical-red failure with an error line, because an abort is
+  recorded as a failed row carrying the `cancelled` error class. The class was
+  already stored; the screen now reads it and says the stage was cancelled,
+  in muted text. A decision should not be dressed up as a fault.
+- 2026-08-04 FIXED (review round 1): two new tests promised more than they
+  checked. One asserted a count was at least zero, which cannot fail; it now
+  asserts the decomposed profile genuinely excludes pairs on this fixture
+  (README.md carries only the general theme) and that the excluded pairs are
+  named in a run note. The other was titled for the skipped-deletion path and
+  ran the accounted path; the skip direction is now asserted directly, that
+  the run refuses and the ledger leaves the file open. Both were caught by the
+  round rather than by the suite, which is the argument for the round.
+- 2026-08-04 CORRECTED (review round 1): the plan's commit map still called U4
+  TODO while its own section said DONE and the code was in the tree; the U5
+  section claimed a browser proof of the limit banner that was never written
+  (it moves to U12 with the other failure-path flows, D-55); and "takes about
+  a second" appeared in three documents with no measurement. The demo was
+  timed (2026-08-04, three runs: 1.45s, 1.46s, 1.54s wall clock, pipeline
+  itself 0.6s), the number recorded once in the runbook, and the other two
+  places now point at it or say nothing.
+- 2026-08-04 DECIDED (U7): a rewritten comment is stored beside the engine's,
+  never over it. `findings.edited_comment` (migration 0009) holds the
+  person's words; `comment` keeps the model's. The report and every screen
+  prefer the edit, because the report is read by whoever fixes the code; the
+  original stays because how well the engine explained itself is the only
+  measurement of whether the prompts work, and each edit is a data point in
+  exactly that. An empty or unchanged rewrite stores null, so "edited" keeps
+  meaning edited. Rejected: a free-text override of `comment` in place, which
+  would erase the evidence, and a separate annotations table, which is a
+  join for a one-to-one fact.
+- 2026-08-04 DECIDED (U7): the confirmation queue is two panes. The left is
+  the queue itself, grouped by severity worst-first with a state chip per
+  decided finding; the right is everything one decision needs: the verbatim
+  rule text from the review's frozen snapshot, the diff hunk that produced
+  the finding, and the worktree lines it cites. The rule text comes from a
+  new `/api/reviews/[id]/rules` route reading the snapshot, so a rule edited
+  after the run cannot change what a past finding is shown to have broken.
+  The hunk rides on the existing context route, read from the bundle's
+  `diff.patch`, which survives the worktree by design; one fetch serves the
+  pane because the screen is driven by a key repeat.
+- 2026-08-04 DECIDED (U7): j and k walk the visual order. The queue is
+  sorted by severity then path then line, and the keyboard walks exactly
+  that sequence, because a cursor that moves in an order the eye cannot see
+  is a cursor that teleports. After a decision the selection skips to the
+  next undecided finding; the decided one stays in place and stepping back
+  onto it shows the record.
+- 2026-08-04 DECIDED (U7): the D-16 map is complete: e opens the comment
+  editor prefilled with what the report would say, Escape leaves any input,
+  g g goes first, G goes last, and the footer hints show all of it. Screen
+  readers get the decided count and the active finding as polite live
+  regions naming the finding, not reciting its card. The dismissal input has
+  a visible label; it was the most-used input in the app and had only a
+  placeholder, which disappears the moment typing starts.
+- 2026-08-04 FOUND (U7): git emits a deleted file as a single hunk covering
+  the whole file (checked against a 200-line deletion: `@@ -1,200 +0,0 @@`),
+  so `hunkForLine` needs no old-numbering special case; the first-hunk
+  fallback is the only possible answer for a deletion. The test pins the
+  single-hunk assumption so a git behaviour change would surface as a
+  failure here rather than as a wrong hunk on screen. A first draft carried
+  the special case and a test that could not fail; both were removed after
+  the check, and the containment logic is mutation-proved (returning the
+  first hunk unconditionally fails the multi-hunk test).
+- 2026-08-04 DECIDED (U8): the picker enforces what the server enforces. Only
+  a model a fresh probe vouches for is selectable, the exact rule of
+  `listSelectable` and 06 section 2; unknown and stale rows show a Probe
+  button and what is known about them, and unavailable rows show the probe's
+  own error verbatim. Before this, a never-probed model was selectable while
+  a stale one was disabled, inverting the spec, and the helper carrying the
+  correct rule was dead code. The judgment moved to `lib/models/availability`
+  so the screen and the server read one function instead of agreeing by
+  coincidence, and the ordering (recommended families first, recommended
+  models first within one) is pure and unit-tested there.
+- 2026-08-04 DECIDED (U8): nothing is preselected when nothing is probed. The
+  form cannot start until a probe vouches for a model, and a successful probe
+  selects the model it vouched for when no choice was made, because probing
+  is what someone does in order to use it. The browser journey now probes
+  before it reviews, which is the honest first-run flow; the fake CLI answers
+  a probe in script mode without consuming a scripted answer, recognising it
+  by the probe's own system prompt.
+- 2026-08-04 DECIDED (U8): the advanced fold shows the price of a downgrade
+  before it is chosen. Pre-flight already computed per-profile adversarial
+  request counts; the fold lists them, offers only profiles strictly weaker
+  than the model's own (the server refuses stronger ones anyway), and sends
+  the override with both the pre-flight and the creation so the preview and
+  the run share one resolution. Engine mode renders as a statement rather
+  than a disabled control, because a control that cannot be operated is a
+  promise this build does not keep (U11 makes it one).
+- 2026-08-04 PROPOSED (U8): multi-ruleset reviews move to U9. 04 specs a
+  ruleset multi-select; U8 shipped a single-select grouped by tier with
+  enabled-rule counts. The read side already merges plural snapshots
+  (`readReviewSnapshot`), so the remaining work is the write side: creation
+  and start accepting several ruleset ids and freezing each. That is ruleset
+  composition, which is U9's domain. Logged per the standing rule rather
+  than asked, since no listed item owned it.
+- 2026-08-04 DECIDED (U8): the branch list names the moment it was read from
+  the remote and offers Refresh beside it, and the pre-flight shows the merge
+  base commit it computed. Both were fetched and thrown away; a review is an
+  assertion about two commits, and the screen setting one up should say which
+  moment and which base it is talking about.
+- 2026-08-04 AMENDED (U9, D-48): the unmapped-lines block cannot fire on the
+  importer as it stands, and that is a property, not a gap. Probed with a
+  leading stray line, a trailing unowned appendix, and a stray between
+  blocks: the block partitioning claims every line of any document, because
+  every heading owns its whole block, non-rule blocks become directives
+  verbatim, and preamble becomes one. D-48's intent, that nothing is silently
+  dropped, is met by construction and pinned by the lib tests plus the
+  byte-for-byte round trip. The import route now returns the fidelity
+  numbers (the screen says "All N lines accounted for" with the importer's
+  own counts) and keeps the 400-with-lines branch as a trap that only an
+  importer regression can spring. A blocked-import browser test was planned
+  and is unwritable against a correct importer; the e2e asserts the positive
+  sentence instead.
+- 2026-08-04 DECIDED (U9): severity edits move the version through the same
+  door as the toggle. One `patchRule` carries both, refuses nothing-to-change
+  bodies at the route, and a patch that changes nothing costs no version.
+  A WARNING promoted to CRITICAL is a different standard, and a report
+  naming "version 3" must identify exactly one standard.
+- 2026-08-04 DECIDED (U9): duplicate-to-tier copies the ruleset as used, not
+  the document as first imported. The copy keeps the toggles as they stand,
+  starts at version 1 with its own history, and is built through the same
+  save path an import uses, so a copy and a re-import cannot mean different
+  things. The usual move is promotion: a rule proven on one project becomes
+  a standard elsewhere.
+- 2026-08-04 DECIDED (U9): a refused project delete now carries its review
+  count as a field and the screen offers the remedy 02 promises: delete the
+  blocking reviews first, behind its own second step, naming the count. The
+  bulk route removes owned and linked-referencing reviews both, because a
+  linked review blocks the delete just the same, and refuses the whole batch
+  while any is running rather than killing one mid-run. Exported reports
+  survive, because exports live outside the review's artifacts.
+- 2026-08-04 DEFERRED (U9 to its own slice): multi-ruleset reviews. The
+  refinement of the U8 PROPOSED entry after reading the merge: composing two
+  rulesets can collide on rule codes, which would make findings.ruleCode
+  ambiguous and run one rule's sweeps twice, so the write side needs a
+  collision refusal designed with it. That is its own reviewable change, not
+  a rider on U9's six features; 04's gap line keeps naming it.
+- 2026-08-04 FIXED (review round 2, P1): duplicating a ruleset twice under one
+  name overwrote the first copy instead of making a second. Found by running
+  it: two duplicates returned the same id. `saveImportedRuleset` is keyed by
+  name and replaces what it finds, so the second copy adopted the first
+  copy's row, wiped whatever had been toggled or re-graded into it, and reset
+  its version to 1 while a past review could still name a later one. The
+  duplicate path now refuses a taken name (`RulesetNameTakenError`, 409) and
+  the screen offers a name field to resolve it. Merging silently was never a
+  candidate: a copy that quietly becomes an edit of something else is the
+  kind of surprise this app exists to refuse.
+- 2026-08-04 DECIDED (U10, D-56): 04's "severity is the only place strong
+  colour appears" is amended to scope that rule to review content. Severity
+  owns red, amber and blue wherever findings are shown; outside findings, the
+  good and critical tokens may mark a run's own state (a status chip, a
+  failed clone, a confirmation that landed). The alternative, holding the
+  literal rule, would have meant a status chip in neutral grey on every
+  screen, which loses the one thing a status chip is for. What is preserved
+  is the actual intent: on any screen showing findings, nothing but a
+  finding's severity uses a severity colour, so a red badge never competes
+  with red chrome for the same meaning.
+- 2026-08-04 DECIDED (U10): the app's own screens carry the 40px hit target
+  at the kit rather than per screen. `Button`, `Input`, `Textarea` and
+  `Select` set `min-h-[var(--hit-target)]`, because a floor honoured only
+  where someone remembered is not a floor. Reduced motion likewise moved
+  from the one pulse class to every animation and transition: each is
+  decorative feedback on a state the screen also states in words, so removing
+  them all costs a reader nothing.
+- 2026-08-04 DECIDED (U10): deleting all data walks the same delete paths the
+  single buttons use rather than truncating tables, so a wipe cannot orphan
+  the clones and run directories a raw delete would leave on disk. Exports
+  are kept and the response says so: a report is the thing a review was for,
+  and someone clearing working state is not asking to lose the reports they
+  already wrote. It refuses while any review is running, which is
+  mutation-proved (neutering the guard fails the test).
+- 2026-08-04 FIXED (review round 2, P1): deleting a queued review stranded the
+  scheduler. The queue holds ids, and nothing in any delete path took an entry
+  out of it, so a review deleted while it waited made `launch` throw from the
+  `finally` of the run that ended. That both escaped as an unhandled rejection,
+  which under Node's default policy ends the process, and abandoned the loop
+  that starts the next review, leaving every review behind it queued forever
+  while the screen kept saying so. Two changes, because either alone leaves a
+  hole: the delete paths now dequeue first (`manager.dequeue`), and
+  `startNextQueued` skips a review whose row is gone and reports any other
+  fault to that review's watchers rather than out of a promise nobody holds.
+  Mutation-proved: removing the guard fails the new test.
+- 2026-08-04 FIXED (review round 2, P1): holding `c` in the confirmation queue
+  walked down the list confirming findings. The key had no in-flight guard,
+  unlike the button beside it, so a repeat fired a second decision that landed
+  on whichever finding the first had already advanced to. Nothing may enter a
+  report without a person deciding it, and holding a key is not deciding
+  twenty things. The handler now ignores auto-repeat outright and respects the
+  same `busy` flag the button does.
+- 2026-08-04 FIXED (review round 2): the dismissal reason was one string
+  shared by the whole queue, so an abandoned draft on one finding was still in
+  the box on the next, and dismissing that one recorded, permanently, why
+  something else was not a problem. Reasons are now keyed by finding exactly
+  as the comment drafts already were. The browser journey asserts both halves:
+  moving away leaves the box empty, and coming back finds the draft.
+- 2026-08-04 FIXED (review round 2): a failed probe and a failed start both
+  returned the control to idle with nothing said, which reads as a click that
+  never registered rather than a request that failed. Both now surface the
+  message, and both have a catch, so a rejected fetch is not an unhandled
+  rejection.
+- 2026-08-04 DECIDED (U11): Mode B exists behind a seam rather than as a
+  branch inside the headless runner. `ReviewEngine` (server/engine/adapter.ts)
+  is the narrowest thing the pipeline already needed: ask a stage, get a
+  validated answer. Which engine answers is the review's own frozen column,
+  not a live setting, so a resume cannot change what a run means half way
+  through.
+- 2026-08-04 DECIDED (U11): the interactive engine is not a looser review. It
+  composes the prompt with the same code, validates the answer against the
+  same schema before the pipeline sees it, and the pipeline's reconciliation
+  runs over it unchanged, so an answer that skipped a hunk is refused there
+  exactly as it would be in Mode A. Usage is recorded as zero rather than
+  estimated: the tokens were spent in someone else's session and a guess would
+  corrupt the one number the user makes decisions with. A run note says so on
+  every interactive review. Proof: eight unit tests over the exchange
+  contract, plus a full review driven end to end from files on disk with no
+  CLI path configured at all.
+- 2026-08-04 FOUND (U11): the ideal-answer fixtures carry
+  `<<candidate:path:line>>` placeholders that the fake CLI resolves by reading
+  the verification prompt, so any engine that does not go through that fake
+  must resolve them itself. The Mode B integration test does it the way a
+  person would, from the prompt it was handed. Recorded because the first
+  attempt looked like a product failure (a completed review with zero verified
+  findings) and was a harness gap.
+- 2026-08-04 FIXED (U12): 04 section 4 claimed WCAG AA "checked in e2e via
+  axe" and nothing checked it. `@axe-core/playwright` now runs over every
+  screen in both themes plus the completed review, scoped to WCAG 2 A and AA
+  (best-practice rules are opinions, and failing a suite on an opinion trains
+  people to ignore it). It found three real violations on first run, all now
+  fixed rather than waived:
+  - `--color-ink-faint` failed contrast in both themes (64% light, 58% dark).
+    Moved to 52% and 68%. The third grey now sits close to the second, which
+    is the honest trade: AA is not negotiable against a preference for three
+    distinct tiers.
+  - The WARNING severity badge measured 3.75:1 on its own soft background,
+    the only severity badge that failed. Amber reads lighter than red or blue
+    at equal lightness, so it had been set to 58% where the others sit at
+    52%; it is now 49%.
+  - Scrollable regions (the report, the activity log, the rule text, the diff
+    hunk, the file context, the findings list) had no keyboard access. Each
+    now takes focus and carries a name, so it is reachable and announced as
+    something rather than as an unlabelled tab stop.
+  The claim in 04 is now checked on every run rather than asserted.
+- 2026-08-04 DECIDED (U12): the `defaultModel` and `defaultEngineMode`
+  settings keys are deleted rather than given readers. Both were catalogued
+  from the start and never read by anything, and U11 made the engine a
+  per-review decision frozen on the row, which is the right place for it: a
+  global default that a review could silently diverge from is worse than no
+  default. A settings key nothing reads is a promise the screen does not
+  keep.
+- 2026-08-04 DONE (U12): CI uploads `review/`, `test-results/` and
+  `playwright-report/` on every run, passing or failing. On a failure they are
+  what the failure is diagnosed from; on a success the screenshots are the
+  record of what the app actually looked like at that commit, which is the
+  whole point of photographing it.
+- 2026-08-04 DECIDED (U12): the browser suite can arm a usage limit with a
+  file. Its server boots once for the whole run, so an environment variable
+  cannot be changed per test, and a pause was the one ordinary ending no
+  browser had ever walked. A test writes the trigger, the next spawned CLI
+  reads it, un-counts its own call so the answer it would have used is still
+  waiting, and fails the way a real limit does. The journey now proves the
+  whole arc through a screen: paused rather than failed, the CLI's own words,
+  when the limit clears, resume, and completion. D-55 stands for restart
+  recovery, which stays at the integration layer.
+- 2026-08-04 DONE (U12): the journey asserts the exported report equals the
+  confirmed set exactly: the findings section holds one entry per confirmed
+  finding and none for the dismissed one, whose reason appears only in its own
+  section. Counting was the missing half; the report already carried the right
+  content, and nothing checked that it carried only that.

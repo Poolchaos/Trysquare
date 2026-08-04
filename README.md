@@ -12,18 +12,31 @@ program rather than trusted away.
 
 ## Status
 
-Early development, and the honest summary is short: **the review pipeline is
-not built yet.**
+**The app runs end to end, and the question it exists to answer is still
+open.**
 
-What exists today is the foundation. The project scaffold runs, the quality
-gate (`./verify.sh`) is in place and its failure modes are proven rather than
-assumed, and the design is specified in detail in [docs/](docs/). One of twelve
-work packages is complete.
+You can add a project, review one branch against another, watch the run,
+decide every finding, and export a report. A browser test walks exactly that
+path on every CI run, from an empty app to an exported file.
 
-There is no usable review functionality yet. If you came here looking for a
-tool to run today, it is not ready. If you came to read the design or to
-contribute, everything you need is in [docs/](docs/) and
-[docs/plans/BUILD-PLAN.md](docs/plans/BUILD-PLAN.md).
+What is not settled is whether the findings are worth a person's time. That
+needs a real model and real usage, and it has deliberately not been spent yet.
+What has been proven costs nothing: against a fixture with eight planted
+defects and two files that are deliberately correct, the pipeline found all
+eight, invented nothing in the clean files, and discarded no quotation as
+unverifiable. Run it yourself with `npm run demo:fixture -- --fake`, which
+spends nothing. That establishes the machinery carries a
+correct review intact, and no more. The judgment is the maintainer's, and it
+is described in [docs/plans/FG2-CHECKLIST.md](docs/plans/FG2-CHECKLIST.md).
+
+Six of twelve work packages are complete and six are partly built: the review
+engine, the data and git layers, and the screens are in place, while the
+design pass, the accessibility work, the interactive engine mode, and parts of
+the test suite are not. What remains is written down item by item in
+[docs/plans/M4-FINISH-PLAN.md](docs/plans/M4-FINISH-PLAN.md), and
+[docs/PROJECT-STATE.md](docs/PROJECT-STATE.md) is the current-facts cache.
+
+Treat this as usable by its author and not yet finished for anyone else.
 
 ## The idea
 
@@ -60,12 +73,21 @@ confirm or dismiss with a reason. Only what you confirm reaches the report.
 detached worktrees pinned to a commit, and the model gets a read-only tool
 allowlist. There is no code path that writes into a repository under review.
 
-## How it will work
+## How it works
 
 You add a project by git URL and it is cloned locally. You pick the branch to
-review, the branch to compare against, and which rulesets to apply. Rulesets
-come in three tiers that compose: rules that apply to any code, rules for a
-particular technology, and rules specific to one project.
+review, the branch to compare against, one ruleset, a model, and how hard the
+model should think. You can add a sentence saying what the change was meant to
+do, which is treated as a claim to check rather than as an instruction. Before
+anything is spent, a pre-flight tells you what would be examined: the commits
+it would pin, the file and hunk counts, the sweep hits, and how many model
+requests it expects to make.
+
+Rulesets are imported by pasting a markdown protocol document, which becomes
+numbered rules and process directives; the import is refused if it produces no
+rules. Each ruleset carries a tier, meaning rules for any code, rules for a
+technology, or rules for one project. Choosing several rulesets so the tiers
+compose in one review is designed but not built: today a review uses one.
 
 The review then runs as a sequence of stages, mirroring a rigorous manual
 review: build the change inventory, classify risk, understand the code
@@ -107,15 +129,38 @@ npm install
 npm run dev
 ```
 
-That serves the app on <http://localhost:3000>. At present it renders a
-placeholder page: see Status above.
+That serves the app on <http://localhost:3000> and opens on the projects
+screen. [docs/RUNBOOK.md](docs/RUNBOOK.md) walks through a first review from
+there, including which actions spend model usage and which do not.
+
+To see the whole pipeline work without spending anything and without a model:
+
+```bash
+npm run demo:fixture -- --fake
+```
+
+That builds two small git repositories with known defects planted in them,
+reviews them end to end, and scores the result against the answer key. Drop
+the `--fake` and it runs against a real model on your subscription.
+
+Two environment variables matter. `TRYSQUARE_DATA` is the data root, holding
+`db.sqlite`, `projects/`, `runs/` and `exports/`, and defaults to
+`~/.local/share/trysquare`. `TRYSQUARE_CLAUDE_PATH` is the binary reviews run
+through, and defaults to `claude` on your PATH.
 
 ## Development
 
 ```bash
-./verify.sh              # the gate: lint, format, types, house style, tests
+./verify.sh              # the gate: lint, format, types, house style,
+                         # private-material and hidden-file checks, unit tests
 ./verify.sh --build      # adds a production build
-./verify.sh --e2e        # adds end-to-end tests
+./verify.sh --e2e        # adds end-to-end tests (needs chromium, below)
+```
+
+The end-to-end run needs a browser, once per machine:
+
+```bash
+npx playwright install chromium
 ```
 
 "Verified" in this project means exactly one thing: `./verify.sh` exited zero.
@@ -143,8 +188,14 @@ current rather than written once.
 | [docs/04-UI-DESIGN.md](docs/04-UI-DESIGN.md) | Screens, states, accessibility |
 | [docs/05-TESTING.md](docs/05-TESTING.md) | Test strategy and the seeded-bug quality gate |
 | [docs/06-MODELS-AND-PROFILES.md](docs/06-MODELS-AND-PROFILES.md) | Model discovery and how the pipeline adapts to model capability |
-| [docs/plans/BUILD-PLAN.md](docs/plans/BUILD-PLAN.md) | Work packages, milestones, current progress |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Install, start, and run a first review |
 | [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md) | What is actually built right now |
+| [docs/plans/BUILD-PLAN.md](docs/plans/BUILD-PLAN.md) | Work packages and milestones |
+| [docs/plans/M4-FINISH-PLAN.md](docs/plans/M4-FINISH-PLAN.md) | The remaining work to v1, item by item |
+
+That is the short list. [docs/README.md](docs/README.md) indexes every
+document, including the decision log and the gate ledger, and is the map to
+read first if you are picking the work up rather than picking it out.
 
 ## Contributing
 

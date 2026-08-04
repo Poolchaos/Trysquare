@@ -18,6 +18,14 @@ Notes:
   reading needs a real model, which costs the maintainer's usage. Nothing in
   this repository will mark this gate passed, and a run of the fake cannot.
 
+- Evidence under `review/` is gitignored and therefore exists only on the
+  machine that produced it, currently the maintainer's. A reader cloning this
+  repository will not find `review/2026-07-31-fg2/` and should reproduce it
+  instead with `npm run demo:fixture -- --fake`, which is free and quick
+  (timing in `docs/RUNBOOK.md`). The directory is ignored deliberately: an unanchored `review`
+  pattern once hid the whole review engine from the repository, and the
+  anchored replacement is what keeps that from recurring.
+
 - The two external AI plans have not been received. When they arrive they are
   reviewed against the specs and folded in as spec amendments; they do not
   block the build (the maintainer's 2026-07-30 go-ahead).

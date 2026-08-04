@@ -1,9 +1,21 @@
 # 02 Data model
 
-Status: DRAFT 2026-07-30, pending G0 ratification. SQLite via Drizzle;
+Status: RATIFIED 2026-07-30 at G0. SQLite via Drizzle;
 migrations checked in from the first table. All ids are ULIDs (sortable),
 all timestamps are ISO-8601 UTC strings. JSON columns are validated with zod
 on read and write.
+
+## Not built yet
+
+This document specifies the target. Verified against the code on 2026-08-03,
+these parts of it do not exist yet. They stay here as requirements rather
+than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
+is named.
+
+- Editing a project name or default branch. Both are marked editable above
+  and there is no route or screen for either. U10, D-51.
+- Offering bulk deletion of a project reviews when a delete is refused. The
+  refusal and its count are implemented; the remedy is not. U9.
 
 ## Tables
 
@@ -127,7 +139,7 @@ past review was judged against.
 | stage                                        | text      | s1_risk, s2_comprehension, s3_adversarial, s4_deletions, s5_verification, s6_audit |
 | attempt                                      | int       |                                                                                    |
 | sessionId                                    | text null | CLI session id for resume                                                          |
-| status                                       | text      | running, succeeded, failed, cancelled                                              |
+| status                                       | text      | succeeded or failed. The enum also carries running and cancelled; nothing writes them, because a row is written only once a stage settles |
 | inputTokens, outputTokens, costEquivalentUsd |           | from result event                                                                  |
 | errorClass, errorText, logPath               |           |                                                                                    |
 | startedAt, endedAt                           | text      |                                                                                    |
@@ -170,6 +182,7 @@ no pending sweep hits past S6.
 | ruleCode                         | text null | which rule it violates, if rule-based                            |
 | issue                            | text      | one-line statement                                               |
 | comment                          | text      | protocol finding format, <= 4 sentences                          |
+| editedComment                    | text null | the person's rewrite at confirm time; the report prefers it       |
 | mechanism                        | text      | traced input -> wrong output path (internal, shown in UI)        |
 | quotedCode                       | text      | exact lines quoted at verification time                          |
 | status                           | text      | candidate, verified, killed, open_question, confirmed, dismissed |
@@ -198,8 +211,10 @@ composed command uses an alias form.
 
 ### settings
 
-(key PK, value JSON): dataDir override display, maxConcurrentReviews,
-stageTimeoutMinutes, defaultModel (last used), defaultEngineMode.
+(key PK, value JSON): maxConcurrentReviews, stageTimeoutMinutes,
+stageMaxBudgetUsd. Those three are the whole catalogue; any other key is
+refused by name. A data-directory display, a default model and a default
+engine mode are designed but not built (U10, U11).
 
 ## Deletion rules
 

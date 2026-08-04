@@ -1,16 +1,29 @@
 # 06 Models and review profiles
 
-Status: DRAFT 2026-07-30. Supersedes the two-model assumption in
+Status: RATIFIED 2026-07-30 at G0. Supersedes the two-model assumption in
 `01-ARCHITECTURE.md` section 7. Facts below were measured on the maintainer's
 machine on 2026-07-30 with Claude Code 2.1.71; they are re-probed by the
 app, never trusted from this document.
+
+## Not built yet
+
+This document specifies the target. Verified against the code on 2026-08-03,
+these parts of it do not exist yet. They stay here as requirements rather
+than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
+is named.
+
+- Choosing the profile from the new-review screen. The server resolves it
+  from the model and refuses an upgrade (U4, 2026-08-03), and the pre-flight
+  returns the resolved profile with the request count each profile would
+  cost, but no control renders them yet. U8.
 
 ## 1. Measured facts (evidence, 2026-07-30)
 
 `claude auth status` returns JSON of the shape
 `{"loggedIn":bool,"authMethod":string,"apiProvider":string,"subscriptionType":string}`.
-The app reads this at startup to show which credentials and billing mode a
-run will use. When the auth method is not a subscription login, the UI warns
+The app reads this only when someone presses Check sign-in on Settings, and
+never at startup: reading it is a real CLI call, and D-31 keeps every such
+call behind an explicit action. When the auth method is not a subscription login, the UI warns
 that runs may bill per token. The app never reads, copies, or logs the
 credentials themselves.
 
@@ -67,7 +80,8 @@ same lesson applies to review stages: the app always passes an explicit
 ## 2. Model registry
 
 The app ships a candidate list (the ids in section 1 plus any the maintainer adds)
-and probes it: on first run, on demand from the picker, and daily. Each
+and probes it only when someone presses a probe control, never on first run
+and never on a timer (D-31: a probe is a real call that spends usage). Each
 result stores resolved id, context window, availability, error text, and
 probe timestamp. The picker shows only what probed available, grouped by
 family, with the context window and the profile it will use. Unavailable

@@ -1,9 +1,31 @@
 # 04 UI and design
 
-Status: DRAFT 2026-07-30, pending G0 ratification. The craft bar is
+Status: RATIFIED 2026-07-30 at G0. The craft bar is
 `AI-ANTIPATTERNS.md` (binding): every screen must contain at least one
 decision a template could not have made. Nothing ships that reads as
 AI-built.
+
+## Not built yet
+
+This document specifies the target. Verified against the code on 2026-08-03,
+these parts of it do not exist yet. They stay here as requirements rather
+than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
+is named.
+
+- Projects list: last fetch, review count, per-row fetch, and the live git
+  output tail during a clone. U10.
+- New review: choosing more than one ruleset at once. The picker is a
+  single-select grouped by tier with rule counts; the freeze path reads
+  plural snapshots already, but creation writes one, and composing two
+  rulesets needs a rule-code collision refusal designed with it. Its own
+  slice after U12 (2026-08-04 DEFERRED in DECISIONS.md).
+- Run screen: S0 and S6 rows, per-stage duration and tokens, and the coverage
+  panel counting hunks and sweeps down live. U6.
+- Rulesets: editing a rule's text in place with markdown preview. Severity,
+  toggles, sweep patterns, directive bodies and duplicate-to-tier are built;
+  free-text rule editing is not. U12 records or builds it.
+- Settings: the data directory display, the engine default, probe-all, and
+  the danger zone. U10, U11.
 
 ## 1. Design language
 
@@ -13,9 +35,13 @@ AI-built.
 - **Typography:** one UI face (system-adjacent grotesk) + one monospace for
   code, paths, hashes, branch names. Type scale defined in tokens; code is
   never rendered in the UI face.
-- **Color:** neutral surface palette with one restrained accent; severity is
-  the only place strong color appears (CRITICAL red, WARNING amber,
-  open-question blue), used consistently in badges, borders, and counts.
+- **Color:** neutral surface palette with one restrained accent. Within
+  review content, severity is the only place strong color appears (CRITICAL
+  red, WARNING amber, open-question blue), used consistently in badges,
+  borders, and counts. Outside it, the good and critical tokens also mark a
+  run's own state: a status chip, a clone that failed, a confirmation that
+  landed (D-56, 2026-08-04). The rule that matters is that no finding's
+  severity competes with chrome for the same colour on the same screen.
   Dark and light themes from day one via CSS variables; both are first-class
   and both are e2e-screenshotted.
 - **Density and rhythm:** 4px spacing grid, tabular numerals for counts and
