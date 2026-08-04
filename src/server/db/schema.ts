@@ -172,6 +172,9 @@ export const reviews = sqliteTable(
     status: text("status").notNull(),
     currentStage: text("current_stage"),
     pausedReason: text("paused_reason"),
+    // Unix seconds, as the CLI reports it. A pause with no end in sight reads
+    // as a hang, so the reset time is kept beside the reason it paused.
+    pausedResetsAt: integer("paused_resets_at"),
 
     usageInputTokens: integer("usage_input_tokens").notNull().default(0),
     usageCacheCreationTokens: integer("usage_cache_creation_tokens").notNull().default(0),
@@ -330,6 +333,13 @@ export const findings = sqliteTable(
     ruleCode: text("rule_code"),
     issue: text("issue").notNull(),
     comment: text("comment").notNull(),
+    /**
+     * What a person wrote in place of the engine's comment, if they rewrote
+     * it while confirming. The engine's own words stay in `comment`: the
+     * report is for the reader, but what the model actually said is the
+     * measurement of whether the prompts are any good.
+     */
+    editedComment: text("edited_comment"),
     /** The traced path from input to wrong output. Internal, shown in the UI. */
     mechanism: text("mechanism").notNull(),
     /** Quoted at verification time and byte-compared against the file. */

@@ -2,9 +2,10 @@
  * Project and dependency-link persistence.
  */
 
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { newId, nowIso } from "@/lib/ids";
-import type { CloneStatus } from "@/lib/domain/enums";
+import { cloneStatusSchema, type CloneStatus } from "@/lib/domain/enums";
+import { assertCloneTransition } from "@/lib/domain/state-machines";
 import type { Db } from "../client";
 import { projectLinks, projects, reviews } from "../schema";
 
@@ -68,17 +69,54 @@ export function listProjects(db: Db): Project[] {
   return db.select().from(projects).orderBy(asc(projects.name)).all();
 }
 
-/** A failed clone keeps its error; a successful one clears the previous error. */
+/**
+ * A failed clone keeps its error; a successful one clears the previous error.
+ *
+ * The transition is asserted, like the review and finding machines are. A
+ * clone that went backwards would show a ready project as still cloning, and
+ * the projects screen polls on exactly that field.
+ */
 export function setCloneStatus(
   db: Db,
   projectId: string,
   status: CloneStatus,
   error?: string | null,
 ): void {
+  const current = cloneStatusSchema.parse(requireProject(db, projectId).cloneStatus);
+  if (current === status) return;
+  assertCloneTransition(current, status);
+
   db.update(projects)
     .set({ cloneStatus: status, cloneError: status === "failed" ? (error ?? null) : null })
     .where(eq(projects.id, projectId))
     .run();
+}
+
+/**
+ * Fails every clone the last process left in flight.
+ *
+ * A project marked pending or cloning after a restart cannot be progressing:
+ * the background task that would have finished it died with the process, and
+ * nothing restarts it. Left alone, the row said "cloning" forever and the
+ * projects screen polled it forever. Failing it gives the user the truth and
+ * the failed-clone retry path.
+ */
+export function markOrphanedClonesFailed(db: Db): number {
+  const stranded = db
+    .select()
+    .from(projects)
+    .where(inArray(projects.cloneStatus, ["pending", "cloning"]))
+    .all();
+
+  for (const project of stranded) {
+    setCloneStatus(
+      db,
+      project.id,
+      "failed",
+      "The server restarted while this clone was in flight. Delete the project and add it again.",
+    );
+  }
+  return stranded.length;
 }
 
 /**
@@ -110,11 +148,16 @@ export function renameProject(db: Db, projectId: string, name: string): void {
  * of somebody else's linked review.
  */
 export function countReviewsReferencing(db: Db, projectId: string): number {
+  return listReviewsReferencing(db, projectId).length;
+}
+
+/** The rows behind that count, for the bulk deletion the refusal offers. */
+export function listReviewsReferencing(db: Db, projectId: string) {
   return db
     .select()
     .from(reviews)
     .where(or(eq(reviews.projectId, projectId), eq(reviews.linkedProjectId, projectId)))
-    .all().length;
+    .all();
 }
 
 /**

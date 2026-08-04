@@ -35,6 +35,4 @@ export const SETTING_KEYS = {
   stageTimeoutMinutes: "stageTimeoutMinutes",
   /** USD-equivalent ceiling per engine call. Zero disables the ceiling. */
   stageMaxBudgetUsd: "stageMaxBudgetUsd",
-  defaultModel: "defaultModel",
-  defaultEngineMode: "defaultEngineMode",
 } as const;

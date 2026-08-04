@@ -1,0 +1,1 @@
+ALTER TABLE `findings` ADD `edited_comment` text;

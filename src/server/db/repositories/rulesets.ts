@@ -12,7 +12,12 @@
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { newId, nowIso } from "@/lib/ids";
-import { severitySchema, type RulesetTier, directiveSectionSchema } from "@/lib/domain/enums";
+import {
+  severitySchema,
+  type RulesetTier,
+  type Severity,
+  directiveSectionSchema,
+} from "@/lib/domain/enums";
 import type { ImportedRuleset } from "@/lib/rulesets/model";
 import type { Db } from "../client";
 import { processDirectives, reviewRulesets, rules, rulesets } from "../schema";
@@ -256,6 +261,16 @@ export class RulesetNotFoundError extends Error {
   }
 }
 
+export class RulesetNameTakenError extends Error {
+  constructor(readonly rulesetName: string) {
+    super(
+      `A ruleset called "${rulesetName}" already exists. Copying onto it would replace its ` +
+        `rules and reset its version, so the copy needs a name of its own.`,
+    );
+    this.name = "RulesetNameTakenError";
+  }
+}
+
 /** The ruleset row itself: its name, tier and version, not its rules. */
 export function requireRuleset(db: Db, rulesetId: string): RulesetRow {
   const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
@@ -265,6 +280,20 @@ export function requireRuleset(db: Db, rulesetId: string): RulesetRow {
 
 export function listRulesets(db: Db): RulesetRow[] {
   return db.select().from(rulesets).orderBy(asc(rulesets.name)).all();
+}
+
+/**
+ * The list with each ruleset's rule count, for screens that group by tier.
+ *
+ * The count is of enabled rules, because it sits beside a picker deciding
+ * what a review will be judged against, and a disabled rule will not be.
+ */
+export function listRulesetSummaries(db: Db): (RulesetRow & { ruleCount: number })[] {
+  const counts = new Map<string, number>();
+  for (const rule of db.select().from(rules).all()) {
+    if (rule.enabled) counts.set(rule.rulesetId, (counts.get(rule.rulesetId) ?? 0) + 1);
+  }
+  return listRulesets(db).map((row) => ({ ...row, ruleCount: counts.get(row.id) ?? 0 }));
 }
 
 /**
@@ -314,6 +343,23 @@ export function setRuleEnabled(
   code: string,
   enabled: boolean,
 ): { version: number } {
+  return patchRule(db, rulesetId, code, { enabled });
+}
+
+/**
+ * Changes what one rule says or whether it applies.
+ *
+ * Severity moves through the same door as the toggle and pays the same
+ * version bump: a WARNING promoted to CRITICAL is a different standard, and
+ * a report naming "version 3" must identify exactly one standard. A patch
+ * that changes nothing costs nothing.
+ */
+export function patchRule(
+  db: Db,
+  rulesetId: string,
+  code: string,
+  patch: { enabled?: boolean; severity?: Severity },
+): { version: number } {
   const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
   if (!row) throw new RulesetNotFoundError(rulesetId);
 
@@ -324,12 +370,17 @@ export function setRuleEnabled(
     .get();
   if (!rule) throw new Error(`Ruleset "${row.name}" has no rule ${code}.`);
 
-  if (rule.enabled === enabled) return { version: row.version };
+  const change: Partial<typeof rules.$inferInsert> = {};
+  if (patch.enabled !== undefined && patch.enabled !== rule.enabled) change.enabled = patch.enabled;
+  if (patch.severity !== undefined && patch.severity !== rule.severity) {
+    change.severity = patch.severity;
+  }
+  if (Object.keys(change).length === 0) return { version: row.version };
 
   const version = row.version + 1;
   db.transaction((tx) => {
     tx.update(rules)
-      .set({ enabled })
+      .set(change)
       .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, code)))
       .run();
     tx.update(rulesets)
@@ -338,6 +389,48 @@ export function setRuleEnabled(
       .run();
   });
   return { version };
+}
+
+/**
+ * Copies a ruleset into another tier as its own version 1.
+ *
+ * Through export and re-import rather than row copying, so the duplicate is
+ * exactly what a person pasting the exported document would get, and the two
+ * cannot drift in what a copy means. Disabled rules come along disabled: the
+ * copy is of the ruleset as it stands, not of the original document.
+ */
+export function duplicateRuleset(
+  db: Db,
+  rulesetId: string,
+  target: { tier: RulesetTier; name: string },
+): { rulesetId: string; version: number } {
+  // Refused rather than merged. `saveImportedRuleset` is keyed by name and
+  // replaces what it finds, so duplicating onto an existing name would hand
+  // back that ruleset's id, overwrite whatever had been edited into it, and
+  // reset its version to 1 while a past review still names a later one.
+  const taken = db.select().from(rulesets).where(eq(rulesets.name, target.name)).get();
+  if (taken) throw new RulesetNameTakenError(target.name);
+
+  const source = loadRuleset(db, rulesetId);
+  const disabled = new Set(
+    db
+      .select()
+      .from(rules)
+      .where(and(eq(rules.rulesetId, rulesetId), eq(rules.enabled, false)))
+      .all()
+      .map((rule) => rule.code),
+  );
+
+  const saved = saveImportedRuleset(db, {
+    name: target.name,
+    tier: target.tier,
+    imported: source,
+  });
+  for (const code of disabled) setRuleEnabled(db, saved.rulesetId, code, false);
+  // Reported as 1 whatever the toggles above did to it: the copy is a new
+  // standard, and its history starts here.
+  db.update(rulesets).set({ version: 1 }).where(eq(rulesets.id, saved.rulesetId)).run();
+  return { rulesetId: saved.rulesetId, version: 1 };
 }
 
 export function hasReviewSnapshot(db: Db, reviewId: string): boolean {

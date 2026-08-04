@@ -1,0 +1,1 @@
+ALTER TABLE `reviews` ADD `paused_resets_at` integer;

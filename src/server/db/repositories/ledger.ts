@@ -93,7 +93,7 @@ export function recordChangedFiles(
 
 export function setFileRiskTags(db: Db, ledgerFileId: string, tags: readonly RiskTag[]): void {
   db.update(ledgerFiles)
-    .set({ riskTags: serialiseJsonColumn(tags) })
+    .set({ riskTags: serialiseJsonColumn([...tags], riskTagsSchema) })
     .where(eq(ledgerFiles.id, ledgerFileId))
     .run();
 }
@@ -104,7 +104,7 @@ export function getFileRiskTags(file: LedgerFile): RiskTag[] {
 
 export function setChainFilesRead(db: Db, ledgerFileId: string, paths: readonly string[]): void {
   db.update(ledgerFiles)
-    .set({ chainFilesRead: serialiseJsonColumn(paths) })
+    .set({ chainFilesRead: serialiseJsonColumn([...paths], stringArraySchema) })
     .where(eq(ledgerFiles.id, ledgerFileId))
     .run();
 }

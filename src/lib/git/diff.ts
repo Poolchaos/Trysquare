@@ -391,3 +391,29 @@ export function summariseDiff(files: readonly ParsedFile[]): DiffStats {
     binaryFiles: files.filter((f) => f.isBinary).length,
   };
 }
+
+/**
+ * The hunk a cited line falls inside, or the file's first hunk.
+ *
+ * A finding cites the file as it is after the change, so the match is against
+ * the new-file numbering. A deletion has no new numbering at all, and needs
+ * no special case: git emits a deleted file as exactly one hunk covering the
+ * whole of it (checked against a 200-line deletion: `@@ -1,200 +0,0 @@`), so
+ * the fallback is the only answer there is.
+ *
+ * That fallback is deliberate rather than a shrug: a line outside every hunk
+ * still belongs to a changed file, and showing what changed in it is more use
+ * than showing nothing. A file with no hunks at all, a binary or a mode
+ * change, genuinely has nothing to show.
+ */
+export function hunkForLine(file: ParsedFile, line: number): ParsedHunk | undefined {
+  const containing = file.hunks.find(
+    (hunk) => line >= hunk.newStart && line < hunk.newStart + Math.max(hunk.newLines, 1),
+  );
+  return containing ?? file.hunks[0];
+}
+
+/** The `@@` line git would have written for this hunk. */
+export function formatHunkHeader(hunk: ParsedHunk): string {
+  return `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@${hunk.section}`;
+}

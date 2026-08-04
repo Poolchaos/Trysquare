@@ -97,6 +97,7 @@ export function createReview(db: Db, input: CreateReviewInput): Review {
     status: "draft" satisfies ReviewStatus,
     currentStage: null,
     pausedReason: null,
+    pausedResetsAt: null,
     usageInputTokens: 0,
     usageOutputTokens: 0,
     costEquivalentUsd: 0,
@@ -128,6 +129,8 @@ export function statusOf(review: Review): ReviewStatus {
 export interface TransitionOptions {
   currentStage?: ReviewStage | null;
   pausedReason?: string | null;
+  /** Unix seconds the usage limit clears, when the CLI said. */
+  pausedResetsAt?: number | null;
 }
 
 /**
@@ -155,8 +158,13 @@ export function transitionReview(
   // A pause reason belongs to the pause. Leaving a stale one on a resumed
   // review would show the user an explanation for a state it is no longer in.
   patch.pausedReason = to === "paused_limit" ? (options.pausedReason ?? null) : null;
+  patch.pausedResetsAt = to === "paused_limit" ? (options.pausedResetsAt ?? null) : null;
 
   if (to === "running" && review.startedAt === null) patch.startedAt = now;
+  // A review that is running again has not finished, whatever the failure that
+  // stopped it recorded. Leaving the old completion would make the report's
+  // duration describe a run that ended and then kept going.
+  if (to === "running") patch.completedAt = null;
   if (to === "complete" || to === "failed" || to === "cancelled") patch.completedAt = now;
 
   const updated = db

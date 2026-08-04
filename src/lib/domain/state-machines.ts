@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import type { CloneStatus } from "./enums";
 
 export const REVIEW_STATUSES = [
   "draft",
@@ -26,8 +27,19 @@ export type ReviewStatus = z.infer<typeof reviewStatusSchema>;
 /** Statuses where stages are executing and a subprocess may be alive. */
 export const ACTIVE_REVIEW_STATUSES = ["running", "verifying"] as const;
 
-/** Statuses that can be resumed rather than restarted. */
-export const RESUMABLE_REVIEW_STATUSES = ["paused_limit", "interrupted"] as const;
+/**
+ * Statuses that can be resumed rather than restarted.
+ *
+ * A failure joins the pause and the interruption because the recovery is the
+ * same one: every stage already answered replays from its checkpoint and only
+ * the stage that broke runs again. The alternative, a per-stage retry, would
+ * be a second recovery path exercised a tenth as often.
+ */
+export const RESUMABLE_REVIEW_STATUSES = ["paused_limit", "interrupted", "failed"] as const;
+
+export function isResumableReview(status: ReviewStatus): boolean {
+  return (RESUMABLE_REVIEW_STATUSES as readonly ReviewStatus[]).includes(status);
+}
 
 /**
  * Interruptions reachable from any active status: a rate limit pause, a
@@ -47,9 +59,48 @@ const REVIEW_TRANSITIONS: Readonly<Record<ReviewStatus, readonly ReviewStatus[]>
   paused_limit: ["running", "failed", "cancelled"],
   interrupted: ["running", "failed", "cancelled"],
   complete: [],
-  failed: [],
+  // Resumable, like a pause or an interruption. Every stage already answered
+  // replays from its checkpoint, so retrying costs only the stage that broke.
+  // Recovery is by resuming the review rather than retrying one stage: the
+  // pipeline has no way to re-enter partway through a stage anyway, and one
+  // mechanism that is exercised often beats two that are not (D-50).
+  failed: ["running"],
   cancelled: [],
 };
+
+/**
+ * A clone goes pending, cloning, then ready or failed, and a failed one can be
+ * retried.
+ *
+ * The other two machines in this file are enforced and this one was not:
+ * `setCloneStatus` wrote whatever it was handed, so `cloning` was declared in
+ * the enum and never actually reached, and nothing would have caught a ready
+ * clone being moved back to pending.
+ */
+const CLONE_TRANSITIONS: Readonly<Record<CloneStatus, readonly CloneStatus[]>> = {
+  pending: ["cloning", "ready", "failed"],
+  cloning: ["ready", "failed"],
+  ready: [],
+  failed: ["pending", "cloning"],
+};
+
+export function canTransitionClone(from: CloneStatus, to: CloneStatus): boolean {
+  return (CLONE_TRANSITIONS[from] ?? []).includes(to);
+}
+
+export class InvalidCloneTransitionError extends Error {
+  constructor(
+    readonly from: CloneStatus,
+    readonly to: CloneStatus,
+  ) {
+    super(`A clone cannot go from ${from} to ${to}.`);
+    this.name = "InvalidCloneTransitionError";
+  }
+}
+
+export function assertCloneTransition(from: CloneStatus, to: CloneStatus): void {
+  if (!canTransitionClone(from, to)) throw new InvalidCloneTransitionError(from, to);
+}
 
 export const FINDING_STATUSES = [
   "candidate",

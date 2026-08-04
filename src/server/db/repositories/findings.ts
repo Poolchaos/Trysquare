@@ -58,6 +58,7 @@ export function createCandidate(db: Db, input: CreateCandidateInput): Finding {
     status: "candidate" satisfies FindingStatus,
     verificationNote: null,
     dismissReason: null,
+    editedComment: null,
     createdAt: nowIso(),
     verifiedAt: null,
     decidedAt: null,
@@ -84,6 +85,7 @@ interface TransitionPatch {
   quotedCode?: string;
   verificationNote?: string | null;
   dismissReason?: string | null;
+  editedComment?: string | null;
   lineStart?: number;
   lineEnd?: number;
 }
@@ -150,9 +152,26 @@ export function markOpenQuestion(db: Db, findingId: string, whatWouldResolveIt: 
   });
 }
 
-/** Human decision. The only route into a report. */
-export function confirmFinding(db: Db, findingId: string): Finding {
-  return transitionFinding(db, findingId, "confirmed");
+/**
+ * Human decision. The only route into a report.
+ *
+ * A replacement comment is optional and kept beside the engine's, never over
+ * it. The report reads the person's words because they are the ones written
+ * for whoever fixes the code; the engine's stay because how well it explained
+ * itself is the only measurement of whether the prompts are working, and
+ * overwriting them would erase the evidence every edit is a data point in.
+ * An empty or unchanged replacement records nothing, so "edited" keeps
+ * meaning edited.
+ */
+export function confirmFinding(
+  db: Db,
+  findingId: string,
+  options: { comment?: string | undefined } = {},
+): Finding {
+  const replacement = options.comment?.trim() ?? "";
+  const original = requireFinding(db, findingId).comment;
+  const edited = replacement === "" || replacement === original.trim() ? null : replacement;
+  return transitionFinding(db, findingId, "confirmed", { editedComment: edited });
 }
 
 /** Human decision. The reason is kept: dismissals are evidence about the engine. */

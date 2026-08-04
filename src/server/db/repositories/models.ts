@@ -10,6 +10,7 @@
 import { asc, eq } from "drizzle-orm";
 import { nowIso } from "@/lib/ids";
 import type { ReviewProfile } from "@/lib/domain/enums";
+import { availabilityOf } from "@/lib/models/availability";
 import type { Db } from "../client";
 import { models } from "../schema";
 
@@ -109,19 +110,6 @@ export function listModels(db: Db): ModelRow[] {
 
 export function getModel(db: Db, id: string): ModelRow | undefined {
   return db.select().from(models).where(eq(models.id, id)).get();
-}
-
-/** Probes older than this are shown as unknown rather than trusted. */
-export const PROBE_FRESHNESS_MS = 24 * 60 * 60 * 1000;
-
-export type ModelAvailability = "available" | "unavailable" | "unknown" | "stale";
-
-export function availabilityOf(model: ModelRow, now: number = Date.now()): ModelAvailability {
-  if (model.available === null || model.lastProbedAt === null) return "unknown";
-  if (!model.available) return "unavailable";
-  const probedAt = Date.parse(model.lastProbedAt);
-  if (Number.isNaN(probedAt)) return "unknown";
-  return now - probedAt > PROBE_FRESHNESS_MS ? "stale" : "available";
 }
 
 /** Only models a probe currently vouches for may run a review. */

@@ -149,3 +149,67 @@ export class StageDidNotAccountError extends Error {
 export function assertReconciled(result: Reconciliation): void {
   if (!isReconciled(result)) throw new StageDidNotAccountError(result);
 }
+
+export interface DeletionReconciliation {
+  /** Shown to the stage and never answered for. */
+  unaccounted: string[];
+  /** Answered for and never shown, which means the answer describes something else. */
+  unknown: string[];
+  /** Answered for more than once, which hides one file behind another's verdict. */
+  duplicated: string[];
+}
+
+/**
+ * The deletion stage's answer against what it was shown, in both directions.
+ *
+ * Deletions need this more than any other stage. A removed file leaves no
+ * hunk to count in the file it used to be, so nothing else in the ledger
+ * notices its absence: if the stage simply omits it, the review reads as
+ * complete while the most dangerous class of change went unexamined.
+ */
+export function reconcileDeletions(
+  expectedPaths: readonly string[],
+  reportedPaths: readonly string[],
+): DeletionReconciliation {
+  const expected = new Set(expectedPaths);
+  const seen = new Map<string, number>();
+  for (const path of reportedPaths) seen.set(path, (seen.get(path) ?? 0) + 1);
+
+  return {
+    unaccounted: expectedPaths.filter((path) => !seen.has(path)),
+    unknown: [...seen.keys()].filter((path) => !expected.has(path)),
+    duplicated: [...seen.entries()].filter(([, count]) => count > 1).map(([path]) => path),
+  };
+}
+
+export class DeletionsNotAccountedError extends Error {
+  constructor(readonly result: DeletionReconciliation) {
+    const parts: string[] = [];
+    if (result.unaccounted.length > 0) {
+      parts.push(
+        `${result.unaccounted.length} removed file(s) were never accounted for ` +
+          `(${result.unaccounted.slice(0, 3).join(", ")})`,
+      );
+    }
+    if (result.unknown.length > 0) {
+      parts.push(
+        `${result.unknown.length} file(s) were reported that this change set does not remove ` +
+          `(${result.unknown.slice(0, 3).join(", ")})`,
+      );
+    }
+    if (result.duplicated.length > 0) {
+      parts.push(`${result.duplicated.length} file(s) were accounted for more than once`);
+    }
+    super(
+      `The deletion stage did not account for what was removed: ${parts.join("; ")}. ` +
+        `A removed file leaves no hunk behind, so nothing else would notice.`,
+    );
+    this.name = "DeletionsNotAccountedError";
+  }
+}
+
+export function assertDeletionsReconciled(result: DeletionReconciliation): void {
+  if (result.unaccounted.length > 0 || result.unknown.length > 0 || result.duplicated.length > 0) {
+    throw new DeletionsNotAccountedError(result);
+  }
+}

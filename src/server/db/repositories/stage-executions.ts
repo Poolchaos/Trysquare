@@ -105,6 +105,35 @@ export function latestSucceeded(
 }
 
 /**
+ * Marks a stage's stored answers as rejected, so a resume asks again.
+ *
+ * A stage row is written as succeeded the moment the engine returns valid
+ * JSON, but the pipeline can still reject that answer against the ledger. A
+ * rejected answer left as succeeded would be replayed byte for byte on every
+ * resume, re-rejected the same way, and the review could never recover
+ * without being deleted and paid for again. The row keeps its output and
+ * usage; only its standing changes, with the rejection recorded on it.
+ */
+export function rejectSucceededAnswers(
+  db: Db,
+  reviewId: string,
+  stage: ReviewStage,
+  reason: string,
+): number {
+  return db
+    .update(stageExecutions)
+    .set({ status: "failed", errorClass: "invalid_output", errorText: reason })
+    .where(
+      and(
+        eq(stageExecutions.reviewId, reviewId),
+        eq(stageExecutions.stage, stage),
+        eq(stageExecutions.status, "succeeded"),
+      ),
+    )
+    .run().changes;
+}
+
+/**
  * The session the earlier stages were using, for a run that is resuming.
  *
  * The CLI keeps sessions on disk, so a live stage after several replayed ones
