@@ -12,13 +12,13 @@ import { repoSlug, validateGitUrl } from "@/lib/git/url";
 import { projectRepoDir } from "@/lib/paths";
 import {
   createProject,
+  listDependencyLinks,
   listProjects,
-  setCloneStatus,
   setClonePath,
-  setDefaultBranch,
 } from "@/server/db/repositories/projects";
-import { cloneBare, detectDefaultBranch } from "@/server/gitops/repo";
-import { created, failed, handler, ok, readJson } from "@/server/api/respond";
+import { listReviewsForProject } from "@/server/db/repositories/reviews";
+import { cloneProjectInBackground } from "@/server/projects/clone";
+import { created, failed, handler, readJson, ok } from "@/server/api/respond";
 import { runtime as appRuntime } from "@/server/runtime";
 
 export const runtime = "nodejs";
@@ -30,7 +30,26 @@ const addProject = z.object({
 });
 
 export function GET(): Promise<Response> {
-  return handler(async () => ok({ projects: listProjects(appRuntime().db) }));
+  return handler(async () => {
+    const { db } = appRuntime();
+    const projects = listProjects(db);
+    const nameOf = new Map(projects.map((project) => [project.id, project.name]));
+
+    // The list is where someone decides which project to open, and that
+    // decision is made on how much history it has and how fresh its refs are.
+    // Both were already a query away and the row said neither.
+    return ok({
+      projects: projects.map((project) => ({
+        ...project,
+        reviewCount: listReviewsForProject(db, project.id).length,
+        dependencies: listDependencyLinks(db, project.id).map((link) => ({
+          id: link.dependencyProjectId,
+          name: nameOf.get(link.dependencyProjectId) ?? "a project that is gone",
+          packageName: link.packageName,
+        })),
+      })),
+    });
+  });
 }
 
 export function POST(request: Request): Promise<Response> {
@@ -56,28 +75,10 @@ export function POST(request: Request): Promise<Response> {
     });
     const clonePath = projectRepoDir(dataDir, project.id);
     setClonePath(db, project.id, clonePath);
-    setCloneStatus(db, project.id, "pending");
 
-    void cloneInBackground(db, project.id, url, clonePath);
+    void cloneProjectInBackground(db, project.id, url, clonePath);
     return created({ project: { ...project, clonePath } });
   });
-}
-
-async function cloneInBackground(
-  db: ReturnType<typeof appRuntime>["db"],
-  projectId: string,
-  url: string,
-  clonePath: string,
-): Promise<void> {
-  try {
-    await cloneBare(url, clonePath);
-    setDefaultBranch(db, projectId, await detectDefaultBranch(clonePath));
-    setCloneStatus(db, projectId, "ready");
-  } catch (error) {
-    // Verbatim: git's stderr says what is actually wrong, and a summary of it
-    // would leave the user guessing at an authentication or address problem.
-    setCloneStatus(db, projectId, "failed", error instanceof Error ? error.message : String(error));
-  }
 }
 
 /** A readable name from the address, which is what a person would have typed. */

@@ -1,6 +1,7 @@
 /** One project, with its dependency links and its reviews. Or gone. */
 
 import {
+  ProjectHasReviewsError,
   deleteProject,
   listDependencyLinks,
   listProjects,
@@ -66,6 +67,14 @@ export async function DELETE(
     try {
       deleteProject(db, id);
     } catch (error) {
+      if (error instanceof ProjectHasReviewsError) {
+        // The count travels as a field, so the screen can offer the remedy
+        // (delete those reviews first) with the real number on the button.
+        return Response.json(
+          { error: error.message, code: error.name, reviewCount: error.reviewCount },
+          { status: 409 },
+        );
+      }
       return failed(error, 409);
     }
 

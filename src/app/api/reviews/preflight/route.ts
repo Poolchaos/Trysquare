@@ -12,7 +12,7 @@
  */
 
 import { z } from "zod";
-import { reviewProfileSchema } from "@/lib/domain/enums";
+import { REVIEW_PROFILES, reviewProfileSchema } from "@/lib/domain/enums";
 import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
 import { changedExportedSymbols } from "@/lib/git/symbols";
 import { repoSlug } from "@/lib/git/url";
@@ -20,7 +20,9 @@ import { estimateTokens, budgetFor } from "@/lib/review/budget";
 import { outputContractFor, stageSchemaFor } from "@/lib/review/stage-schemas";
 import { runSweeps } from "@/lib/review/sweep";
 import { composeSystemPrompt, planRuleBatches } from "@/lib/rulesets/compose";
-import { availabilityOf, getModel } from "@/server/db/repositories/models";
+import { isJudgmentProfile, resolveProfile } from "@/lib/review/profiles";
+import { availabilityOf } from "@/lib/models/availability";
+import { getModel } from "@/server/db/repositories/models";
 import { recordFetch, requireProject } from "@/server/db/repositories/projects";
 import { loadRuleset } from "@/server/db/repositories/rulesets";
 import { diffText, fetchAll, mergeBase, resolveCommit } from "@/server/gitops/repo";
@@ -37,7 +39,7 @@ const body = z.object({
   intoBranch: z.string().min(1),
   rulesetId: z.string().min(1),
   model: z.string().min(1),
-  profileId: reviewProfileSchema.default("full-context"),
+  profileId: reviewProfileSchema.optional(),
   linked: z
     .object({
       projectId: z.string().min(1),
@@ -100,10 +102,30 @@ export function POST(request: Request): Promise<Response> {
     );
 
     const changedSymbols = linkedSide ? changedExportedSymbols(linkedSide.files) : [];
-    const plan = planRuleBatches(
-      ruleset.rules,
-      entries.map((entry) => `${entry.slug}/${entry.file.path}`),
-      input.profileId,
+
+    // Resolved exactly as creation resolves it, so the panel states the
+    // profile the run would use rather than a default the run would ignore.
+    const registeredProfile = reviewProfileSchema.safeParse(getModel(db, input.model)?.profileId);
+    const resolution = resolveProfile({
+      model: input.model,
+      modelProfile: registeredProfile.success ? registeredProfile.data : null,
+      ...(input.profileId === undefined ? {} : { requested: input.profileId }),
+    });
+    if (!resolution.ok) {
+      throw Response.json({ error: resolution.message, code: resolution.code }, { status: 400 });
+    }
+    const profile = resolution.profile;
+
+    const paths = entries.map((entry) => `${entry.slug}/${entry.file.path}`);
+    const plan = planRuleBatches(ruleset.rules, paths, profile);
+
+    // What each profile would cost in requests, so a downgrade is an informed
+    // choice rather than a guess (docs/06 section 3).
+    const requestsByProfile = Object.fromEntries(
+      REVIEW_PROFILES.filter(isJudgmentProfile).map((candidate) => [
+        candidate,
+        planRuleBatches(ruleset.rules, paths, candidate).batches.length,
+      ]),
     );
 
     // The heaviest prompt the run would send, which is what decides whether it
@@ -142,8 +164,11 @@ export function POST(request: Request): Promise<Response> {
       contextWindow: window,
       withinWindow: window === null ? null : estimate <= budgetFor(window),
       requests: plan.batches.length,
+      requestsByProfile,
       excludedPairs: plan.excluded.length,
-      profile: input.profileId,
+      profile,
+      modelProfile: registeredProfile.success ? registeredProfile.data : null,
+      downgradedFrom: resolution.downgradedFrom,
     });
   });
 }

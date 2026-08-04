@@ -1,6 +1,7 @@
 /** The models this account can actually use, and what each one is good for. */
 
-import { availabilityOf, listModels } from "@/server/db/repositories/models";
+import { availabilityOf } from "@/lib/models/availability";
+import { listModels } from "@/server/db/repositories/models";
 import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 

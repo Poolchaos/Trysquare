@@ -26,7 +26,7 @@ export function POST(request: Request): Promise<Response> {
   return handler(async () => {
     const { db } = runtime();
     const input = await readJson(request, body);
-    const imported = importProtocol(input.markdown).ruleset;
+    const { ruleset: imported, coverage } = importProtocol(input.markdown);
     if (imported.rules.length === 0) {
       // A review judged against nothing comes back clean, and reads exactly
       // like a review that found nothing wrong.
@@ -36,6 +36,23 @@ export function POST(request: Request): Promise<Response> {
             "That document produced no rules, so a review using it would check nothing " +
             "and report a clean result. Check the rule headings match the expected format.",
           code: "EmptyRuleset",
+        },
+        { status: 400 },
+      );
+    }
+
+    // D-48: a line the importer could not place is a line the reviews would
+    // silently not check. Blocked with the lines named, so the author fixes
+    // the document rather than trusting a ruleset that dropped part of it.
+    const lost = coverage.unmapped.filter((entry) => entry.text.trim() !== "");
+    if (lost.length > 0) {
+      throw Response.json(
+        {
+          error:
+            `${lost.length} line(s) of that document do not belong to any rule or ` +
+            `directive, so importing it would silently drop them.`,
+          code: "UnmappedLines",
+          unmapped: lost,
         },
         { status: 400 },
       );
@@ -52,6 +69,12 @@ export function POST(request: Request): Promise<Response> {
       ...saved,
       rules: imported.rules.length,
       directives: imported.directives.length,
+      // The fidelity report, so the screen can say "every line accounted for"
+      // with the numbers that prove it rather than as reassurance.
+      fidelity: {
+        totalLines: coverage.totalLines,
+        mappedLines: coverage.mappedLines,
+      },
     });
   });
 }

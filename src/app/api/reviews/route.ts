@@ -9,13 +9,15 @@
  */
 
 import { z } from "zod";
-import { reviewEffortSchema, reviewProfileSchema } from "@/lib/domain/enums";
+import { engineModeSchema, reviewEffortSchema, reviewProfileSchema } from "@/lib/domain/enums";
 import {
   listDependencyLinks,
   recordFetch,
   requireProject,
 } from "@/server/db/repositories/projects";
-import { createReview, listActiveReviews } from "@/server/db/repositories/reviews";
+import { appendRunNote, createReview, listActiveReviews } from "@/server/db/repositories/reviews";
+import { getModel } from "@/server/db/repositories/models";
+import { resolveProfile } from "@/lib/review/profiles";
 import { fetchAll, mergeBase, resolveCommit } from "@/server/gitops/repo";
 import { created, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
@@ -30,7 +32,10 @@ const body = z.object({
   fromBranch: z.string().min(1),
   intoBranch: z.string().min(1),
   model: z.string().min(1),
-  profileId: reviewProfileSchema.default("full-context"),
+  // No default: absent means "whatever the model is registered for", which is
+  // not the same request as explicitly asking for full-context.
+  profileId: reviewProfileSchema.optional(),
+  engineMode: engineModeSchema.optional(),
   effort: reviewEffortSchema.default("high"),
   intent: z.string().optional(),
   linked: z
@@ -103,18 +108,65 @@ export function POST(request: Request): Promise<Response> {
       };
     }
 
+    // How the work is divided follows from the model, not from a default. The
+    // registry knows what each model can absorb; asking for more than that is
+    // refused, and asking for less is a deliberate downgrade that is recorded.
+    const registered = getModel(db, input.model);
+    // Parsed rather than asserted: the column is text, and a profile this code
+    // does not know is treated as an unregistered model, which is visible in
+    // the run note, instead of throwing out of review creation.
+    const registeredProfile = reviewProfileSchema.safeParse(registered?.profileId);
+    const resolution = resolveProfile({
+      model: input.model,
+      modelProfile: registeredProfile.success ? registeredProfile.data : null,
+      ...(input.profileId === undefined ? {} : { requested: input.profileId }),
+    });
+    if (!resolution.ok) {
+      throw Response.json({ error: resolution.message, code: resolution.code }, { status: 400 });
+    }
+
     const review = createReview(db, {
       projectId: project.id,
       fromBranch: input.fromBranch,
       intoBranch: input.intoBranch,
       ...pins,
       model: input.model,
-      profileId: input.profileId,
-      engineMode: "headless",
+      profileId: resolution.profile,
+      engineMode: input.engineMode ?? "headless",
       effort: input.effort,
       ...(input.intent === undefined ? {} : { intent: input.intent }),
       ...(linked === undefined ? {} : { linked }),
     });
+
+    // Two independent facts, not branches of one: an unregistered model can
+    // also carry an explicit downgrade, and folding them together once wrote
+    // a note claiming full-context on a review that ran decomposed.
+    if (!registeredProfile.success) {
+      appendRunNote(db, review.id, {
+        kind: "note",
+        message:
+          `${input.model} is not in the model registry, so its profile is unknown and ` +
+          `full-context was assumed as the baseline. Probe the model to have its own ` +
+          `profile used instead.`,
+      });
+    }
+    if ((input.engineMode ?? "headless") === "interactive") {
+      appendRunNote(db, review.id, {
+        kind: "note",
+        message:
+          "Interactive engine: each stage's prompt is written to the bundle and this app " +
+          "waits for you to save the answer beside it. Tokens are spent in your own session, " +
+          "so the usage recorded here stays at zero.",
+      });
+    }
+    if (resolution.downgradedFrom !== null) {
+      appendRunNote(db, review.id, {
+        kind: "note",
+        message:
+          `Profile downgraded from ${resolution.downgradedFrom} to ${resolution.profile} ` +
+          `on purpose. The same rules are applied; they are divided into more, smaller requests.`,
+      });
+    }
 
     return created({ review });
   });

@@ -26,17 +26,20 @@ export async function GET(
  *
  * Refused while it is running, because a review with a live subprocess needs
  * cancelling first: deleting the row would orphan the process rather than stop
- * it.
+ * it. A review merely waiting in the queue is taken out of it here, since the
+ * queue holds ids and the scheduler would otherwise reach for a row that is
+ * gone.
  */
 export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   return handler(async () => {
-    const { db, dataDir } = runtime();
+    const { db, dataDir, manager } = runtime();
     const { id } = await context.params;
 
     try {
+      manager.dequeue(id);
       await deleteReviewEntirely(db, id, dataDir);
     } catch (error) {
       return failed(error, 409);
