@@ -15,7 +15,6 @@ import { PROBE_FRESHNESS_MS, availabilityOf } from "@/lib/models/availability";
 import {
   ModelAliasRejectedError,
   getModel,
-  listSelectable,
   recordProbeFailure,
   recordProbeSuccess,
   registerCandidate,
@@ -238,23 +237,22 @@ describe("model registry", () => {
     const row = registerCandidate(db, fable);
     expect(row.available).toBeNull();
     expect(availabilityOf(row)).toBe("unknown");
-    expect(listSelectable(db)).toHaveLength(0);
   });
 
-  it("becomes selectable only after a successful probe", () => {
+  it("becomes available only after a successful probe", () => {
     registerCandidate(db, fable);
     recordProbeSuccess(db, fable.id, { resolvedId: fable.id, contextWindow: 1_000_000 });
 
-    const selectable = listSelectable(db);
-    expect(selectable).toHaveLength(1);
-    expect(selectable[0]!.contextWindow).toBe(1_000_000);
+    const stored = getModel(db, fable.id);
+    expect(availabilityOf(stored!)).toBe("available");
+    expect(stored!.contextWindow).toBe(1_000_000);
   });
 
   it("keeps the failure reason so the picker can explain why it is disabled", () => {
     registerCandidate(db, fable);
     // Prove the probe result is what changes the state: it is available first.
     recordProbeSuccess(db, fable.id, { resolvedId: fable.id, contextWindow: 200_000 });
-    expect(listSelectable(db)).toHaveLength(1);
+    expect(availabilityOf(getModel(db, fable.id)!)).toBe("available");
 
     recordProbeFailure(db, fable.id, "model not available on this account");
 
@@ -263,7 +261,6 @@ describe("model registry", () => {
     expect(stored?.lastError).toBe("model not available on this account");
     expect(stored?.lastProbedAt).not.toBeNull();
     expect(availabilityOf(stored!)).toBe("unavailable");
-    expect(listSelectable(db)).toHaveLength(0);
   });
 
   it("treats a probe older than a day as stale rather than trusted", () => {
@@ -271,6 +268,6 @@ describe("model registry", () => {
     recordProbeSuccess(db, fable.id, { resolvedId: fable.id, contextWindow: 200_000 });
 
     const later = Date.now() + PROBE_FRESHNESS_MS + 1000;
-    expect(listSelectable(db, later)).toHaveLength(0);
+    expect(availabilityOf(getModel(db, fable.id)!, later)).toBe("stale");
   });
 });

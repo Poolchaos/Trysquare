@@ -38,8 +38,8 @@ describe("what a probe result means", () => {
   });
 
   it("lets only a current voucher through the picker", () => {
-    // The exact set listSelectable uses on the server: a screen offering
-    // stale or unknown models would offer what the run cannot promise.
+    // A screen offering stale or unknown models would offer what the run
+    // cannot promise.
     expect(isSelectable("available")).toBe(true);
     expect(isSelectable("stale")).toBe(false);
     expect(isSelectable("unknown")).toBe(false);

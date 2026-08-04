@@ -29,10 +29,10 @@ export function availabilityOf(model: ProbeState, now: number = Date.now()): Mod
 /**
  * Whether the picker lets this model be chosen.
  *
- * Only a probe currently vouching for the model counts (the same rule as the
- * server's `listSelectable`). A stale probe is yesterday's evidence and an
- * absent one is none; both render as unknown, with a probe control beside
- * them, rather than as a working option that fails at start time.
+ * Only a probe currently vouching for the model counts. A stale probe is
+ * yesterday's evidence and an absent one is none; both render as unknown,
+ * with a probe control beside them, rather than as a working option that
+ * fails at start time.
  */
 export function isSelectable(availability: ModelAvailability): boolean {
   return availability === "available";

@@ -10,7 +10,6 @@
 import { asc, eq } from "drizzle-orm";
 import { nowIso } from "@/lib/ids";
 import type { ReviewProfile } from "@/lib/domain/enums";
-import { availabilityOf } from "@/lib/models/availability";
 import type { Db } from "../client";
 import { models } from "../schema";
 
@@ -110,9 +109,4 @@ export function listModels(db: Db): ModelRow[] {
 
 export function getModel(db: Db, id: string): ModelRow | undefined {
   return db.select().from(models).where(eq(models.id, id)).get();
-}
-
-/** Only models a probe currently vouches for may run a review. */
-export function listSelectable(db: Db, now: number = Date.now()): ModelRow[] {
-  return listModels(db).filter((m) => availabilityOf(m, now) === "available");
 }
