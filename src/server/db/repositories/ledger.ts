@@ -327,13 +327,3 @@ export function assertCoverageComplete(db: Db, reviewId: string): CoverageReport
   if (shortfalls.length > 0) throw new IncompleteCoverageError(reviewId, report, shortfalls);
   return report;
 }
-
-export function listPendingHunks(db: Db, reviewId: string): LedgerHunk[] {
-  const fileIds = listLedgerFiles(db, reviewId).map((f) => f.id);
-  if (fileIds.length === 0) return [];
-  return db
-    .select()
-    .from(ledgerHunks)
-    .where(and(inArray(ledgerHunks.ledgerFileId, fileIds), eq(ledgerHunks.status, "pending")))
-    .all();
-}

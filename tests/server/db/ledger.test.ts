@@ -11,7 +11,6 @@ import {
   getFileRiskTags,
   listHunks,
   listLedgerFiles,
-  listPendingHunks,
   listSweepHits,
   markFileReviewed,
   markHunkHasFindings,
@@ -83,7 +82,7 @@ describe("coverage ledger", () => {
     markHunkHasFindings(db, hunks[0]!.id);
 
     expect(() => assertCoverageComplete(db, reviewId)).toThrow(IncompleteCoverageError);
-    expect(listPendingHunks(db, reviewId)).toHaveLength(1);
+    expect(coverageReport(db, reviewId).pendingHunks).toBe(1);
   });
 
   it("passes the audit once every hunk and file is accounted for", () => {
@@ -100,7 +99,6 @@ describe("coverage ledger", () => {
     const report = assertCoverageComplete(db, reviewId);
     expect(report.pendingHunks).toBe(0);
     expect(report.pendingFiles).toBe(0);
-    expect(listPendingHunks(db, reviewId)).toHaveLength(0);
   });
 
   it("will not accept a clear without a reason, because that is a skipped hunk", () => {
@@ -108,7 +106,8 @@ describe("coverage ledger", () => {
     const hunks = listHunks(db, file.id);
     expect(() => clearHunk(db, hunks[0]!.id, "")).toThrow(/without a reason/);
     expect(() => clearHunk(db, hunks[0]!.id, "   ")).toThrow(/without a reason/);
-    expect(listPendingHunks(db, reviewId)).toHaveLength(2);
+    // The refused clears must not have marked anything.
+    expect(coverageReport(db, reviewId).pendingHunks).toBe(2);
   });
 
   it("names the shortfall in the error so the failure is actionable", () => {
