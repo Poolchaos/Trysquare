@@ -22,8 +22,10 @@ Last verified: 2026-08-03
 - A full audit on 2026-08-03 found the gate red on this machine, two pipeline
   promises that were decorative rather than enforced, and a records set two
   milestones behind the code. The verified gap inventory and the remaining
-  work to v1 are in `plans/M4-FINISH-PLAN.md` (items U1 to U13). Of twelve
-  build-plan work packages, six are complete and six are partly built.
+  work to v1 are in `plans/M4-FINISH-PLAN.md` (items U1 to U13). As of
+  2026-08-04 all twelve build-plan work packages are DONE; what remains is
+  the two maintainer judgments, the G1 verdict and the FG-4 design
+  acceptance.
 - The two external AI plans never arrived. They fold in as spec amendments if
   they do; they did not block the build.
 

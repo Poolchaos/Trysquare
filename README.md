@@ -19,22 +19,29 @@ You can add a project, review one branch against another, watch the run,
 decide every finding, and export a report. A browser test walks exactly that
 path on every CI run, from an empty app to an exported file.
 
-What is not settled is whether the findings are worth a person's time. That
-needs a real model and real usage, and it has deliberately not been spent yet.
-What has been proven costs nothing: against a fixture with eight planted
-defects and two files that are deliberately correct, the pipeline found all
-eight, invented nothing in the clean files, and discarded no quotation as
-unverifiable. Run it yourself with `npm run demo:fixture -- --fake`, which
-spends nothing. That establishes the machinery carries a
-correct review intact, and no more. The judgment is the maintainer's, and it
-is described in [docs/plans/FG2-CHECKLIST.md](docs/plans/FG2-CHECKLIST.md).
+What is not settled is whether the findings are worth a person's time. Two
+kinds of evidence exist, and they answer different halves of that question.
+The free half: against a fixture with eleven planted defects (measured
+2026-08-04) and two files that are deliberately correct, the pipeline carries
+a correct review intact, finds all eleven, invents nothing in the clean
+files, and discards no quotation as unverifiable. Run it yourself with
+`npm run demo:fixture -- --fake`, which spends nothing. The paid half ran on
+2026-08-04 on the maintainer's subscription: a haiku smoke was correctly
+refused by the coverage law, the first full-strength run exposed a real
+product bug that was fixed the same day, and the two runs after the fix each
+found 8 of the 8 defects the fixture then planted, at the exact lines, with
+nothing invented and nothing discarded, for about a dollar and five minutes
+each. What no run settles is the judgment itself: whether those findings
+read as worth a person's time is the maintainer's call, described in
+[docs/plans/FG2-CHECKLIST.md](docs/plans/FG2-CHECKLIST.md), and it has not
+been made.
 
-Eleven of twelve work packages are complete: the review engine, the data and
-git layers, every screen, the design pass, the accessibility checks, and the
+All twelve work packages are built: the review engine, the data and git
+layers, every screen, the design pass, the accessibility checks, and the
 interactive engine mode that runs a review from files in your own terminal
-instead of a subprocess. The twelfth is partly done, and the last one is the
-judgment above, which only a real model can settle. What remains is written
-down item by item in
+instead of a subprocess. What remains open is judgment, not construction:
+the finding-quality verdict above and the design acceptance, both the
+maintainer's. The trail is in
 [docs/plans/M4-FINISH-PLAN.md](docs/plans/M4-FINISH-PLAN.md), and
 [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md) is the current-facts cache.
 
@@ -81,9 +88,13 @@ allowlist. There is no code path that writes into a repository under review.
 grouped by severity beside the rule and the code they cite.](docs/images/confirmation-queue.png)
 
 Both screenshots are of the seeded test fixture, whose defects are planted on
-purpose and whose findings say so: no real model has reviewed real code here
-yet, and the Status section above says why. They are produced by the browser
-suite on every run rather than staged for the README.
+purpose and whose findings say so; they are produced by the browser suite on
+every CI run rather than staged for the README, so what they show is the fake
+engine's scripted review. The real-model smoke runs described in Status
+happened locally and their evidence, including every finding's text, lives
+under `review/`, which is deliberately not committed. No real model has
+reviewed a real project through this app yet: that is the next gate, and it
+is the maintainer's to drive.
 
 The panel worth looking at is Coverage. It says how many files, hunks and
 sweep hits were accounted for, which is what separates "nothing is wrong" from
