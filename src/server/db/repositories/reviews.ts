@@ -276,27 +276,6 @@ export function listReviewsForProject(db: Db, projectId: string): Review[] {
     .all();
 }
 
-/** History is grouped by branch pair, which is how the UI lists it. */
-export function listReviewsForBranchPair(
-  db: Db,
-  projectId: string,
-  fromBranch: string,
-  intoBranch: string,
-): Review[] {
-  return db
-    .select()
-    .from(reviews)
-    .where(
-      and(
-        eq(reviews.projectId, projectId),
-        eq(reviews.fromBranch, fromBranch),
-        eq(reviews.intoBranch, intoBranch),
-      ),
-    )
-    .orderBy(desc(reviews.createdAt))
-    .all();
-}
-
 export function listActiveReviews(db: Db): Review[] {
   return db
     .select()

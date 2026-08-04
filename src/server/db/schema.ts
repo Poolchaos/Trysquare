@@ -197,7 +197,8 @@ export const reviews = sqliteTable(
   },
   (table) => [
     index("reviews_project_idx").on(table.projectId),
-    // History is kept per branch pair, which is how the UI groups it.
+    // Anticipates history grouped by branch pair. No query uses it yet; kept
+    // because dropping it is a migration against a live database for no gain.
     index("reviews_branch_pair_idx").on(table.projectId, table.fromBranch, table.intoBranch),
     index("reviews_status_idx").on(table.status),
   ],

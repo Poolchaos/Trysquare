@@ -4,7 +4,6 @@ import type { Db } from "@/server/db/client";
 import {
   addReviewUsage,
   listActiveReviews,
-  listReviewsForBranchPair,
   markOrphanedReviewsInterrupted,
   requireReview,
   statusOf,
@@ -139,17 +138,5 @@ describe("restart recovery", () => {
     // Nothing was executing for these two, so a restart does not change them.
     expect(statusOf(requireReview(db, waiting.id))).toBe("awaiting_confirmation");
     expect(statusOf(requireReview(db, draft.id))).toBe("draft");
-  });
-});
-
-describe("history", () => {
-  it("groups reviews by branch pair", () => {
-    const project = seedProject(db);
-    seedReview(db, project.id);
-    seedReview(db, project.id);
-
-    const pair = listReviewsForBranchPair(db, project.id, "feature/x", "main");
-    expect(pair).toHaveLength(2);
-    expect(listReviewsForBranchPair(db, project.id, "feature/other", "main")).toHaveLength(0);
   });
 });
