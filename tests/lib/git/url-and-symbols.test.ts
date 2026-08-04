@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseUnifiedDiff } from "@/lib/git/diff";
 import { changedExportedSymbols, declarationsInLine, isTypeScriptPath } from "@/lib/git/symbols";
-import { InvalidGitUrlError, projectNameFromUrl, repoSlug, validateGitUrl } from "@/lib/git/url";
+import { InvalidGitUrlError, repoSlug, validateGitUrl } from "@/lib/git/url";
 
 describe("git URL validation", () => {
   it("accepts the forms a hosting provider hands out", () => {
@@ -39,13 +39,6 @@ describe("git URL validation", () => {
   it("rejects an empty or unrecognised address", () => {
     expect(() => validateGitUrl("   ")).toThrow(/it is empty/);
     expect(() => validateGitUrl("not a url at all")).toThrow(InvalidGitUrlError);
-  });
-
-  it("derives a sensible project name", () => {
-    expect(projectNameFromUrl("https://github.com/acme/widget.git")).toBe("widget");
-    expect(projectNameFromUrl("git@github.com:acme/shared-core.git")).toBe("shared-core");
-    expect(projectNameFromUrl("https://example.com/acme/widget/")).toBe("widget");
-    expect(projectNameFromUrl("/srv/repos/legacy")).toBe("legacy");
   });
 
   it("slugs a name safely for use as a directory the model will read", () => {

@@ -63,19 +63,6 @@ export function validateGitUrl(rawUrl: string): string {
 }
 
 /**
- * A display name derived from the URL's last segment, used as the default
- * project name and as the on-disk directory for a linked review's worktree.
- */
-export function projectNameFromUrl(rawUrl: string): string {
-  const url = validateGitUrl(rawUrl);
-  const withoutQuery = url.split(/[?#]/)[0] ?? url;
-  const trimmed = withoutQuery.replace(/\/+$/, "");
-  const lastSegment = trimmed.split(/[/:]/).filter(Boolean).pop() ?? "repository";
-  const name = lastSegment.replace(/\.git$/i, "");
-  return name === "" ? "repository" : name;
-}
-
-/**
  * A filesystem-safe slug for the worktree directory of a linked review, where
  * two repositories are checked out side by side and their names become path
  * segments the model reads.
