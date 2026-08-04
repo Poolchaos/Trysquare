@@ -1529,3 +1529,12 @@ verified evidence, in writing, here.
   what is proven end to end is that a repaired change set produces clears
   the pipeline accepts, with every claimed consumer existing and using the
   symbol.
+- 2026-08-04 REVIEW ROUND (after U12, per the charter): a structured pass
+  over the day's fourteen commits, focused on the two gate-adjacent scripts
+  and the fixture rebuild. Zero defects requiring fixes. Two notes: the
+  check-style review-json exemption assumes "/" as the separator, which on a
+  non-Linux machine fails closed (more is scanned, never less); the demo's
+  run-label sanitiser was traced against the observed directory name. The
+  heavier changes carried their proof when they landed: two mutation proofs
+  on the S4 routing and the state-machine tests, and two full
+  `./verify.sh --build --e2e` runs at exit 0.
