@@ -163,6 +163,17 @@ against a fake CLI committed to the repository.
   exactly the mistake that once spent real usage.
 - **A production build can rewrite `tsconfig.json`.** If the format gate then
   fails, run `npm run format` and re-run. Recorded in `PROJECT-STATE.md`.
+- **`npm run dev` refusing to start over a file that plainly exists means the
+  build cache is older than the file.** Seen 2026-08-04: dev exited 1 with
+  "Could not parse module `[project]/src/instrumentation.ts`, file not found"
+  while the file was present and committed. `.next/cache` was dated
+  2026-07-30 10:25 and `src/instrumentation.ts` was created 2026-07-31 09:26,
+  so Turbopack was resolving against a module graph built before the file
+  existed. `rm -rf .next` fixes it permanently. Note what this is not: a
+  production build followed by `npm run dev` was tried afterwards and starts
+  cleanly, so sharing `.next` between the two is not the cause.
+- **Port 3000 in use is not an error.** Dev falls back to 3001 and prints the
+  URL it actually took. Read the line rather than assuming 3000.
 
 ## Where things are
 
