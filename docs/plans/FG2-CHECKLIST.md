@@ -53,9 +53,10 @@ npm run demo:fixture                                  # haiku, cheapest
 npm run demo:fixture -- --model claude-fable-5[1m]    # the real question
 ```
 
-Both write a score and a full event log into `review/<date>-fg2/`. The haiku
-run is a plumbing smoke against a real model and is not a quality claim
-(D-18); haiku's findings do not represent the product.
+Each run writes its own directory under `review/<date>-fg2/`, named by time
+and model, holding the score, the full event log, and every finding's text
+(`findings.json`). The haiku run is a plumbing smoke against a real model and
+is not a quality claim (D-18); haiku's findings do not represent the product.
 
 Judge these, in this order:
 
@@ -68,11 +69,11 @@ Judge these, in this order:
 3. **Discarded quotes.** Findings killed because they cited code that was not
    at those lines. A non-zero count means the model fabricated, and the app
    caught it; a large count means the prompts need work.
-4. **Are the findings readable?** Open `review/<date>-fg2/events.jsonl` and
-   the report itself. Each finding gives File, Lines, Issue and Comment. The
-   comment is meant to be plain language someone who did not write the code
-   can follow, with the code quoted separately. If it reads like a machine
-   restating the diff, that is a prompt problem worth naming.
+4. **Are the findings readable?** Open the run's `findings.json`. Each
+   finding gives file, lines, issue, comment, mechanism and the quoted code.
+   The comment is meant to be plain language someone who did not write the
+   code can follow, with the code quoted separately. If it reads like a
+   machine restating the diff, that is a prompt problem worth naming.
 5. **What it cost.** Tokens split into fresh and cached, cost equivalent, and
    wall time, printed at the end of every run.
 

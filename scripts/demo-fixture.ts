@@ -200,11 +200,33 @@ async function main(): Promise<number> {
   const report = scoreAgainstManifest(db, reviewId, manifest);
   renderScore(report, review, Date.now() - startedAt, outcome?.kind ?? "failed");
 
-  const outDir = join(REPO_ROOT, "review", `${new Date().toISOString().slice(0, 10)}-fg2`);
+  // Each run gets its own directory: the score is only half the evidence, and
+  // a same-day rerun must not overwrite the run it is being compared against.
+  const stamp = new Date().toISOString();
+  const runLabel = `${stamp.slice(11, 19).replaceAll(":", "")}-${
+    options.fake ? "fake" : options.model.replace(/[^a-z0-9.-]+/gi, "-").replace(/^-|-$/g, "")
+  }`;
+  const outDir = join(REPO_ROOT, "review", `${stamp.slice(0, 10)}-fg2`, runLabel);
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, "events.jsonl"), `${eventLog.join("\n")}\n`);
   writeFileSync(join(outDir, "score.json"), `${JSON.stringify(report, null, 2)}\n`);
-  log(`Wrote the event log and the score to ${outDir}`);
+  // The full finding texts, because the verdict FG-2 asks for is partly "is a
+  // finding worth reading", and the database they live in is deleted below.
+  const findingRows = listFindings(db, reviewId).map((finding) => ({
+    status: statusOf(finding),
+    repo: finding.repo,
+    file: finding.filePath,
+    lines: [finding.lineStart, finding.lineEnd],
+    severity: finding.severity,
+    ruleCode: finding.ruleCode,
+    issue: finding.issue,
+    comment: finding.comment,
+    mechanism: finding.mechanism,
+    quotedCode: finding.quotedCode,
+    verificationNote: finding.verificationNote,
+  }));
+  writeFileSync(join(outDir, "findings.json"), `${JSON.stringify(findingRows, null, 2)}\n`);
+  log(`Wrote the event log, the score and the findings to ${outDir}`);
 
   if (options.keep) log(`Kept the data directory: ${dataDir}`);
   else rmSync(dataDir, { recursive: true, force: true });
