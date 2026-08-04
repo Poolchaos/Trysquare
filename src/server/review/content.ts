@@ -207,6 +207,9 @@ export function renderChangedSymbols(symbols: readonly ChangedSymbol[]): string 
     ...symbols.map(
       (symbol) => `- ${symbol.name} (${symbol.kind}, ${symbol.change}) in ${symbol.path}`,
     ),
+    "",
+    "Every symbol listed must appear exactly once in symbolDispositions, with",
+    "its path copied exactly as printed here.",
   ].join("\n");
 }
 

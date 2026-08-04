@@ -209,6 +209,25 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         })),
       );
 
+  // Symbols were the one path family the model saw unqualified. It reads the
+  // worktree, where the file lives under the repository's slug, and a real
+  // model reports the path it actually opened: the first live run answered
+  // "shared-core/types.ts" against an expectation of "types.ts", perfectly
+  // correct in substance and refused on spelling. Qualified here, in one
+  // place, so the prompt, the expectation and the reconciliation all speak
+  // the worktree's language like every other path in the pipeline. Callers
+  // that pass symbols with no linked repository checked out get them
+  // verbatim, since there is no slug to speak of.
+  const linkedSlug = input.files.find((entry) => entry.repo === "linked")?.slug;
+  const qualifiedSymbols =
+    input.changedSymbols === undefined
+      ? undefined
+      : input.changedSymbols.map((symbol) =>
+          linkedSlug === undefined
+            ? symbol
+            : { ...symbol, path: qualified(linkedSlug, symbol.path) },
+        );
+
   const sweepOutcome = runSweeps(
     input.files.map((entry) => ({ repo: entry.repo, file: entry.file })),
     input.rules,
@@ -239,7 +258,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       pattern: hit.pattern,
       excerpt: hit.excerpt,
     })),
-    ...(input.changedSymbols === undefined ? {} : { changedSymbols: input.changedSymbols }),
+    ...(qualifiedSymbols === undefined ? {} : { changedSymbols: qualifiedSymbols }),
     ...(input.baseContents === undefined ? {} : { baseContents: input.baseContents }),
   };
 
@@ -334,7 +353,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     hunkIndex: hunkIndexFor(finding.path, finding.lineStart, ledgerFiles, db),
   }));
 
-  const expectedSymbols: SymbolRef[] = (input.changedSymbols ?? []).map((symbol) => ({
+  const expectedSymbols: SymbolRef[] = (qualifiedSymbols ?? []).map((symbol) => ({
     symbol: symbol.name,
     path: symbol.path,
   }));

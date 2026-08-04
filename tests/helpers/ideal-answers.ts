@@ -160,20 +160,24 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
   });
 
   const linkedFiles = files.filter((entry) => entry.repo === "linked").map((entry) => entry.file);
+  // Qualified exactly as the pipeline now qualifies its expectation and its
+  // prompt: the worktree path, slug first.
+  const linkedSlug = files.find((entry) => entry.repo === "linked")?.slug;
+  const symbolPath = (path: string) => (linkedSlug ? `${linkedSlug}/${path}` : path);
   const symbolDispositions = changedExportedSymbols(linkedFiles).map((symbol) => {
     const broken = manifest.defects.find((defect) => defect.kind === "cross-repo");
     const isRenamedField = symbol.name === "Prefs";
     return isRenamedField && broken
       ? {
           symbol: symbol.name,
-          path: symbol.path,
+          path: symbolPath(symbol.path),
           consumersChecked: [qualify(broken)],
           verdict: "finding" as const,
           reason: "One consumer still reads the field under its old name.",
         }
       : {
           symbol: symbol.name,
-          path: symbol.path,
+          path: symbolPath(symbol.path),
           consumersChecked: [],
           verdict: "no_consumers_found" as const,
           reason: "Nothing in the primary repository reads this yet.",

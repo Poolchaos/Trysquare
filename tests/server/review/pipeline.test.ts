@@ -1072,3 +1072,160 @@ describe("working the highest-risk files first", () => {
     expect(listLedgerFiles(db, reviewId)).toHaveLength(RISK_FILES.length);
   });
 });
+
+describe("the paths a symbol is spoken of by", () => {
+  const LINKED_PATCH = [
+    "diff --git a/types.ts b/types.ts",
+    "--- a/types.ts",
+    "+++ b/types.ts",
+    "@@ -1,2 +1,2 @@",
+    " export interface Prefs {",
+    "+  theme: string;",
+    "",
+  ].join("\n");
+
+  const LINKED_FILES = [
+    ...FILES,
+    ...parseUnifiedDiff(LINKED_PATCH).map((file) => ({
+      repo: "linked" as const,
+      slug: "shared-core",
+      file,
+    })),
+  ];
+
+  const LINKED_SYMBOLS = [
+    { name: "Prefs", path: "types.ts", kind: "interface" as const, change: "modified" as const },
+  ];
+
+  function collectPrompts(answers: (prompt: string) => unknown) {
+    const prompts: string[] = [];
+    const run = async (request: StageRequest): Promise<StageResponse> => {
+      prompts.push(`${request.stage}\n${request.prompt}`);
+      return { output: answers(request.prompt), sessionId: "s" };
+    };
+    return { prompts, run };
+  }
+
+  it("lists a symbol under the path the worktree gives it", async () => {
+    // The first live run answered with the worktree path, correctly in
+    // substance, and was refused on spelling: the prompt was the one place
+    // in the pipeline still speaking repo-relative paths. The listing now
+    // names the file as the model will actually find it.
+    const prompts: string[] = [];
+    await runReviewPipeline({
+      db,
+      reviewId,
+      worktreeRoot,
+      files: LINKED_FILES,
+      rules: RULES,
+      profile: "full-context",
+      changedSymbols: LINKED_SYMBOLS,
+      systemPromptFor: (stage) => `prompt for ${stage}`,
+      run: async (request) => {
+        prompts.push(request.prompt);
+        if (request.stage === "s3_adversarial") {
+          return {
+            output: {
+              findings: [],
+              clearedHunks: [
+                { path: "app/orders.ts", hunkIndex: 0, reason: "checked" },
+                { path: "shared-core/types.ts", hunkIndex: 0, reason: "checked" },
+              ],
+              sweepDispositions: [
+                {
+                  path: "app/orders.ts",
+                  line: 2,
+                  ruleCode: "3",
+                  disposition: "cleared",
+                  reason: "local literal",
+                },
+              ],
+              symbolDispositions: [
+                {
+                  symbol: "Prefs",
+                  path: "shared-core/types.ts",
+                  consumersChecked: ["app/orders.ts"],
+                  verdict: "all_consumers_verified",
+                  reason: "The one consumer reads the new shape.",
+                },
+              ],
+            },
+            sessionId: "s",
+          };
+        }
+        return {
+          output:
+            request.stage === "s4_deletions"
+              ? { findings: [], reviewedDeletions: [] }
+              : request.stage === "s5_verification"
+                ? { verdicts: [] }
+                : { files: [] },
+          sessionId: "s",
+        };
+      },
+    });
+
+    const adversarial = prompts.find((prompt) => prompt.includes("exported symbol"))!;
+    expect(adversarial).toContain("in shared-core/types.ts");
+    expect(adversarial).toContain("copied exactly as printed here");
+  });
+
+  it("reconciles a stage that echoes the listing verbatim", async () => {
+    // The class of bug the fake gate is structurally blind to: the ideal
+    // answers echo the expectation, so a prompt whose spelling drifts from
+    // the expectation passes every fake run and fails every real one. This
+    // runner answers the way a model does, by reading the prompt it was
+    // given, so any future drift between the two fails here first.
+    const echoed = await runReviewPipeline({
+      db,
+      reviewId,
+      worktreeRoot,
+      files: LINKED_FILES,
+      rules: RULES,
+      profile: "full-context",
+      changedSymbols: LINKED_SYMBOLS,
+      systemPromptFor: (stage) => `prompt for ${stage}`,
+      run: async (request) => {
+        if (request.stage !== "s3_adversarial") {
+          return {
+            output:
+              request.stage === "s4_deletions"
+                ? { findings: [], reviewedDeletions: [] }
+                : request.stage === "s5_verification"
+                  ? { verdicts: [] }
+                  : { files: [] },
+            sessionId: "s",
+          };
+        }
+        const listed = [...request.prompt.matchAll(/^- (\S+) \([^)]+\) in (\S+)$/gm)];
+        return {
+          output: {
+            findings: [],
+            clearedHunks: [
+              { path: "app/orders.ts", hunkIndex: 0, reason: "checked" },
+              { path: "shared-core/types.ts", hunkIndex: 0, reason: "checked" },
+            ],
+            sweepDispositions: [
+              {
+                path: "app/orders.ts",
+                line: 2,
+                ruleCode: "3",
+                disposition: "cleared",
+                reason: "local literal",
+              },
+            ],
+            symbolDispositions: listed.map(([, symbol, path]) => ({
+              symbol,
+              path,
+              consumersChecked: ["app/orders.ts"],
+              verdict: "all_consumers_verified",
+              reason: "Echoed from the listing, as a model does.",
+            })),
+          },
+          sessionId: "s",
+        };
+      },
+    });
+    expect(echoed.coverage.pendingHunks).toBe(0);
+  });
+});
