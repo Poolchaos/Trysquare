@@ -142,10 +142,6 @@ export class IllegalTransitionError extends Error {
   }
 }
 
-export function reviewTransitionsFrom(from: ReviewStatus): readonly ReviewStatus[] {
-  return REVIEW_TRANSITIONS[from];
-}
-
 export function canTransitionReview(from: ReviewStatus, to: ReviewStatus): boolean {
   return REVIEW_TRANSITIONS[from].includes(to);
 }
@@ -156,10 +152,6 @@ export function assertReviewTransition(from: ReviewStatus, to: ReviewStatus): vo
   }
 }
 
-export function findingTransitionsFrom(from: FindingStatus): readonly FindingStatus[] {
-  return FINDING_TRANSITIONS[from];
-}
-
 export function canTransitionFinding(from: FindingStatus, to: FindingStatus): boolean {
   return FINDING_TRANSITIONS[from].includes(to);
 }
@@ -168,17 +160,4 @@ export function assertFindingTransition(from: FindingStatus, to: FindingStatus):
   if (!canTransitionFinding(from, to)) {
     throw new IllegalTransitionError("finding", from, to, FINDING_TRANSITIONS[from]);
   }
-}
-
-export function isTerminalReviewStatus(status: ReviewStatus): boolean {
-  return REVIEW_TRANSITIONS[status].length === 0;
-}
-
-export function isTerminalFindingStatus(status: FindingStatus): boolean {
-  return FINDING_TRANSITIONS[status].length === 0;
-}
-
-/** Only these reach the report, and only a human puts them there. */
-export function isReportableFindingStatus(status: FindingStatus): boolean {
-  return status === "confirmed";
 }

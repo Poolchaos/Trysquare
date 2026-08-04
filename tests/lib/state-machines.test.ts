@@ -9,11 +9,6 @@ import {
   assertReviewTransition,
   canTransitionFinding,
   canTransitionReview,
-  findingTransitionsFrom,
-  isReportableFindingStatus,
-  isTerminalFindingStatus,
-  isTerminalReviewStatus,
-  reviewTransitionsFrom,
 } from "@/lib/domain/state-machines";
 
 describe("review status machine", () => {
@@ -55,8 +50,6 @@ describe("review status machine", () => {
 
   it("treats complete and cancelled as final", () => {
     for (const terminal of ["complete", "cancelled"] as const) {
-      expect(isTerminalReviewStatus(terminal)).toBe(true);
-      expect(reviewTransitionsFrom(terminal)).toHaveLength(0);
       for (const status of REVIEW_STATUSES) {
         expect(canTransitionReview(terminal, status), `${terminal} -> ${status}`).toBe(false);
       }
@@ -67,11 +60,10 @@ describe("review status machine", () => {
     // Failure used to be final, which meant the only recovery from a broken
     // stage was starting over and paying for every stage again. Resuming
     // replays the answered ones from their checkpoints (D-50).
-    expect(isTerminalReviewStatus("failed")).toBe(false);
-    expect(reviewTransitionsFrom("failed")).toEqual(["running"]);
     for (const status of REVIEW_STATUSES) {
-      if (status === "running") continue;
-      expect(canTransitionReview("failed", status), `failed -> ${status}`).toBe(false);
+      expect(canTransitionReview("failed", status), `failed -> ${status}`).toBe(
+        status === "running",
+      );
     }
   });
 
@@ -100,7 +92,12 @@ describe("review status machine", () => {
 
 describe("finding status machine", () => {
   it("lets verification decide a candidate's fate", () => {
-    expect(findingTransitionsFrom("candidate")).toEqual(["verified", "killed", "open_question"]);
+    const fates = ["verified", "killed", "open_question"] as const;
+    for (const status of FINDING_STATUSES) {
+      expect(canTransitionFinding("candidate", status), `candidate -> ${status}`).toBe(
+        (fates as readonly string[]).includes(status),
+      );
+    }
   });
 
   it("requires verification before a human can confirm", () => {
@@ -115,7 +112,6 @@ describe("finding status machine", () => {
   });
 
   it("keeps a killed finding dead so it cannot be revived into a report", () => {
-    expect(isTerminalFindingStatus("killed")).toBe(true);
     for (const status of FINDING_STATUSES) {
       expect(canTransitionFinding("killed", status), `killed -> ${status}`).toBe(false);
     }
@@ -123,13 +119,9 @@ describe("finding status machine", () => {
 
   it("treats a decided finding as final", () => {
     for (const decided of ["confirmed", "dismissed"] as const) {
-      expect(isTerminalFindingStatus(decided)).toBe(true);
-    }
-  });
-
-  it("reports only what a human confirmed", () => {
-    for (const status of FINDING_STATUSES) {
-      expect(isReportableFindingStatus(status), status).toBe(status === "confirmed");
+      for (const status of FINDING_STATUSES) {
+        expect(canTransitionFinding(decided, status), `${decided} -> ${status}`).toBe(false);
+      }
     }
   });
 

@@ -1479,3 +1479,19 @@ verified evidence, in writing, here.
   Also observed, recorded, not fixed: fable writes ruleCode as prose
   ("Rule 11") where the ruleset speaks bare codes ("11"), and the stage
   schema accepts any string.
+- 2026-08-04 DONE (U12): the dead-export sweep, second pass, the exports only
+  their own tests kept alive. Deleted: `listPendingHunks` (its assertions now
+  ask `coverageReport`, the surface the app asks), `projectNameFromUrl` (the
+  projects route's own `nameFromUrl` is the live rule; not consolidated
+  because the two disagree on fallbacks), `listReviewsForBranchPair` (the UI
+  lists by project; the branch-pair index stays with an honest comment),
+  `listSelectable` (U8 moved the rule to `availabilityOf`; the staleness test
+  got stronger in the rewrite), and the state-machines introspection five
+  (`reviewTransitionsFrom`, `findingTransitionsFrom`, `isTerminalReviewStatus`,
+  `isTerminalFindingStatus`, `isReportableFindingStatus`), whose claims now
+  run exhaustively through `canTransitionReview`/`canTransitionFinding`.
+  The failed-to-running positive was explicitly preserved and both it and the
+  candidate-fates loop are mutation-proved: emptying `failed`'s transitions
+  fails two tests by name, removing a candidate fate fails one.
+  `canTransitionClone` and `canTransitionFinding` stay exported though only
+  self-used: un-exporting working code is churn, not cleanup.
