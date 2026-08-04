@@ -29,10 +29,12 @@ spends nothing. That establishes the machinery carries a
 correct review intact, and no more. The judgment is the maintainer's, and it
 is described in [docs/plans/FG2-CHECKLIST.md](docs/plans/FG2-CHECKLIST.md).
 
-Six of twelve work packages are complete and six are partly built: the review
-engine, the data and git layers, and the screens are in place, while the
-design pass, the accessibility work, the interactive engine mode, and parts of
-the test suite are not. What remains is written down item by item in
+Eleven of twelve work packages are complete: the review engine, the data and
+git layers, every screen, the design pass, the accessibility checks, and the
+interactive engine mode that runs a review from files in your own terminal
+instead of a subprocess. The twelfth is partly done, and the last one is the
+judgment above, which only a real model can settle. What remains is written
+down item by item in
 [docs/plans/M4-FINISH-PLAN.md](docs/plans/M4-FINISH-PLAN.md), and
 [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md) is the current-facts cache.
 
@@ -72,6 +74,27 @@ confirm or dismiss with a reason. Only what you confirm reaches the report.
 **Reviewed code is never modified.** Projects are cloned bare, reviews run in
 detached worktrees pinned to a commit, and the model gets a read-only tool
 allowlist. There is no code path that writes into a repository under review.
+
+## What it looks like
+
+![The confirmation queue: a stage timeline, the coverage panel, and findings
+grouped by severity beside the rule and the code they cite.](docs/images/confirmation-queue.png)
+
+Both screenshots are of the seeded test fixture, whose defects are planted on
+purpose and whose findings say so: no real model has reviewed real code here
+yet, and the Status section above says why. They are produced by the browser
+suite on every run rather than staged for the README.
+
+The panel worth looking at is Coverage. It says how many files, hunks and
+sweep hits were accounted for, which is what separates "nothing is wrong" from
+"nothing was looked at". The two greyed stages at the ends of the timeline,
+Prepare and Audit, are the deterministic halves that no model touches.
+
+![The same review in the dark theme, showing the report it
+produced.](docs/images/run-screen-dark.png)
+
+Both themes are first-class and both are photographed and checked for contrast
+on every CI run.
 
 ## How it works
 
