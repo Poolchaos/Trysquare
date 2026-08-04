@@ -1097,15 +1097,6 @@ describe("the paths a symbol is spoken of by", () => {
     { name: "Prefs", path: "types.ts", kind: "interface" as const, change: "modified" as const },
   ];
 
-  function collectPrompts(answers: (prompt: string) => unknown) {
-    const prompts: string[] = [];
-    const run = async (request: StageRequest): Promise<StageResponse> => {
-      prompts.push(`${request.stage}\n${request.prompt}`);
-      return { output: answers(request.prompt), sessionId: "s" };
-    };
-    return { prompts, run };
-  }
-
   it("lists a symbol under the path the worktree gives it", async () => {
     // The first live run answered with the worktree path, correctly in
     // substance, and was refused on spelling: the prompt was the one place
