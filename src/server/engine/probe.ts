@@ -23,8 +23,6 @@ const authStatusSchema = z
   })
   .passthrough();
 
-export type AuthStatus = z.infer<typeof authStatusSchema>;
-
 export interface AuthSummary {
   loggedIn: boolean;
   /** True when runs draw on a subscription rather than per-token billing. */

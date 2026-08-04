@@ -49,13 +49,6 @@ export const assistantEventSchema = z
   })
   .passthrough();
 
-export const userEventSchema = z
-  .object({
-    type: z.literal("user"),
-    session_id: z.string(),
-  })
-  .passthrough();
-
 /**
  * Live rate-limit state. This is how a review learns it is approaching a
  * limit before the run fails, and what the pause screen shows.
@@ -111,9 +104,6 @@ export const resultEventSchema = z
   })
   .passthrough();
 
-export type SystemInitEvent = z.infer<typeof systemInitSchema>;
-export type AssistantEvent = z.infer<typeof assistantEventSchema>;
-export type RateLimitEvent = z.infer<typeof rateLimitEventSchema>;
 export type ResultEvent = z.infer<typeof resultEventSchema>;
 
 /** What the job manager consumes. Raw CLI events are narrowed into these. */

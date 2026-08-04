@@ -138,10 +138,6 @@ export const RISK_TAGS = [
 export const riskTagSchema = z.enum(RISK_TAGS);
 export type RiskTag = z.infer<typeof riskTagSchema>;
 
-export const LEDGER_FILE_STATUSES = ["pending", "reviewed"] as const;
-export const ledgerFileStatusSchema = z.enum(LEDGER_FILE_STATUSES);
-export type LedgerFileStatus = z.infer<typeof ledgerFileStatusSchema>;
-
 /**
  * A hunk ends the review either attached to findings or explicitly cleared.
  * `pending` past the audit stage is a coverage failure, not a warning.

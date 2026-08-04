@@ -146,7 +146,7 @@ fail-at emits the limit error exactly once and then continues the sequence.
 
 New `src/server/review/checkpointing-runner.ts`:
 
-- `createCheckpointingRunner({db, reviewId, inner: EngineRunner['run'],
+- `createCheckpointingRunner({db, reviewId, inner: ReviewEngine['run'],
   onLiveAttempt}) -> StageRunner`.
 - On each request: compute `promptHash = sha256(stage + "\n" + prompt)`
   (node:crypto). Look up `latestSucceeded`; on hit, return

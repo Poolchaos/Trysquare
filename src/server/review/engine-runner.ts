@@ -17,7 +17,7 @@ import { composeSystemPrompt } from "@/lib/rulesets/compose";
 import type { ImportedDirective, ImportedRule } from "@/lib/rulesets/model";
 import { outputContractFor, stageSchemaFor } from "@/lib/review/stage-schemas";
 import type { ReviewEngine } from "@/server/engine/adapter";
-import { StageFailedError, assertToolsAreReadOnly, runStage } from "@/server/engine/headless";
+import { assertToolsAreReadOnly, runStage } from "@/server/engine/headless";
 import type { StageRequest, StageResponse } from "./pipeline";
 
 export class StageOutputUnreadableError extends Error {
@@ -154,9 +154,6 @@ export interface EngineRunnerOptions {
       }) => void)
     | undefined;
 }
-
-/** Mode A. Kept as a named type because callers hold one directly. */
-export type EngineRunner = ReviewEngine;
 
 export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
   let chainSession: string | undefined;
@@ -308,5 +305,3 @@ function describeSchemaFailure(schema: z.ZodType, value: unknown): string {
   if (parsed.success) return "the answer was valid";
   return `your answer did not match the required schema: ${summariseIssues(parsed.error)}`;
 }
-
-export { StageFailedError };

@@ -115,7 +115,7 @@ excluded pairs surface in the result.
 
 **T5. Linked-review dispositions (fixes G-5).** When the review has a
 linked repo: S3's prompt includes the changed exported symbols from the
-bundle; output is validated against `symbolDispositionSchema` merged into
+bundle; output is validated against `symbolDispositionEntrySchema` merged into
 the adversarial schema (one combined answer); app code enforces every
 symbol dispositioned (same both-direction reconciliation), and
 `all_consumers_verified` clears require at least one consumer file named.

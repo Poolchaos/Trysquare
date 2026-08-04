@@ -128,25 +128,7 @@ export const verificationStageSchema = z.object({
   ),
 });
 
-/** Cross-repo contract changes, for a linked review. */
-export const symbolDispositionSchema = z.object({
-  dispositions: z.array(
-    z.object({
-      symbol: z.string(),
-      path: z.string(),
-      consumersChecked: z.array(z.string()),
-      verdict: z.enum(["all_consumers_verified", "finding"]),
-      reason: z.string().min(1),
-    }),
-  ),
-});
-
-export type RiskStageOutput = z.infer<typeof riskStageSchema>;
-export type ComprehensionStageOutput = z.infer<typeof comprehensionStageSchema>;
 export type AdversarialStageOutput = z.infer<typeof adversarialStageSchema>;
-export type DeletionStageOutput = z.infer<typeof deletionStageSchema>;
-export type VerificationStageOutput = z.infer<typeof verificationStageSchema>;
-export type SymbolDispositionOutput = z.infer<typeof symbolDispositionSchema>;
 
 /**
  * Renders a schema into the prompt as an instruction.

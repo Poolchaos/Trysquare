@@ -1412,3 +1412,36 @@ verified evidence, in writing, here.
   select with no ORDER BY, so ranking its output would move the tie-break to
   whatever order SQLite happened to return, and no pure-function test could
   catch that regression.
+- 2026-08-04 DONE (U12, D-54): the dead-export sweep, first pass. Deleted with
+  no test changes at all, because none of these had a consumer of any kind:
+  `userEventSchema` and the `SystemInitEvent`/`AssistantEvent`/`RateLimitEvent`
+  aliases; the `LEDGER_FILE_STATUSES` triple (the ledger writes and compares
+  the raw strings); `AuthStatus`; the `EngineRunner` alias, whose own comment
+  claimed callers held one directly when every caller imports `ReviewEngine`
+  from the adapter; the `StageFailedError` pass-through re-export; the
+  `listLedgerFiles` re-export from the pipeline; and the manager's
+  `ReviewEvent`/`ReviewListener` re-exports.
+  The one worth naming is `symbolDispositionSchema` with its
+  `SymbolDispositionOutput`. It was a stale duplicate that contradicted the
+  live shape: two verdicts where the module-private
+  `symbolDispositionEntrySchema` has three, the third being
+  `no_consumers_found`, which carries a long comment explaining why it must
+  exist. A dead schema is untidy; a dead schema that disagrees with the live
+  one about what a valid answer looks like is a trap for whoever reaches for
+  the wrong name.
+  `docs/plans/EXECUTION-ORDER.md` and `M2-FINISH-PLAN.md` named two of these
+  symbols and were corrected in the same change.
+- 2026-08-04 DECIDED (U12): no column is dropped in this pass, and the
+  write-only ones are recorded instead. G1 is awaiting a verdict, migrations
+  run against the maintainer's live database, and SQLite column drops rebuild
+  tables carrying foreign keys and indexes, so a batch of destructive schema
+  changes ahead of a gate verdict is out of order. Still unread, deliberately:
+  `ledger_hunks.clear_reason`, `sweep_hits.clear_reason`,
+  `sweep_hits.finding_id`, `reviews.linked_into_branch`,
+  `reviews.linked_into_commit`, `reviews.into_commit`, `findings.verified_at`,
+  `findings.decided_at`, and the accumulate-only
+  `reviews.usage_cache_creation_tokens`. `engine_mode` is no longer among them:
+  U11 gave it its reader.
+  `renameProject` is also kept though unreferenced: 02 still carries project
+  renaming as an unbuilt requirement, and deleting the function would retire a
+  documented requirement by stealth rather than by decision.

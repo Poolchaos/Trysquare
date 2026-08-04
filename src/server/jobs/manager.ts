@@ -37,7 +37,7 @@ import { SETTING_KEYS, readSettingOr } from "../db/repositories/settings";
 import { listForReview, usageTotals } from "../db/repositories/stage-executions";
 import { DEFAULT_MODEL_CANDIDATES } from "../engine/probe";
 import { prepareAndRun, type PrepareAndRunOptions, type RunOutcome } from "../review/service";
-import { createReviewBus, type ReviewEvent, type ReviewListener } from "./bus";
+import { createReviewBus, type ReviewListener } from "./bus";
 
 /** One at a time. Two reviews share one account's rate limit and one disk. */
 const DEFAULT_MAX_CONCURRENT = 1;
@@ -385,5 +385,3 @@ export function jobManager(): JobManager {
   holder[MANAGER_KEY] ??= new JobManager();
   return holder[MANAGER_KEY];
 }
-
-export type { ReviewEvent, ReviewListener };
