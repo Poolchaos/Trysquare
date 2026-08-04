@@ -21,8 +21,10 @@ import { assertBatchesCoverEverything, planRuleBatches } from "@/lib/rulesets/co
 import type { ImportedRule } from "@/lib/rulesets/model";
 import { budgetFor, estimateTokens, fitsBudget, splitToFit } from "@/lib/review/budget";
 import {
+  assertDeletionsReconciled,
   assertReconciled,
   reconcileAdversarial,
+  reconcileDeletions,
   type HunkRef,
   type SweepRef,
   type SymbolRef,
@@ -40,6 +42,7 @@ import { assertSweepComplete, runSweeps } from "@/lib/review/sweep";
 import type { Db } from "@/server/db/client";
 import { appendRunNote } from "@/server/db/repositories/reviews";
 import {
+  isDeletionCandidate,
   renderAdversarialPrompt,
   renderComprehensionPrompt,
   renderDeletionPrompt,
@@ -123,6 +126,12 @@ export interface PipelineInput {
    */
   systemPromptFor: (stage: ReviewStage, batch?: { rules: readonly ImportedRule[] }) => string;
   run: StageRunner;
+  /**
+   * Told when this pipeline rejects a stage's already-stored answer, so the
+   * caller can strike the checkpoint. Without it a resume replays the exact
+   * answer that was rejected and fails the same way every time.
+   */
+  invalidate?: ((stage: ReviewStage, reason: string) => void) | undefined;
 }
 
 export interface PipelineResult {
@@ -139,7 +148,6 @@ export interface PipelineResult {
   excludedPairs: number;
 }
 
-/** Paths in the ledger are qualified by repository, as the model sees them. */
 /** The label a candidate is given in the verification prompt. */
 function refFor(index: number): string {
   return `C${index + 1}`;
@@ -150,12 +158,24 @@ function indexOfRef(ref: string): number {
   return Number.isFinite(parsed) ? parsed - 1 : -1;
 }
 
+/** Paths in the ledger are qualified by repository, as the model sees them. */
 function qualified(slug: string, path: string): string {
   return `${slug}/${path}`;
 }
 
 export async function runReviewPipeline(input: PipelineInput): Promise<PipelineResult> {
   const { db, reviewId } = input;
+
+  // Every check that can refuse a stage's answer runs through this, so the
+  // refused answer is struck from the checkpoints before the error travels.
+  const rejecting = <T>(stage: ReviewStage, judge: () => T): T => {
+    try {
+      return judge();
+    } catch (error) {
+      input.invalidate?.(stage, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  };
 
   // S0: everything deterministic, before any model is involved.
   //
@@ -222,15 +242,12 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   };
 
   // S1: risk classification.
-  const risk = riskStageSchema.parse(
-    (
-      await input.run({
-        stage: "s1_risk",
-        systemPrompt: input.systemPromptFor("s1_risk"),
-        prompt: renderRiskPrompt(content),
-      })
-    ).output,
-  );
+  const riskResponse = await input.run({
+    stage: "s1_risk",
+    systemPrompt: input.systemPromptFor("s1_risk"),
+    prompt: renderRiskPrompt(content),
+  });
+  const risk = rejecting("s1_risk", () => riskStageSchema.parse(riskResponse.output));
   for (const entry of risk.files) {
     const ledgerFile = ledgerFiles.find((file) => file.path === entry.path);
     if (ledgerFile) setFileRiskTags(db, ledgerFile.id, entry.riskTags);
@@ -238,14 +255,13 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
 
   // S2: comprehension. Findings are forbidden here by the prompt; the schema
   // has nowhere to put them, so one cannot arrive by accident either.
-  const comprehension = comprehensionStageSchema.parse(
-    (
-      await input.run({
-        stage: "s2_comprehension",
-        systemPrompt: input.systemPromptFor("s2_comprehension"),
-        prompt: renderComprehensionPrompt(content),
-      })
-    ).output,
+  const comprehensionResponse = await input.run({
+    stage: "s2_comprehension",
+    systemPrompt: input.systemPromptFor("s2_comprehension"),
+    prompt: renderComprehensionPrompt(content),
+  });
+  const comprehension = rejecting("s2_comprehension", () =>
+    comprehensionStageSchema.parse(comprehensionResponse.output),
   );
   for (const entry of comprehension.files) {
     const ledgerFile = ledgerFiles.find((file) => file.path === entry.path);
@@ -275,24 +291,26 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     path: symbol.path,
   }));
 
-  assertReconciled(
-    reconcileAdversarial(
-      expectedHunks,
-      expectedSweeps,
-      {
-        hunksWithFindings: findingHunks,
-        hunksCleared: adversarial.clearedHunks,
-        sweepDispositions: adversarial.sweepDispositions,
-        symbolDispositions: adversarial.symbolDispositions.map((disposition) => ({
-          symbol: disposition.symbol,
-          path: disposition.path,
-        })),
-      },
-      expectedSymbols,
-    ),
-  );
+  rejecting("s3_adversarial", () => {
+    assertReconciled(
+      reconcileAdversarial(
+        expectedHunks,
+        expectedSweeps,
+        {
+          hunksWithFindings: findingHunks,
+          hunksCleared: adversarial.clearedHunks,
+          sweepDispositions: adversarial.sweepDispositions,
+          symbolDispositions: adversarial.symbolDispositions.map((disposition) => ({
+            symbol: disposition.symbol,
+            path: disposition.path,
+          })),
+        },
+        expectedSymbols,
+      ),
+    );
 
-  assertSymbolVerdictsAreBacked(adversarial);
+    assertSymbolVerdictsAreBacked(adversarial);
+  });
 
   // Record what the stage decided.
   for (const cleared of adversarial.clearedHunks) {
@@ -343,25 +361,39 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     // resolved in the ledger and cannot be traced back to anything.
     const match = nearestFindingTo(candidates, disposition.path, disposition.line);
     if (!match) {
-      throw new SweepDispositionUnmatchedError(
+      const unmatched = new SweepDispositionUnmatchedError(
         disposition.path,
         disposition.line,
         disposition.ruleCode,
       );
+      input.invalidate?.("s3_adversarial", unmatched.message);
+      throw unmatched;
     }
     attachSweepHitToFinding(db, row.id, match.id);
   }
 
   // S4: deletions, which is where regressions hide.
-  const deletions = deletionStageSchema.parse(
-    (
-      await input.run({
-        stage: "s4_deletions",
-        systemPrompt: input.systemPromptFor("s4_deletions"),
-        prompt: renderDeletionPrompt(content),
-      })
-    ).output,
-  );
+  const deletionsResponse = await input.run({
+    stage: "s4_deletions",
+    systemPrompt: input.systemPromptFor("s4_deletions"),
+    prompt: renderDeletionPrompt(content),
+  });
+  const deletions = rejecting("s4_deletions", () => {
+    const parsed = deletionStageSchema.parse(deletionsResponse.output);
+    // Both directions, like every other stage: something removed and never
+    // mentioned means the stage skipped it, and something mentioned that was
+    // never removed means it is describing a change set that does not exist.
+    assertDeletionsReconciled(
+      reconcileDeletions(
+        input.files
+          .filter(isDeletionCandidate)
+          .map((entry) => qualified(entry.slug, entry.file.path)),
+        parsed.reviewedDeletions.map((entry) => entry.path),
+      ),
+    );
+    return parsed;
+  });
+
   for (const finding of deletions.findings) {
     candidates.push(
       createCandidate(db, {
@@ -379,34 +411,49 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     );
   }
 
-  // Every file has now been looked at by the comprehension, adversarial and
-  // deletion stages, so the file rows can be closed.
-  for (const file of ledgerFiles) markFileReviewed(db, file.id);
+  // A file closes when the stages that owed an account of it have given one:
+  // its hunks are all dispositioned, and if it removed anything or moved away
+  // from a path, the deletion stage named it.
+  //
+  // Closing every file unconditionally would make the audit's changed-files
+  // check unfalsifiable: `pendingFiles` could never be anything but zero, so
+  // the one invariant that catches a whole deleted file going unreviewed
+  // would always pass.
+  const accountedDeletions = new Set(deletions.reviewedDeletions.map((entry) => entry.path));
+  const removes = new Set(
+    input.files.filter(isDeletionCandidate).map((entry) => qualified(entry.slug, entry.file.path)),
+  );
+  for (const file of ledgerFiles) {
+    const hunksSettled = listHunks(db, file.id).every((hunk) => hunk.status !== "pending");
+    const deletionSettled = !removes.has(file.path) || accountedDeletions.has(file.path);
+    // A file with no hunks and nothing removed is a binary blob or a mode
+    // change: there is no text for a reader to account for, so nothing is owed.
+    if (hunksSettled && deletionSettled) markFileReviewed(db, file.id);
+  }
 
   // S5: verification, in a fresh session with no access to the reasoning that
   // produced the candidates.
-  const verification = verificationStageSchema.parse(
-    (
-      await input.run({
-        stage: "s5_verification",
-        systemPrompt: input.systemPromptFor("s5_verification"),
-        prompt: renderVerificationPrompt(
-          candidates.map((finding, index) => ({
-            // Positional, because the candidate order is fixed by the stage
-            // answers that produced it, and those are replayed byte for byte.
-            // A database id here would change on every resume and the
-            // verification stage could never be replayed.
-            ref: refFor(index),
-            path: finding.filePath,
-            lineStart: finding.lineStart,
-            lineEnd: finding.lineEnd,
-            severity: finding.severity,
-            issue: finding.issue,
-            mechanism: finding.mechanism,
-          })),
-        ),
-      })
-    ).output,
+  const verificationResponse = await input.run({
+    stage: "s5_verification",
+    systemPrompt: input.systemPromptFor("s5_verification"),
+    prompt: renderVerificationPrompt(
+      candidates.map((finding, index) => ({
+        // Positional, because the candidate order is fixed by the stage
+        // answers that produced it, and those are replayed byte for byte.
+        // A database id here would change on every resume and the
+        // verification stage could never be replayed.
+        ref: refFor(index),
+        path: finding.filePath,
+        lineStart: finding.lineStart,
+        lineEnd: finding.lineEnd,
+        severity: finding.severity,
+        issue: finding.issue,
+        mechanism: finding.mechanism,
+      })),
+    ),
+  });
+  const verification = rejecting("s5_verification", () =>
+    verificationStageSchema.parse(verificationResponse.output),
   );
 
   let verified = 0;
@@ -540,7 +587,16 @@ async function runAdversarialStage(
         }),
       });
 
-      const parsed = adversarialStageSchema.parse(response.output);
+      let parsed: AdversarialStageOutput;
+      try {
+        parsed = adversarialStageSchema.parse(response.output);
+      } catch (error) {
+        input.invalidate?.(
+          "s3_adversarial",
+          error instanceof Error ? error.message : String(error),
+        );
+        throw error;
+      }
       merged.findings.push(...parsed.findings);
       merged.clearedHunks.push(...parsed.clearedHunks);
       merged.sweepDispositions.push(...parsed.sweepDispositions);

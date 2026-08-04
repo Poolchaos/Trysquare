@@ -30,7 +30,10 @@ export function buildReportInput(db: Db, reviewId: string): ReportInput {
         severity: finding.severity,
         ruleCode: finding.ruleCode,
         issue: finding.issue,
-        comment: finding.comment,
+        // The person's words when they rewrote the engine's, because the
+        // report is read by whoever has to fix the code. The engine's own
+        // wording stays on the row as the record of how it explained itself.
+        comment: finding.editedComment ?? finding.comment,
         mechanism: finding.mechanism,
         quotedCode: finding.quotedCode,
         dismissReason: finding.dismissReason,

@@ -19,7 +19,13 @@ export class StageFailedError extends Error {
   constructor(
     readonly errorClass: StageErrorClass,
     message: string,
-    readonly detail: { exitCode?: number | null; stderr?: string; logPath?: string } = {},
+    readonly detail: {
+      exitCode?: number | null;
+      stderr?: string;
+      logPath?: string;
+      /** Unix seconds a usage limit clears, when the CLI reported it. */
+      resetsAt?: number;
+    } = {},
   ) {
     super(message);
     this.name = "StageFailedError";
@@ -200,7 +206,12 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
               "invalid_output",
               `The CLI emitted ${malformed.length} line(s) that were not valid JSON, ` +
                 `so the transcript has a hole and cannot be trusted.`,
-              { exitCode: code, stderr, logPath: options.logPath },
+              {
+                exitCode: code,
+                stderr,
+                logPath: options.logPath,
+                ...(rateLimit?.resetsAt === undefined ? {} : { resetsAt: rateLimit.resetsAt }),
+              },
             ),
           );
           return;
@@ -216,7 +227,12 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
               errorClass === "limit"
                 ? `The run stopped at a usage limit: ${stderr.trim() || "no detail given"}`
                 : `The CLI exited with code ${code} before producing a result. ${stderr.trim()}`,
-              { exitCode: code, stderr, logPath: options.logPath },
+              {
+                exitCode: code,
+                stderr,
+                logPath: options.logPath,
+                ...(rateLimit?.resetsAt === undefined ? {} : { resetsAt: rateLimit.resetsAt }),
+              },
             ),
           );
           return;
@@ -228,7 +244,12 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
             new StageFailedError(
               errorClass,
               `The run reported an error: ${result.result ?? result.subtype}`,
-              { exitCode: code, stderr, logPath: options.logPath },
+              {
+                exitCode: code,
+                stderr,
+                logPath: options.logPath,
+                ...(rateLimit?.resetsAt === undefined ? {} : { resetsAt: rateLimit.resetsAt }),
+              },
             ),
           );
           return;

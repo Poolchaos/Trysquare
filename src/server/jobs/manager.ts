@@ -16,18 +16,21 @@
 import { z } from "zod";
 import type { EngineEvent } from "@/lib/engine/events";
 import type { ReviewStage } from "@/lib/domain/enums";
-import type { ReviewStatus } from "@/lib/domain/state-machines";
+import { canTransitionReview, type ReviewStatus } from "@/lib/domain/state-machines";
 import { resolveDataDir } from "@/lib/paths";
 import { homedir } from "node:os";
 import type { Db } from "../db/client";
 import { listFindings, statusOf as findingStatusOf } from "../db/repositories/findings";
+import { coverageReport, type CoverageReport } from "../db/repositories/ledger";
 import { registerCandidate } from "../db/repositories/models";
+import { markOrphanedClonesFailed } from "../db/repositories/projects";
 import {
   getReview,
   markOrphanedReviewsInterrupted,
   readRunNotes,
   requireReview,
   statusOf,
+  transitionReview,
   type RunNote,
 } from "../db/repositories/reviews";
 import { SETTING_KEYS, readSettingOr } from "../db/repositories/settings";
@@ -52,6 +55,8 @@ export interface ReviewSnapshot {
   stages: ReturnType<typeof listForReview>;
   notes: RunNote[];
   usage: ReturnType<typeof usageTotals>;
+  /** What the ledger says is still outstanding, which is what S6 gates on. */
+  coverage: CoverageReport;
   findings: { total: number; verified: number; openQuestions: number; confirmed: number };
   running: boolean;
   queued: boolean;
@@ -74,9 +79,11 @@ export class JobManager {
    * Called once per server start, after the database has been migrated.
    *
    * Recovering orphans belongs here rather than in a request handler: a review
-   * still marked running cannot be running, because nothing survived the
-   * restart that could be running it, and leaving the row that way would make
-   * it un-startable and un-cancellable both.
+   * still marked running cannot be running, and a clone still marked in flight
+   * cannot be in flight, because nothing survived the restart that could be
+   * doing either. Leaving the rows that way would make the review
+   * un-startable and un-cancellable, and the clone a permanent "cloning" the
+   * projects screen polls forever.
    */
   init(options: ManagerInit): void {
     this.db = options.db;
@@ -84,6 +91,7 @@ export class JobManager {
     this.claudePath = options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH;
 
     markOrphanedReviewsInterrupted(options.db);
+    markOrphanedClonesFailed(options.db);
     for (const candidate of DEFAULT_MODEL_CANDIDATES) registerCandidate(options.db, candidate);
   }
 
@@ -136,16 +144,51 @@ export class JobManager {
   }
 
   cancel(reviewId: string): boolean {
+    // Dequeueing alone is not a cancellation the rest of the app can see: the
+    // row would still say draft, the Cancel button would still show, and a
+    // second tab would wait on a queue entry that no longer exists. So the
+    // entry is removed and then the row is judged like any other.
     const queuedAt = this.queue.findIndex((entry) => entry.reviewId === reviewId);
-    if (queuedAt !== -1) {
-      // Never started, so there is no run to unwind and no status to change.
-      this.queue.splice(queuedAt, 1);
+    if (queuedAt !== -1) this.queue.splice(queuedAt, 1);
+
+    const run = this.active.get(reviewId);
+    if (run) {
+      run.controller.abort();
       return true;
     }
 
-    const run = this.active.get(reviewId);
-    if (!run) return false;
-    run.controller.abort();
+    // Nothing is executing, but the review may still be cancellable: a draft
+    // (queued or not), one waiting on a person, or one stopped at a usage
+    // limit. The state machine already knows which, so this asks it rather
+    // than keeping a second list that would drift from the first. Without
+    // this the only way to be rid of such a review was to delete it, which
+    // also throws away its findings.
+    const db = this.requireDb();
+    const status = statusOf(requireReview(db, reviewId));
+    if (canTransitionReview(status, "cancelled")) {
+      transitionReview(db, reviewId, "cancelled");
+      this.bus.emit(reviewId, { kind: "status", status: "cancelled" });
+      return true;
+    }
+
+    // A dequeued review whose status has no cancel transition (a failed one
+    // waiting to resume) keeps its status; taking it out of the line is still
+    // a real effect worth reporting as one.
+    return queuedAt !== -1;
+  }
+
+  /**
+   * Takes a review out of the queue without judging its status.
+   *
+   * For the delete paths: a queued review is about to stop existing, and the
+   * queue holds ids rather than rows. Separate from `cancel` because there is
+   * nothing to cancel once the row is going, and transitioning a row that is
+   * about to be deleted would be work nobody reads.
+   */
+  dequeue(reviewId: string): boolean {
+    const at = this.queue.findIndex((entry) => entry.reviewId === reviewId);
+    if (at === -1) return false;
+    this.queue.splice(at, 1);
     return true;
   }
 
@@ -173,6 +216,7 @@ export class JobManager {
       stages: listForReview(db, reviewId),
       notes: readRunNotes(review),
       usage: usageTotals(db, reviewId),
+      coverage: coverageReport(db, reviewId),
       findings: {
         total: findings.length,
         verified: countOf("verified"),
@@ -295,11 +339,30 @@ export class JobManager {
     }
   }
 
+  /**
+   * Starts whatever is next in line, and survives what it finds there.
+   *
+   * This runs from the `finally` of the run that just ended, where nothing is
+   * awaiting it and nothing would catch a throw. A queued review whose row was
+   * deleted while it waited used to throw here, which both escaped as an
+   * unhandled rejection and abandoned the loop, stranding every review behind
+   * it in a queue nothing would ever drain again. A gone review is now simply
+   * dropped, and any other fault is reported to the watchers of the review it
+   * belongs to rather than taking the scheduler down with it.
+   */
   private startNextQueued(): void {
     while (this.active.size < this.maxConcurrent()) {
       const next = this.queue.shift();
       if (!next) return;
-      this.launch(next.reviewId, next.options);
+
+      if (!getReview(this.requireDb(), next.reviewId)) continue;
+
+      try {
+        this.launch(next.reviewId, next.options);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        this.bus.emit(next.reviewId, { kind: "done", outcome: "failed", reason });
+      }
     }
   }
 }

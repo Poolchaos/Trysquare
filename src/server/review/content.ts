@@ -256,10 +256,29 @@ export function renderAdversarialPrompt(
   ].join("\n");
 }
 
-export function renderDeletionPrompt(input: StageContentInput): string {
-  const deletions = input.files.filter(
-    (entry) => entry.file.changeType === "deleted" || entry.file.removedLines > 0,
+/**
+ * Whether the deletion stage owes an account of this file.
+ *
+ * A rename counts even when no line changed: the old path stops existing, and
+ * whatever imported it breaks. That is the same failure as a deletion and it
+ * is the one a diff makes hardest to see, because the content it shows is
+ * unchanged.
+ *
+ * Exported because the pipeline reconciles the stage's answer against this
+ * exact set. If the prompt asked about one set of files and the check counted
+ * another, a stage could account for everything it was shown and still leave
+ * the ledger short.
+ */
+export function isDeletionCandidate(entry: ChangedFileEntry): boolean {
+  return (
+    entry.file.changeType === "deleted" ||
+    entry.file.changeType === "renamed" ||
+    entry.file.removedLines > 0
   );
+}
+
+export function renderDeletionPrompt(input: StageContentInput): string {
+  const deletions = input.files.filter(isDeletionCandidate);
 
   if (deletions.length === 0) {
     return "This change set removes nothing. Report no findings and no reviewed deletions.";
@@ -268,12 +287,48 @@ export function renderDeletionPrompt(input: StageContentInput): string {
   const blocks = deletions.map((entry) => {
     const path = qualifiedPath(entry);
     const previous = input.baseContents?.get(path);
-    const heading = `## ${path} (${entry.file.changeType})`;
-    if (entry.file.changeType === "deleted" && previous !== undefined) {
-      // A deleted file is not in the worktree, so its previous contents are
-      // supplied here or the stage has nothing to review.
-      return [heading, "", "Contents before deletion:", "", "```", previous, "```"].join("\n");
+    const gone = entry.file.oldPath ? `${entry.slug}/${entry.file.oldPath}` : path;
+    const heading =
+      entry.file.changeType === "renamed"
+        ? `## ${path} (renamed, was ${gone})`
+        : `## ${path} (${entry.file.changeType})`;
+
+    if (entry.file.changeType === "deleted") {
+      // A deleted file is not in the worktree, so either its previous contents
+      // are supplied here or the stage is judging a file it cannot open. When
+      // they are missing the prompt says so, because a stage quietly reviewing
+      // a deletion from its minus lines alone is the failure this text exists
+      // to make visible.
+      return previous === undefined
+        ? [
+            heading,
+            "",
+            "Contents before deletion were not available, so only the removed",
+            "lines below are shown. Say so in your reason rather than implying",
+            "you read the whole file.",
+            "",
+            renderAllHunks({ ...input, files: [entry] }),
+          ].join("\n")
+        : [
+            heading,
+            "",
+            "Contents before deletion:",
+            "",
+            fenceFor(previous),
+            previous,
+            fenceFor(previous),
+          ].join("\n");
     }
+
+    if (entry.file.changeType === "renamed" && entry.file.hunks.length === 0) {
+      return [
+        heading,
+        "",
+        `No line changed, but nothing can import ${gone} any more.`,
+        "Search the worktree for references to the old path.",
+      ].join("\n");
+    }
+
     return [
       heading,
       "",
@@ -284,12 +339,29 @@ export function renderDeletionPrompt(input: StageContentInput): string {
   });
 
   return [
-    `${deletions.length} file(s) removed code. For each, state what behaviour the`,
-    "removed code provided and who depended on it. Search the worktree for callers.",
-    "A removed guard, await, cleanup, or error handler is the highest risk.",
+    `${deletions.length} file(s) removed code or moved away from a path. For each,`,
+    "state what behaviour the removed code provided and who depended on it.",
+    "Search the worktree for callers. A removed guard, await, cleanup, or error",
+    "handler is the highest risk.",
+    "",
+    "Every path listed below must appear exactly once in reviewedDeletions,",
+    "spelled as it is here, including files you conclude are harmless. Reporting",
+    "a path that is not listed fails the review.",
     "",
     ...blocks,
   ].join("\n\n");
+}
+
+/**
+ * A fence one backtick longer than any run inside the text it wraps.
+ *
+ * Deleted files are inlined verbatim, and a markdown file full of its own
+ * code fences would otherwise terminate the block early, turning the rest of
+ * the file into instructions.
+ */
+function fenceFor(text: string): string {
+  const longest = text.match(/`+/g)?.reduce((max, run) => Math.max(max, run.length), 0) ?? 0;
+  return "`".repeat(Math.max(3, longest + 1));
 }
 
 export function renderVerificationPrompt(candidates: readonly CandidateEntry[]): string {

@@ -28,6 +28,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import type { EngineEvent } from "@/lib/engine/events";
 import {
+  engineModeSchema,
   reviewEffortSchema,
   reviewProfileSchema,
   type ReviewStage,
@@ -36,6 +37,7 @@ import {
 import {
   ACTIVE_REVIEW_STATUSES,
   canTransitionReview,
+  isResumableReview,
   type ReviewStatus,
 } from "@/lib/domain/state-machines";
 import { repoSlug } from "@/lib/git/url";
@@ -62,7 +64,8 @@ import {
   statusOf,
   transitionReview,
 } from "../db/repositories/reviews";
-import { availabilityOf, getModel } from "../db/repositories/models";
+import { availabilityOf } from "@/lib/models/availability";
+import { getModel } from "../db/repositories/models";
 import {
   hasReviewSnapshot,
   readReviewSnapshot,
@@ -71,7 +74,7 @@ import {
 } from "../db/repositories/rulesets";
 import { SETTING_KEYS, readSettingOr } from "../db/repositories/settings";
 import { StageFailedError } from "../engine/headless";
-import { buildBundle, type RepoSpec } from "../gitops/bundle";
+import { buildBundle, readBaseContents, type RepoSpec } from "../gitops/bundle";
 import { fetchAll, resolveCommit } from "../gitops/repo";
 import {
   addWorktree,
@@ -81,6 +84,8 @@ import {
 } from "../gitops/worktree";
 import { createCheckpointingRunner, type CheckpointingRunner } from "./checkpointing-runner";
 import type { ChangedFileEntry } from "./content";
+import type { ReviewEngine } from "../engine/adapter";
+import { createInteractiveEngine } from "../engine/interactive";
 import { createEngineRunner } from "./engine-runner";
 import { runReviewPipeline, type PipelineResult, type StageRequest } from "./pipeline";
 
@@ -102,8 +107,8 @@ export class ReviewNotRunnableError extends Error {
     readonly status: string,
   ) {
     super(
-      `Review ${reviewId} is ${status}, so it cannot be started. Only a draft, ` +
-        "a review paused on a usage limit, or one interrupted by a restart can run.",
+      `Review ${reviewId} is ${status}, so it cannot be started. Only a draft, or one ` +
+        "paused on a usage limit, interrupted by a restart, or failed, can run.",
     );
     this.name = "ReviewNotRunnableError";
   }
@@ -200,11 +205,7 @@ export async function prepareAndRun(
 
   const review = requireReview(db, reviewId);
   const startingStatus = statusOf(review);
-  if (
-    startingStatus !== "draft" &&
-    startingStatus !== "paused_limit" &&
-    startingStatus !== "interrupted"
-  ) {
+  if (startingStatus !== "draft" && !isResumableReview(startingStatus)) {
     throw new ReviewNotRunnableError(reviewId, startingStatus);
   }
 
@@ -294,6 +295,23 @@ export async function prepareAndRun(
       })),
     );
 
+    // A deleted file is not in the worktree, so the only way the deletion
+    // stage can read one is from the copy the bundle took at the merge base.
+    const { contents: baseContents, missing } = await readBaseContents(
+      bundleDirFor(dataDir, reviewId),
+      files,
+    );
+    for (const miss of missing) {
+      // Not fatal, and not hidden either: the prompt says outright when it is
+      // judging a deletion it could not open, and this says which one.
+      appendRunNote(db, reviewId, {
+        kind: "note",
+        message:
+          `No pre-change copy of ${miss.path}, so its deletion is reviewed from ` +
+          `the diff alone: ${miss.reason}`,
+      });
+    }
+
     // Candidates and their verdicts are derived entirely from stage answers,
     // and every stage answer is checkpointed. Clearing them lets a resumed run
     // recreate them from the stored answers instead of adding a second copy
@@ -323,6 +341,7 @@ export async function prepareAndRun(
       ...(review.intent === null ? {} : { intent: review.intent }),
       ...(contextWindow === undefined ? {} : { contextWindow }),
       changedSymbols: bundle.inventory.changedExportedSymbols,
+      baseContents,
       systemPromptFor: (stage, batch) =>
         composeSystemPrompt({
           directives: snapshot.directives,
@@ -332,6 +351,7 @@ export async function prepareAndRun(
           outputContract: outputContractFor(stageSchemaFor(stage)),
         }),
       run: cancellableRunner(runner, options.signal),
+      invalidate: (stage, reason) => runner.invalidate(stage, reason),
     });
 
     // The app never writes inside a checked-out review, so this is not a
@@ -469,22 +489,38 @@ function buildRunner(
   // The engine reports attempts to the wrapper, and the wrapper delegates to
   // the engine, so one of them has to be reachable before it exists.
   const built: { wrapper?: CheckpointingRunner } = {};
-  const engine = createEngineRunner({
-    worktreeRoot: worktreeRootDir(dataDir, reviewId),
-    logsDir: logsDirFor(dataDir, reviewId),
-    model: review.model,
-    timeoutMs: timeoutMinutes * 60_000,
-    effort: reviewEffortSchema.parse(review.effort),
-    directives: snapshot.directives,
-    rules: snapshot.rules,
-    ...(budget > 0 ? { maxBudgetUsd: budget } : {}),
-    ...((options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH)
-      ? { claudePath: options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH }
-      : {}),
-    ...(options.signal === undefined ? {} : { signal: options.signal }),
-    ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
-    onStageComplete: (info) => built.wrapper?.noteAttempt(info),
-  });
+
+  // Which engine answers is the review's own frozen decision, not a live
+  // setting: a review that started in one mode must finish in it, or a resume
+  // would change what the run means half way through.
+  const engine: ReviewEngine =
+    engineModeSchema.parse(review.engineMode) === "interactive"
+      ? createInteractiveEngine({
+          exchangeDir: bundleDirFor(dataDir, reviewId),
+          worktreeRoot: worktreeRootDir(dataDir, reviewId),
+          model: review.model,
+          directives: snapshot.directives,
+          rules: snapshot.rules,
+          timeoutMs: timeoutMinutes * 60_000,
+          ...(options.signal === undefined ? {} : { signal: options.signal }),
+          ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
+        })
+      : createEngineRunner({
+          worktreeRoot: worktreeRootDir(dataDir, reviewId),
+          logsDir: logsDirFor(dataDir, reviewId),
+          model: review.model,
+          timeoutMs: timeoutMinutes * 60_000,
+          effort: reviewEffortSchema.parse(review.effort),
+          directives: snapshot.directives,
+          rules: snapshot.rules,
+          ...(budget > 0 ? { maxBudgetUsd: budget } : {}),
+          ...((options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH)
+            ? { claudePath: options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH }
+            : {}),
+          ...(options.signal === undefined ? {} : { signal: options.signal }),
+          ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
+          onStageComplete: (info) => built.wrapper?.noteAttempt(info),
+        });
 
   built.wrapper = createCheckpointingRunner({
     db,
@@ -538,7 +574,11 @@ async function recordFailure(
   const logPath = error instanceof StageFailedError ? error.detail.logPath : undefined;
 
   if (errorClass === "limit") {
-    settle(db, reviewId, "paused_limit", { pausedReason: message });
+    const resetsAt = error instanceof StageFailedError ? error.detail.resetsAt : undefined;
+    settle(db, reviewId, "paused_limit", {
+      pausedReason: message,
+      ...(resetsAt === undefined ? {} : { pausedResetsAt: resetsAt }),
+    });
     return { kind: "paused", reason: message };
   }
 
@@ -587,7 +627,7 @@ function settle(
   db: Db,
   reviewId: string,
   to: ReviewStatus,
-  options: { pausedReason?: string } = {},
+  options: { pausedReason?: string; pausedResetsAt?: number } = {},
 ): void {
   const current = statusOf(requireReview(db, reviewId));
   if (!canTransitionReview(current, to)) return;

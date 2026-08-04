@@ -29,6 +29,7 @@ import {
   latestSucceeded,
   nextAttemptNumber,
   recordAttempt,
+  rejectSucceededAnswers,
 } from "../db/repositories/stage-executions";
 import { StageFailedError } from "../engine/headless";
 import { StageOutputUnreadableError } from "./engine-runner";
@@ -80,6 +81,17 @@ export interface CheckpointingRunner {
    * here is what keeps the recorded usage equal to what was actually spent.
    */
   noteAttempt: (report: AttemptReport) => void;
+  /**
+   * The pipeline rejected this stage's answer after it was stored.
+   *
+   * A stored answer is only safe to replay because everything that judged it
+   * accepted it. When the pipeline's own reconciliation refuses one, replaying
+   * it on resume would re-refuse it identically forever, so the stored answer
+   * is struck and the next run asks the stage again. Every answer for the
+   * stage is struck, not just one: a stage split into batches merges them
+   * before reconciliation, so which batch is at fault cannot be told apart.
+   */
+  invalidate: (stage: ReviewStage, reason: string) => void;
 }
 
 /**
@@ -263,7 +275,11 @@ export function createCheckpointingRunner(
     }
   };
 
-  return { run, noteAttempt };
+  const invalidate = (stage: ReviewStage, reason: string): void => {
+    rejectSucceededAnswers(db, reviewId, stage, reason);
+  };
+
+  return { run, noteAttempt, invalidate };
 }
 
 function classOf(error: unknown): StageErrorClass {

@@ -8,7 +8,7 @@
  * file is not in the worktree, so its previous contents are materialised here.
  */
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { RepoRole } from "@/lib/domain/enums";
 import { parseUnifiedDiff, summariseDiff, type ParsedFile } from "@/lib/git/diff";
@@ -151,4 +151,57 @@ export async function buildBundle(options: {
   await writeFile(join(bundleDir, "stats.json"), JSON.stringify(stats, null, 2), "utf8");
 
   return { inventory, stats, parsedByRepo };
+}
+
+export interface BaseContentsEntry {
+  slug: string;
+  file: Pick<ParsedFile, "path" | "oldPath" | "changeType" | "isBinary">;
+}
+
+export interface BaseContentsResult {
+  /** Keyed by the qualified path the stages use, which is the path after the change. */
+  contents: Map<string, string>;
+  missing: { path: string; reason: string }[];
+}
+
+/**
+ * Reads back the pre-change copies of files this change set deletes.
+ *
+ * Only deletions, because every other changed file is still in the worktree
+ * and the model can open it there. A deleted file has nowhere else to come
+ * from: without this the deletion stage judges a removal from the diff's minus
+ * lines alone, which is how it can miss what the file did for the code that
+ * called it.
+ *
+ * The key and the source differ deliberately. The bundle stored the copy under
+ * the path the file had before the change, while the stages name files by the
+ * path they have after it.
+ */
+export async function readBaseContents(
+  bundleDir: string,
+  files: readonly BaseContentsEntry[],
+): Promise<BaseContentsResult> {
+  const contents = new Map<string, string>();
+  const missing: { path: string; reason: string }[] = [];
+
+  for (const entry of files) {
+    // The same cases the writer skips: nothing was stored for a binary, so
+    // reading one here would report a missing copy that was never meant to
+    // exist and dress ordinary behaviour up as lost evidence.
+    if (entry.file.changeType !== "deleted" || entry.file.isBinary) continue;
+    const source = entry.file.oldPath ?? entry.file.path;
+    try {
+      contents.set(
+        `${entry.slug}/${entry.file.path}`,
+        await readFile(join(bundleDir, "base", entry.slug, source), "utf8"),
+      );
+    } catch (error) {
+      missing.push({
+        path: `${entry.slug}/${source}`,
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return { contents, missing };
 }

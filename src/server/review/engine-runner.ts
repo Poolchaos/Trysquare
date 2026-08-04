@@ -16,6 +16,7 @@ import { usageOf } from "@/lib/engine/events";
 import { composeSystemPrompt } from "@/lib/rulesets/compose";
 import type { ImportedDirective, ImportedRule } from "@/lib/rulesets/model";
 import { outputContractFor, stageSchemaFor } from "@/lib/review/stage-schemas";
+import type { ReviewEngine } from "@/server/engine/adapter";
 import { StageFailedError, assertToolsAreReadOnly, runStage } from "@/server/engine/headless";
 import type { StageRequest, StageResponse } from "./pipeline";
 
@@ -154,13 +155,10 @@ export interface EngineRunnerOptions {
     | undefined;
 }
 
-export interface EngineRunner {
-  run: (request: StageRequest) => Promise<StageResponse>;
-  /** The session the chained stages share, exposed for resume. */
-  chainSessionId: () => string | undefined;
-}
+/** Mode A. Kept as a named type because callers hold one directly. */
+export type EngineRunner = ReviewEngine;
 
-export function createEngineRunner(options: EngineRunnerOptions): EngineRunner {
+export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
   let chainSession: string | undefined;
 
   const run = async (request: StageRequest): Promise<StageResponse> => {
@@ -294,7 +292,7 @@ export function createEngineRunner(options: EngineRunnerOptions): EngineRunner {
     };
   };
 
-  return { run, chainSessionId: () => chainSession };
+  return { mode: "headless", run, chainSessionId: () => chainSession };
 }
 
 function summariseIssues(error: z.ZodError): string {
