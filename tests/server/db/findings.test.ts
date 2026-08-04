@@ -6,7 +6,7 @@ import {
   createCandidate,
   dismissFinding,
   listAwaitingDecision,
-  listConfirmed,
+  listFindingsByStatus,
   listUnresolvedCandidates,
   markKilled,
   markOpenQuestion,
@@ -48,7 +48,7 @@ describe("finding verification", () => {
   it("is born as a candidate and is not reportable", () => {
     const finding = candidate();
     expect(statusOf(finding)).toBe("candidate");
-    expect(listConfirmed(db, reviewId)).toHaveLength(0);
+    expect(listFindingsByStatus(db, reviewId, ["confirmed"])).toHaveLength(0);
     expect(listUnresolvedCandidates(db, reviewId)).toHaveLength(1);
   });
 
@@ -119,7 +119,7 @@ describe("human decision", () => {
     confirmFinding(db, kept.id);
     dismissFinding(db, dropped.id, "Intentional: this path is dead code pending removal.");
 
-    const report = listConfirmed(db, reviewId);
+    const report = listFindingsByStatus(db, reviewId, ["confirmed"]);
     expect(report).toHaveLength(1);
     expect(report[0]!.id).toBe(kept.id);
   });

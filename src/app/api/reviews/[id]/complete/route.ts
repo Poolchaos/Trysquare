@@ -8,7 +8,7 @@
  * them (D-12).
  */
 
-import { listFindingsByStatus } from "@/server/db/repositories/findings";
+import { listAwaitingDecision } from "@/server/db/repositories/findings";
 import { requireReview, statusOf, transitionReview } from "@/server/db/repositories/reviews";
 import { removeReviewWorktrees } from "@/server/review/service";
 import { failed, handler, ok } from "@/server/api/respond";
@@ -35,7 +35,7 @@ export async function POST(
       );
     }
 
-    const undecided = listFindingsByStatus(db, id, ["verified", "open_question"]);
+    const undecided = listAwaitingDecision(db, id);
     if (undecided.length > 0) {
       return Response.json(
         {

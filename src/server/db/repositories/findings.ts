@@ -220,11 +220,6 @@ export function listAwaitingDecision(db: Db, reviewId: string): Finding[] {
   return listFindingsByStatus(db, reviewId, ["verified", "open_question"]);
 }
 
-/** What the report contains. Nothing else may appear in it. */
-export function listConfirmed(db: Db, reviewId: string): Finding[] {
-  return listFindingsByStatus(db, reviewId, ["confirmed"]);
-}
-
 /** Candidates still awaiting a verdict. Non-empty past S5 is a pipeline bug. */
 export function listUnresolvedCandidates(db: Db, reviewId: string): Finding[] {
   return listFindingsByStatus(db, reviewId, ["candidate"]);
