@@ -356,6 +356,33 @@ build or run time in a file the review never showed.
 
 **Severity:** CRITICAL
 
+## Duplication Anti-Patterns
+
+### 13. Duplicated Helper
+
+**Rule:** Flag a new function that re-implements an existing helper's job
+instead of calling it, especially when the new copy drops a guard or an edge
+case the original handles.
+
+**Violation Example:**
+
+```ts
+// existing: mergePrefs, which skips undefined overrides
+export function applyPrefOverrides(base: PrefValues, override: PrefValues) {
+  return { ...base, ...override };
+}
+```
+
+**Detection:** An added function whose name or shape mirrors one already in
+the tree. Search for the existing helper before accepting the new one; the
+original does not appear in the diff, because nothing changed it.
+
+**Why This Matters:** Two implementations of one job drift. The copy that
+skipped the guard is the one the next caller reaches for, and the behaviour
+divergence surfaces as a bug that reads like it was always there.
+
+**Severity:** WARNING
+
 ## Dependency Anti-Patterns
 
 ### 14. Changed Default Nobody Opted Into

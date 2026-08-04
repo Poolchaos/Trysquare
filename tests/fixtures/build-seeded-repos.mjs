@@ -166,6 +166,23 @@ export function saveTimeoutMs(): number {
 }
 `,
 
+  // The helper the feature branch will duplicate. BEFORE only and untouched
+  // after, so it exists in the tree but never in the diff.
+  "src/settings/merge.ts": `export interface PrefValues {
+  [key: string]: string | number | boolean | undefined;
+}
+
+export function mergePrefs(base: PrefValues, override: PrefValues): PrefValues {
+  const merged = { ...base };
+  for (const key of Object.keys(override)) {
+    if (override[key] !== undefined) {
+      merged[key] = override[key];
+    }
+  }
+  return merged;
+}
+`,
+
   "src/utils/format.ts": `export function titleCase(value: string): string {
   const first = value.slice(0, 1).toUpperCase();
   const rest = value.slice(1);
@@ -258,6 +275,16 @@ export function saveTimeoutMs(): number {
 
 export function describeTimeout(seconds: number): string {
   return seconds + "s";
+}
+`,
+
+  // Defect (rule 13): re-implements mergePrefs without its undefined guard.
+  // A new file, and deliberately dissimilar from the deleted retry.ts so
+  // git's rename detection cannot pair the two (see REMOVED).
+  "src/settings/apply.ts": `import type { PrefValues } from "./merge";
+
+export function applyPrefOverrides(base: PrefValues, override: PrefValues): PrefValues {
+  return { ...base, ...override };
 }
 `,
 
@@ -398,6 +425,16 @@ const DEFECTS = [
     kind: "cross-repo",
     dependsOnSymbol: "DEFAULT_TIMEOUT_SECONDS",
     crossRepo: true,
+  },
+  {
+    id: "duplicated-merge-helper",
+    repo: "app",
+    file: "src/settings/apply.ts",
+    marker: "return { ...base, ...override };",
+    ruleCode: "13",
+    severity: "WARNING",
+    description:
+      "applyPrefOverrides re-implements mergePrefs without its undefined guard, so an undefined override clobbers a real default",
   },
   {
     id: "weakened-assertion",

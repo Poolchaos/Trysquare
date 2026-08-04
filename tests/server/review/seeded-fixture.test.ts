@@ -187,6 +187,22 @@ describe("the seeded change set", () => {
     expect(caller).toContain("retryOnce(");
   });
 
+  it("keeps the helper being duplicated in the tree and out of the change set", () => {
+    // Without this, the duplicate is nominal: if merge.ts were silently
+    // dropped from the fixture, apply.ts would duplicate nothing and the
+    // answer key would still pass.
+    const original = readFileSync(join(appDir, "src/settings/merge.ts"), "utf8");
+    expect(original).toContain("export function mergePrefs");
+    expect(original).toContain("!== undefined");
+    expect(appFiles.some((entry) => entry.path === "src/settings/merge.ts")).toBe(false);
+
+    // The copy differs behaviourally, not stylistically: the guard is gone,
+    // so an undefined override clobbers a real default.
+    const duplicate = readFileSync(join(appDir, "src/settings/apply.ts"), "utf8");
+    expect(duplicate).toContain("{ ...base, ...override }");
+    expect(duplicate).not.toContain("!== undefined");
+  });
+
   it("removes the guard and the await as deletions, not merely edits", () => {
     const guard = appFiles.find((file) => file.path === "src/auth/guard.ts");
     const removed = guard?.hunks.flatMap((hunk) =>
