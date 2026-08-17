@@ -1713,3 +1713,16 @@ verified evidence, in writing, here.
   every list scan a click. The evidence set is saved at
   review/2026-08-17-ux-direction/ with a README noting one mislabel
   corrected during filing.
+- 2026-08-17 D-70: `./verify.sh --e2e` builds first, because the browser
+  suite serves the built output. Playwright starts its server with
+  `npm run start`, which serves whatever was last built, so `--e2e` without
+  `--build` ran the whole browser suite against stale output: green, and
+  blind to the change being verified. Found by watching a layout change fail
+  to appear in its own screenshot, then pass its e2e run anyway.
+  This is the false-positive class the charter names: a passing test that
+  does not exercise the change does not count. Two runs earlier today
+  reported `--e2e` green over UI changes that were not in the built bundle
+  (the cache-write panel, 5686d81, and the first attempt at this one). Both
+  are now covered by full runs that built first; no defect survived, but the
+  proof was weaker than the commit messages claimed, and that is recorded
+  rather than quietly fixed.

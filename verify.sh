@@ -88,6 +88,15 @@ run "No private material" node scripts/check-no-private.mjs
 run "Nothing hidden from git" node scripts/check-nothing-hidden.mjs
 run "Unit tests" npm run --silent test
 
+# The browser suite starts its server with `npm run start`, which serves
+# whatever was last built. Without a build first, --e2e passes against stale
+# output: green, and blind to the change being verified. That is the false
+# positive this project refuses, so asking for e2e asks for the build.
+if [ "$WITH_E2E" -eq 1 ] && [ "$WITH_BUILD" -eq 0 ]; then
+  echo "note: --e2e builds first, because the browser suite serves the built output."
+  WITH_BUILD=1
+fi
+
 if [ "$WITH_BUILD" -eq 1 ]; then
   run "Production build" npm run --silent build
 fi
