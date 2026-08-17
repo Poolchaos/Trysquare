@@ -137,3 +137,13 @@ test("a screen whose data cannot be read says so instead of loading forever", as
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   }
 });
+
+test("the rail says how many reviews are waiting on a person", async ({ page }) => {
+  // The one state that wants something from someone used to be visible only
+  // by opening the reviews list and reading the chips, so a review that
+  // finished while the tab sat on another screen waited silently.
+  await page.goto("/projects");
+  const badge = page.getByLabel(/awaiting your decision/);
+  await expect(badge).toBeVisible({ timeout: 30_000 });
+  await expect(badge).toHaveText(/^\d+$/);
+});
