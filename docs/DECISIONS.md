@@ -1739,3 +1739,20 @@ verified evidence, in writing, here.
   knowable; the same numbers now ride on the stage request, so a runner can
   report progress through a stage that makes nine calls rather than one.
   Pinned by a test that fails when the total goes back to zero.
+- 2026-08-17 D-72 (WP-H): the palette is retuned to D-68 and the token set is
+  made honest. The accent moves from blue at hue 250 to the cyan-teal of the
+  ratified direction at hue 200, the dark surfaces deepen so a panel reads as
+  raised off its ground, and the open-question tone shifts to 265 so it is not
+  read as the accent. Severity stays at 25 and 75, far enough from the accent
+  that a CRITICAL badge can never be mistaken for chrome; axe checked every
+  screen in both themes and passed.
+  Two token families were not merely unused, they were unusable. The type
+  scale did generate utilities and nothing had ever referenced one, so
+  headings now sit on the heading step and page titles on the title step.
+  The spacing set generated nothing at all: Tailwind reads --spacing-*, this
+  file declared --space-*, so no component could have used one even by
+  accident. They are deleted rather than renamed, because the 4px grid 04
+  asks for is Tailwind's own scale and a second vocabulary for it is a
+  decision nobody could apply consistently, which is exactly what happened.
+  Motion tokens stay, read through arbitrary values, so a duration is named
+  once rather than typed into a component.

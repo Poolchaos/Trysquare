@@ -201,7 +201,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold">Branches</h2>
+              <h2 className="text-heading font-semibold">Branches</h2>
               <Input
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
@@ -270,7 +270,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               </Card>
             )}
 
-            <h2 className="mt-8 mb-3 text-sm font-semibold">Reviews</h2>
+            <h2 className="mt-8 mb-3 text-heading font-semibold">Reviews</h2>
             {detail.reviews.length === 0 ? (
               <Empty title="No reviews of this project yet">
                 Pick a branch above to review it.
@@ -298,7 +298,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
           <aside className="grid gap-4 self-start">
             <Card className="p-4">
-              <h2 className="mb-1 text-sm font-semibold">Dependencies</h2>
+              <h2 className="mb-1 text-heading font-semibold">Dependencies</h2>
               <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
                 A linked project can be reviewed alongside this one, so a changed type is traced to
                 the consumer that never migrated.
@@ -386,7 +386,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             </Card>
 
             <Card className="p-4">
-              <h2 className="mb-1 text-sm font-semibold">Delete project</h2>
+              <h2 className="mb-1 text-heading font-semibold">Delete project</h2>
               <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
                 Removes the clone from disk. Refused while any review still refers to it.
               </p>

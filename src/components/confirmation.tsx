@@ -262,7 +262,7 @@ export function ConfirmationQueue({
     <section>
       <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-48 flex-1">
-          <h2 className="text-sm font-semibold" aria-live="polite">
+          <h2 className="text-heading font-semibold" aria-live="polite">
             {decided} of {queue.length} decided
           </h2>
           <div
@@ -274,7 +274,7 @@ export function ConfirmationQueue({
             className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--color-surface-sunken)]"
           >
             <div
-              className="h-full bg-[var(--color-accent)] transition-[width] duration-200"
+              className="h-full bg-[var(--color-accent)] transition-[width] duration-[var(--motion-considered)]"
               style={{ width: `${queue.length === 0 ? 0 : (decided / queue.length) * 100}%` }}
             />
           </div>

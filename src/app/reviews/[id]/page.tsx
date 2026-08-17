@@ -239,7 +239,7 @@ function CoveragePanel({
   if (coverage.totalFiles === 0) {
     return running ? (
       <Card className="mb-6 p-4">
-        <h2 className="mb-1 text-sm font-medium">Coverage</h2>
+        <h2 className="mb-1 text-heading font-medium">Coverage</h2>
         <p className="text-xs text-[var(--color-ink-muted)]">
           Counted once the change set has been read.
         </p>
@@ -256,7 +256,7 @@ function CoveragePanel({
 
   return (
     <Card className="mb-6 p-4">
-      <h2 className="mb-3 text-sm font-medium">Coverage</h2>
+      <h2 className="mb-3 text-heading font-medium">Coverage</h2>
       <ul className="grid gap-2">
         {rows.map(([label, total, pending]) => (
           <li key={label} className="flex items-baseline justify-between gap-4 text-sm">
@@ -637,7 +637,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   onExported={setExported}
                 />
                 <RunDetail snapshot={snapshot} done={done} executing={executing} folded />
-                <h2 className="mb-3 text-sm font-semibold">
+                <h2 className="mb-3 text-heading font-semibold">
                   Findings{reported.length > 0 ? ` (${reported.length})` : ""}
                 </h2>
                 {renderReadOnly()}
@@ -645,7 +645,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             ) : (
               <>
                 <RunDetail snapshot={snapshot} done={done} executing={executing} folded={false} />
-                <h2 className="mb-3 text-sm font-semibold">
+                <h2 className="mb-3 text-heading font-semibold">
                   Findings{reported.length > 0 ? ` (${reported.length})` : ""}
                 </h2>
                 {renderReadOnly()}
@@ -655,7 +655,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
           <aside className="grid gap-4 self-start">
             <Card className="p-4">
-              <h2 className="mb-3 text-sm font-semibold">What it cost</h2>
+              <h2 className="mb-3 text-heading font-semibold">What it cost</h2>
               <dl className="grid gap-1.5 text-sm">
                 <Stat label="Fresh input" value={review.usageInputTokens.toLocaleString("en-US")} />
                 {/* Written into the cache by this review, which is what makes
@@ -677,7 +677,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
             {review.intent ? (
               <Card className="p-4">
-                <h2 className="mb-2 text-sm font-semibold">What it was meant to do</h2>
+                <h2 className="mb-2 text-heading font-semibold">What it was meant to do</h2>
                 <p className="text-sm text-[var(--color-ink-muted)]">{review.intent}</p>
               </Card>
             ) : null}
@@ -693,7 +693,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
             {live.length > 0 ? (
               <Card className="p-4">
-                <h2 className="mb-2 text-sm font-semibold">Activity</h2>
+                <h2 className="mb-2 text-heading font-semibold">Activity</h2>
                 <ul
                   tabIndex={0}
                   role="group"
@@ -772,7 +772,7 @@ function ReportPanel({
   return (
     <section className="mb-6">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold">Report</h2>
+        <h2 className="text-heading font-semibold">Report</h2>
         <span className="flex items-center gap-2">
           <Button
             onClick={() => {
@@ -855,7 +855,7 @@ function RunDetail({
   const body = (
     <>
       <Card className="mb-6 p-4">
-        <h2 className="mb-3 text-sm font-medium">Stages</h2>
+        <h2 className="mb-3 text-heading font-medium">Stages</h2>
         <ol className="grid gap-1">
           {STAGES.map(([stage, label, description]) => {
             const attempts = snapshot.stages.filter((row) => row.stage === stage);
@@ -956,7 +956,7 @@ function RunDetail({
 
       {snapshot.notes.length > 0 ? (
         <Card className="mb-6 p-4">
-          <h2 className="mb-2 text-sm font-medium">What this run recorded</h2>
+          <h2 className="mb-2 text-heading font-medium">What this run recorded</h2>
           {/* Persisted, unlike the live activity tail, so how a run
               divided its work survives a reload. */}
           <ul className="grid gap-2">

@@ -522,7 +522,7 @@ function NewReview() {
           </div>
 
           <Card className="p-4">
-            <h2 className="text-sm font-medium">Model</h2>
+            <h2 className="text-heading font-medium">Model</h2>
             <p className="mt-1 mb-3 text-xs text-[var(--color-ink-muted)]">
               Only a model a fresh probe vouches for can run a review. A probe is one tiny paid
               call, made only when you press the button (never on a timer).
@@ -687,7 +687,7 @@ function NewReview() {
 
           {links.length > 0 ? (
             <Card className="p-4">
-              <h2 className="text-sm font-medium">Review a dependency at the same time</h2>
+              <h2 className="text-heading font-medium">Review a dependency at the same time</h2>
               <p className="mt-1 mb-3 text-xs text-[var(--color-ink-muted)]">
                 A change to an exported type only breaks at the consumer, so reviewing both halves
                 together is the only way to catch one that never migrated.
@@ -758,7 +758,7 @@ function NewReview() {
 
           {readyToPreflight && preflight ? (
             <Card className="p-4">
-              <h2 className="mb-3 text-sm font-medium">What this review will examine</h2>
+              <h2 className="mb-3 text-heading font-medium">What this review will examine</h2>
               <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
                 <Row label="Files changed" value={String(preflight.files)} />
                 <Row label="Hunks" value={String(preflight.hunks)} />

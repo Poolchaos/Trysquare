@@ -4,9 +4,15 @@
  * Both themes are first-class (docs/04-UI-DESIGN.md), so every colour is a
  * token and no component hardcodes one.
  *
+ * The palette is the restrained night instrument ratified as D-68: dark
+ * leads and light is derived, surfaces are near-black with a blue-grey cast,
+ * and one cyan-teal accent carries interaction and progress.
+ *
  * Severity is the only place strong colour appears. Everything else is a
- * near-neutral surface with one restrained accent, because a reviewer's tool
- * that colours its chrome leaves nothing left to mean "this one is critical".
+ * near-neutral surface with that one accent, because a reviewer's tool that
+ * colours its chrome leaves nothing left to mean "this one is critical". The
+ * accent sits at hue 200 and severity at 25 and 75, far enough apart that a
+ * CRITICAL badge never reads as chrome.
  */
 @theme {
   --color-surface: oklch(99% 0.002 250);
@@ -21,9 +27,9 @@
      measures this pair on every screen in both themes. */
   --color-ink-faint: oklch(52% 0.008 250);
 
-  --color-accent: oklch(52% 0.13 250);
-  --color-accent-ink: oklch(99% 0.002 250);
-  --color-accent-soft: oklch(94% 0.03 250);
+  --color-accent: oklch(50% 0.11 200);
+  --color-accent-ink: oklch(99% 0.002 220);
+  --color-accent-soft: oklch(94% 0.035 200);
 
   --color-critical: oklch(52% 0.19 25);
   --color-critical-soft: oklch(95% 0.04 25);
@@ -32,8 +38,8 @@
      badge that failed AA. Brought into line with the others at 52%. */
   --color-warning: oklch(49% 0.13 75);
   --color-warning-soft: oklch(95% 0.04 75);
-  --color-question: oklch(52% 0.11 250);
-  --color-question-soft: oklch(95% 0.03 250);
+  --color-question: oklch(50% 0.13 265);
+  --color-question-soft: oklch(95% 0.035 265);
   --color-good: oklch(52% 0.12 155);
   --color-good-soft: oklch(95% 0.04 155);
 
@@ -52,46 +58,48 @@
   --text-aside: 0.75rem;
 
   /*
-   * The 4px grid 04 specifies, named so a component asks for a rhythm step
-   * rather than a number. Tailwind's own scale is already this grid; these
-   * exist for the places that reach for a raw value.
+   * No spacing tokens. The 4px grid 04 asks for is Tailwind's own scale, and
+   * the named set that used to sit here generated nothing at all: the
+   * namespace is --spacing-*, so --space-hair and its siblings were never
+   * utilities and no component could have used one. A second vocabulary for
+   * a grid the framework already provides is a decision nobody could apply
+   * consistently, which is exactly why nothing did.
    */
-  --space-hair: 0.25rem;
-  --space-tight: 0.5rem;
-  --space-snug: 0.75rem;
-  --space-base: 1rem;
-  --space-loose: 1.5rem;
-  --space-section: 2rem;
 
   /* 04 section 4: nothing interactive smaller than this. */
   --hit-target: 2.5rem;
 
-  /* Functional motion only, 150-200ms, never blocking. */
+  /*
+   * Functional motion only, 150-200ms, never blocking. Read through
+   * arbitrary values (duration-[var(--motion-quick)]) because Tailwind has no
+   * motion namespace; the point is that a duration is named once here rather
+   * than typed into a component.
+   */
   --motion-quick: 150ms;
   --motion-considered: 200ms;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-surface: oklch(19% 0.008 250);
-    --color-surface-raised: oklch(23% 0.009 250);
-    --color-surface-sunken: oklch(16% 0.007 250);
-    --color-border: oklch(32% 0.01 250);
-    --color-border-strong: oklch(42% 0.012 250);
-    --color-ink: oklch(94% 0.004 250);
-    --color-ink-muted: oklch(70% 0.008 250);
-    --color-ink-faint: oklch(68% 0.008 250);
+    --color-surface: oklch(16% 0.012 245);
+    --color-surface-raised: oklch(21% 0.013 245);
+    --color-surface-sunken: oklch(13% 0.011 245);
+    --color-border: oklch(29% 0.014 245);
+    --color-border-strong: oklch(40% 0.016 245);
+    --color-ink: oklch(95% 0.004 245);
+    --color-ink-muted: oklch(72% 0.009 245);
+    --color-ink-faint: oklch(69% 0.009 245);
 
-    --color-accent: oklch(70% 0.12 250);
-    --color-accent-ink: oklch(17% 0.01 250);
-    --color-accent-soft: oklch(30% 0.05 250);
+    --color-accent: oklch(80% 0.13 200);
+    --color-accent-ink: oklch(15% 0.012 245);
+    --color-accent-soft: oklch(29% 0.06 200);
 
     --color-critical: oklch(70% 0.16 25);
     --color-critical-soft: oklch(28% 0.06 25);
     --color-warning: oklch(76% 0.12 75);
     --color-warning-soft: oklch(28% 0.05 75);
-    --color-question: oklch(72% 0.1 250);
-    --color-question-soft: oklch(27% 0.05 250);
+    --color-question: oklch(74% 0.12 265);
+    --color-question-soft: oklch(27% 0.06 265);
     --color-good: oklch(72% 0.11 155);
     --color-good-soft: oklch(26% 0.05 155);
   }

@@ -162,7 +162,7 @@ export default function SettingsPage() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="p-4">
-            <h2 className="mb-3 text-sm font-semibold">How a run behaves</h2>
+            <h2 className="mb-3 text-heading font-semibold">How a run behaves</h2>
             {settings === null ? null : (
               <div className="grid gap-4">
                 {FIELDS.map((field) => (
@@ -186,7 +186,7 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="p-4">
-            <h2 className="mb-1 text-sm font-semibold">Sign-in</h2>
+            <h2 className="mb-1 text-heading font-semibold">Sign-in</h2>
             <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
               Runs the CLI&apos;s own status check locally. Nothing is sent anywhere and nothing is
               spent.
@@ -227,7 +227,7 @@ export default function SettingsPage() {
         </div>
 
         <Card className="mt-6 p-4">
-          <h2 className="mb-1 text-sm font-semibold">Where everything is kept</h2>
+          <h2 className="mb-1 text-heading font-semibold">Where everything is kept</h2>
           {system === null ? (
             <p className="text-xs text-[var(--color-ink-muted)]">Reading...</p>
           ) : (
@@ -249,7 +249,7 @@ export default function SettingsPage() {
 
         <div className="mt-8 mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="mb-1 text-sm font-semibold">Models</h2>
+            <h2 className="mb-1 text-heading font-semibold">Models</h2>
             <p className="text-xs text-[var(--color-ink-muted)]">
               Probing asks the CLI whether a model is usable and what context window it has. Each
               probe is a real call, so it happens only when you ask.
@@ -307,7 +307,9 @@ export default function SettingsPage() {
         )}
 
         <Card className="mt-8 max-w-2xl border-[var(--color-critical)] p-4">
-          <h2 className="mb-1 text-sm font-semibold text-[var(--color-critical)]">Danger zone</h2>
+          <h2 className="mb-1 text-heading font-semibold text-[var(--color-critical)]">
+            Danger zone
+          </h2>
           <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
             Deletes every project, review and ruleset, and the clones, worktrees, bundles and logs
             on disk. Exported reports are kept: a report is the thing a review was for. Refused
