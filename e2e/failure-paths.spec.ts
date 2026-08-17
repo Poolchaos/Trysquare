@@ -92,8 +92,9 @@ test("cancelling a running review stops it and says so", async ({ page }) => {
   // Cancel during the stalled stage, not merely while "running": the prepare
   // step precedes any stage, takes real time on a three-branch fixture, and a
   // cancel landing there leaves no stage to carry the mid-stage note this
-  // test exists to check. The event feed says when the stage is truly open.
-  await expect(page.getByText("s1_risk started")).toBeVisible({ timeout: 60_000 });
+  // test exists to check. The event feed says when the stage is truly open,
+  // in the label a person reads rather than the stage's internal id.
+  await expect(page.getByText("Risk started")).toBeVisible({ timeout: 60_000 });
   await page.getByRole("button", { name: "Cancel" }).click();
 
   await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });

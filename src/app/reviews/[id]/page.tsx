@@ -52,6 +52,32 @@ const STAGES = [
 /** Stages that run as app code, so they never write a stage_executions row. */
 const DETERMINISTIC_STAGES = new Set(["s0_prepare", "s6_audit"]);
 
+const STAGE_LABELS = new Map<string, string>(STAGES.map(([stage, label]) => [stage, label]));
+
+/**
+ * A stage as a person would say it.
+ *
+ * The feed printed the internal id, so a five-minute wait was narrated in
+ * the pipeline's private language while the same page already had the human
+ * label two panels away.
+ */
+function stageLabel(stage: string): string {
+  return STAGE_LABELS.get(stage) ?? stage.replace(/^s\d+_/, "").replace(/_/g, " ");
+}
+
+/**
+ * What the activity feed is made of.
+ *
+ * Three different kinds of thing used to be one string array told apart by
+ * leading spaces: a stage changing state, the engine reaching for a tool, and
+ * a durable note about the run. They read as one undifferentiated wall, which
+ * is exactly what a person watching a long run cannot use.
+ */
+type LiveEntry =
+  | { kind: "stage"; stage: string; phase: string }
+  | { kind: "engine"; detail: string }
+  | { kind: "note"; message: string };
+
 interface Snapshot {
   review: {
     id: string;
@@ -71,6 +97,8 @@ interface Snapshot {
     usageCacheReadTokens: number;
     usageCacheCreationTokens: number;
     costEquivalentUsd: number;
+    startedAt: string | null;
+    completedAt: string | null;
   };
   stages: {
     stage: string;
@@ -160,6 +188,29 @@ function executingStage(snapshot: Snapshot, done: ReadonlySet<string>): string |
   return stage;
 }
 
+/**
+ * How long a run has been going, in words that stay readable past an hour.
+ *
+ * A review takes minutes, so seconds alone stop meaning anything quickly and
+ * a bare millisecond count means nothing at any point.
+ */
+function elapsedBetween(fromMs: number, toMs: number): string {
+  const seconds = Math.max(0, Math.floor((toMs - fromMs) / 1000));
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 1) return `${seconds}s`;
+  if (minutes < 60) return `${minutes}m ${String(seconds % 60).padStart(2, "0")}s`;
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
+}
+
+function elapsedSince(startedAt: string, now: number): string {
+  return elapsedBetween(new Date(startedAt).getTime(), now);
+}
+
+/** A finished run's wall clock, from the two columns that always held it. */
+function totalRunTime(startedAt: string, completedAt: string): string {
+  return elapsedBetween(new Date(startedAt).getTime(), new Date(completedAt).getTime());
+}
+
 function formatDuration(startedAt: string, endedAt: string | null): string | null {
   if (!endedAt) return null;
   const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
@@ -233,8 +284,11 @@ function CoveragePanel({
 export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [live, setLive] = useState<string[]>([]);
+  const [live, setLive] = useState<LiveEntry[]>([]);
   const [streaming, setStreaming] = useState(true);
+  // Ticks only while something is running, so a finished review is not
+  // re-rendered once a second forever.
+  const [now, setNow] = useState(() => Date.now());
   // Bumped after a resume, so a fresh stream is opened for the fresh run.
   // The old one is gone: the server closes a stream when its run ends.
   const [watchEpoch, setWatchEpoch] = useState(0);
@@ -287,10 +341,16 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       // Kept as a bounded tail: a long run emits thousands of engine lines,
       // and the page only ever shows the most recent of them. The archive is
       // the event log, not component state.
-      const push = (line: string) => setLive((lines) => [...lines, line].slice(-200));
-      if (parsed.kind === "stage") push(`${parsed.stage} ${parsed.phase}`);
-      if (parsed.kind === "engine") push(`  ${parsed.detail}`);
-      if (parsed.kind === "note") push(`note: ${parsed.note?.message}`);
+      const push = (entry: LiveEntry) => setLive((all) => [...all, entry].slice(-200));
+      if (parsed.kind === "stage" && parsed.stage && parsed.phase) {
+        push({ kind: "stage", stage: parsed.stage, phase: parsed.phase });
+      }
+      if (parsed.kind === "engine" && parsed.detail) {
+        push({ kind: "engine", detail: parsed.detail });
+      }
+      if (parsed.kind === "note" && parsed.note?.message) {
+        push({ kind: "note", message: parsed.note.message });
+      }
 
       if (parsed.kind === "done") runEnded = true;
 
@@ -328,6 +388,12 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, watchEpoch]);
+
+  useEffect(() => {
+    if (!snapshot?.running) return;
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [snapshot?.running]);
 
   if (!snapshot) return <PageBody>Loading...</PageBody>;
 
@@ -420,6 +486,23 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             <Sha value={review.fromCommit} />
             <span>{review.model}</span>
             <span>effort {review.effort}</span>
+            {/* Where the run is and how long it has been there. A five-minute
+                wait used to offer one pulsing dot and no way to tell a slow
+                stage from a stuck one. */}
+            {snapshot.running && executing ? (
+              <span className="text-[var(--color-ink)]">
+                {stageLabel(executing)}, stage {STAGES.findIndex(([s]) => s === executing) + 1} of{" "}
+                {STAGES.length}
+              </span>
+            ) : null}
+            {review.startedAt && snapshot.running ? (
+              <span className="tabular-nums">{elapsedSince(review.startedAt, now)} elapsed</span>
+            ) : null}
+            {review.startedAt && review.completedAt ? (
+              <span className="tabular-nums">
+                took {totalRunTime(review.startedAt, review.completedAt)}
+              </span>
+            ) : null}
           </span>
         }
         actions={
@@ -600,9 +683,25 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   aria-label="Activity log"
                   className="max-h-64 overflow-y-auto text-xs text-[var(--color-ink-muted)]"
                 >
-                  {live.slice(-40).map((line, index) => (
-                    <li key={index} className="font-[family-name:var(--font-mono)] leading-5">
-                      {line}
+                  {live.slice(-40).map((entry, index) => (
+                    <li key={index} className="leading-5">
+                      {entry.kind === "stage" ? (
+                        <span className="text-[var(--color-ink)]">
+                          {stageLabel(entry.stage)}{" "}
+                          <span className="text-[var(--color-ink-faint)]">{entry.phase}</span>
+                        </span>
+                      ) : entry.kind === "note" ? (
+                        <span className="block border-l-2 border-[var(--color-border-strong)] py-0.5 pl-2">
+                          {entry.message}
+                        </span>
+                      ) : (
+                        // The engine reaching for a tool. Indented and quiet:
+                        // it is the texture of work happening, not a fact to
+                        // read line by line.
+                        <span className="pl-3 font-[family-name:var(--font-mono)] text-[var(--color-ink-faint)]">
+                          {entry.detail}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
