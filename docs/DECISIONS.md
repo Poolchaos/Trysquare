@@ -1666,3 +1666,41 @@ verified evidence, in writing, here.
   scanned in full; a missing required target still exits 2. Proven all four
   ways, including under a fresh worktree with no gitignored directories,
   which is CI's checkout exactly.
+- 2026-08-17 D-68: the UX direction is ratified as the restrained night
+  instrument, chosen by the maintainer from three rounds of generated mocks
+  rather than from adjectives. Dark leads and light is derived; both stay
+  first-class and photographed. The language: near-black blue-gray matte
+  surfaces, thin 1px borders, one cyan-teal accent reserved for interactive
+  elements and progress, monospace for everything code-adjacent, large
+  tabular numerals for headline counts, and glow spent on at most one live
+  element per screen. The severity law is unchanged and was re-proven by the
+  process: the rejected full-neon round is the one where CRITICAL red
+  drowned. Per-screen picks: the confirmation queue with line-referenced
+  finding rows, a failure-mechanism strip under the code, and honest stat
+  tiles (what the review cost, how long it ran); the dense scoreboard with
+  named per-rule yield bars and local-history sparklines; the typographic
+  report (title, one bold summary sentence, prose-first finding cards,
+  provenance footer); the mobile single-column queue with bracketed
+  Confirm/Dismiss. Elements from the mock rounds that are banned from ever
+  shipping, with reasons: predicted remediation cost and fix duration (the
+  product cannot measure them), a live critical-miss rate (measurable only
+  on the seeded fixture, a lie on real code), contributor leaderboards,
+  avatars and reviewer columns (no accounts exist; cross-person competition
+  is the documented distortion), an AI-confidence percentage (invented; the
+  real figure is verification survival), apply-recommendation actions (the
+  app never writes to reviewed code, by architectural law), and
+  search/notification/account chrome (nothing behind them). The maintainer's
+  mock set is designated evidence at review/2026-08-17-ux-direction/, kept
+  local like all review evidence.
+- 2026-08-17 D-69: the UX plan's gates are answered by the maintainer, on
+  the recommendations. Gate 1 yes: the review screen becomes queue-first and
+  state-dependent. Gate 2 tier b: measurements plus momentum, completion
+  moment and the honest wait; streaks, badges, levels and decision-speed
+  metrics are rejected in writing. Gate 3: resolved by D-68. Gate 4 yes:
+  the report renders in-app and exports as a self-contained single HTML
+  file beside the markdown. Gate 5 yes: home becomes the scoreboard. Gate 6:
+  multi-ruleset composition stays deferred. The direction is proven on the
+  confirmation queue first. Mobile scope: responsive monitor-and-decide on
+  phone widths; setup flows stay desktop-first. My-branches: a branch
+  counts as mine when its tip commit author email matches the identities in
+  settings, seeded from git config, with no manual assignment in v1.

@@ -1,10 +1,29 @@
 # UX uplift plan: the audit, the research, and the work
 
-Status: DRAFT FOR RATIFICATION, written 2026-08-17 for the Opus driver. The
+Status: RATIFIED 2026-08-17, all gates answered same day (D-68, D-69). The
 maintainer said the current design and UX are lacking and asked for an
 audit, research, and a plan, with gamification considered. This document is
-all three. Nothing here is built; section 4's gates are the maintainer's to
-answer before the gated work starts.
+all three, and since ratification it also pins the visual direction: the
+maintainer generated mocks from prompts across three rounds and picked from
+pictures. The picked set is designated evidence at
+`review/2026-08-17-ux-direction/` (local, like all review evidence).
+
+**The ratified direction (build to this, not to adjectives).** Dark leads,
+light derived, both photographed. Near-black blue-gray matte surfaces, thin
+1px borders, one cyan-teal accent reserved for interactive elements and
+progress, monospace for everything code-adjacent, large tabular numerals
+for headline counts, glow budget of one live element per screen, severity
+red/amber untouched as the strongest colors in review content. Per screen:
+queue with line-referenced rows, a failure-mechanism strip under the code,
+and honest cost/duration tiles; dense scoreboard with named per-rule yield
+bars and local-history sparklines; typographic report with one bold summary
+sentence and prose-first finding cards; mobile single-column queue with
+bracketed Confirm/Dismiss. **Banned from shipping** (D-68 has the reasons):
+predicted remediation cost or fix time, live critical-miss rates,
+leaderboards, avatars or reviewer columns, confidence percentages,
+apply-recommendation actions, search/notification/account chrome. The
+standing test for any new widget: if the number is not measured from this
+machine's own data, it does not render.
 
 Method: every screen read from the live screenshot set
 (`review/2026-08-17-e2e/`, produced by the browser suite the same morning),
@@ -249,7 +268,7 @@ exists to prevent).
 
 ## 4. Decision gates (maintainer)
 
-Each answer gets a dated DECISIONS entry.
+All answered 2026-08-17 by the maintainer, on the recommendations (D-69):
 
 1. **Queue-first, state-dependent review screen (F1).** Awaiting
    confirmation leads with the queue, run detail collapses to a summary
@@ -277,21 +296,25 @@ Each answer gets a dated DECISIONS entry.
 
 | WP   | Scope | Blocked on | Status |
 | ---- | ----- | ---------- | ------ |
-| WP-A | Records: 04's not-built list, FG-4 notes' stale claims (F14); gate answers appended to DECISIONS as they arrive | - | TODO |
-| WP-B | Queue-first review screen: state-dependent composition, queue rail with progress and severity remaining, status-chip differentiation, project link and breadcrumb on review detail (F1, F10, part of F11) | gate 1 | TODO |
-| WP-C | Rendered report in-app; single-file HTML export beside the markdown; de-duplicate report vs finding cards; copy confirmation (F2, part of F13) | gate 4 | TODO |
+| WP-A | Records: 04's not-built list and design language brought to the ratified direction, FG-4 notes' stale claims (F14), gate answers recorded | - | DONE 2026-08-17 |
+| WP-B | Queue-first review screen to the picked mock: state-dependent composition, line-referenced rows, failure-mechanism strip, honest cost/duration tiles, queue rail with progress and severity remaining, status-chip differentiation, project link and breadcrumb (F1, F10, part of F11) | - | TODO |
+| WP-C | Report to the picked mock: rendered in-app with the typographic hierarchy, single-file HTML export beside the markdown, de-duplicate report vs finding cards, copy confirmation (F2, part of F13) | - | TODO |
 | WP-D | The honest wait: three event classes rendered distinctly with human stage labels, elapsed and per-stage time, batch n of m emitted from the manager, "usually takes" from stage_executions history (F4) | - | TODO |
 | WP-E | States that fail honestly: error paths for every initial fetch, loading.tsx per route, headerless-loading fix, empty-state consistency incl. the zero-branch case (F6, F7) | - | TODO |
-| WP-F | The scoreboard as home: per-model and per-ruleset aggregates, rule yield, spend, recent and awaiting reviews, first-run teaching state; unhide killed findings as the invention-rate stat; fix the snapshot-counts overwrite (F9, gate 5) | gates 2, 5 | TODO |
-| WP-G | The completion moment and queue momentum; total-duration computed from startedAt/completedAt (F5) | gate 2, WP-B | TODO |
-| WP-H | Speak the token system: adopt the declared type, spacing and motion scales across screens, retire one-off values, chips; both themes re-shot (F12) | gate 3 | TODO |
+| WP-F | The scoreboard as home, to the picked dense mock: stat tiles with local-history sparklines, recent-reviews table (branch pair, model, branch author when known, findings, cost, duration, status), awaiting-decision highlight, named rule yield; unhide killed findings as the invention-rate stat; fix the snapshot-counts overwrite; first-run teaching state (F9) | - | TODO |
+| WP-G | The completion moment and queue momentum; total-duration computed from startedAt/completedAt (F5) | WP-B | TODO |
+| WP-H | Speak the token system, retuned to the ratified palette: adopt the declared type, spacing and motion scales across screens, retire one-off values, chips; both themes re-shot (F12) | - | TODO |
 | WP-I | History with outcomes: reviews list rows carry counts/cost/duration/model with status filter; project rows carry last outcome (F8) | - | TODO |
 | WP-J | Rail and ergonomics: awaiting-decision badge in the rail, poll only what the chip needs, fold unprobed models on new review, selected states, small fixes from F13 | - | TODO |
+| WP-K | Responsive monitor-and-decide: every screen lays out at phone width; the queue becomes the picked single-column mobile mock with bracketed thumb-height Confirm/Dismiss; run monitoring readable on a phone; setup flows stay desktop-first (D-69) | WP-B | TODO |
+| WP-L | My branches: settings holds the identities (seeded from git config), branch lists and the new-review picker gain a Mine filter matching tip-commit author email, scoreboard's author column uses the same identity (D-69) | - | TODO |
 
-Sequencing intent: WP-A immediately (records are wrong today). WP-D, E, I,
-J are gate-free and interleave while the maintainer answers gates. WP-B
-before WP-G. WP-H last, so the identity pass photographs finished screens.
-WP-B, C, F are the heavy three; A and J small; the rest medium.
+Sequencing intent: WP-B first, it is the proof screen the direction was
+ratified on. Then WP-C and WP-F, the other two heavies. WP-D, E, I, J, L
+interleave freely. WP-G after WP-B; WP-K after WP-B because the mobile
+queue derives from the desktop one. WP-H last, so the identity pass
+photographs finished screens. WP-B, C, F are the heavy three; J and L
+small; the rest medium.
 
 ## 6. Review cadence
 
