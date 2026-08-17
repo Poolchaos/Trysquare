@@ -32,9 +32,6 @@ the line entirely would lose the trail.
 - 2026-08-04: a risk-tagged variant of the quality gate, so the risk-first
   ordering is exercised with non-empty tags somewhere outside the pipeline
   tests.
-- 2026-08-04: the seeded fixture produces zero sweep hits, so the gate's
-  pendingSweepHits === 0 and the whole sweep-disposition path are vacuous on
-  this fixture; plant a sweepable pattern.
 - 2026-08-04: scripts/demo-fixture.ts scores every defect against
   app/<file>, so a future shared-core defect would score MISSED forever;
   qualify by the defect's repo when one is added.

@@ -22,7 +22,7 @@ import { changedExportedSymbols } from "@/lib/git/symbols";
 import { importProtocol } from "@/lib/rulesets/import";
 import type { Db } from "@/server/db/client";
 import { listFindings, statusOf } from "@/server/db/repositories/findings";
-import { listLedgerFiles } from "@/server/db/repositories/ledger";
+import { listLedgerFiles, listSweepHits } from "@/server/db/repositories/ledger";
 import { cloneBare, diffText, mergeBase, resolveCommit } from "@/server/gitops/repo";
 import { addWorktree } from "@/server/gitops/worktree";
 import type { ReviewProfile } from "@/lib/domain/enums";
@@ -195,6 +195,27 @@ describe("a correct review of the seeded fixture", () => {
     expect(result.coverage.pendingSweepHits).toBe(0);
     expect(result.coverage.pendingFiles).toBe(0);
     expect(result.coverage.unresolvedCandidates).toBe(0);
+    // There is something to have accounted for. Zero pending against zero
+    // total is what this assertion said for as long as the fixture matched no
+    // sweep pattern, and it proved nothing about the sweep at all.
+    expect(result.coverage.totalSweepHits).toBeGreaterThan(0);
+  }, 60_000);
+
+  it("ties the swept line to the finding that explains it", async () => {
+    // The richer of the two disposition paths: the mechanical pass flags the
+    // line, the adversarial stage says it is the defect rather than clearing
+    // it, and the hit ends up pointing at the finding a person will read.
+    await runGate();
+    const hits = listSweepHits(db, reviewId);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.ruleCode).toBe("8");
+    expect(hits[0]?.path).toBe("app/src/billing/total.ts");
+    expect(hits[0]?.disposition).toBe("finding");
+
+    const attached = listFindings(db, reviewId).find(
+      (finding) => finding.id === hits[0]?.findingId,
+    );
+    expect(attached?.filePath).toBe("app/src/billing/total.ts");
   }, 60_000);
 
   it("verifies every seeded defect, at the file and line the manifest states", async () => {

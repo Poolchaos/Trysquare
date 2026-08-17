@@ -240,9 +240,13 @@ export async function refreshSession(): Promise<void> {
 }
 `,
 
-  // Defect 4: money summed as floating point currency units.
+  // Defect 4: money summed as floating point currency units, then rounded for
+  // presentation and handed back as a number. The toFixed is also what the
+  // protocol's mechanical sweep for rule 8 matches, so this line is the
+  // fixture's one sweep hit: without it, every sweep assertion in the suite
+  // passes on an empty set.
   "src/billing/total.ts": `export function orderTotal(items: Item[]): number {
-  return items.reduce((sum, item) => sum + item.price, 0);
+  return Number(items.reduce((sum, item) => sum + item.price, 0).toFixed(2));
 }
 `,
 

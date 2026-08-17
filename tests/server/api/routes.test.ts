@@ -647,6 +647,7 @@ describe("looking before you pay", () => {
       hunks: number;
       sweepHits: number;
       sweepProblems: string[];
+      sweepLiterals: string[];
       estimatedTokens: number;
       requests: number;
       contextWindow: number | null;
@@ -659,12 +660,15 @@ describe("looking before you pay", () => {
     expect(body.pins.primary.subject.length).toBeGreaterThan(0);
     expect(body.files).toBe(fixture.appFiles.length);
     expect(body.hunks).toBeGreaterThan(0);
-    // Zero hits is the truth for this fixture: six patterns run and none of
-    // them match its changed lines. What matters is that they all ran, because
-    // a pattern that could not run means an incomplete sweep, which the
-    // pipeline refuses outright rather than treating as a clean result.
-    expect(body.sweepHits).toBe(0);
+    // The fixture plants exactly one line the mechanical patterns match: the
+    // toFixed on the float-money defect, which the protocol's sweep table
+    // maps to rule 8. Asserting the count rather than merely that patterns
+    // ran is what makes this a check on the sweep reaching the pre-flight at
+    // all; the whole suite used to assert against an empty set.
+    expect(body.sweepHits).toBe(1);
     expect(body.sweepProblems).toEqual([]);
+    // Every pattern in this protocol is a real regex, so none is read as text.
+    expect(body.sweepLiterals).toEqual([]);
     expect(body.estimatedTokens).toBeGreaterThan(0);
     expect(body.requests).toBeGreaterThanOrEqual(1);
     // No probe has run in this suite, so the window is honestly unknown

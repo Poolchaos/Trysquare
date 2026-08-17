@@ -83,7 +83,7 @@ behaviour is WP-A's work, not a nuisance to suppress.
 | WP-B | Resume the maintainer's first real review; capture G2 evidence | WP-A | TODO |
 | WP-C | Stop S4 re-raising what S3 already found (D-59) | WP-A | DONE 2026-08-04 (mechanical half; the prompt half waits on a real run's fold count) |
 | WP-D | Normalise prose rule codes at the stage boundary | - | DONE 2026-08-04 |
-| WP-E | Give the fixture a sweep hit, so the sweep-disposition path stops being vacuous | WP-C | TODO |
+| WP-E | Give the fixture a sweep hit, so the sweep-disposition path stops being vacuous | WP-C | DONE 2026-08-04 |
 | WP-F | Small inbox items: demo scorer app/ prefix; clearHunk vs sweep-clear reason mismatch; cache-creation token line | - | TODO |
 | WP-G | Records on gate verdicts (G1, G2, G3 rows; BUILD-PLAN milestones) | maintainer | GATE |
 
