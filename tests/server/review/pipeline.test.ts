@@ -199,6 +199,51 @@ describe("a complete run", () => {
   });
 });
 
+describe("a stage that divides its work", () => {
+  it("tells each request which of how many it is", async () => {
+    // The prompt was written to say this and never once did: the total was
+    // hardcoded to zero, which is falsy, so the line was skipped on every
+    // batched request ever sent. A model told to account only for what it
+    // was shown deserves to know it is one of several.
+    const prompts: string[] = [];
+    const manyRules = [
+      rule("1", ["typescript"]),
+      rule("2", ["async"]),
+      rule("3", ["typescript"], ["\\bas\\b"]),
+      rule("4", ["security"]),
+    ];
+
+    await run(
+      { ...BASE_ANSWERS, s5_verification: { verdicts: [] } },
+      {
+        rules: manyRules,
+        profile: "decomposed",
+        run: async (request: StageRequest) => {
+          if (request.stage === "s3_adversarial") prompts.push(request.prompt);
+          return {
+            output:
+              request.stage === "s3_adversarial"
+                ? { findings: [], clearedHunks: [], sweepDispositions: [], symbolDispositions: [] }
+                : ((
+                    {
+                      ...BASE_ANSWERS,
+                      s5_verification: { verdicts: [] },
+                    } as Record<string, unknown>
+                  )[request.stage] ?? {}),
+            sessionId: "s",
+          };
+        },
+      },
+    ).catch(() => undefined);
+
+    expect(prompts.length).toBeGreaterThan(1);
+    // Numbered against the real total, not against zero.
+    for (const [index, prompt] of prompts.entries()) {
+      expect(prompt).toContain(`This is request ${index + 1} of ${prompts.length}`);
+    }
+  });
+});
+
 describe("a rule code a model wrote in prose", () => {
   it("reaches the finding row in the ruleset's own spelling", async () => {
     // Both live runs answered "Rule 1" where the protocol says "1". The

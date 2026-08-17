@@ -83,6 +83,9 @@ export interface StageRequest {
   systemPrompt: string;
   prompt: string;
   resumeSessionId?: string | undefined;
+  /** Set only when a stage divides its work, so progress can be reported. */
+  batchNumber?: number;
+  batchCount?: number;
 }
 
 export interface StageResponse {
@@ -708,9 +711,23 @@ async function runAdversarialStage(
   };
   let requestCount = 0;
 
-  for (const [index, batch] of plan.batches.entries()) {
+  // Every request planned before the first one is sent, because a prompt that
+  // says "request 2 of 5" has to know the 5. It said "of 0" instead, which is
+  // falsy, so the line the prompt was written to carry has never once
+  // rendered and no batched model has been told it was one of several.
+  const planned = plan.batches.map((batch) => ({
+    batch,
+    groups: splitBatchToFit(
+      input,
+      content,
+      input.systemPromptFor("s3_adversarial", { rules: batch.rules }),
+      batch.files,
+    ),
+  }));
+  const totalRequests = planned.reduce((count, entry) => count + entry.groups.length, 0);
+
+  for (const [index, { batch, groups }] of planned.entries()) {
     const systemPrompt = input.systemPromptFor("s3_adversarial", { rules: batch.rules });
-    const groups = splitBatchToFit(input, content, systemPrompt, batch.files);
 
     for (const group of groups) {
       requestCount += 1;
@@ -721,8 +738,13 @@ async function runAdversarialStage(
           files: group,
           ...(batch.theme === undefined ? {} : { theme: batch.theme }),
           batchNumber: requestCount,
-          batchCount: 0,
+          batchCount: totalRequests,
         }),
+        // Carried so the runner can say which request is in flight. A stage
+        // that makes nine requests looked identical to one that makes one,
+        // for as long as it took.
+        batchNumber: requestCount,
+        batchCount: totalRequests,
       });
 
       let parsed: AdversarialStageOutput;

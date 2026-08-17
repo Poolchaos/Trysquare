@@ -1726,3 +1726,16 @@ verified evidence, in writing, here.
   are now covered by full runs that built first; no defect survived, but the
   proof was weaker than the commit messages claimed, and that is recorded
   rather than quietly fixed.
+- 2026-08-17 D-71 (WP-D): the adversarial stage plans every request before it
+  sends the first one, so a batched prompt can say which of how many it is.
+  It passed a total of zero, which is falsy, so the "This is request N of M"
+  line the prompt was written to carry was skipped on every batched request
+  ever sent: a decomposed or chunked run told each request to account only
+  for what it was shown while never telling it that other requests existed.
+  No coverage was lost, since reconciliation compares the merged answer
+  against the whole change set either way, but the prompt did not say what it
+  was written to say and nothing noticed for as long as batching has existed.
+  Planning up front costs one extra pass over the batches and makes the total
+  knowable; the same numbers now ride on the stage request, so a runner can
+  report progress through a stage that makes nine calls rather than one.
+  Pinned by a test that fails when the total goes back to zero.
