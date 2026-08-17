@@ -328,14 +328,28 @@ export function ConfirmationQueue({
                         type="button"
                         onClick={() => setSelected(index)}
                         aria-current={index === selected ? "true" : undefined}
-                        className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-2 text-left text-xs transition-colors ${
+                        className={`flex w-full items-stretch gap-2 overflow-hidden rounded-md border pr-2.5 text-left text-xs transition-colors ${
                           index === selected
                             ? "border-[var(--color-accent)] bg-[var(--color-surface-raised)]"
                             : "border-transparent hover:bg-[var(--color-surface-sunken)]"
                         }`}
                       >
-                        <StateChip status={finding.status} />
-                        <span className="min-w-0 flex-1">
+                        {/* An element rather than a border utility: the
+                            selected state sets a border colour on all four
+                            sides, and which of the two wins would come down
+                            to stylesheet order. */}
+                        <span
+                          aria-hidden
+                          className={`w-0.5 shrink-0 self-stretch ${severityEdge(finding.severity)}`}
+                        />
+                        <span className="flex items-center gap-2 py-2">
+                          <StateChip status={finding.status} />
+                        </span>
+                        <span className="min-w-0 flex-1 py-2">
+                          {/* The path leads the row. A reviewer's first
+                              question on any finding is where am I, and a
+                              queue that answers it only in the detail pane
+                              makes every scan a click (D-68). */}
                           <Mono className="block truncate text-[var(--color-ink-muted)]">
                             {finding.filePath}:{finding.lineStart}
                           </Mono>
@@ -395,12 +409,6 @@ export function ConfirmationQueue({
               </p>
             )}
 
-            {current.mechanism ? (
-              <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
-                How it fails: {current.mechanism}
-              </p>
-            ) : null}
-
             {current.verificationNote ? (
               <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
                 Verification: {current.verificationNote}
@@ -441,9 +449,41 @@ export function ConfirmationQueue({
             ) : null}
 
             {current.quotedCode ? (
-              <pre className="mt-3 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs">
-                <code className="font-[family-name:var(--font-mono)]">{current.quotedCode}</code>
-              </pre>
+              <figure className="mt-3">
+                {/* Numbered from the finding's own lineStart. The quotation
+                    was byte-checked against the file at those lines before it
+                    could be verified, so these numbers are read off the
+                    record rather than guessed at. */}
+                <figcaption className="flex items-center justify-between gap-3 rounded-t border border-b-0 border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1.5">
+                  <Mono className="truncate text-xs text-[var(--color-ink-muted)]">
+                    {current.filePath}
+                  </Mono>
+                  <span className="shrink-0 text-[0.65rem] text-[var(--color-ink-faint)]">
+                    {current.lineEnd > current.lineStart
+                      ? `lines ${current.lineStart}-${current.lineEnd}`
+                      : `line ${current.lineStart}`}
+                  </span>
+                </figcaption>
+                <pre className="overflow-x-auto rounded-b border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs">
+                  <code className="font-[family-name:var(--font-mono)]">
+                    {current.quotedCode.split("\n").map((line, offset) => (
+                      <span key={offset} className="block">
+                        <span className="mr-3 inline-block w-8 shrink-0 text-right text-[var(--color-ink-faint)]">
+                          {current.lineStart + offset}
+                        </span>
+                        {line}
+                      </span>
+                    ))}
+                  </code>
+                </pre>
+              </figure>
+            ) : null}
+
+            {current.mechanism ? (
+              <p className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs">
+                <span className="font-medium">Failure mechanism </span>
+                <span className="text-[var(--color-ink-muted)]">{current.mechanism}</span>
+              </p>
             ) : null}
 
             {showContext ? (
@@ -581,6 +621,21 @@ export function ConfirmationQueue({
       </footer>
     </section>
   );
+}
+
+/**
+ * A severity stripe down the row's leading edge.
+ *
+ * Redundant with the group heading, deliberately: on a protocol with fifty
+ * rules the heading scrolls out of sight long before the group does, and
+ * severity is the one thing a queue must never make someone scroll up to
+ * recover.
+ */
+function severityEdge(severity: string): string {
+  const upper = severity.toUpperCase();
+  if (upper === "CRITICAL") return "bg-[var(--color-critical)]";
+  if (upper === "WARNING") return "bg-[var(--color-warning)]";
+  return "bg-[var(--color-border-strong)]";
 }
 
 function StateChip({ status }: { status: string }) {
