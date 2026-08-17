@@ -68,6 +68,7 @@ interface Snapshot {
     usageInputTokens: number;
     usageOutputTokens: number;
     usageCacheReadTokens: number;
+    usageCacheCreationTokens: number;
     costEquivalentUsd: number;
   };
   stages: {
@@ -628,6 +629,14 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               <h2 className="mb-3 text-sm font-semibold">What it cost</h2>
               <dl className="grid gap-1.5 text-sm">
                 <Stat label="Fresh input" value={review.usageInputTokens.toLocaleString("en-US")} />
+                {/* Written into the cache by this review, which is what makes
+                    the cached reads below cost a fraction of fresh input. It
+                    is charged, so leaving it out understated what a run
+                    spent. */}
+                <Stat
+                  label="Cache write"
+                  value={review.usageCacheCreationTokens.toLocaleString("en-US")}
+                />
                 <Stat
                   label="Cached read"
                   value={review.usageCacheReadTokens.toLocaleString("en-US")}

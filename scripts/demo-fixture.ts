@@ -351,9 +351,12 @@ function renderScore(
   log(`  outcome            ${outcome}`);
   log(`  discarded quotes   ${score.killedByQuoteCheck} (cited code that was not there)`);
   log(`  open questions     ${score.openQuestions}`);
+  // Cache writes are charged and were missing from every run captured as gate
+  // evidence, so two runs could not be compared on what they actually spent.
   log(
     `  tokens             ${count(review.usageInputTokens)} in, ` +
       `${count(review.usageOutputTokens)} out, ` +
+      `${count(review.usageCacheCreationTokens)} cache write, ` +
       `${count(review.usageCacheReadTokens)} cached read`,
   );
   log(`  cost equivalent    $${review.costEquivalentUsd.toFixed(4)}`);
