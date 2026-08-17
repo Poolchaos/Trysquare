@@ -199,6 +199,81 @@ describe("a complete run", () => {
   });
 });
 
+describe("a finding two stages both report", () => {
+  /** The deletions stage repeating the adversarial stage's finding, its own way. */
+  const restated = (overrides: Record<string, unknown> = {}) => ({
+    path: "app/orders.ts",
+    lineStart: 2,
+    lineEnd: 2,
+    severity: "CRITICAL" as const,
+    ruleCode: "3",
+    issue: "The cast that replaced validation was removed from the guarded path.",
+    comment: "Read from what the change removed rather than what it added.",
+    mechanism: "the removed line at 2 left payload asserted rather than parsed",
+    ...overrides,
+  });
+
+  it("folds the repeat into the finding already raised", async () => {
+    // Both live runs of the seeded fixture did this: nine defects arrived as
+    // eighteen candidates, and a person would have decided each one twice.
+    const result = await run({
+      ...BASE_ANSWERS,
+      s4_deletions: { findings: [restated()], reviewedDeletions: [] },
+      s5_verification: { verdicts: [] },
+    });
+
+    expect(result.candidatesRaised).toBe(1);
+    expect(listFindings(db, reviewId)).toHaveLength(1);
+    // The one kept is the one raised first, with its own wording intact.
+    expect(listFindings(db, reviewId)[0]?.issue).toBe("Unchecked cast on external data.");
+  });
+
+  it("says on the run how often the deletions stage repeated itself", async () => {
+    // Folded, not hidden: how often this happens is the measurement of
+    // whether the deletion stage's prompt is scoped correctly.
+    await run({
+      ...BASE_ANSWERS,
+      s4_deletions: { findings: [restated()], reviewedDeletions: [] },
+      s5_verification: { verdicts: [] },
+    });
+
+    const notes = readRunNotes(requireReview(db, reviewId)).filter((note) =>
+      note.message.includes("already reported"),
+    );
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.message).toContain("app/orders.ts:2");
+  });
+
+  it("keeps a finding that cites a different rule at the same line", async () => {
+    // The negative control. Two rules can be broken by one line, and folding
+    // on position alone would eat the second one silently, which is the
+    // failure this pipeline exists to prevent.
+    const result = await run({
+      ...BASE_ANSWERS,
+      s4_deletions: {
+        findings: [restated({ ruleCode: "9", issue: "A different rule, same line." })],
+        reviewedDeletions: [],
+      },
+      s5_verification: { verdicts: [] },
+    });
+
+    expect(result.candidatesRaised).toBe(2);
+  });
+
+  it("keeps a finding at a line the earlier one does not cover", async () => {
+    const result = await run({
+      ...BASE_ANSWERS,
+      s4_deletions: {
+        findings: [restated({ lineStart: 3, lineEnd: 3, issue: "The reduce, not the cast." })],
+        reviewedDeletions: [],
+      },
+      s5_verification: { verdicts: [] },
+    });
+
+    expect(result.candidatesRaised).toBe(2);
+  });
+});
+
 describe("refusing to accept an incomplete stage", () => {
   it("fails when a hunk was neither given a finding nor cleared", async () => {
     await expect(

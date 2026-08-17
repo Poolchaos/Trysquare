@@ -1585,3 +1585,28 @@ verified evidence, in writing, here.
   keeps `docs/private/` and `review/` out, which is the same list `.gitignore`
   already maintains. Proven both ways: an untracked file carrying the name
   fails the gate, and the ignored private material still passes.
+- 2026-08-04 D-59 DECIDED (was PROPOSED, same day): a finding the deletions
+  stage raises that the adversarial stage already raised is folded into the
+  earlier one, and the count is written on the run.
+  Both clean runs of the seeded fixture produced nine distinct defects as
+  eighteen candidates: a modification removes lines as well as adding them, so
+  S4 reads the removed half of a change S3 has already reported and reports it
+  again in different words. Every finding in the review would have been decided
+  twice by hand.
+  Folded rather than kept-and-dismissed, because the duplication is the
+  defect, not a judgment for the person to make eighteen times. Counted rather
+  than folded silently, because how often S4 repeats itself is the measurement
+  of whether its prompt is scoped correctly, and a silent fold would erase the
+  only evidence that it is not.
+  The match is deliberately narrow: same file, same rule code, overlapping
+  line ranges. Matching on position alone would merge two genuinely different
+  findings that cite one line, and a fold that ate a real finding is exactly
+  the silent loss this pipeline exists to prevent. The cost of the narrow
+  match is that a duplicate whose rule code is spelled differently by the two
+  stages survives; that is visible noise, and prose rule codes are their own
+  item.
+  The second half, scoping the S4 prompt to deletions without a surviving
+  replacement, is deliberately not done yet. The fold note is now the
+  instrument that measures whether it is needed: a real run that reports no
+  folds needs no prompt change, and one that reports nine has its evidence.
+  A prompt change on speculation would be a paid experiment with no baseline.

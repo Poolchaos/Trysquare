@@ -81,7 +81,7 @@ behaviour is WP-A's work, not a nuisance to suppress.
 | ---- | ----- | ---------- | ------ |
 | WP-A | Finish and land the sweep literal fallback | - | DONE 2026-08-04 |
 | WP-B | Resume the maintainer's first real review; capture G2 evidence | WP-A | TODO |
-| WP-C | Stop S4 re-raising what S3 already found (D-59) | WP-A | TODO |
+| WP-C | Stop S4 re-raising what S3 already found (D-59) | WP-A | DONE 2026-08-04 (mechanical half; the prompt half waits on a real run's fold count) |
 | WP-D | Normalise prose rule codes at the stage boundary | - | TODO |
 | WP-E | Give the fixture a sweep hit, so the sweep-disposition path stops being vacuous | WP-C | TODO |
 | WP-F | Small inbox items: demo scorer app/ prefix; clearHunk vs sweep-clear reason mismatch; cache-creation token line | - | TODO |
@@ -126,9 +126,10 @@ real review on subscription). The driver's half:
 - Watch the run. Root-cause any failure before any retry: an anomalous
   artifact is a defect until root-caused, and this is the first real
   protocol, first real repo, first 61-file change set through the pipeline.
-- Expect the D-59 duplication (findings appearing twice, S3 + S4 wordings)
-  until WP-C lands. Warn the maintainer before they open the confirmation
-  queue, so it reads as the known defect rather than model noise.
+- WP-C landed first, so each finding should now appear once. Read the run
+  notes for the fold count: it says how many times the deletions stage
+  repeated the adversarial stage, and it is the evidence that decides whether
+  the S4 prompt still needs scoping.
 - When the review completes and the maintainer decides findings and
   exports: that is FG-3. Record the G2 row in `docs/GATES.md` with dated
   evidence (counts, cost, wall time, what the maintainer said), status set

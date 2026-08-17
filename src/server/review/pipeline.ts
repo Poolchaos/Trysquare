@@ -474,7 +474,32 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     return parsed;
   });
 
+  // A modification removes lines as well as adding them, so the deletions
+  // stage reads the removed half of a change the adversarial stage has
+  // already reported and raises it again in different words. Both live runs
+  // of the seeded fixture did exactly this: nine defects arrived as eighteen
+  // candidates, each one twice, and the person deciding them would have
+  // decided every finding in the review twice (D-59).
+  //
+  // The match is deliberately narrow: same file, same rule, and line ranges
+  // that overlap. Folding on position alone would merge two genuinely
+  // different findings that happen to cite one line, and losing a real
+  // finding silently is the one failure this pipeline exists to prevent.
+  // A duplicate that survives because the two stages spelled the rule
+  // differently is visible noise; a fold that ate a finding is not.
+  const foldedIntoEarlier: string[] = [];
   for (const finding of deletions.findings) {
+    const alreadyRaised = candidates.find(
+      (existing) =>
+        existing.filePath === finding.path &&
+        existing.ruleCode === finding.ruleCode &&
+        existing.lineStart <= finding.lineEnd &&
+        finding.lineStart <= existing.lineEnd,
+    );
+    if (alreadyRaised) {
+      foldedIntoEarlier.push(`${finding.path}:${finding.lineStart}`);
+      continue;
+    }
     candidates.push(
       createCandidate(db, {
         reviewId,
@@ -489,6 +514,22 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         mechanism: finding.mechanism,
       }),
     );
+  }
+
+  // Counted on the review rather than folded away in silence: how often the
+  // deletions stage repeats itself is the measurement of whether its prompt
+  // is scoped correctly, and a silent fold would erase the evidence.
+  //
+  // Written on the first run only, like the sweep's note above: a resume
+  // replays the same stage answers and would append the same line again.
+  if (!alreadySeeded && foldedIntoEarlier.length > 0) {
+    appendRunNote(db, reviewId, {
+      kind: "note",
+      message:
+        `The deletions stage raised ${foldedIntoEarlier.length} finding(s) the adversarial ` +
+        `stage had already reported, folded into the earlier one: ` +
+        `${foldedIntoEarlier.join(", ")}.`,
+    });
   }
 
   // A file closes when the stages that owed an account of it have given one:
