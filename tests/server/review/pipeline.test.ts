@@ -311,6 +311,26 @@ describe("a finding two stages both report", () => {
     expect(result.candidatesRaised).toBe(2);
   });
 
+  it("keeps a finding that names no rule, rather than guessing it is the same one", async () => {
+    // Two findings at one line that both cite nothing are indistinguishable
+    // here, so folding them would be a guess. The direction to guess in is
+    // the one that keeps both: a duplicate is noise, a lost finding is not.
+    const result = await run({
+      ...BASE_ANSWERS,
+      s3_adversarial: {
+        ...COMPLETE_ADVERSARIAL,
+        findings: [{ ...COMPLETE_ADVERSARIAL.findings[0]!, ruleCode: null }],
+      },
+      s4_deletions: {
+        findings: [restated({ ruleCode: null, issue: "Also unattributed, also line 2." })],
+        reviewedDeletions: [],
+      },
+      s5_verification: { verdicts: [] },
+    });
+
+    expect(result.candidatesRaised).toBe(2);
+  });
+
   it("keeps a finding at a line the earlier one does not cover", async () => {
     const result = await run({
       ...BASE_ANSWERS,

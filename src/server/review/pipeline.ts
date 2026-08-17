@@ -489,21 +489,28 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   // candidates, each one twice, and the person deciding them would have
   // decided every finding in the review twice (D-59).
   //
-  // The match is deliberately narrow: same file, same rule, and line ranges
-  // that overlap. Folding on position alone would merge two genuinely
+  // The match is deliberately narrow: same file, same named rule, and line
+  // ranges that overlap. Folding on position alone would merge two genuinely
   // different findings that happen to cite one line, and losing a real
   // finding silently is the one failure this pipeline exists to prevent.
   // A duplicate that survives because the two stages spelled the rule
   // differently is visible noise; a fold that ate a finding is not.
+  //
+  // A finding that names no rule is never folded. Two such findings at one
+  // line are indistinguishable to this code, so folding them would be a
+  // guess, and the direction to guess in is the one that keeps both.
   const foldedIntoEarlier: string[] = [];
   for (const finding of deletions.findings) {
-    const alreadyRaised = candidates.find(
-      (existing) =>
-        existing.filePath === finding.path &&
-        existing.ruleCode === finding.ruleCode &&
-        existing.lineStart <= finding.lineEnd &&
-        finding.lineStart <= existing.lineEnd,
-    );
+    const alreadyRaised =
+      finding.ruleCode === null
+        ? undefined
+        : candidates.find(
+            (existing) =>
+              existing.filePath === finding.path &&
+              existing.ruleCode === finding.ruleCode &&
+              existing.lineStart <= finding.lineEnd &&
+              finding.lineStart <= existing.lineEnd,
+          );
     if (alreadyRaised) {
       foldedIntoEarlier.push(`${finding.path}:${finding.lineStart}`);
       continue;

@@ -1636,3 +1636,22 @@ verified evidence, in writing, here.
   minimum is S1's risk rationale, which disposes of nothing and refuses
   nothing; it stays as it is rather than gaining a constraint that could fail
   a run over a cosmetic field.
+- 2026-08-04 REVIEW ROUND (after the WP-A to WP-F cluster, per the plan's
+  cadence): a pass over the day's eight behaviour-changing commits. One
+  finding, fixed in the same pass.
+  Finding 1: the D-59 fold matched on rule code equality, and two findings
+  that both name no rule compared equal, so a deletions-stage finding citing
+  nothing could be folded into an unrelated adversarial one at the same line.
+  The observed duplication always carried rule codes, so this was a latent
+  path rather than an active defect, but it is the one direction this fold
+  must never take. A finding naming no rule is now never folded; the test
+  fails by name when the guard is removed.
+  Checked and sound: the literal-pattern fallback never changes a valid
+  regex's meaning; the fold cannot merge across repositories, since ledger
+  paths carry their slug; the deleted-module finding, which S4 raises by
+  design, is not foldable because no adversarial finding exists in a file
+  outside the change set; the rule-code reader strips a word and its
+  punctuation, never digits, so "Rule 1a" against a ruleset holding "1" is
+  kept rather than snapped; and the private-material scan over untracked
+  files did not grow the file count, so .gitignore is doing the excluding.
+  `./verify.sh --build --e2e` exited 0 over the whole cluster.
