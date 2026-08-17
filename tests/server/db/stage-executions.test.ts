@@ -6,8 +6,10 @@ import {
   listForReview,
   nextAttemptNumber,
   recordAttempt,
+  stageDurationMedians,
   usageTotals,
 } from "@/server/db/repositories/stage-executions";
+import { createReview } from "@/server/db/repositories/reviews";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
 
 let ctx: TestDb;
@@ -295,5 +297,84 @@ describe("the order a timeline reads in", () => {
     }
 
     expect(listForReview(db, reviewId).map((row) => row.attempt)).toEqual([1, 2, 3]);
+  });
+});
+
+describe("how long a stage usually takes here", () => {
+  /** A timed attempt whose duration is exactly what is asked for. */
+  function timed(id: string, stage: string, seconds: number) {
+    const startedAt = new Date("2026-08-17T10:00:00.000Z").toISOString();
+    const endedAt = new Date(Date.parse(startedAt) + seconds * 1000).toISOString();
+    recordAttempt(db, {
+      reviewId: id,
+      stage: stage as Parameters<typeof recordAttempt>[1]["stage"],
+      promptHash: `hash-${stage}-${seconds}`,
+      attempt: 1,
+      status: "succeeded",
+      usage,
+      startedAt,
+      endedAt,
+    });
+  }
+
+  it("says nothing until it has seen the stage enough times to mean it", () => {
+    // An average of one is not an average, and a run in progress is a bad
+    // place to learn that the number on the screen came from a single sample.
+    timed(reviewId, "s1_risk", 10);
+    timed(reviewId, "s1_risk", 20);
+    expect(stageDurationMedians(db, "claude-fable-5[1m]").has("s1_risk")).toBe(false);
+
+    timed(reviewId, "s1_risk", 30);
+    expect(stageDurationMedians(db, "claude-fable-5[1m]").get("s1_risk")).toBe(20_000);
+  });
+
+  it("takes the middle sample, so one stalled stage cannot move it", () => {
+    // The mean of these is 155s, which no run has ever taken. The median is
+    // 20s, which three of them did.
+    timed(reviewId, "s2_comprehension", 10);
+    timed(reviewId, "s2_comprehension", 20);
+    timed(reviewId, "s2_comprehension", 30);
+    timed(reviewId, "s2_comprehension", 620);
+
+    expect(stageDurationMedians(db, "claude-fable-5[1m]").get("s2_comprehension")).toBe(25_000);
+  });
+
+  it("keeps one model's timings out of another's", () => {
+    // A haiku stage and a fable stage are not the same work, and one median
+    // over both would describe neither.
+    const other = createReview(db, {
+      projectId: seedProject(db, "other").id,
+      fromBranch: "feature/x",
+      fromCommit: "a".repeat(40),
+      intoBranch: "main",
+      intoCommit: "b".repeat(40),
+      mergeBaseCommit: "c".repeat(40),
+      model: "claude-haiku-4-5-20251001",
+      profileId: "mechanical-only",
+      engineMode: "headless",
+    }).id;
+
+    for (const seconds of [10, 10, 10]) timed(reviewId, "s3_adversarial", seconds);
+    for (const seconds of [90, 90, 90]) timed(other, "s3_adversarial", seconds);
+
+    expect(stageDurationMedians(db, "claude-fable-5[1m]").get("s3_adversarial")).toBe(10_000);
+    expect(stageDurationMedians(db, "claude-haiku-4-5-20251001").get("s3_adversarial")).toBe(
+      90_000,
+    );
+  });
+
+  it("ignores an attempt that never finished, rather than timing it to now", () => {
+    for (const seconds of [10, 10, 10]) timed(reviewId, "s4_deletions", seconds);
+    recordAttempt(db, {
+      reviewId,
+      stage: "s4_deletions",
+      promptHash: "hash-open",
+      attempt: 2,
+      status: "running",
+      usage,
+      endedAt: null,
+    });
+
+    expect(stageDurationMedians(db, "claude-fable-5[1m]").get("s4_deletions")).toBe(10_000);
   });
 });

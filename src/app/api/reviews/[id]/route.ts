@@ -2,6 +2,7 @@
 
 import { listFindings } from "@/server/db/repositories/findings";
 import { getProject } from "@/server/db/repositories/projects";
+import { stageDurationMedians } from "@/server/db/repositories/stage-executions";
 import { requireReview } from "@/server/db/repositories/reviews";
 import { deleteReviewEntirely } from "@/server/review/service";
 import { detectMerged } from "@/server/review/merged";
@@ -27,6 +28,10 @@ export async function GET(
       ...manager.snapshot(id),
       findings: listFindings(db, id),
       project: project ? { id: project.id, name: project.name } : null,
+      // What this machine has actually measured for this model, so a stage in
+      // flight can say what it usually takes instead of only that it is still
+      // going. Empty until a stage has been timed enough times to mean it.
+      stageMedians: Object.fromEntries(stageDurationMedians(db, review.model)),
     });
   });
 }

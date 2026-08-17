@@ -13,7 +13,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { newId, nowIso } from "@/lib/ids";
 import type { ReviewStage, StageErrorClass, StageStatus } from "@/lib/domain/enums";
 import type { Db } from "../client";
-import { stageExecutions } from "../schema";
+import { reviews, stageExecutions } from "../schema";
 
 export type StageExecution = typeof stageExecutions.$inferSelect;
 
@@ -220,4 +220,55 @@ export function usageTotals(db: Db, reviewId: string): UsageTotals {
     costEquivalentUsd: rows.reduce((total, row) => total + row.costEquivalentUsd, 0),
     liveAttempts: rows.length,
   };
+}
+
+/**
+ * How long each stage usually takes on this machine, for this model.
+ *
+ * A run in progress can say more than "still going" without inventing
+ * anything: the same stage has been timed on every previous review, and the
+ * median of those is a measurement rather than an estimate.
+ *
+ * Per model, because a haiku stage and a fable stage are not the same work
+ * and one median over both would describe neither. The median rather than the
+ * mean, because one stage that waited out a rate limit would drag an average
+ * somewhere no run has ever been.
+ *
+ * A stage with fewer than this many timed attempts reports nothing at all. An
+ * average of one is not an average, and a wait is a bad place to learn that
+ * the number on the screen came from a single sample.
+ */
+const ENOUGH_SAMPLES = 3;
+
+export function stageDurationMedians(db: Db, model: string): Map<string, number> {
+  const rows = db
+    .select({
+      stage: stageExecutions.stage,
+      startedAt: stageExecutions.startedAt,
+      endedAt: stageExecutions.endedAt,
+    })
+    .from(stageExecutions)
+    .innerJoin(reviews, eq(stageExecutions.reviewId, reviews.id))
+    .where(and(eq(reviews.model, model), eq(stageExecutions.status, "succeeded")))
+    .all();
+
+  const byStage = new Map<string, number[]>();
+  for (const row of rows) {
+    if (!row.endedAt) continue;
+    const ms = new Date(row.endedAt).getTime() - new Date(row.startedAt).getTime();
+    if (!Number.isFinite(ms) || ms <= 0) continue;
+    byStage.set(row.stage, [...(byStage.get(row.stage) ?? []), ms]);
+  }
+
+  const medians = new Map<string, number>();
+  for (const [stage, samples] of byStage) {
+    if (samples.length < ENOUGH_SAMPLES) continue;
+    const sorted = [...samples].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    medians.set(
+      stage,
+      sorted.length % 2 === 0 ? (sorted[middle - 1]! + sorted[middle]!) / 2 : sorted[middle]!,
+    );
+  }
+  return medians;
 }

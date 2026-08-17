@@ -127,6 +127,8 @@ interface Snapshot {
   findings: Finding[];
   /** Null only if the project was deleted out from under the review. */
   project: { id: string; name: string } | null;
+  /** Median milliseconds per stage for this model, measured on this machine. */
+  stageMedians: Record<string, number>;
   running: boolean;
   queued: boolean;
 }
@@ -824,6 +826,10 @@ function RunDetail({
 }) {
   const { coverage } = snapshot;
   const outstanding = coverage.pendingFiles + coverage.pendingHunks + coverage.pendingSweepHits;
+  const usualFor = (stage: string): string | null => {
+    const ms = snapshot.stageMedians[stage];
+    return ms === undefined ? null : elapsedBetween(0, ms);
+  };
 
   const body = (
     <>
@@ -866,7 +872,16 @@ function RunDetail({
                     </span>
                   ) : null}
                   <span className="ml-auto shrink-0 text-xs text-[var(--color-ink-muted)]">
-                    {last ? formatDuration(last.startedAt, last.endedAt) : null}
+                    {/* A stage in flight says what this machine has measured
+                        it taking before, so a slow stage is distinguishable
+                        from a stuck one. Nothing is shown until the same
+                        stage has been timed enough times for a median to
+                        mean something. */}
+                    {last
+                      ? formatDuration(last.startedAt, last.endedAt)
+                      : current && usualFor(stage) !== null
+                        ? `usually ${usualFor(stage)}`
+                        : null}
                   </span>
                 </div>
 
