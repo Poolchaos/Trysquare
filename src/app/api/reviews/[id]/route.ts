@@ -1,6 +1,7 @@
 /** Everything a review page needs in one read. */
 
 import { listFindings } from "@/server/db/repositories/findings";
+import { getProject } from "@/server/db/repositories/projects";
 import { requireReview } from "@/server/db/repositories/reviews";
 import { deleteReviewEntirely } from "@/server/review/service";
 import { detectMerged } from "@/server/review/merged";
@@ -16,8 +17,17 @@ export async function GET(
   return handler(async () => {
     const { db, manager } = runtime();
     const { id } = await context.params;
-    await detectMerged(db, [requireReview(db, id)]);
-    return ok({ ...manager.snapshot(id), findings: listFindings(db, id) });
+    const review = requireReview(db, id);
+    await detectMerged(db, [review]);
+    // The project this review belongs to, so the deepest screen in the app
+    // has a way back up. Without it the review page named neither its
+    // project nor a route to one.
+    const project = getProject(db, review.projectId);
+    return ok({
+      ...manager.snapshot(id),
+      findings: listFindings(db, id),
+      project: project ? { id: project.id, name: project.name } : null,
+    });
   });
 }
 

@@ -158,7 +158,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
   await test.step("starting it walks the stages and then stops for a person", async () => {
     await page.getByRole("button", { name: "Start review" }).click();
     await expect(page).toHaveURL(/\/reviews\/[A-Z0-9]+$/i, { timeout: 60_000 });
-    await expect(page.getByText("awaiting confirmation")).toBeVisible({ timeout: 120_000 });
+    await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
     await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible();
   });
 

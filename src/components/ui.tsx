@@ -146,10 +146,25 @@ export function severityTone(severity: string): keyof typeof TONES {
 
 export function statusTone(status: string): keyof typeof TONES {
   if (status === "running" || status === "verifying") return "accent";
-  if (status === "complete" || status === "awaiting_confirmation") return "good";
+  // Waiting on a person is not the same as finished, and the two used to
+  // wear the same green. In a list of reviews the only question worth
+  // answering at a glance is which ones still want something from you.
+  if (status === "awaiting_confirmation") return "question";
+  if (status === "complete") return "good";
   if (status === "failed" || status === "cancelled") return "critical";
   if (status === "paused_limit" || status === "interrupted") return "warning";
   return "neutral";
+}
+
+/**
+ * A review's status as a person would say it.
+ *
+ * "awaiting confirmation" describes the machine's state; a reader wants to
+ * know it is their turn, so the one status that needs a human says so.
+ */
+export function statusLabel(status: string): string {
+  if (status === "awaiting_confirmation") return "awaiting your decision";
+  return status.replace(/_/g, " ");
 }
 
 /**

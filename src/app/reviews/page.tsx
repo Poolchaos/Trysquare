@@ -12,7 +12,17 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PageBody, PageHeader } from "@/components/page";
-import { Badge, Button, Card, Empty, Mono, Problem, Select, statusTone } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  Mono,
+  Problem,
+  Select,
+  statusLabel,
+  statusTone,
+} from "@/components/ui";
 
 interface Row {
   id: string;
@@ -125,9 +135,7 @@ export default function ReviewsPage() {
                     href={`/reviews/${review.id}`}
                     className="flex min-w-0 flex-1 items-center gap-2"
                   >
-                    <Badge tone={statusTone(review.status)}>
-                      {review.status.replace(/_/g, " ")}
-                    </Badge>
+                    <Badge tone={statusTone(review.status)}>{statusLabel(review.status)}</Badge>
                     {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}
                     <span className="text-sm font-medium">{review.projectName}</span>
                     <Mono className="truncate text-xs text-[var(--color-ink-muted)]">

@@ -22,6 +22,7 @@ import {
   Mono,
   Problem,
   Select,
+  statusLabel,
   statusTone,
 } from "@/components/ui";
 
@@ -244,9 +245,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   <li key={review.id}>
                     <Link href={`/reviews/${review.id}`}>
                       <Card className="flex flex-wrap items-center gap-2 p-3 text-sm hover:border-[var(--color-border-strong)]">
-                        <Badge tone={statusTone(review.status)}>
-                          {review.status.replace(/_/g, " ")}
-                        </Badge>
+                        <Badge tone={statusTone(review.status)}>{statusLabel(review.status)}</Badge>
                         <Mono className="text-xs text-[var(--color-ink-muted)]">
                           {review.fromBranch} into {review.intoBranch}
                         </Mono>

@@ -26,6 +26,7 @@ import {
   Problem,
   Sha,
   severityTone,
+  statusLabel,
   statusTone,
 } from "@/components/ui";
 
@@ -96,6 +97,8 @@ interface Snapshot {
   };
   notes: { kind: string; message: string; at: string }[];
   findings: Finding[];
+  /** Null only if the project was deleted out from under the review. */
+  project: { id: string; name: string } | null;
   running: boolean;
   queued: boolean;
 }
@@ -389,16 +392,29 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     <>
       <PageHeader
         title={
-          <span className="flex items-center gap-2">
-            <Mono>{review.fromBranch}</Mono>
-            <span className="text-[var(--color-ink-faint)]">into</span>
-            <Mono>{review.intoBranch}</Mono>
+          <span className="flex flex-col gap-1">
+            {/* The way back up. This screen is the deepest in the app and
+                named neither its project nor a route to one, so the only
+                exit was the rail. */}
+            {snapshot.project ? (
+              <a
+                href={`/projects/${snapshot.project.id}`}
+                className="w-fit text-xs font-normal text-[var(--color-ink-muted)] underline underline-offset-2 hover:text-[var(--color-ink)]"
+              >
+                {snapshot.project.name}
+              </a>
+            ) : null}
+            <span className="flex items-center gap-2">
+              <Mono>{review.fromBranch}</Mono>
+              <span className="text-[var(--color-ink-faint)]">into</span>
+              <Mono>{review.intoBranch}</Mono>
+            </span>
           </span>
         }
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
             <Badge tone={statusTone(review.status)}>
-              {snapshot.queued ? "queued" : review.status.replace(/_/g, " ")}
+              {snapshot.queued ? "queued" : statusLabel(review.status)}
             </Badge>
             {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}
             <Sha value={review.fromCommit} />

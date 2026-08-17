@@ -72,7 +72,7 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   // The trigger armed one call and disarmed itself, so the resume runs to the
   // end, paying only for the stages the first attempt never reached.
   await page.getByRole("button", { name: "Resume" }).click();
-  await expect(page.getByText("awaiting confirmation")).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
   await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible();
 
   // The pause is over, so the banner is gone rather than lingering as a
