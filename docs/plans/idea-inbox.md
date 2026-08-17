@@ -32,9 +32,6 @@ the line entirely would lose the trail.
 - 2026-08-04: a risk-tagged variant of the quality gate, so the risk-first
   ordering is exercised with non-empty tags somewhere outside the pipeline
   tests.
-- 2026-08-04: scripts/demo-fixture.ts scores every defect against
-  app/<file>, so a future shared-core defect would score MISSED forever;
-  qualify by the defect's repo when one is added.
 - 2026-08-04: clearHunk demands a reason while the sweep-clear guard does
   not; align the two or record why they differ.
 - 2026-08-04: the run screen's usage panel omits cache-creation tokens,
