@@ -1655,3 +1655,14 @@ verified evidence, in writing, here.
   kept rather than snapped; and the private-material scan over untracked
   files did not grow the file count, so .gitignore is doing the excluding.
   `./verify.sh --build --e2e` exited 0 over the whole cluster.
+- 2026-08-17 D-67: the house-style gate's target list distinguishes required
+  directories from optional ones, and `review/` is optional. It joined the
+  scan during the design pass so captured prose would be checked, but the
+  directory is gitignored by design, so it exists on workstations and not on
+  a CI checkout; the misconfiguration guard then failed every CI run with
+  exit 2 while every local run was green. An environment-dependent gate is
+  the exact failure the guard exists to catch, pointed the wrong way. An
+  absent optional target is skipped by name in the output; a present one is
+  scanned in full; a missing required target still exits 2. Proven all four
+  ways, including under a fresh worktree with no gitignored directories,
+  which is CI's checkout exactly.

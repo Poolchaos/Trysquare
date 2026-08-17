@@ -28,6 +28,16 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const TARGET_DIRS = ["src", "tests", "e2e", "docs", "scripts", ".github", "review"];
 
 /**
+ * Targets that legitimately do not exist on a fresh checkout.
+ *
+ * `review/` is gitignored by design (its evidence lives only on the machine
+ * that produced it), so CI has no such directory and requiring it made the
+ * gate red on every push while green on every workstation. An absent
+ * optional target is skipped by name; a present one is scanned in full.
+ */
+const OPTIONAL_TARGETS = new Set(["review"]);
+
+/**
  * REVIEW_PROTOCOL.md is private working material. The other two are
  * generated. Neither kind is authored here.
  */
@@ -121,6 +131,10 @@ for (const target of TARGET_DIRS) {
   // wrong place, which is how it came to check nothing at all. Missing one
   // directory is not visible in a file count, so it fails here by name.
   if (!existsSync(path)) {
+    if (OPTIONAL_TARGETS.has(target)) {
+      console.log(`check-style: optional target '${target}' is absent here; skipped by name.`);
+      continue;
+    }
     console.error(
       `check-style: target '${target}' is missing under ${ROOT}; the gate is misconfigured.`,
     );
