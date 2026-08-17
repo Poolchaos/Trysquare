@@ -305,7 +305,7 @@ All answered 2026-08-17 by the maintainer, on the recommendations (D-69):
 | WP-G | The completion moment and queue momentum; total-duration computed from startedAt/completedAt (F5) | WP-B | TODO |
 | WP-H | Speak the token system, retuned to the ratified palette: adopt the declared type, spacing and motion scales across screens, retire one-off values, chips; both themes re-shot (F12) | - | TODO |
 | WP-I | History with outcomes: reviews list rows carry counts/cost/duration/model with status filter; project rows carry last outcome (F8) | - | DONE 2026-08-17. Project rows still carry no last outcome; that reads better beside the scoreboard's own aggregates and moves to WP-F. |
-| WP-J | Rail and ergonomics: awaiting-decision badge in the rail, poll only what the chip needs, fold unprobed models on new review, selected states, small fixes from F13 | - | TODO |
+| WP-J | Rail and ergonomics: awaiting-decision badge in the rail, poll only what the chip needs, fold unprobed models on new review, selected states, small fixes from F13 | - | DONE 2026-08-17 (ffac6dd and the ergonomics commit below). The per-stage cache-write line from F13 is left for WP-H, which is where the stage rows get rebuilt. |
 | WP-K | Responsive monitor-and-decide: every screen lays out at phone width; the queue becomes the picked single-column mobile mock with bracketed thumb-height Confirm/Dismiss; run monitoring readable on a phone; setup flows stay desktop-first (D-69) | WP-B | TODO |
 | WP-L | My branches: settings holds the identities (seeded from git config), branch lists and the new-review picker gain a Mine filter matching tip-commit author email, scoreboard's author column uses the same identity (D-69) | - | TODO |
 

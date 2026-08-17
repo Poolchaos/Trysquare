@@ -134,6 +134,7 @@ function NewReview() {
   // are the numbers the run will have.
   const [profileOverride, setProfileOverride] = useState("");
   const [engineMode, setEngineMode] = useState("headless");
+  const [showAllModels, setShowAllModels] = useState(false);
 
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
@@ -185,6 +186,12 @@ function NewReview() {
       cancelled = true;
     };
   }, [projectId, refreshCount]);
+
+  const usableModels = models.filter((row) => isSelectable(row.availability));
+  const unprobed = models.filter((row) => !isSelectable(row.availability));
+  // Everything, until one model can actually run a review. Before that the
+  // unprobed rows are the whole point of the panel.
+  const shownModels = usableModels.length === 0 || showAllModels ? models : usableModels;
 
   async function probe(id: string) {
     setError("");
@@ -521,7 +528,7 @@ function NewReview() {
               call, made only when you press the button (never on a timer).
             </p>
             <ul className="grid gap-1" data-testid="model-picker">
-              {models.map((row) => {
+              {shownModels.map((row) => {
                 const selectable = isSelectable(row.availability);
                 return (
                   <li key={row.id}>
@@ -578,6 +585,20 @@ function NewReview() {
                 );
               })}
             </ul>
+            {/* Once something is usable, the models that are not stop being
+                the bulk of the page. They stay one click away, because
+                probing one is how it becomes usable. */}
+            {unprobed.length > 0 && usableModels.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowAllModels((shown) => !shown)}
+                className="mt-2 text-xs text-[var(--color-ink-muted)] underline underline-offset-2 hover:text-[var(--color-ink)]"
+              >
+                {showAllModels
+                  ? "Hide the models that need probing"
+                  : `Show ${unprobed.length} model(s) that need probing`}
+              </button>
+            ) : null}
           </Card>
 
           <Field

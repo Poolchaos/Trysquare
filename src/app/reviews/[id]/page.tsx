@@ -751,6 +751,8 @@ function ReportPanel({
   onExported: (path: string) => void;
 }) {
   const [error, setError] = useState("");
+  // A copy that says nothing is a copy someone presses twice to be sure.
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (report !== null) return;
@@ -774,11 +776,15 @@ function ReportPanel({
         <span className="flex items-center gap-2">
           <Button
             onClick={() => {
-              if (report) void navigator.clipboard?.writeText(report);
+              if (!report) return;
+              void navigator.clipboard?.writeText(report).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              });
             }}
             disabled={!report}
           >
-            Copy
+            {copied ? "Copied" : "Copy"}
           </Button>
           <Button
             variant="primary"

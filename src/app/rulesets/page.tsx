@@ -170,7 +170,7 @@ export default function RulesetsPage() {
                                   {ruleset.name}
                                 </Link>
                                 <span className="block text-xs text-[var(--color-ink-muted)]">
-                                  {ruleset.ruleCount} rule{ruleset.ruleCount === 1 ? "" : "s"} on
+                                  {ruleset.ruleCount} rule{ruleset.ruleCount === 1 ? "" : "s"}
                                   {ruleset.sourceDoc ? `, from ${ruleset.sourceDoc}` : ""}
                                 </span>
                               </span>
