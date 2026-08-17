@@ -199,6 +199,57 @@ describe("a complete run", () => {
   });
 });
 
+describe("a rule code a model wrote in prose", () => {
+  it("reaches the finding row in the ruleset's own spelling", async () => {
+    // Both live runs answered "Rule 1" where the protocol says "1". The
+    // confirmation screen looks the code up to show the rule's own words, so
+    // a prose code shows the rule as missing from the ruleset it came from.
+    const result = await run({
+      ...BASE_ANSWERS,
+      s3_adversarial: {
+        ...COMPLETE_ADVERSARIAL,
+        findings: [{ ...COMPLETE_ADVERSARIAL.findings[0]!, ruleCode: "Rule 3" }],
+      },
+      s5_verification: { verdicts: [] },
+    });
+
+    expect(result.candidatesRaised).toBe(1);
+    expect(listFindings(db, reviewId)[0]?.ruleCode).toBe("3");
+  });
+
+  it("does not stop the run when a sweep disposition is written the same way", async () => {
+    // This one is not cosmetic: a disposition's code is compared against the
+    // sweep hit's, which came from the ruleset, so a prose code there fails
+    // reconciliation and the whole review stops.
+    const result = await run({
+      ...BASE_ANSWERS,
+      s3_adversarial: {
+        ...COMPLETE_ADVERSARIAL,
+        sweepDispositions: [{ ...COMPLETE_ADVERSARIAL.sweepDispositions[0]!, ruleCode: "rule 3" }],
+      },
+      s5_verification: { verdicts: [] },
+    });
+
+    expect(result.coverage.pendingSweepHits).toBe(0);
+  });
+
+  it("keeps a code that is not in the ruleset, rather than dropping it", async () => {
+    const result = await run({
+      ...BASE_ANSWERS,
+      s3_adversarial: {
+        ...COMPLETE_ADVERSARIAL,
+        findings: [{ ...COMPLETE_ADVERSARIAL.findings[0]!, ruleCode: "Rule 99" }],
+      },
+      s5_verification: { verdicts: [] },
+    });
+
+    // The screen says such a code is not in the frozen ruleset, which is both
+    // true and worth knowing; nulling it would hide that a rule was cited.
+    expect(result.candidatesRaised).toBe(1);
+    expect(listFindings(db, reviewId)[0]?.ruleCode).toBe("Rule 99");
+  });
+});
+
 describe("a finding two stages both report", () => {
   /** The deletions stage repeating the adversarial stage's finding, its own way. */
   const restated = (overrides: Record<string, unknown> = {}) => ({

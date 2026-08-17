@@ -1610,3 +1610,20 @@ verified evidence, in writing, here.
   instrument that measures whether it is needed: a real run that reports no
   folds needs no prompt change, and one that reports nine has its evidence.
   A prompt change on speculation would be a paid experiment with no baseline.
+- 2026-08-04 D-66 (WP-D): a rule code from a stage answer is read back to the
+  ruleset's own spelling at the boundary where the answer enters, and a code
+  that cannot be resolved is kept verbatim rather than nulled or guessed.
+  Models answer in prose about as often as not: both live runs of the fixture
+  returned "Rule 1" where the protocol says "1". Two things break on that. The
+  confirmation screen looks the code up to show the rule's own words beside
+  the finding, which is how a person judges whether the rule says what the
+  engine claims, so a prose code renders as "Rule Rule 1" and reports the rule
+  as absent from the ruleset it came from. And the adversarial stage's sweep
+  dispositions are reconciled against hits whose codes come from the ruleset
+  itself, so one prose code there fails reconciliation and stops the run.
+  Kept verbatim when unresolvable, because what the model cited is evidence
+  about the prompts; nulling it would hide that a rule was named at all, and
+  matching it to the nearest code would put words in the protocol's mouth.
+  The screen already says such a code is not in the frozen ruleset.
+  The prefix stripped is a word and its punctuation, never digits, so a
+  ruleset containing "1" cannot swallow a citation of "11".

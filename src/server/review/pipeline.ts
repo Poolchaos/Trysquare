@@ -31,6 +31,7 @@ import {
 } from "@/lib/review/coverage";
 import { checkQuotedCode, describeMismatch } from "@/lib/review/quote-match";
 import { byRiskOrder, riskOrderedPaths } from "@/lib/review/risk-order";
+import { ruleCodeReader } from "@/lib/review/rule-codes";
 import {
   type AdversarialStageOutput,
   adversarialStageSchema,
@@ -458,6 +459,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     systemPrompt: input.systemPromptFor("s4_deletions"),
     prompt: renderDeletionPrompt(ordered),
   });
+  const readRuleCode = ruleCodeReader(input.rules.map((rule) => rule.code));
   const deletions = rejecting("s4_deletions", () => {
     const parsed = deletionStageSchema.parse(deletionsResponse.output);
     // Both directions, like every other stage: something removed and never
@@ -471,7 +473,13 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         parsed.reviewedDeletions.map((entry) => entry.path),
       ),
     );
-    return parsed;
+    return {
+      ...parsed,
+      findings: parsed.findings.map((finding) => ({
+        ...finding,
+        ruleCode: readRuleCode(finding.ruleCode),
+      })),
+    };
   });
 
   // A modification removes lines as well as adding them, so the deletions
@@ -683,6 +691,8 @@ async function runAdversarialStage(
     });
   }
 
+  const readRuleCode = ruleCodeReader(input.rules.map((rule) => rule.code));
+
   const merged: AdversarialStageOutput = {
     findings: [],
     clearedHunks: [],
@@ -718,9 +728,24 @@ async function runAdversarialStage(
         );
         throw error;
       }
-      merged.findings.push(...parsed.findings);
+      // Rule codes are read back to the ruleset's own spelling here, at the
+      // edge where a model's answer enters. A disposition's code is compared
+      // against a sweep hit's, which came from the ruleset, so "Rule 3"
+      // against "3" fails reconciliation and stops the run.
+      merged.findings.push(
+        ...parsed.findings.map((finding) => ({
+          ...finding,
+          ruleCode: readRuleCode(finding.ruleCode),
+        })),
+      );
       merged.clearedHunks.push(...parsed.clearedHunks);
-      merged.sweepDispositions.push(...parsed.sweepDispositions);
+      merged.sweepDispositions.push(
+        ...parsed.sweepDispositions.map((disposition) => ({
+          ...disposition,
+          // Never null for a disposition: the schema requires the string.
+          ruleCode: readRuleCode(disposition.ruleCode) ?? disposition.ruleCode,
+        })),
+      );
       // Deduplicated: a symbol may legitimately be dispositioned in more than
       // one batch, and counting it twice would misreport the accounting.
       for (const disposition of parsed.symbolDispositions) {
