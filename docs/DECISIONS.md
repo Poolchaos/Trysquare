@@ -1574,3 +1574,14 @@ verified evidence, in writing, here.
   pattern that will be read as text before anything is spent, and the run
   carries a note naming them. `assertSweepComplete` stays as the boundary for
   a pattern that cannot run at all, which escaping makes unreachable today.
+- 2026-08-04 D-65: the private-material gate scans untracked files too, not
+  only tracked and staged ones. A plan document written this session carried a
+  private product name; `./verify.sh` was run before `git add`, the file was
+  untracked, the gate had nothing to look at, and the name reached a commit.
+  It was caught on the next run, when the file had become tracked, and the
+  commit was amended before it left this machine. A gate that only sees a file
+  after it is staged cannot protect the commit that stages it, so the scan now
+  includes `git ls-files --others --exclude-standard`. The exclusion is what
+  keeps `docs/private/` and `review/` out, which is the same list `.gitignore`
+  already maintains. Proven both ways: an untracked file carrying the name
+  fails the gate, and the ignored private material still passes.

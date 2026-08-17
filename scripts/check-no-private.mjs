@@ -63,7 +63,13 @@ let files;
 try {
   const tracked = git(["ls-files"]).split("\n");
   const staged = git(["diff", "--cached", "--name-only", "--diff-filter=ACMR"]).split("\n");
-  files = [...new Set([...tracked, ...staged])].filter(Boolean);
+  // A new file that is neither tracked nor staged yet is still a file about
+  // to be committed, and checking only the first two let a private product
+  // name through: the gate was run before `git add`, saw nothing, and passed.
+  // `--exclude-standard` keeps the genuinely ignored out, which is what
+  // `docs/private/` and `review/` rely on.
+  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split("\n");
+  files = [...new Set([...tracked, ...staged, ...untracked])].filter(Boolean);
 } catch (error) {
   console.error("check-no-private: could not ask git which files are publishable.");
   console.error(String(error instanceof Error ? error.message : error));
