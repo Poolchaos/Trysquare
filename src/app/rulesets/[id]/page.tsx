@@ -9,7 +9,7 @@
  */
 
 import { use, useCallback, useEffect, useState } from "react";
-import { PageBody, PageHeader } from "@/components/page";
+import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import { Badge, Button, Card, Input, Mono, Problem, Select, severityTone } from "@/components/ui";
 
 interface Detail {
@@ -39,6 +39,8 @@ const TIERS = ["global", "tech", "project"];
 export default function RulesetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const [showDirectives, setShowDirectives] = useState(false);
@@ -57,13 +59,23 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const response = await fetch(`/api/rulesets/${id}`);
-      if (response.ok && !cancelled) setDetail((await response.json()) as Detail);
+      try {
+        const response = await fetch(`/api/rulesets/${id}`);
+        if (cancelled) return;
+        if (!response.ok) {
+          const body = (await response.json().catch(() => ({}))) as { error?: string };
+          setLoadError(body.error ?? "This ruleset could not be read.");
+          return;
+        }
+        setDetail((await response.json()) as Detail);
+      } catch {
+        if (!cancelled) setLoadError("This ruleset could not be read.");
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, loadAttempt]);
 
   async function amend(code: string, patch: { enabled?: boolean; severity?: string }) {
     setError("");
@@ -106,7 +118,18 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  if (!detail) return <PageBody>Loading...</PageBody>;
+  if (!detail) {
+    return (
+      <PageLoading
+        title="Ruleset"
+        {...(loadError === "" ? {} : { error: loadError })}
+        onRetry={() => {
+          setLoadError("");
+          setLoadAttempt((attempt) => attempt + 1);
+        }}
+      />
+    );
+  }
 
   const off = detail.rules.filter((rule) => !rule.enabled).length;
 

@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { use, useCallback, useEffect, useState } from "react";
-import { PageBody, PageHeader } from "@/components/page";
+import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import {
   Badge,
   Button,
@@ -63,6 +63,8 @@ interface Branches {
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [branches, setBranches] = useState<Branches | null>(null);
   const [filter, setFilter] = useState("");
   const [error, setError] = useState("");
@@ -88,18 +90,31 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [detailResponse, branchResponse] = await Promise.all([
-        fetch(`/api/projects/${id}`),
-        fetch(`/api/projects/${id}/branches`),
-      ]);
-      if (cancelled) return;
-      if (detailResponse.ok) setDetail((await detailResponse.json()) as Detail);
-      if (branchResponse.ok) setBranches((await branchResponse.json()) as Branches);
+      try {
+        const [detailResponse, branchResponse] = await Promise.all([
+          fetch(`/api/projects/${id}`),
+          fetch(`/api/projects/${id}/branches`),
+        ]);
+        if (cancelled) return;
+        // The project itself is the screen; without it there is nothing to
+        // draw, and saying so beats a "Loading..." that never resolves.
+        if (!detailResponse.ok) {
+          const body = (await detailResponse.json().catch(() => ({}))) as { error?: string };
+          setLoadError(body.error ?? "This project could not be read.");
+          return;
+        }
+        setDetail((await detailResponse.json()) as Detail);
+        // Branches are a separate concern: the remote may be unreachable while
+        // the project is perfectly readable, and the branch card says so.
+        if (branchResponse.ok) setBranches((await branchResponse.json()) as Branches);
+      } catch {
+        if (!cancelled) setLoadError("This project could not be read.");
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, loadAttempt]);
 
   async function call(path: string, init: RequestInit, onDone?: () => void) {
     setError("");
@@ -119,7 +134,18 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     }
   }
 
-  if (!detail) return <PageBody>Loading...</PageBody>;
+  if (!detail) {
+    return (
+      <PageLoading
+        title="Project"
+        {...(loadError === "" ? {} : { error: loadError })}
+        onRetry={() => {
+          setLoadError("");
+          setLoadAttempt((attempt) => attempt + 1);
+        }}
+      />
+    );
+  }
 
   const { project } = detail;
   const shown = (branches?.branches ?? []).filter((branch) => branch.name.includes(filter));

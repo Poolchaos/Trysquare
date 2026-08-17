@@ -119,3 +119,21 @@ test("a review deleted from the list takes its evidence with it", async ({ page 
 
   await expect(rows).toHaveCount(before - 1);
 });
+
+test("a screen whose data cannot be read says so instead of loading forever", async ({ page }) => {
+  // Three detail screens used to set their state only when the fetch came
+  // back ok, so a review, project or ruleset that could not be read left
+  // "Loading..." on the screen permanently. A failure indistinguishable from
+  // slowness is the one a person waits out rather than acts on.
+  for (const path of ["/reviews/NOPE123", "/projects/NOPE123", "/rulesets/NOPE123"]) {
+    await page.goto(path);
+    // The server's own words where it has them, this screen's where it does
+    // not; either way the screen stops claiming to be loading.
+    await expect(page.getByRole("button", { name: "Try again" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/could not be read|not found|No \w+ with id/)).toBeVisible();
+    await expect(page.getByText("Loading...")).toBeHidden();
+    // And the page keeps its shape while it fails, rather than collapsing to
+    // a bare line of text with no header.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  }
+});

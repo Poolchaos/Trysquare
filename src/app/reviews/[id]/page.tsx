@@ -16,7 +16,7 @@ import {
   type ReviewStatus,
 } from "@/lib/domain/state-machines";
 import { ConfirmationQueue, type Finding } from "@/components/confirmation";
-import { PageBody, PageHeader } from "@/components/page";
+import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import {
   Badge,
   Button,
@@ -288,6 +288,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [live, setLive] = useState<LiveEntry[]>([]);
   const [streaming, setStreaming] = useState(true);
+  const [loadError, setLoadError] = useState("");
   // Ticks only while something is running, so a finished review is not
   // re-rendered once a second forever.
   const [now, setNow] = useState(() => Date.now());
@@ -325,7 +326,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
     void (async () => {
       const fresh = await fetchSnapshot();
-      if (fresh && !cancelled) setSnapshot(fresh);
+      if (cancelled) return;
+      // A review that cannot be read is not a review that is slow to read.
+      if (fresh) setSnapshot(fresh);
+      else setLoadError("This review could not be read.");
     })();
 
     const source = new EventSource(`/api/reviews/${id}/events`);
@@ -397,7 +401,18 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     return () => clearInterval(tick);
   }, [snapshot?.running]);
 
-  if (!snapshot) return <PageBody>Loading...</PageBody>;
+  if (!snapshot) {
+    return (
+      <PageLoading
+        title="Review"
+        {...(loadError === "" ? {} : { error: loadError })}
+        onRetry={() => {
+          setLoadError("");
+          watchAgain();
+        }}
+      />
+    );
+  }
 
   const { review, findings } = snapshot;
   const done = new Set(
