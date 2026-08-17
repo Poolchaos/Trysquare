@@ -64,10 +64,20 @@ const count = (value: number): string => value.toString().replace(/\B(?=(\d{3})+
 
 interface Defect {
   id: string;
+  /** Which repository it was planted in: "app" or the linked dependency. */
+  repo: string;
   file: string;
   line: number;
   severity: string;
   kind: string;
+}
+
+/** The two worktree slugs the demo checks the repositories out under. */
+const APP_SLUG = "app";
+const CORE_SLUG = "shared-core";
+
+function qualifiedPath(defect: Defect): string {
+  return `${defect.repo === "app" ? APP_SLUG : CORE_SLUG}/${defect.file}`;
 }
 
 interface Manifest {
@@ -283,18 +293,28 @@ function scoreAgainstManifest(
   const found: Score["found"] = [];
   const missed: Score["missed"] = [];
   for (const defect of manifest.defects) {
-    const where = `app/${defect.file}:${defect.line}`;
+    // Qualified by the defect's own repository, as every path in a review is.
+    // Assuming the app's slug scored anything planted in the dependency as
+    // MISSED for ever, and it would have read as a model that could not see
+    // across the two repositories rather than a scorer that could not.
+    const path = qualifiedPath(defect);
+    const where = `${path}:${defect.line}`;
     // Within two lines: a reviewer that cites the guard rather than the line
     // it guards has still found the defect.
     const hit = verified.find(
-      (finding) =>
-        finding.filePath === `app/${defect.file}` && Math.abs(finding.lineStart - defect.line) <= 2,
+      (finding) => finding.filePath === path && Math.abs(finding.lineStart - defect.line) <= 2,
     );
     (hit ? found : missed).push({ id: defect.id, where });
   }
 
+  // The clean list carries paths without a repository, and every file on it
+  // is in the app by construction. Kept as one named slug rather than a
+  // literal, so a clean file in the dependency shows up as a shape change
+  // here rather than as a false positive that silently stops being counted.
   const falsePositives = verified
-    .filter((finding) => manifest.cleanFiles.some((clean) => finding.filePath === `app/${clean}`))
+    .filter((finding) =>
+      manifest.cleanFiles.some((clean) => finding.filePath === `${APP_SLUG}/${clean}`),
+    )
     .map((finding) => ({ file: finding.filePath, line: finding.lineStart, issue: finding.issue }));
 
   return {
