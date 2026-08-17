@@ -4,6 +4,7 @@ import type { Db } from "@/server/db/client";
 import {
   confirmFinding,
   createCandidate,
+  findingTallies,
   dismissFinding,
   listAwaitingDecision,
   listFindingsByStatus,
@@ -187,5 +188,36 @@ describe("human decision", () => {
 
     const awaiting = listAwaitingDecision(db, reviewId);
     expect(awaiting.map((f) => f.id).sort()).toEqual([verified.id, question.id].sort());
+  });
+});
+
+describe("what a review yielded, across the whole list", () => {
+  it("counts each review's findings by what became of them", () => {
+    // The reviews list showed a status and a date, so a review that confirmed
+    // several criticals looked exactly like one that was cancelled.
+    const kept = candidate();
+    const dropped = candidate({ issue: "Second" });
+    const invented = candidate({ issue: "Third" });
+
+    markVerified(db, kept.id, { quotedCode: "code", lineStart: 1, lineEnd: 1 });
+    markVerified(db, dropped.id, { quotedCode: "code", lineStart: 1, lineEnd: 1 });
+    confirmFinding(db, kept.id);
+    dismissFinding(db, dropped.id, "Handled upstream.");
+    markKilled(db, invented.id, "Quoted code that was not there.");
+
+    const tally = findingTallies(db).get(reviewId);
+    expect(tally).toEqual({ total: 3, confirmed: 1, dismissed: 1, killed: 1 });
+  });
+
+  it("keeps killed findings in the count rather than hiding the engine's misses", () => {
+    // They are the measurement of how often the engine invents things, and a
+    // history that drops them reads cleaner than the one that happened.
+    markKilled(db, candidate().id, "False positive.");
+    expect(findingTallies(db).get(reviewId)?.killed).toBe(1);
+    expect(findingTallies(db).get(reviewId)?.total).toBe(1);
+  });
+
+  it("reports nothing for a review that raised nothing", () => {
+    expect(findingTallies(db).has(reviewId)).toBe(false);
   });
 });

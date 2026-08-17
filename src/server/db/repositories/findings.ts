@@ -7,7 +7,7 @@
  * is what "the human is the done-gatekeeper" means in code.
  */
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { newId, nowIso } from "@/lib/ids";
 import type { RepoRole, Severity } from "@/lib/domain/enums";
 import {
@@ -223,4 +223,45 @@ export function listAwaitingDecision(db: Db, reviewId: string): Finding[] {
 /** Candidates still awaiting a verdict. Non-empty past S5 is a pipeline bug. */
 export function listUnresolvedCandidates(db: Db, reviewId: string): Finding[] {
   return listFindingsByStatus(db, reviewId, ["candidate"]);
+}
+
+/**
+ * What each review actually yielded, in one query rather than one per row.
+ *
+ * The reviews list showed a status and a timestamp, so a three-hour review
+ * that confirmed twelve criticals looked exactly like a cancelled one. These
+ * are the numbers that tell them apart.
+ *
+ * Killed findings are counted here rather than hidden. They are the engine's
+ * own error rate, and a list that quietly drops them reports a cleaner
+ * history than actually happened.
+ */
+export interface FindingTally {
+  total: number;
+  confirmed: number;
+  dismissed: number;
+  killed: number;
+}
+
+export function findingTallies(db: Db): Map<string, FindingTally> {
+  const rows = db
+    .select({
+      reviewId: findings.reviewId,
+      status: findings.status,
+      count: sql<number>`count(*)`,
+    })
+    .from(findings)
+    .groupBy(findings.reviewId, findings.status)
+    .all();
+
+  const tallies = new Map<string, FindingTally>();
+  for (const row of rows) {
+    const tally = tallies.get(row.reviewId) ?? { total: 0, confirmed: 0, dismissed: 0, killed: 0 };
+    tally.total += row.count;
+    if (row.status === "confirmed") tally.confirmed += row.count;
+    if (row.status === "dismissed") tally.dismissed += row.count;
+    if (row.status === "killed") tally.killed += row.count;
+    tallies.set(row.reviewId, tally);
+  }
+  return tallies;
 }

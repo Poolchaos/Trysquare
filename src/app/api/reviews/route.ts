@@ -26,6 +26,7 @@ import { resolveProfile } from "@/lib/review/profiles";
 import { fetchAll, mergeBase, resolveCommit } from "@/server/gitops/repo";
 import { created, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
+import { findingTallies } from "@/server/db/repositories/findings";
 import { runtime } from "@/server/runtime";
 import { listProjects } from "@/server/db/repositories/projects";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
@@ -64,10 +65,13 @@ export function GET(): Promise<Response> {
       listProjects(db).flatMap((project) => listReviewsForProject(db, project.id)),
     );
 
+    // One grouped query for the whole list rather than one per row.
+    const tallies = findingTallies(db);
     const reviews = listProjects(db).flatMap((project) =>
       listReviewsForProject(db, project.id).map((review) => ({
         ...review,
         projectName: project.name,
+        findings: tallies.get(review.id) ?? { total: 0, confirmed: 0, dismissed: 0, killed: 0 },
       })),
     );
     reviews.sort((a, b) => b.createdAt.localeCompare(a.createdAt));

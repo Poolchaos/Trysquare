@@ -33,6 +33,25 @@ interface Row {
   status: string;
   createdAt: string;
   mergedDetectedAt: string | null;
+  model: string;
+  costEquivalentUsd: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  findings: { total: number; confirmed: number; dismissed: number; killed: number };
+}
+
+/** A finished review's wall clock, from columns the list already receives. */
+function ranFor(startedAt: string | null, completedAt: string | null): string | null {
+  if (!startedAt || !completedAt) return null;
+  const seconds = Math.max(
+    0,
+    Math.floor((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000),
+  );
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  return minutes < 60
+    ? `${minutes}m ${String(seconds % 60).padStart(2, "0")}s`
+    : `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
 }
 
 /** Statuses that own a running process, so the row offers no delete. */
@@ -41,6 +60,7 @@ const RUNNING = new Set(["running", "verifying"]);
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Row[] | null>(null);
   const [project, setProject] = useState("");
+  const [status, setStatus] = useState("");
   const [confirming, setConfirming] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -85,30 +105,53 @@ export default function ReviewsPage() {
   const projects = [
     ...new Map((reviews ?? []).map((review) => [review.projectId, review.projectName])),
   ];
-  const shown = (reviews ?? []).filter((review) => project === "" || review.projectId === project);
+  const shown = (reviews ?? []).filter(
+    (review) =>
+      (project === "" || review.projectId === project) &&
+      (status === "" ||
+        (status === "awaiting"
+          ? review.status === "awaiting_confirmation"
+          : review.status === status)),
+  );
+  const awaiting = (reviews ?? []).filter(
+    (review) => review.status === "awaiting_confirmation",
+  ).length;
 
   return (
     <>
       <PageHeader
         title="Reviews"
         actions={
-          projects.length > 1 ? (
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-[var(--color-ink-muted)]">Project</span>
-              <Select
-                value={project}
-                onChange={(event) => setProject(event.target.value)}
-                className="w-auto"
+          <span className="flex flex-wrap items-center gap-3">
+            {/* The one filter worth reaching for first: which of these still
+                want something from me. Offered only when the answer is not
+                none, so it never advertises an empty set. */}
+            {awaiting > 0 ? (
+              <Button
+                variant={status === "awaiting" ? "primary" : "quiet"}
+                onClick={() => setStatus(status === "awaiting" ? "" : "awaiting")}
               >
-                <option value="">All</option>
-                {projects.map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-          ) : null
+                {awaiting} awaiting your decision
+              </Button>
+            ) : null}
+            {projects.length > 1 ? (
+              <label className="flex items-center gap-2 text-sm">
+                <span className="text-[var(--color-ink-muted)]">Project</span>
+                <Select
+                  value={project}
+                  onChange={(event) => setProject(event.target.value)}
+                  className="w-auto"
+                >
+                  <option value="">All</option>
+                  {projects.map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            ) : null}
+          </span>
         }
       />
       <PageBody>
@@ -123,8 +166,8 @@ export default function ReviewsPage() {
         ) : reviews.length === 0 ? (
           <Empty title="No reviews yet">Open a project and choose a branch to review.</Empty>
         ) : shown.length === 0 ? (
-          <Empty title="No reviews for that project">
-            Every review is still here; only this filter is hiding them.
+          <Empty title="No reviews match these filters">
+            Every review is still here; only the filters are hiding them.
           </Empty>
         ) : (
           <ul className="grid gap-2">
@@ -143,6 +186,27 @@ export default function ReviewsPage() {
                     </Mono>
                   </Link>
                   <span className="flex items-center gap-3">
+                    {/* What the review actually produced. Without these a
+                        three-hour run that confirmed twelve criticals read
+                        exactly like a cancelled one. */}
+                    {review.findings.total > 0 ? (
+                      <span className="text-xs text-[var(--color-ink-muted)] tabular-nums">
+                        {review.findings.confirmed} of {review.findings.total} confirmed
+                      </span>
+                    ) : null}
+                    {ranFor(review.startedAt, review.completedAt) ? (
+                      <span className="text-xs text-[var(--color-ink-muted)] tabular-nums">
+                        {ranFor(review.startedAt, review.completedAt)}
+                      </span>
+                    ) : null}
+                    {review.costEquivalentUsd > 0 ? (
+                      <span className="text-xs text-[var(--color-ink-muted)] tabular-nums">
+                        ${review.costEquivalentUsd.toFixed(2)}
+                      </span>
+                    ) : null}
+                    <span className="hidden text-xs text-[var(--color-ink-faint)] sm:inline">
+                      {review.model}
+                    </span>
                     <span className="text-xs text-[var(--color-ink-muted)]">
                       {review.createdAt.slice(0, 16).replace("T", " ")}
                     </span>
