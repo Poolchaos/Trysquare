@@ -318,7 +318,9 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByText(EDITED_COMMENT)).toBeVisible();
 
     await page.getByRole("button", { name: "Export" }).click();
-    await expect(page.getByText(/Written to .*exports/)).toBeVisible({ timeout: 30_000 });
+    // The path shown is the HTML one, because that is the file a person
+    // sends to whoever fixes the code.
+    await expect(page.getByText(/Written to .*exports.*\.html/)).toBeVisible({ timeout: 30_000 });
   });
 
   await test.step("the exported file on disk carries the words a person wrote", async () => {
@@ -326,8 +328,12 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // it: the export is what leaves the app, so it is what gets read here,
     // off the disk, rather than trusted from the page that just rendered it.
     const written = await page.getByText(/Written to .*exports/).textContent();
-    const path = written?.replace(/^Written to /, "").trim() ?? "";
-    expect(path).not.toBe("");
+    const htmlPath = written?.replace(/^Written to /, "").trim() ?? "";
+    expect(htmlPath).not.toBe("");
+    // Both files land: the HTML to hand over, the markdown to keep.
+    const html = readFileSync(htmlPath, "utf8");
+    expect(html).toContain("<!doctype html>");
+    const path = htmlPath.replace(/\.html$/, ".md");
     const report = readFileSync(path, "utf8");
     expect(report).toContain(`Comment: ${EDITED_COMMENT}`);
 

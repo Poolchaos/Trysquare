@@ -251,3 +251,100 @@ export function exportFileName(input: {
   const safe = (value: string) => value.replace(/[/\\]+/g, "-");
   return `${safe(input.projectSlug)}--${safe(input.fromBranch)}--into--${safe(input.intoBranch)}--${input.at.slice(0, 10)}.md`;
 }
+
+/**
+ * The report as one self-contained HTML file.
+ *
+ * A report is written to be handed to whoever fixes the code, and markdown on
+ * someone else's disk is not that: it renders differently in every viewer and
+ * not at all in a browser. This is one file with its styles inline, no
+ * scripts, no fonts, no requests, so it opens anywhere and keeps working
+ * after the app that made it is gone.
+ *
+ * Everything is escaped on the way in. A finding quotes real code, and code
+ * is full of angle brackets.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+export function renderReportHtml(input: ReportInput): string {
+  const counts = input.confirmed.reduce<Record<string, number>>((all, finding) => {
+    all[finding.severity] = (all[finding.severity] ?? 0) + 1;
+    return all;
+  }, {});
+  const summary =
+    `${input.confirmed.length} confirmed finding${input.confirmed.length === 1 ? "" : "s"}` +
+    (Object.keys(counts).length > 0
+      ? `: ${SEVERITY_ORDER.filter((severity) => counts[severity])
+          .map((severity) => `${counts[severity]} ${severity.toLowerCase()}`)
+          .join(", ")}`
+      : "") +
+    ".";
+
+  const group = (label: string, findings: readonly ReportFinding[]): string => {
+    if (findings.length === 0) return "";
+    const items = [...findings]
+      .sort(
+        (a, b) =>
+          SEVERITY_ORDER.indexOf(a.severity as never) - SEVERITY_ORDER.indexOf(b.severity as never),
+      )
+      .map(
+        (finding) => `
+      <li class="f ${escapeHtml(finding.severity.toLowerCase())}">
+        <p class="t">${escapeHtml(finding.issue)}
+          <span class="w">${escapeHtml(finding.filePath)}:${finding.lineStart}</span>
+          ${finding.ruleCode ? `<span class="w">rule ${escapeHtml(finding.ruleCode)}</span>` : ""}
+        </p>
+        <p class="c">${escapeHtml(finding.comment)}</p>
+        ${finding.dismissReason ? `<p class="w">Dismissed: ${escapeHtml(finding.dismissReason)}</p>` : ""}
+        ${finding.quotedCode ? `<pre><code>${escapeHtml(finding.quotedCode)}</code></pre>` : ""}
+      </li>`,
+      )
+      .join("");
+    return `<h2>${escapeHtml(label)} (${findings.length})</h2><ul class="fs">${items}</ul>`;
+  };
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review: ${escapeHtml(input.projectName)} ${escapeHtml(input.fromBranch)} into ${escapeHtml(input.intoBranch)}</title>
+<style>
+:root { color-scheme: light dark; --ink: #16181d; --muted: #5c6370; --line: #d9dce2; --bg: #fff; --panel: #f7f8fa; --crit: #b3261e; --warn: #8a5a00; }
+@media (prefers-color-scheme: dark) { :root { --ink: #e8eaed; --muted: #9aa2ad; --line: #2b303a; --bg: #14171c; --panel: #1a1e25; --crit: #f2857d; --warn: #e0a640; } }
+body { margin: 0 auto; max-width: 52rem; padding: 2.5rem 1.5rem 4rem; background: var(--bg); color: var(--ink);
+  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+h1 { font-size: 1.4rem; margin: 0 0 .5rem; font-family: ui-monospace, monospace; }
+.sum { font-size: 1.05rem; font-weight: 600; margin: 0 0 1.5rem; }
+h2 { font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 2rem 0 .5rem; }
+h3 { font-size: .95rem; margin: 1.5rem 0 .25rem; }
+p { margin: .25rem 0; }
+blockquote { margin: .25rem 0; border-left: 2px solid var(--line); padding-left: .75rem; color: var(--muted); }
+.fs { list-style: none; margin: 0; padding: 0; }
+.f { border: 1px solid var(--line); border-left-width: 3px; border-radius: 6px; padding: .75rem .9rem; margin: .5rem 0; background: var(--panel); }
+.f.critical { border-left-color: var(--crit); } .f.warning { border-left-color: var(--warn); }
+.t { font-weight: 600; }
+.c { color: var(--muted); }
+.w { font-weight: 400; font-size: .8rem; color: var(--muted); font-family: ui-monospace, monospace; margin-left: .5rem; }
+pre { overflow-x: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: .6rem; margin: .5rem 0 0; }
+code { font: 12.5px/1.5 ui-monospace, "SF Mono", Menlo, monospace; }
+footer { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: .75rem; font-size: .8rem; color: var(--muted); }
+</style></head><body>
+<h1>${escapeHtml(input.fromBranch)} into ${escapeHtml(input.intoBranch)}</h1>
+<p class="sum">${escapeHtml(summary)}</p>
+<h3>What was examined</h3>
+<p class="c">${input.coverage.totalFiles} changed file(s) and ${input.coverage.totalHunks} hunk(s) were read, and each hunk was either given a finding or cleared with a reason. ${input.coverage.totalSweepHits} mechanical sweep hit(s) were each dispositioned. ${input.chainFilesRead} file(s) outside the change set were opened to follow what it calls into.</p>
+${input.intent ? `<h3>What the change was for</h3><blockquote>${escapeHtml(input.intent)}</blockquote>` : ""}
+${group("Confirmed", input.confirmed)}
+${group("Open questions", input.openQuestions)}
+${group("Dismissed", input.dismissed)}
+<footer>${escapeHtml(input.model)} at effort ${escapeHtml(input.effort)}, ${escapeHtml(input.profile)} profile, against ${escapeHtml(input.rulesetName)} v${input.rulesetVersion}.
+Commit ${escapeHtml(input.fromCommit.slice(0, 12))}, merge base ${escapeHtml(input.mergeBaseCommit.slice(0, 12))}.
+Cost equivalent $${input.usage.costEquivalentUsd.toFixed(4)}.</footer>
+</body></html>
+`;
+}

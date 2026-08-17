@@ -828,8 +828,12 @@ function ReportPanel({
             variant="primary"
             onClick={async () => {
               const response = await fetch(`/api/reviews/${reviewId}/export`, { method: "POST" });
-              const body = (await response.json()) as { path?: string; error?: string };
-              if (response.ok && body.path) onExported(body.path);
+              const body = (await response.json()) as {
+                path?: string;
+                htmlPath?: string;
+                error?: string;
+              };
+              if (response.ok && body.path) onExported(body.htmlPath ?? body.path);
               else setError(body.error ?? "The report could not be exported.");
             }}
           >

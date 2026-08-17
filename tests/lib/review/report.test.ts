@@ -6,7 +6,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { exportFileName, renderReport, type ReportInput } from "@/lib/review/report";
+import {
+  exportFileName,
+  renderReport,
+  renderReportHtml,
+  type ReportInput,
+} from "@/lib/review/report";
 
 const FINDING = {
   filePath: "app/src/orders/save.ts",
@@ -247,5 +252,52 @@ describe("the file an export is written to", () => {
       at: "2026-07-31T23:00:00.000Z",
     });
     expect(morning).toBe(evening);
+  });
+});
+
+describe("the report as a file someone else can open", () => {
+  it("carries its own styles and asks the network for nothing", () => {
+    // The point of the HTML export is that it survives being sent somewhere.
+    // A stylesheet link, a font request or a script would each make it
+    // depend on something the recipient may not have.
+    const html = renderReportHtml(BASE);
+
+    expect(html).toContain("<!doctype html>");
+    expect(html).toContain("<style>");
+    expect(html).not.toContain("<script");
+    expect(html).not.toMatch(/<link[^>]+href/i);
+    expect(html).not.toMatch(/https?:\/\//);
+  });
+
+  it("escapes the code it quotes, because code is full of angle brackets", () => {
+    const html = renderReportHtml({
+      ...BASE,
+      confirmed: [
+        {
+          filePath: "app/src/render.ts",
+          lineStart: 3,
+          lineEnd: 3,
+          severity: "CRITICAL",
+          ruleCode: "1",
+          issue: "Unescaped markup",
+          comment: 'Renders "user" input directly.',
+          mechanism: "traced from the change",
+          quotedCode: 'el.innerHTML = "<img src=x onerror=alert(1)>";',
+        },
+      ],
+    });
+
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    expect(html).not.toContain("<img src=x");
+  });
+
+  it("says the same counts as the markdown it ships beside", () => {
+    // Two renderings of one build; a reader who has both must not find them
+    // disagreeing about how many findings there were.
+    const html = renderReportHtml(BASE);
+    const markdown = renderReport(BASE);
+    const fromMarkdown = /(\d+) confirmed finding/.exec(markdown)?.[1];
+    expect(fromMarkdown).toBeDefined();
+    expect(html).toContain(`${fromMarkdown} confirmed finding`);
   });
 });

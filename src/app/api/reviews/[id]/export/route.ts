@@ -10,7 +10,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { repoSlug } from "@/lib/git/url";
 import { exportsDir } from "@/lib/paths";
-import { exportFileName, renderReport } from "@/lib/review/report";
+import { exportFileName, renderReport, renderReportHtml } from "@/lib/review/report";
 import { requireProject } from "@/server/db/repositories/projects";
 import { requireReview, statusOf } from "@/server/db/repositories/reviews";
 import { buildReportInput } from "@/server/review/report-input";
@@ -39,7 +39,8 @@ export async function POST(
       );
     }
 
-    const markdown = renderReport(buildReportInput(db, id));
+    const input = buildReportInput(db, id);
+    const markdown = renderReport(input);
     const name = exportFileName({
       projectSlug: repoSlug(requireProject(db, review.projectId).name),
       fromBranch: review.fromBranch,
@@ -52,6 +53,12 @@ export async function POST(
     const path = join(directory, name);
     await writeFile(path, markdown, "utf8");
 
-    return ok({ path, markdown });
+    // A second file beside the first, self-contained, so the report can be
+    // handed to whoever fixes the code without handing them this app as well.
+    // Markdown is the archival form; the HTML is the readable one.
+    const htmlPath = path.replace(/\.md$/, "") + ".html";
+    await writeFile(htmlPath, renderReportHtml(input), "utf8");
+
+    return ok({ path, htmlPath, markdown });
   });
 }

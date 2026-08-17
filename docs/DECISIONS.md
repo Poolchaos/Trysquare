@@ -1756,3 +1756,28 @@ verified evidence, in writing, here.
   decision nobody could apply consistently, which is exactly what happened.
   Motion tokens stay, read through arbitrary values, so a duration is named
   once rather than typed into a component.
+- 2026-08-17 D-73: where the saved mock and the written record disagreed, the
+  saved file wins. The maintainer kept `report-final.png` and
+  `scoreboard-final.png` as the denser left-hand variants while D-68's prose
+  described the right-hand ones, said "happy with all of these" and then said
+  go three times without settling it. Continuing to ask was blocking work
+  that was asked for repeatedly, so it is resolved this way and recorded
+  rather than left implicit: the picked file is what the maintainer chose
+  with their hands, and prose written about a picture is the weaker evidence.
+  One element of the recommendation survives regardless, because D-68's own
+  rule requires it: rule-yield bars name their rule. Anonymous bars are a
+  measurement nobody can act on, and "every element surfaces a measurement
+  the product already makes" is meaningless if the reader cannot tell which
+  rule a bar is about. If the maintainer meant the other variants, replacing
+  the two files re-opens this cheaply, since the difference is density rather
+  than structure.
+- 2026-08-17 D-74 (WP-C): the report is typeset from the same structured
+  input the markdown is written from, and exports as a self-contained HTML
+  file beside it. No markdown parser is involved: the page and the document
+  are two renderings of one build, so they cannot drift, and nothing has to
+  infer what a heading was from a string. The HTML carries its styles inline
+  and requests nothing, because a report that phones home for a stylesheet
+  stops working the moment it is opened somewhere else, which is the only
+  place it is ever opened. Markdown stays the archival form and is what the
+  suite still asserts document structure against. The screen names the HTML
+  path, since that is the file a person sends to whoever fixes the code.
