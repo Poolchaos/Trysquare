@@ -308,11 +308,14 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.getByRole("button", { name: "Complete review" }).click();
     await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
 
-    // The report says what was examined, not only what was found, and renders
-    // findings in the structure the protocol defines.
-    await expect(page.getByText("## What was examined")).toBeVisible();
-    await expect(page.getByText(/^File: app\//m).first()).toBeVisible();
-    await expect(page.getByText(`Comment: ${EDITED_COMMENT}`)).toBeVisible();
+    // The report says what was examined, not only what was found, and is
+    // typeset rather than printed as raw markdown. The document's structure is
+    // asserted against the exported file below, which is where it is actually
+    // promised; here the claim is that a person can read it.
+    await expect(page.getByRole("heading", { name: "What was examined" })).toBeVisible();
+    await expect(page.getByText(/confirmed finding/)).toBeVisible();
+    await expect(page.getByText(/app\/src\//).first()).toBeVisible();
+    await expect(page.getByText(EDITED_COMMENT)).toBeVisible();
 
     await page.getByRole("button", { name: "Export" }).click();
     await expect(page.getByText(/Written to .*exports/)).toBeVisible({ timeout: 30_000 });

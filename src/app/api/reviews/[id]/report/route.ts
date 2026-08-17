@@ -34,6 +34,11 @@ export async function GET(
       );
     }
 
-    return ok({ markdown: renderReport(buildReportInput(db, id)) });
+    // Both shapes from one build: the markdown is what gets exported and
+    // copied, the structured input is what the screen typesets. Rendering the
+    // page from the same input the document is written from means the two
+    // cannot drift, and it needs no markdown parser to say what a heading is.
+    const input = buildReportInput(db, id);
+    return ok({ markdown: renderReport(input), report: input });
   });
 }

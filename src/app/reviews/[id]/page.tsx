@@ -133,6 +133,41 @@ interface Snapshot {
   queued: boolean;
 }
 
+interface ReportFinding {
+  filePath: string;
+  lineStart: number;
+  lineEnd: number;
+  severity: string;
+  ruleCode: string | null;
+  issue: string;
+  comment: string;
+  mechanism: string;
+  quotedCode: string;
+  dismissReason?: string | null;
+}
+
+interface ReportData {
+  projectName: string;
+  fromBranch: string;
+  intoBranch: string;
+  fromCommit: string;
+  mergeBaseCommit: string;
+  intent?: string | null;
+  confirmed: ReportFinding[];
+  dismissed: ReportFinding[];
+  openQuestions: ReportFinding[];
+  coverage: { totalFiles: number; totalHunks: number; totalSweepHits: number };
+  chainFilesRead: number;
+  rulesetName: string;
+  rulesetVersion: number;
+  model: string;
+  effort: string;
+  profile: string;
+  usage: { costEquivalentUsd: number };
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
 /**
  * The CLI reports a limit reset as unix seconds. Shown in the reader's own
  * timezone, because the only question being asked is when to come back.
@@ -637,10 +672,6 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   onExported={setExported}
                 />
                 <RunDetail snapshot={snapshot} done={done} executing={executing} folded />
-                <h2 className="mb-3 text-heading font-semibold">
-                  Findings{reported.length > 0 ? ` (${reported.length})` : ""}
-                </h2>
-                {renderReadOnly()}
               </>
             ) : (
               <>
@@ -750,6 +781,7 @@ function ReportPanel({
   onLoaded: (markdown: string) => void;
   onExported: (path: string) => void;
 }) {
+  const [data, setData] = useState<ReportData | null>(null);
   const [error, setError] = useState("");
   // A copy that says nothing is a copy someone presses twice to be sure.
   const [copied, setCopied] = useState(false);
@@ -759,10 +791,16 @@ function ReportPanel({
     let cancelled = false;
     void (async () => {
       const response = await fetch(`/api/reviews/${reviewId}/report`);
-      const body = (await response.json()) as { markdown?: string; error?: string };
+      const body = (await response.json()) as {
+        markdown?: string;
+        report?: ReportData;
+        error?: string;
+      };
       if (cancelled) return;
-      if (response.ok && body.markdown) onLoaded(body.markdown);
-      else setError(body.error ?? "The report could not be built.");
+      if (response.ok && body.markdown) {
+        onLoaded(body.markdown);
+        if (body.report) setData(body.report);
+      } else setError(body.error ?? "The report could not be built.");
     })();
     return () => {
       cancelled = true;
@@ -806,14 +844,18 @@ function ReportPanel({
       ) : null}
 
       {report === null ? (
-        <p className="text-sm text-[var(--color-ink-muted)]">Building the report...</p>
+        <p className="text-body text-[var(--color-ink-muted)]">Building the report...</p>
+      ) : data ? (
+        <RenderedReport data={data} />
       ) : (
+        // Only when the structured build is missing, which means an older
+        // response shape. The document still reads; it just is not typeset.
         <Card className="max-h-[32rem] overflow-auto p-4">
           <pre
             tabIndex={0}
             role="group"
             aria-label="Report"
-            className="text-xs leading-5 whitespace-pre-wrap"
+            className="text-aside leading-5 whitespace-pre-wrap"
           >
             <code className="font-[family-name:var(--font-mono)]">{report}</code>
           </pre>
@@ -1001,6 +1043,138 @@ function RunDetail({
         <div className="mt-3">{body}</div>
       </details>
     </div>
+  );
+}
+
+/**
+ * The report as a document rather than a dump.
+ *
+ * The renderer builds a structured thing, a summary line, a completeness
+ * statement, findings grouped by severity, dismissals with their reasons, and
+ * the whole of it used to arrive on screen as unrendered markdown inside a
+ * scrolling monospace box: the payoff of a five-minute run with less
+ * hierarchy than the queue the reader had just left.
+ *
+ * Typeset from the same input the markdown is written from, so the page and
+ * the exported document cannot say different things, and no markdown parser
+ * has to be trusted to work out what a heading was.
+ */
+function RenderedReport({ data }: { data: ReportData }) {
+  const groups = [
+    { key: "confirmed", label: "Confirmed", findings: data.confirmed },
+    { key: "open", label: "Open questions", findings: data.openQuestions },
+    { key: "dismissed", label: "Dismissed", findings: data.dismissed },
+  ].filter((group) => group.findings.length > 0);
+
+  const bySeverity = (findings: ReportFinding[]) => {
+    const order = ["CRITICAL", "WARNING", "NITPICK"];
+    return [...findings].sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
+  };
+  const counts = data.confirmed.reduce<Record<string, number>>((all, finding) => {
+    all[finding.severity] = (all[finding.severity] ?? 0) + 1;
+    return all;
+  }, {});
+
+  return (
+    <Card className="p-6">
+      <h3 className="flex flex-wrap items-center gap-2 text-title font-semibold tracking-tight">
+        <Mono>{data.fromBranch}</Mono>
+        <span className="text-[var(--color-ink-faint)]">into</span>
+        <Mono>{data.intoBranch}</Mono>
+      </h3>
+
+      {/* The sentence a reader wants before any of the detail. */}
+      <p className="mt-3 text-heading font-semibold">
+        {data.confirmed.length} confirmed finding{data.confirmed.length === 1 ? "" : "s"}
+        {Object.keys(counts).length > 0
+          ? `: ${["CRITICAL", "WARNING", "NITPICK"]
+              .filter((severity) => counts[severity])
+              .map((severity) => `${counts[severity]} ${severity.toLowerCase()}`)
+              .join(", ")}`
+          : ""}
+        .
+      </p>
+
+      <h4 className="mt-5 text-body font-medium">What was examined</h4>
+      <p className="mt-1 text-body text-[var(--color-ink-muted)]">
+        {data.coverage.totalFiles} changed file(s) and {data.coverage.totalHunks} hunk(s) were read,
+        and each hunk was either given a finding or cleared with a reason.{" "}
+        {data.coverage.totalSweepHits} mechanical sweep hit(s) were each dispositioned.{" "}
+        {data.chainFilesRead} file(s) outside the change set were opened to follow what it calls
+        into.
+      </p>
+
+      {data.intent ? (
+        <>
+          <h4 className="mt-5 text-body font-medium">What the change was for</h4>
+          <blockquote className="mt-1 border-l-2 border-[var(--color-border-strong)] pl-3 text-body text-[var(--color-ink-muted)]">
+            {data.intent}
+          </blockquote>
+        </>
+      ) : null}
+
+      {groups.map((group) => (
+        <section key={group.key} className="mt-6">
+          <h4 className="text-body font-semibold tracking-wide uppercase text-[var(--color-ink-muted)]">
+            {group.label} ({group.findings.length})
+          </h4>
+          <ul className="mt-2 grid gap-2">
+            {bySeverity(group.findings).map((finding, index) => (
+              <li
+                key={`${finding.filePath}-${finding.lineStart}-${index}`}
+                className="flex gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+              >
+                <span
+                  aria-hidden
+                  className={`w-0.5 shrink-0 self-stretch rounded ${
+                    finding.severity === "CRITICAL"
+                      ? "bg-[var(--color-critical)]"
+                      : finding.severity === "WARNING"
+                        ? "bg-[var(--color-warning)]"
+                        : "bg-[var(--color-border-strong)]"
+                  }`}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="text-body font-medium">{finding.issue}</span>
+                    <Mono className="text-aside text-[var(--color-ink-muted)]">
+                      {finding.filePath}:{finding.lineStart}
+                    </Mono>
+                    {finding.ruleCode ? (
+                      <span className="text-aside text-[var(--color-ink-faint)]">
+                        rule {finding.ruleCode}
+                      </span>
+                    ) : null}
+                  </div>
+                  {/* Prose first, code subordinate: the reader is deciding what
+                      to do, not reading a diff. */}
+                  <p className="mt-1 text-body text-[var(--color-ink-muted)]">{finding.comment}</p>
+                  {finding.dismissReason ? (
+                    <p className="mt-1 text-aside text-[var(--color-ink-faint)]">
+                      Dismissed: {finding.dismissReason}
+                    </p>
+                  ) : null}
+                  {finding.quotedCode ? (
+                    <pre className="mt-2 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2 text-aside">
+                      <code className="font-[family-name:var(--font-mono)]">
+                        {finding.quotedCode}
+                      </code>
+                    </pre>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <footer className="mt-6 border-t border-[var(--color-border)] pt-3 text-aside text-[var(--color-ink-faint)]">
+        <Mono>{data.model}</Mono> at effort {data.effort}, {data.profile} profile, against{" "}
+        {data.rulesetName} v{data.rulesetVersion}. Commit <Sha value={data.fromCommit} />, merge
+        base <Sha value={data.mergeBaseCommit} />. Cost equivalent $
+        {data.usage.costEquivalentUsd.toFixed(4)}.
+      </footer>
+    </Card>
   );
 }
 
