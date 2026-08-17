@@ -173,9 +173,12 @@ function formatDuration(startedAt: string, endedAt: string | null): string | nul
 function CoveragePanel({
   coverage,
   running,
+  /** False when the caller already states it above the fold, so it is said once. */
+  withSentence = true,
 }: {
   coverage: Snapshot["coverage"];
   running: boolean;
+  withSentence?: boolean;
 }) {
   if (coverage.totalFiles === 0) {
     return running ? (
@@ -208,11 +211,13 @@ function CoveragePanel({
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
-        {outstanding === 0
-          ? "Everything the change touched ended with a finding or an explicit clear."
-          : `${outstanding} still outstanding. The review cannot finish while anything is.`}
-      </p>
+      {withSentence ? (
+        <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+          {outstanding === 0
+            ? "Everything the change touched ended with a finding or an explicit clear."
+            : `${outstanding} still outstanding. The review cannot finish while anything is.`}
+        </p>
+      ) : null}
       {coverage.unresolvedCandidates > 0 ? (
         <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
           {coverage.unresolvedCandidates} candidate finding(s) awaiting verification.
@@ -488,134 +493,42 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
           <div className="min-w-0">
-            <Card className="mb-6 p-4">
-              <h2 className="mb-3 text-sm font-medium">Stages</h2>
-              <ol className="grid gap-1">
-                {STAGES.map(([stage, label, description]) => {
-                  const attempts = snapshot.stages.filter((row) => row.stage === stage);
-                  const last = attempts[attempts.length - 1];
-                  // A stage aborted by the user is recorded as failed with its
-                  // own error class; painting it critical-red would dress a
-                  // decision up as a fault.
-                  const wasCancelled = last?.status === "failed" && last.errorClass === "cancelled";
-                  const failed = last?.status === "failed" && !wasCancelled;
-                  const succeeded =
-                    deterministicDone(stage, snapshot, done) || last?.status === "succeeded";
-                  const current = stage === executing;
-
-                  return (
-                    <li
-                      key={stage}
-                      className="border-t border-[var(--color-border)] py-2 first:border-0"
-                    >
-                      <div className="flex items-baseline gap-3 text-sm">
-                        <span
-                          aria-hidden
-                          className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                            current
-                              ? "bg-[var(--color-accent)] pulse"
-                              : failed
-                                ? "bg-[var(--color-critical)]"
-                                : succeeded
-                                  ? "bg-[var(--color-good)]"
-                                  : "bg-[var(--color-border-strong)]"
-                          }`}
-                        />
-                        <span
-                          className={succeeded || failed ? "" : "text-[var(--color-ink-muted)]"}
-                        >
-                          {label}
-                        </span>
-                        {attempts.length > 1 ? (
-                          <span className="text-xs text-[var(--color-ink-muted)]">
-                            {attempts.length} attempts
-                          </span>
-                        ) : null}
-                        <span className="ml-auto shrink-0 text-xs text-[var(--color-ink-muted)]">
-                          {last ? formatDuration(last.startedAt, last.endedAt) : null}
-                        </span>
-                      </div>
-
-                      {last && !DETERMINISTIC_STAGES.has(stage) ? (
-                        <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
-                          {last.inputTokens.toLocaleString("en-US")} fresh,{" "}
-                          {last.cacheReadTokens.toLocaleString("en-US")} cached,{" "}
-                          {last.outputTokens.toLocaleString("en-US")} out, $
-                          {last.costEquivalentUsd.toFixed(4)}
-                        </p>
-                      ) : (
-                        <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
-                          {description}
-                        </p>
-                      )}
-
-                      {(failed || wasCancelled) && last ? (
-                        <div className="mt-2 pl-[1.125rem] text-xs">
-                          <p
-                            className={
-                              wasCancelled
-                                ? "text-[var(--color-ink-muted)]"
-                                : "text-[var(--color-critical)]"
-                            }
-                          >
-                            {wasCancelled
-                              ? "Cancelled mid-stage."
-                              : `${last.errorClass}: ${last.errorText}`}
-                          </p>
-                          {last.logPath ? (
-                            // The transcript is the evidence behind a failure,
-                            // and it is on this machine. Naming the file is the
-                            // difference between a diagnosable run and a shrug.
-                            <Mono className="mt-1 block break-all text-[var(--color-ink-muted)]">
-                              {last.logPath}
-                            </Mono>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ol>
-            </Card>
-
-            <CoveragePanel coverage={snapshot.coverage} running={snapshot.running} />
-
-            {snapshot.notes.length > 0 ? (
-              <Card className="mb-6 p-4">
-                <h2 className="mb-2 text-sm font-medium">What this run recorded</h2>
-                {/* Persisted, unlike the live activity tail, so how a run
-                    divided its work survives a reload. */}
-                <ul className="grid gap-2">
-                  {snapshot.notes.map((note, index) => (
-                    <li key={`${note.at}-${index}`} className="text-xs">
-                      <span className="text-[var(--color-ink-muted)]">
-                        {new Date(note.at).toLocaleTimeString()}
-                      </span>{" "}
-                      {note.message}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            ) : null}
-
-            {review.status === "complete" ? (
-              <ReportPanel
-                reviewId={id}
-                report={report}
-                exported={exported}
-                onLoaded={setReport}
-                onExported={setExported}
-              />
-            ) : null}
-
+            {/*
+             * The screen composes itself around what the person is here to do,
+             * and that changes completely with the review's state while the
+             * layout used not to change at all. Running: the run is the
+             * subject. Waiting on a decision: the queue is the subject and the
+             * finished run folds behind a summary. Complete: the report is.
+             */}
             {review.status === "awaiting_confirmation" && reported.length > 0 ? (
-              <ConfirmationQueue
-                reviewId={id}
-                findings={findings}
-                onChanged={() => void reload()}
-              />
+              <>
+                <ConfirmationQueue
+                  reviewId={id}
+                  findings={findings}
+                  onChanged={() => void reload()}
+                />
+                <div className="mt-6">
+                  <RunDetail snapshot={snapshot} done={done} executing={executing} folded />
+                </div>
+              </>
+            ) : review.status === "complete" ? (
+              <>
+                <ReportPanel
+                  reviewId={id}
+                  report={report}
+                  exported={exported}
+                  onLoaded={setReport}
+                  onExported={setExported}
+                />
+                <RunDetail snapshot={snapshot} done={done} executing={executing} folded />
+                <h2 className="mb-3 text-sm font-semibold">
+                  Findings{reported.length > 0 ? ` (${reported.length})` : ""}
+                </h2>
+                {renderReadOnly()}
+              </>
             ) : (
               <>
+                <RunDetail snapshot={snapshot} done={done} executing={executing} folded={false} />
                 <h2 className="mb-3 text-sm font-semibold">
                   Findings{reported.length > 0 ? ` (${reported.length})` : ""}
                 </h2>
@@ -769,6 +682,174 @@ function ReportPanel({
         </Card>
       )}
     </section>
+  );
+}
+
+/**
+ * Everything the run itself did: its stages, its coverage, and the notes it
+ * left behind.
+ *
+ * Folded away once the review is waiting on a person or finished, because at
+ * that point it is context rather than the subject, and reaching the
+ * decisions used to mean scrolling past all of it. The coverage sentence
+ * stays on the surface when folded: it is the claim the product exists to
+ * make, and putting "was anything skipped" behind a disclosure would be
+ * answering the question by hiding it.
+ */
+function RunDetail({
+  snapshot,
+  done,
+  executing,
+  folded,
+}: {
+  snapshot: Snapshot;
+  done: ReadonlySet<string>;
+  executing: string | null;
+  folded: boolean;
+}) {
+  const { coverage } = snapshot;
+  const outstanding = coverage.pendingFiles + coverage.pendingHunks + coverage.pendingSweepHits;
+
+  const body = (
+    <>
+      <Card className="mb-6 p-4">
+        <h2 className="mb-3 text-sm font-medium">Stages</h2>
+        <ol className="grid gap-1">
+          {STAGES.map(([stage, label, description]) => {
+            const attempts = snapshot.stages.filter((row) => row.stage === stage);
+            const last = attempts[attempts.length - 1];
+            // A stage aborted by the user is recorded as failed with its
+            // own error class; painting it critical-red would dress a
+            // decision up as a fault.
+            const wasCancelled = last?.status === "failed" && last.errorClass === "cancelled";
+            const failed = last?.status === "failed" && !wasCancelled;
+            const succeeded =
+              deterministicDone(stage, snapshot, done) || last?.status === "succeeded";
+            const current = stage === executing;
+
+            return (
+              <li key={stage} className="border-t border-[var(--color-border)] py-2 first:border-0">
+                <div className="flex items-baseline gap-3 text-sm">
+                  <span
+                    aria-hidden
+                    className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                      current
+                        ? "bg-[var(--color-accent)] pulse"
+                        : failed
+                          ? "bg-[var(--color-critical)]"
+                          : succeeded
+                            ? "bg-[var(--color-good)]"
+                            : "bg-[var(--color-border-strong)]"
+                    }`}
+                  />
+                  <span className={succeeded || failed ? "" : "text-[var(--color-ink-muted)]"}>
+                    {label}
+                  </span>
+                  {attempts.length > 1 ? (
+                    <span className="text-xs text-[var(--color-ink-muted)]">
+                      {attempts.length} attempts
+                    </span>
+                  ) : null}
+                  <span className="ml-auto shrink-0 text-xs text-[var(--color-ink-muted)]">
+                    {last ? formatDuration(last.startedAt, last.endedAt) : null}
+                  </span>
+                </div>
+
+                {last && !DETERMINISTIC_STAGES.has(stage) ? (
+                  <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
+                    {last.inputTokens.toLocaleString("en-US")} fresh,{" "}
+                    {last.cacheReadTokens.toLocaleString("en-US")} cached,{" "}
+                    {last.outputTokens.toLocaleString("en-US")} out, $
+                    {last.costEquivalentUsd.toFixed(4)}
+                  </p>
+                ) : (
+                  <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
+                    {description}
+                  </p>
+                )}
+
+                {(failed || wasCancelled) && last ? (
+                  <div className="mt-2 pl-[1.125rem] text-xs">
+                    <p
+                      className={
+                        wasCancelled
+                          ? "text-[var(--color-ink-muted)]"
+                          : "text-[var(--color-critical)]"
+                      }
+                    >
+                      {wasCancelled
+                        ? "Cancelled mid-stage."
+                        : `${last.errorClass}: ${last.errorText}`}
+                    </p>
+                    {last.logPath ? (
+                      // The transcript is the evidence behind a failure,
+                      // and it is on this machine. Naming the file is the
+                      // difference between a diagnosable run and a shrug.
+                      <Mono className="mt-1 block break-all text-[var(--color-ink-muted)]">
+                        {last.logPath}
+                      </Mono>
+                    ) : null}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+      </Card>
+
+      <CoveragePanel
+        coverage={snapshot.coverage}
+        running={snapshot.running}
+        withSentence={!folded}
+      />
+
+      {snapshot.notes.length > 0 ? (
+        <Card className="mb-6 p-4">
+          <h2 className="mb-2 text-sm font-medium">What this run recorded</h2>
+          {/* Persisted, unlike the live activity tail, so how a run
+              divided its work survives a reload. */}
+          <ul className="grid gap-2">
+            {snapshot.notes.map((note, index) => (
+              <li key={`${note.at}-${index}`} className="text-xs">
+                <span className="text-[var(--color-ink-muted)]">
+                  {new Date(note.at).toLocaleTimeString()}
+                </span>{" "}
+                {note.message}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+    </>
+  );
+
+  if (!folded) return body;
+
+  return (
+    <div className="mb-6">
+      {/* Above the fold, never inside it. Whether anything went unaccounted
+          for is the one thing a reader must not have to open a disclosure to
+          learn, so the sentence stays out here and only the detail behind it
+          folds. */}
+      {coverage.totalFiles > 0 ? (
+        <p className="mb-2 text-sm text-[var(--color-ink-muted)]">
+          {outstanding === 0
+            ? "Everything the change touched ended with a finding or an explicit clear."
+            : `${outstanding} still outstanding. The review cannot finish while anything is.`}
+        </p>
+      ) : null}
+      <details>
+        <summary className="cursor-pointer rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-sm">
+          <span className="font-medium">Run detail</span>
+          <span className="ml-2 text-[var(--color-ink-muted)]">
+            {coverage.totalFiles > 0
+              ? `${coverage.totalFiles} file(s), ${coverage.totalHunks} hunk(s), stages and run notes`
+              : "stages, coverage and run notes"}
+          </span>
+        </summary>
+        <div className="mt-3">{body}</div>
+      </details>
+    </div>
   );
 }
 

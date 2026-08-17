@@ -165,11 +165,18 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
   await test.step("the run screen accounts for the whole change set", async () => {
     // The distinction the coverage panel exists to make: a review that found
     // nothing has to be readable apart from one that looked at nothing.
-    await expect(page.getByRole("heading", { name: "Coverage" })).toBeVisible();
-    await expect(page.getByText(/Files.*\d+ of \d+ accounted for/)).toBeVisible();
+    //
+    // Once the review is waiting on a decision the run detail folds away, so
+    // the queue is not below a screenful of finished work. What must survive
+    // the fold is this sentence: whether anything went unaccounted for is not
+    // a thing to make someone open a disclosure to learn.
     await expect(
       page.getByText("Everything the change touched ended with a finding or an explicit clear."),
     ).toBeVisible();
+
+    await page.getByText("Run detail", { exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Coverage" })).toBeVisible();
+    await expect(page.getByText(/Files.*\d+ of \d+ accounted for/)).toBeVisible();
 
     // The deterministic ends of the pipeline. They write no stage row, so
     // they are the rows most easily lost, and they are the parts of a review
@@ -178,6 +185,11 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(stages.getByText("Prepare")).toBeVisible();
     await expect(stages.getByText("Audit")).toBeVisible();
     await expect(stages.getByText(/fresh,.*cached,.*out, \$/).first()).toBeVisible();
+
+    // Left as a reader finds it, so the screenshot below photographs the
+    // queue-first layout rather than this test's own expansion.
+    await page.getByText("Run detail", { exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Coverage" })).toBeHidden();
   });
 
   await test.step("the queue mid-decision is photographed for the design review", async () => {
