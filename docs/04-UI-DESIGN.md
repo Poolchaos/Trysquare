@@ -148,7 +148,10 @@ from the dependency diff.
 ### Confirmation (S7)
 
 Two-pane: left, finding list grouped by severity with confirm/dismiss state
-chips; right, the active finding: issue, comment, rule (expandable verbatim
+chips, every row naming its file path and line beside the title, because a
+reviewer's first orientation question is "where am I" and the list must
+answer it without a click (D-68 amendment); right, the active finding, its
+code panel headed by the filename: issue, comment, rule (expandable verbatim
 rule text), mechanism, quoted code rendered inside real file context
 (worktree lines, exact line numbers) plus the diff hunk. Confirm / dismiss
 (reason required) / edit comment. Progress bar: n of m decided. Finishing

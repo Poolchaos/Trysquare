@@ -1704,3 +1704,12 @@ verified evidence, in writing, here.
   phone widths; setup flows stay desktop-first. My-branches: a branch
   counts as mine when its tip commit author email matches the identities in
   settings, seeded from git config, with no manual assignment in v1.
+- 2026-08-17 D-68 amended, same day: the confirmation queue builds from the
+  denser of the two final queue mocks, chosen by the maintainer for a
+  reason now promoted to a requirement: the file path is always visible,
+  on every finding row (path and line beside the title) and as a filename
+  header on the code panel. A reviewer's first orientation question is
+  "where am I", and a queue that answers it only in the detail pane makes
+  every list scan a click. The evidence set is saved at
+  review/2026-08-17-ux-direction/ with a README noting one mislabel
+  corrected during filing.
