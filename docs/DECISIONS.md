@@ -1781,3 +1781,22 @@ verified evidence, in writing, here.
   place it is ever opened. Markdown stays the archival form and is what the
   suite still asserts document structure against. The screen names the HTML
   path, since that is the file a person sends to whoever fixes the code.
+- 2026-08-17 D-75 (WP-F): the root is the scoreboard rather than a redirect to
+  Projects, and every figure on it is counted from rows this app wrote. The
+  app opened on a list of repositories and never once said what any of the
+  work had produced, while the database held all of it: what reviews cost, how
+  often a finding survived a person's judgment, how often the engine cited
+  code that was not there, and which rules of a protocol ever earn a place in
+  a report.
+  Two rules make this the honest version of a dashboard. A rate with no
+  denominator renders as a dash, never a zero, because zero percent is a claim
+  about findings that were judged and "nothing has been decided yet" is a
+  different statement. And the sparkline is one mark per completed review in
+  the order they ran, drawing nothing below two reviews, because a line
+  through a single point is a shape invented for decoration.
+  Killed findings are the point here. They are filtered out of every other
+  screen deliberately, and this is the one place they are the measurement:
+  the invention rate is what the quotation check killed out of everything
+  raised. Rule yield is sorted worst first, because the rule costing the most
+  attention for the least return is the one an author needs to see, and each
+  bar names its rule: an anonymous bar is a measurement nobody can act on.

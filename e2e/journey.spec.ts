@@ -354,3 +354,26 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     expect(findingsSection).not.toContain("Deliberate: the caller already guards this.");
   });
 });
+
+test("the scoreboard counts what the machine has actually run", async ({ page }) => {
+  // Runs after the journey, which leaves one completed review behind, so the
+  // numbers here are counted from real work rather than seeded.
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Review scoreboard" })).toBeVisible();
+
+  await expect(page.getByText("Total spend")).toBeVisible();
+  await expect(page.getByText("Invention rate")).toBeVisible();
+
+  // The journey confirmed several findings and dismissed one, so precision is
+  // a real fraction rather than the dash an undecided app would show.
+  const precision = page.getByText("Precision").locator("..");
+  await expect(precision.getByText(/^\d+%$/)).toBeVisible();
+
+  // Rule yield names its rules; anonymous bars would measure nothing anyone
+  // could act on.
+  await expect(page.getByRole("heading", { name: "Rule yield" })).toBeVisible();
+  await expect(page.getByText(/^Rule \w+$/).first()).toBeVisible();
+
+  // And the recent table carries the review it just ran.
+  await expect(page.getByRole("table")).toContainText("feature/rename-prefs");
+});
