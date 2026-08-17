@@ -23,6 +23,7 @@ import {
   Badge,
   Button,
   Card,
+  Empty,
   Field,
   Input,
   Mono,
@@ -436,8 +437,18 @@ function NewReview() {
                   </li>
                 ))}
                 {shown.length === 0 ? (
-                  <li className="py-6 text-center text-sm text-[var(--color-ink-muted)]">
-                    No branch matches that filter.
+                  <li className="py-6">
+                    <Empty
+                      title={
+                        (branches ?? []).length === 0
+                          ? "This repository has no branches to review"
+                          : "No branch matches that filter"
+                      }
+                    >
+                      {(branches ?? []).length === 0
+                        ? "Nothing has been pushed to it yet, or the clone could not read its refs."
+                        : `${(branches ?? []).length} branch(es) are here; the filter is hiding them.`}
+                    </Empty>
                   </li>
                 ) : null}
               </ul>

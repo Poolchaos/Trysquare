@@ -192,7 +192,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         ) : null}
         {branches?.stale ? (
           <div className="mb-4">
-            <Problem>These branches are from the last successful fetch: {branches.stale}</Problem>
+            <p className="text-sm text-[var(--color-ink-muted)]">
+              These branches are from the last successful fetch: {branches.stale}
+            </p>
           </div>
         ) : null}
 
@@ -211,7 +213,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             {branches === null ? (
               <p className="text-sm text-[var(--color-ink-muted)]">Fetching the latest refs...</p>
             ) : shown.length === 0 ? (
-              <Empty title="No branch matches that filter" />
+              (branches.branches ?? []).length === 0 ? (
+                <Empty title="This repository has no branches">
+                  Nothing has been pushed to it yet, or the clone could not read its refs.
+                </Empty>
+              ) : (
+                <Empty title="No branch matches that filter">
+                  {(branches.branches ?? []).length} branch(es) are here; the filter is hiding them.
+                </Empty>
+              )
             ) : (
               <Card className="overflow-x-auto">
                 <table className="w-full text-sm">
