@@ -19,7 +19,10 @@ import { addedLineNumbers, type ParsedFile } from "@/lib/git/diff";
 
 export interface SweepRule {
   code: string;
-  /** Regex sources. An unusable one is reported, never skipped in silence. */
+  /**
+   * Regex sources, read as literal text when they are not valid regexes.
+   * Either way the pattern runs, and which way is recorded, never silent.
+   */
   sweepPatterns: readonly string[];
 }
 
@@ -51,6 +54,15 @@ export interface SweepOutcome {
    * which the pipeline treats as a failure rather than a warning.
    */
   problems: SweepProblem[];
+  /**
+   * Patterns that ran as literal text because they do not compile as regular
+   * expressions. Real protocols write sweep patterns as code fragments, and a
+   * fragment like `new Date(` is an unterminated group to the regex engine.
+   * The author's intent, find this text, is unambiguous and runnable, so
+   * running it beats refusing the review; recorded so the run says which
+   * patterns were read that way.
+   */
+  ranAsLiteral: { ruleCode: string; pattern: string }[];
   patternsRun: number;
   linesScanned: number;
 }
@@ -58,11 +70,23 @@ export interface SweepOutcome {
 /** Excerpts are trimmed so a minified line cannot flood the ledger. */
 const MAX_EXCERPT = 200;
 
-function compile(pattern: string): RegExp | null {
+/**
+ * A pattern as something runnable, preferring the author's regex.
+ *
+ * Escaping every metacharacter always yields a compilable expression, so the
+ * null branch is a boundary rather than a path reachable today. It stays
+ * because `runSweeps` must not silently drop a pattern if this ever changes.
+ */
+function compile(pattern: string): { regex: RegExp; literal: boolean } | null {
   try {
     // No global flag: each line is tested independently, and a stateful regex
     // would skip every other match through lastIndex.
-    return new RegExp(pattern);
+    return { regex: new RegExp(pattern), literal: false };
+  } catch {
+    // Not a regex. Read it as the text it is rather than refusing the review.
+  }
+  try {
+    return { regex: new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), literal: true };
   } catch {
     return null;
   }
@@ -80,22 +104,24 @@ export function runSweeps(
 ): SweepOutcome {
   const hits: SweepHit[] = [];
   const problems: SweepProblem[] = [];
+  const ranAsLiteral: { ruleCode: string; pattern: string }[] = [];
   let patternsRun = 0;
   let linesScanned = 0;
 
   const compiled: { ruleCode: string; pattern: string; regex: RegExp }[] = [];
   for (const rule of rules) {
     for (const pattern of rule.sweepPatterns) {
-      const regex = compile(pattern);
-      if (!regex) {
+      const result = compile(pattern);
+      if (!result) {
         problems.push({
           ruleCode: rule.code,
           pattern,
-          reason: "the pattern is not a valid regular expression, so it was not run",
+          reason: "the pattern could not be run, even as literal text",
         });
         continue;
       }
-      compiled.push({ ruleCode: rule.code, pattern, regex });
+      if (result.literal) ranAsLiteral.push({ ruleCode: rule.code, pattern });
+      compiled.push({ ruleCode: rule.code, pattern, regex: result.regex });
       patternsRun += 1;
     }
   }
@@ -122,7 +148,7 @@ export function runSweeps(
     }
   }
 
-  return { hits, problems, patternsRun, linesScanned };
+  return { hits, problems, ranAsLiteral, patternsRun, linesScanned };
 }
 
 export class SweepIncompleteError extends Error {

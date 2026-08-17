@@ -158,7 +158,13 @@ export function POST(request: Request): Promise<Response> {
       sweepHits: sweep.hits.length,
       // A pattern that could not be run means the sweep is incomplete, which
       // the pipeline refuses outright. Better seen here than after paying.
-      sweepProblems: sweep.problems.map((problem) => problem.reason),
+      sweepProblems: sweep.problems.map(
+        (problem) => `${problem.ruleCode} (${problem.pattern}): ${problem.reason}`,
+      ),
+      // Patterns read as literal text because they are not regular
+      // expressions. Informational: the sweep runs them, and the run notes
+      // record the same fact on the review.
+      sweepLiterals: sweep.ranAsLiteral.map((entry) => `${entry.ruleCode} (${entry.pattern})`),
       changedSymbols: changedSymbols.length,
       estimatedTokens: estimate,
       contextWindow: window,

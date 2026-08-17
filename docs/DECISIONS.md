@@ -1553,3 +1553,24 @@ verified evidence, in writing, here.
   heading level as rules, was rejected because a later document adding one
   shallow numbered heading would silently demote a whole family of real rules
   to prose, which is the exact failure this module exists to prevent.
+- 2026-08-04 D-64: a sweep pattern is read as a regular expression when it is
+  one, and as literal text when it is not. Refusal is kept only for a pattern
+  that cannot run either way.
+  The maintainer's first real review, 61 files against their own protocol,
+  failed in S0 at $0.0000 because rule 29's pattern `new Date(` is an
+  unterminated group to the regex engine. The protocol is not wrong: people
+  write sweep patterns as code fragments, and `new Date(`, `console.log(` and
+  `items.map(` all mean find this text. Killing a whole review over one
+  character of punctuation, with an error naming the symptom rather than the
+  fix, is the worse failure.
+  Rejected, always-literal: the example protocol's own patterns are real
+  regexes (`\bas\b`, `console\.`), and reading those literally would match
+  nothing while looking like a clean sweep. Rejected, guessing the author's
+  intent: not knowable from the string.
+  The residual risk is stated rather than hidden. A genuinely mistyped regex,
+  `console\.(log|warn` with the bracket missing, now runs as literal text and
+  finds nothing, where before it stopped the run. That trade is only
+  acceptable because it is recorded at both ends: the pre-flight lists every
+  pattern that will be read as text before anything is spent, and the run
+  carries a note naming them. `assertSweepComplete` stays as the boundary for
+  a pattern that cannot run at all, which escaping makes unreachable today.

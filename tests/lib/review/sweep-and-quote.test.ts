@@ -86,11 +86,47 @@ describe("mechanical sweeps", () => {
     expect(outcome.hits).toEqual([]);
   });
 
-  it("reports an unusable pattern instead of quietly running fewer checks", () => {
-    // Fewer patterns means fewer hits, and fewer hits looks like cleaner code.
-    const outcome = runSweeps(TARGETS, [{ code: "9", sweepPatterns: ["([unclosed"] }]);
-    expect(outcome.problems).toHaveLength(1);
-    expect(outcome.problems[0]?.ruleCode).toBe("9");
+  it("runs a pattern that is not a regular expression as literal text", () => {
+    // Protocol authors write sweep patterns as code fragments, and a fragment
+    // ending in an open bracket is an unterminated group to the regex engine.
+    // Refusing it failed a real 61-file review in S0 over one character of
+    // punctuation, while the author's intent, find this text, was never in
+    // doubt. The pattern that did it was "new Date(".
+    const outcome = runSweeps(TARGETS, [{ code: "29", sweepPatterns: ["console.log("] }]);
+
+    expect(outcome.hits).toHaveLength(1);
+    expect(outcome.hits[0]?.line).toBe(12);
+    expect(outcome.hits[0]?.ruleCode).toBe("29");
+    expect(outcome.patternsRun).toBe(1);
+    // Read that way, and said so: silence here would be the sweep quietly
+    // meaning something other than what the protocol wrote.
+    expect(outcome.ranAsLiteral).toEqual([{ ruleCode: "29", pattern: "console.log(" }]);
+    expect(outcome.problems).toEqual([]);
+    expect(() => assertSweepComplete(outcome)).not.toThrow();
+  });
+
+  it("still reads a valid pattern as a regular expression, not as text", () => {
+    // The fallback must not swallow the normal case: escaped and alternating
+    // patterns are how the example protocol is written, and reading one
+    // literally would silently stop it matching anything.
+    const outcome = runSweeps(TARGETS, [{ code: "6", sweepPatterns: ["console\\.(log|warn)"] }]);
+
+    expect(outcome.hits).toHaveLength(1);
+    expect(outcome.hits[0]?.excerpt).toContain("console.log");
+    expect(outcome.ranAsLiteral).toEqual([]);
+  });
+
+  it("still refuses an outcome carrying a pattern that could not be run at all", () => {
+    // The guard is tested directly rather than through runSweeps: escaping
+    // makes every pattern runnable, so this is the boundary holding for a
+    // future compile() that can fail, not a path reachable today.
+    const outcome = {
+      hits: [],
+      problems: [{ ruleCode: "9", pattern: "x", reason: "unrunnable" }],
+      ranAsLiteral: [],
+      patternsRun: 0,
+      linesScanned: 0,
+    };
     expect(() => assertSweepComplete(outcome)).toThrow(SweepIncompleteError);
   });
 

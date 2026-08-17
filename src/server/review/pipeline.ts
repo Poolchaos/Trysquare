@@ -237,6 +237,19 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   // and skipping it would let a resumed run proceed on an unverified sweep.
   assertSweepComplete(sweepOutcome);
 
+  if (!alreadySeeded && sweepOutcome.ranAsLiteral.length > 0) {
+    appendRunNote(db, reviewId, {
+      kind: "note",
+      message:
+        `${sweepOutcome.ranAsLiteral.length} sweep pattern(s) are not valid regular ` +
+        `expressions and ran as literal text: ` +
+        sweepOutcome.ranAsLiteral
+          .map((entry) => `${entry.ruleCode} (${entry.pattern})`)
+          .join(", ") +
+        `.`,
+    });
+  }
+
   if (!alreadySeeded) {
     recordSweepHits(
       db,

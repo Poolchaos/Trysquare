@@ -40,6 +40,7 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/M3-FINISH-PLAN.md](plans/M3-FINISH-PLAN.md) | Implementation plan for the usable app (T10-T17 remainder plus W8 leftovers): commit map V1-V9, spend-safety and confirmation-loop design, decisions D-30..D-44. |
 | [plans/M4-FINISH-PLAN.md](plans/M4-FINISH-PLAN.md) | The v1 close-out plan from the 2026-08-03 full audit: verified gap inventory, commit map U1-U13, decisions D-45..D-56. |
 | [plans/U12-FIXTURE-GAPS.md](plans/U12-FIXTURE-GAPS.md) | The four seeded-fixture defects still owed, planned against the live tree and adversarially verified. The driver's working order for the rest of U12. |
+| [plans/POST-M4-PLAN.md](plans/POST-M4-PLAN.md)   | The driver's plan after M4: land the in-flight sweep fix, close gates G1-G3 with evidence, D-59 dedup, inbox spend-down. |
 | [plans/PLAN-TEMPLATE.md](plans/PLAN-TEMPLATE.md) | Template for multi-step plan docs (work packages, decision gates, done tracking).            |
 | [plans/idea-inbox.md](plans/idea-inbox.md)       | One-line dated idea capture. Ideas are not expanded until the active gate passes.            |
 

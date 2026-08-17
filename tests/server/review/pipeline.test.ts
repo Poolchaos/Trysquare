@@ -12,7 +12,6 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { parseUnifiedDiff } from "@/lib/git/diff";
 import { DeletionsNotAccountedError, StageDidNotAccountError } from "@/lib/review/coverage";
-import { SweepIncompleteError } from "@/lib/review/sweep";
 import type { Db } from "@/server/db/client";
 import { listFindings, statusOf } from "@/server/db/repositories/findings";
 import {
@@ -249,19 +248,77 @@ describe("refusing to accept an incomplete stage", () => {
     await expect(run({ ...BASE_ANSWERS, s1_risk: { wrong: "shape" } })).rejects.toThrow();
   });
 
-  it("stops the run when a sweep pattern could not be executed", async () => {
-    await expect(
-      runReviewPipeline({
-        db,
-        reviewId,
-        worktreeRoot,
-        files: FILES,
-        rules: [rule("9", ["general"], ["([unclosed"])],
-        profile: "full-context",
-        systemPromptFor: (stage) => `prompt for ${stage}`,
-        run: scripted(BASE_ANSWERS),
-      }),
-    ).rejects.toThrow(SweepIncompleteError);
+  it("runs a pattern that is not a regex as literal text, and says so on the run", async () => {
+    // The whole review used to die here. A pattern written as a code
+    // fragment, which is how protocol authors write them, is an unterminated
+    // group to the regex engine; refusing it cost a real 61-file review its
+    // S0. The hit it produces is an ordinary hit: recorded, and dispositioned
+    // by the adversarial stage like every other.
+    const literalRules = [...RULES, rule("29", ["general"], ["reduce((sum"])];
+    const answers = {
+      ...BASE_ANSWERS,
+      s3_adversarial: {
+        ...COMPLETE_ADVERSARIAL,
+        sweepDispositions: [
+          ...COMPLETE_ADVERSARIAL.sweepDispositions,
+          {
+            path: "app/orders.ts",
+            line: 3,
+            ruleCode: "29",
+            disposition: "cleared" as const,
+            reason: "Examined; the reduce is over a fixed list.",
+          },
+        ],
+      },
+      s5_verification: { verdicts: [] },
+    };
+
+    const result = await run(answers, { rules: literalRules });
+
+    expect(result.coverage.totalSweepHits).toBe(2);
+    expect(result.coverage.pendingSweepHits).toBe(0);
+    expect(listSweepHits(db, reviewId).some((hit) => hit.ruleCode === "29")).toBe(true);
+
+    // Named on the review, because a pattern read as text means something
+    // different from the same pattern read as a regex, and the difference is
+    // the reviewer's to know.
+    const notes = readRunNotes(requireReview(db, reviewId)).filter((note) =>
+      note.message.includes("literal text"),
+    );
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.message).toContain("29 (reduce((sum)");
+  });
+
+  it("does not repeat the literal-pattern note when a run is resumed", async () => {
+    // The note is written beside the sweep, and a resumed run re-runs the
+    // sweep to re-check it. Writing the note again would have every resume
+    // add a line saying the same thing about the same patterns.
+    const literalRules = [...RULES, rule("29", ["general"], ["reduce((sum"])];
+    const answers = {
+      ...BASE_ANSWERS,
+      s3_adversarial: {
+        ...COMPLETE_ADVERSARIAL,
+        sweepDispositions: [
+          ...COMPLETE_ADVERSARIAL.sweepDispositions,
+          {
+            path: "app/orders.ts",
+            line: 3,
+            ruleCode: "29",
+            disposition: "cleared" as const,
+            reason: "Examined; the reduce is over a fixed list.",
+          },
+        ],
+      },
+      s5_verification: { verdicts: [] },
+    };
+
+    await run(answers, { rules: literalRules });
+    await run(answers, { rules: literalRules });
+
+    const notes = readRunNotes(requireReview(db, reviewId)).filter((note) =>
+      note.message.includes("literal text"),
+    );
+    expect(notes).toHaveLength(1);
   });
 });
 

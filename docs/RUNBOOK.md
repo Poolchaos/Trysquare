@@ -110,9 +110,13 @@ Every step below is free until you press Start review.
 4. **Read the pre-flight.** It appears once the branches, ruleset and model
    are chosen, and costs nothing: the commits it would pin and when their refs
    were fetched, file and hunk counts, sweep hits, changed exported symbols,
-   an estimated token count and the number of model requests. If it reports
-   sweep patterns that could not run, fix those first, because the review will
-   refuse to finish with an incomplete sweep.
+   an estimated token count and the number of model requests. Two lines about
+   the sweep are worth reading before you start. A pattern that is not a valid
+   regular expression, which is how most people write `new Date(` or
+   `console.log(`, is searched for as literal text and listed here saying so;
+   nothing is wrong, but a pattern read as text matches different things from
+   one read as a regex. A pattern that could not run at all is a refusal: fix
+   it first, because the review will not finish on an incomplete sweep.
 5. **Start the review.** This is the step that spends usage. The run screen
    shows which stages have finished, a live activity log, and a running tally
    of fresh input tokens, cached reads, output tokens and cost equivalent.

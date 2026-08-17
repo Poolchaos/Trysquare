@@ -64,6 +64,7 @@ interface Preflight {
   hunks: number;
   sweepHits: number;
   sweepProblems: string[];
+  sweepLiterals: string[];
   changedSymbols: number;
   estimatedTokens: number;
   contextWindow: number | null;
@@ -770,9 +771,21 @@ function NewReview() {
                 <div className="mt-3">
                   <Problem>
                     {preflight.sweepProblems.length} sweep pattern(s) could not run, so the review
-                    would refuse to start: {preflight.sweepProblems[0]}
+                    would refuse to start: {preflight.sweepProblems.join("; ")}
                   </Problem>
                 </div>
+              ) : null}
+
+              {preflight.sweepLiterals.length > 0 ? (
+                // Not a warning: the pattern runs either way. But a pattern
+                // read as text matches different things from the same pattern
+                // read as a regex, and which one happened is worth knowing
+                // before the findings arrive rather than after.
+                <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+                  {preflight.sweepLiterals.length} sweep pattern(s) are not valid regular
+                  expressions and will be searched for as literal text:{" "}
+                  {preflight.sweepLiterals.join("; ")}
+                </p>
               ) : null}
 
               {preflight.excludedPairs > 0 ? (
