@@ -32,8 +32,6 @@ the line entirely would lose the trail.
 - 2026-08-04: a risk-tagged variant of the quality gate, so the risk-first
   ordering is exercised with non-empty tags somewhere outside the pipeline
   tests.
-- 2026-08-04: clearHunk demands a reason while the sweep-clear guard does
-  not; align the two or record why they differ.
 - 2026-08-04: the run screen's usage panel omits cache-creation tokens,
   which reviews.usage_cache_creation_tokens accumulates; surface it.
 - 2026-08-04: S3 ruleCode arrives from real models as prose ("Rule 11")

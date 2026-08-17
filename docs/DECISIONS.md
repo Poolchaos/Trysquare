@@ -1627,3 +1627,12 @@ verified evidence, in writing, here.
   The screen already says such a code is not in the frozen ruleset.
   The prefix stripped is a word and its punctuation, never digits, so a
   ruleset containing "1" cannot swallow a citation of "11".
+- 2026-08-04: the inbox's claim that `clearHunk` demands a reason while the
+  sweep-clear guard does not is FALSE, checked against the live code and
+  removed rather than built. `clearHunk` and `clearSweepHit` both reject a
+  reason that is empty after trimming, with their own messages, and the stage
+  schemas require a non-empty string for both `clearedHunks[].reason` and
+  `sweepDispositions[].reason`. The only `reason` in the stage schemas with no
+  minimum is S1's risk rationale, which disposes of nothing and refuses
+  nothing; it stays as it is rather than gaining a constraint that could fail
+  a run over a cosmetic field.
