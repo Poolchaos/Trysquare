@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] ${className}`}
+      className={`rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_1px_0_0_var(--color-surface-sunken)] ${className}`}
     >
       {children}
     </div>

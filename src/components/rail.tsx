@@ -63,9 +63,23 @@ export function Rail() {
   }, [pathname]);
 
   return (
-    <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4">
-      <Link href="/" className="mb-4 px-2 text-sm font-semibold tracking-tight">
-        Trysquare
+    <nav className="flex w-52 shrink-0 flex-col gap-0.5 border-r border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3">
+      <Link href="/" className="mb-5 flex items-center gap-2 px-2 py-1">
+        {/* The try square itself: two arms meeting at a right angle, which is
+            the tool the app is named for and the thing it does to a diff.
+            Drawn rather than imported so it inherits the accent and needs no
+            asset. */}
+        <svg viewBox="0 0 16 16" aria-hidden className="h-4 w-4 shrink-0">
+          <path
+            d="M2 2 L2 14 L14 14"
+            fill="none"
+            stroke="var(--color-accent)"
+            strokeWidth="2"
+            strokeLinecap="square"
+          />
+          <path d="M5 11 L11 11 L11 5" fill="none" stroke="currentColor" strokeWidth="1" />
+        </svg>
+        <span className="text-body font-semibold tracking-tight">Trysquare</span>
       </Link>
 
       {LINKS.map((link) => {
@@ -75,10 +89,10 @@ export function Rail() {
             key={link.href}
             href={link.href}
             aria-current={current ? "page" : undefined}
-            className={`rounded-md px-2 py-1.5 text-sm transition-colors ${
+            className={`rounded-md border-l-2 px-2 py-1.5 text-body transition-colors ${
               current
-                ? "bg-[var(--color-accent-soft)] font-medium text-[var(--color-accent)]"
-                : "text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)] font-medium text-[var(--color-accent)]"
+                : "border-transparent text-[var(--color-ink-muted)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-ink)]"
             }`}
           >
             <span className="flex items-center justify-between gap-2">
