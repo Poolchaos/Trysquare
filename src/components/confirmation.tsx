@@ -255,30 +255,25 @@ export function ConfirmationQueue({
     }
   }
 
-  const decided = queue.length - undecided.length;
   const draft = current ? (drafts[current.id] ?? current.editedComment ?? current.comment) : "";
 
   return (
     <section>
       <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-48 flex-1">
-          <h2 className="text-heading font-semibold" aria-live="polite">
-            {decided} of {queue.length} decided
-          </h2>
-          <div
-            role="progressbar"
-            aria-valuenow={decided}
-            aria-valuemin={0}
-            aria-valuemax={queue.length}
-            aria-label="Findings decided"
-            className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--color-surface-sunken)]"
-          >
-            <div
-              className="h-full bg-[var(--color-accent)] transition-[width] duration-[var(--motion-considered)]"
-              style={{ width: `${queue.length === 0 ? 0 : (decided / queue.length) * 100}%` }}
-            />
-          </div>
-        </div>
+        {/* The decided count and its bar live in the page toolbar; what only
+            this header can say is what remains, by severity. */}
+        <p className="text-dense text-[var(--color-ink-muted)]" aria-live="polite">
+          {undecided.length === 0
+            ? `All ${queue.length} decided.`
+            : SEVERITY_ORDER.filter((severity) =>
+                undecided.some((finding) => finding.severity.toUpperCase() === severity),
+              )
+                .map(
+                  (severity) =>
+                    `${undecided.filter((finding) => finding.severity.toUpperCase() === severity).length} ${severity.toLowerCase()}`,
+                )
+                .join(", ") + " left to decide"}
+        </p>
         <Button
           variant="primary"
           onClick={() => void complete()}
@@ -308,7 +303,7 @@ export function ConfirmationQueue({
           : "No findings."}
       </p>
 
-      <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
         <nav aria-label="Findings" tabIndex={0} className="lg:max-h-[42rem] lg:overflow-y-auto">
           {SEVERITY_ORDER.filter((severity) =>
             queue.some((finding) => finding.severity.toUpperCase() === severity),
@@ -354,6 +349,15 @@ export function ConfirmationQueue({
                             {finding.filePath}:{finding.lineStart}
                           </Mono>
                           <span className="block truncate">{finding.issue}</span>
+                        </span>
+                        {/* Redundant with the group heading on purpose: on a
+                            long queue the heading scrolls away, and severity
+                            is the one thing a row must never make someone
+                            scroll up to recover. */}
+                        <span className="self-center py-2">
+                          <Badge tone={severityTone(finding.severity)}>
+                            {finding.severity.toLowerCase()}
+                          </Badge>
                         </span>
                       </button>
                     </li>
@@ -610,7 +614,7 @@ export function ConfirmationQueue({
         ) : null}
       </div>
 
-      <footer className="mt-4 flex flex-wrap gap-3 text-xs text-[var(--color-ink-faint)]">
+      <footer className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-aside text-[var(--color-ink-faint)]">
         <Key label="j / k" action="next / previous" />
         <Key label="c" action="confirm" />
         <Key label="d" action="dismiss" />

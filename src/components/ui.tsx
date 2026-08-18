@@ -138,6 +138,32 @@ export function Badge({
   );
 }
 
+/**
+ * The stat tile the ratified mocks are built around: an uppercase
+ * micro-label over a large tabular numeral. One shape for every measured
+ * figure in the app, so a number always looks like a number.
+ */
+export function StatTile({
+  label,
+  value,
+  note,
+  children,
+}: {
+  label: string;
+  value: string;
+  note?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_1px_0_0_var(--color-surface-sunken)]">
+      <p className="text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">{label}</p>
+      <p className="mt-1 text-title font-semibold tabular-nums">{value}</p>
+      {note ? <p className="text-aside text-[var(--color-ink-faint)]">{note}</p> : null}
+      {children}
+    </div>
+  );
+}
+
 export function severityTone(severity: string): keyof typeof TONES {
   if (severity === "CRITICAL") return "critical";
   if (severity === "WARNING") return "warning";

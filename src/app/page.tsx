@@ -19,7 +19,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageBody, PageHeader } from "@/components/page";
-import { Badge, Card, Empty, Mono, statusLabel, statusTone } from "@/components/ui";
+import { Badge, Card, Empty, Mono, StatTile, statusLabel, statusTone } from "@/components/ui";
 
 interface Row {
   id: string;
@@ -86,27 +86,6 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
-function Tile({
-  label,
-  value,
-  note,
-  children,
-}: {
-  label: string;
-  value: string;
-  note?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <Card className="p-4">
-      <p className="text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">{label}</p>
-      <p className="mt-1 text-title font-semibold tabular-nums">{value}</p>
-      {note ? <p className="text-aside text-[var(--color-ink-faint)]">{note}</p> : null}
-      {children}
-    </Card>
-  );
-}
-
 export default function HomePage() {
   const [board, setBoard] = useState<Scoreboard | null>(null);
   const [error, setError] = useState("");
@@ -153,10 +132,10 @@ export default function HomePage() {
         ) : (
           <div className="grid gap-6">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Tile label="Total spend" value={`$${board.spendUsd.toFixed(2)}`}>
+              <StatTile label="Total spend" value={`$${board.spendUsd.toFixed(2)}`}>
                 <Sparkline values={board.spendHistory} />
-              </Tile>
-              <Tile
+              </StatTile>
+              <StatTile
                 label="Reviews completed"
                 value={String(board.reviewsCompleted)}
                 note={
@@ -165,12 +144,12 @@ export default function HomePage() {
                     : undefined
                 }
               />
-              <Tile
+              <StatTile
                 label="Precision"
                 value={percent(board.precision)}
                 note={board.precision === null ? "nothing decided yet" : "confirmed of decided"}
               />
-              <Tile
+              <StatTile
                 label="Invention rate"
                 value={percent(board.inventionRate)}
                 note={

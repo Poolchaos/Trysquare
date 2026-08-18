@@ -14,10 +14,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const LINKS = [
-  { href: "/projects", label: "Projects" },
-  { href: "/reviews", label: "Reviews" },
-  { href: "/rulesets", label: "Rulesets" },
-  { href: "/settings", label: "Settings" },
+  { href: "/projects", label: "Projects", icon: "M2 4h4l2 2h6v7H2z" },
+  { href: "/reviews", label: "Reviews", icon: "M2 4h8M2 8h12M2 12h8" },
+  { href: "/rulesets", label: "Rulesets", icon: "M4 2h8v12H4zM4 2v12" },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: "M8 5.5A2.5 2.5 0 1 0 8 10.5 2.5 2.5 0 0 0 8 5.5zM8 1v2M8 13v2M1 8h2M13 8h2",
+  },
 ];
 
 interface ActiveReview {
@@ -96,7 +100,18 @@ export function Rail() {
             }`}
           >
             <span className="flex items-center justify-between gap-2">
-              {link.label}
+              <span className="flex items-center gap-2">
+                <svg viewBox="0 0 16 16" aria-hidden className="h-4 w-4 shrink-0 opacity-70">
+                  <path
+                    d={link.icon}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {link.label}
+              </span>
               {/* The state that wants something from a person, said where a
                   person can see it from any screen. It used to be visible
                   only by opening the reviews list and reading the chips. */}

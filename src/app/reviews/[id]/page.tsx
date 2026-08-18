@@ -26,6 +26,7 @@ import {
   Problem,
   Sha,
   severityTone,
+  StatTile,
   statusLabel,
   statusTone,
 } from "@/components/ui";
@@ -450,6 +451,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   }
 
   const { review, findings } = snapshot;
+  const queueRows = findings.filter((finding) => finding.status !== "killed");
+  const undecidedRows = queueRows.filter((finding) =>
+    ["verified", "open_question"].includes(finding.status),
+  ).length;
+  const decidedRows = queueRows.length - undecidedRows;
   const done = new Set(
     snapshot.stages.filter((row) => row.status === "succeeded").map((r) => r.stage),
   );
@@ -559,6 +565,28 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         }
         actions={
           <>
+            {review.status === "awaiting_confirmation" && queueRows.length > 0 ? (
+              <span className="mr-2 flex items-center gap-2 text-dense">
+                <span className="text-[var(--color-ink-muted)] tabular-nums">
+                  {decidedRows} of {queueRows.length} decided
+                </span>
+                <span
+                  role="progressbar"
+                  aria-valuenow={decidedRows}
+                  aria-valuemin={0}
+                  aria-valuemax={queueRows.length}
+                  aria-label="Findings decided"
+                  className="h-1 w-28 overflow-hidden rounded-full bg-[var(--color-surface-raised)]"
+                >
+                  <span
+                    className="block h-full bg-[var(--color-accent)] transition-[width] duration-[var(--motion-considered)]"
+                    style={{
+                      width: `${queueRows.length === 0 ? 0 : (decidedRows / queueRows.length) * 100}%`,
+                    }}
+                  />
+                </span>
+              </span>
+            ) : null}
             {isResumableReview(review.status as ReviewStatus) ? (
               <Button
                 variant="primary"
@@ -685,9 +713,27 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           </div>
 
           <aside className="grid min-w-0 gap-4 self-start">
+            {/* The two figures a person actually checks, at the weight the
+                mock gives them; the token breakdown stays, beneath, at the
+                weight it deserves. */}
+            <div className="grid grid-cols-2 gap-3">
+              <StatTile label="$ cost" value={`$${review.costEquivalentUsd.toFixed(2)}`} />
+              <StatTile
+                label="Duration"
+                value={
+                  snapshot.running && review.startedAt
+                    ? elapsedSince(review.startedAt, now)
+                    : review.startedAt && review.completedAt
+                      ? totalRunTime(review.startedAt, review.completedAt)
+                      : "-"
+                }
+              />
+            </div>
             <Card className="p-4">
-              <h2 className="mb-3 text-heading font-semibold">What it cost</h2>
-              <dl className="grid gap-1.5 text-sm">
+              <p className="mb-2 text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
+                Tokens
+              </p>
+              <dl className="grid gap-1.5 text-dense">
                 <Stat label="Fresh input" value={review.usageInputTokens.toLocaleString("en-US")} />
                 {/* Written into the cache by this review, which is what makes
                     the cached reads below cost a fraction of fresh input. It
@@ -702,13 +748,14 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   value={review.usageCacheReadTokens.toLocaleString("en-US")}
                 />
                 <Stat label="Output" value={review.usageOutputTokens.toLocaleString("en-US")} />
-                <Stat label="Cost equivalent" value={`$${review.costEquivalentUsd.toFixed(4)}`} />
               </dl>
             </Card>
 
             {review.intent ? (
               <Card className="p-4">
-                <h2 className="mb-2 text-heading font-semibold">What it was meant to do</h2>
+                <p className="mb-2 text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
+                  What it was meant to do
+                </p>
                 <p className="text-sm text-[var(--color-ink-muted)]">{review.intent}</p>
               </Card>
             ) : null}
@@ -724,7 +771,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
             {live.length > 0 ? (
               <Card className="p-4">
-                <h2 className="mb-2 text-heading font-semibold">Activity</h2>
+                <p className="mb-2 text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
+                  Activity
+                </p>
                 <ul
                   tabIndex={0}
                   role="group"
