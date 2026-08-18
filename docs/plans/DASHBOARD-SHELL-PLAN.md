@@ -159,10 +159,10 @@ habit applies: no orphaned helpers left behind.
 
 | WP | Scope | Blocked on | Status |
 | --- | --- | --- | --- |
-| M0 | Preconditions: the live review is finished (check the DB, not the screen); full `./verify.sh --e2e` baseline green before any change | the maintainer's run | TODO |
-| M1 | The shell swap: TopBar component, layout to bar+column, rail deleted; e2e follows (badge test renamed and repointed, aria-current exact-match for `/`, Home added to the themes SCREENS loop with title "Review scoreboard"); 04 section 2 rewritten | M0 | TODO |
-| M2 | Data for the widgets, server-side: `readScoreboard` gains `awaitingReviews` and `projects` (per-project latest outcome), attention endpoint gains `currentStage`/`startedAt`/`costEquivalentUsd`; unit tests for each including the empty cases | M0 | TODO |
-| M3 | The dashboard: widget composition on `/` per section 2, WP-E state standards on every widget, axe in both themes | M1, M2 | TODO |
+| M0 | Preconditions | - | DONE 2026-08-18. The run was not in flight: the dev server was down and no engine process existed, so the row saying `running` was orphaned. Baseline green at 720 tests. |
+| M1 | The shell swap | M0 | DONE 2026-08-18 (d4cafd9) |
+| M2 | Data for the widgets | M0 | DONE 2026-08-18 (21b6c22) |
+| M3 | The dashboard | M1, M2 | DONE 2026-08-18 (this commit) |
 | M4 | Live wiring: the Live scan widget's gauge and clock, deep link into the theater; batch n of m emitted by the runner as an engine event so the theater and widget can say "request 3 of 9" (the counts already ride `StageRequest`; the emit is the missing half of D-71) | M3 | TODO |
 | M5 | Responsive: the bar and every widget at 360px, the WP-K rules applied to the new shell (monitor and decide first-class; setup desktop-first) | M3 | TODO |
 | M6 | Evidence and records: both themes re-shot, FG-4 evidence refreshed, README's two embedded images regenerated, 04 home section finalized, PROPOSED entries below recorded DECIDED, rows closed here and in `UX-UPLIFT-PLAN.md` | M1-M5 | TODO |

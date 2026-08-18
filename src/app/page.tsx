@@ -35,6 +35,23 @@ interface Row {
   createdAt: string;
 }
 
+interface AwaitingRow {
+  id: string;
+  projectName: string;
+  fromBranch: string;
+  intoBranch: string;
+  confirmed: number;
+  total: number;
+  since: string;
+}
+
+interface ProjectRow {
+  id: string;
+  name: string;
+  reviews: number;
+  latest: { id: string; status: string; confirmed: number; total: number; at: string } | null;
+}
+
 interface Scoreboard {
   spendUsd: number;
   reviewsCompleted: number;
@@ -42,9 +59,78 @@ interface Scoreboard {
   precision: number | null;
   inventionRate: number | null;
   awaiting: number;
+  awaitingReviews: AwaitingRow[];
   spendHistory: number[];
   recent: Row[];
   ruleYield: { ruleCode: string; confirmed: number; total: number }[];
+  projects: ProjectRow[];
+}
+
+interface LiveRun {
+  id: string;
+  status: string;
+  projectName: string;
+  fromBranch: string;
+  intoBranch: string;
+  currentStage: string | null;
+  startedAt: string | null;
+  costEquivalentUsd: number;
+}
+
+/** The pipeline, for the live widget's gauge. Mirrors the review screen's. */
+const STAGE_ORDER = [
+  "s0_prepare",
+  "s1_risk",
+  "s2_comprehension",
+  "s3_adversarial",
+  "s4_deletions",
+  "s5_verification",
+  "s6_audit",
+];
+
+const STAGE_NAMES: Record<string, string> = {
+  s0_prepare: "Prepare",
+  s1_risk: "Risk",
+  s2_comprehension: "Comprehension",
+  s3_adversarial: "Adversarial",
+  s4_deletions: "Deletions",
+  s5_verification: "Verification",
+  s6_audit: "Audit",
+};
+
+/** How long ago, in the words someone would use out loud. */
+function ago(iso: string, now: number): string {
+  const minutes = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60000));
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+/** A widget: the machined panel with the uppercase mono label. */
+function Widget({
+  label,
+  action,
+  className = "",
+  children,
+}: {
+  label: string;
+  action?: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className={`min-w-0 p-4 ${className}`}>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="font-[family-name:var(--font-mono)] text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
+          {label}
+        </p>
+        {action}
+      </div>
+      {children}
+    </Card>
+  );
 }
 
 function duration(ms: number | null): string {
@@ -88,7 +174,40 @@ function Sparkline({ values }: { values: number[] }) {
 
 export default function HomePage() {
   const [board, setBoard] = useState<Scoreboard | null>(null);
+  const [live, setLive] = useState<LiveRun | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState("");
+
+  // The same narrow endpoint the bar polls, so a running review appears here
+  // without a second source of truth about what is running.
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const response = await fetch("/api/reviews/attention");
+        if (!response.ok || cancelled) return;
+        const body = (await response.json()) as { active: LiveRun | null };
+        if (!cancelled) setLive(body.active);
+      } catch {
+        // A dashboard that cannot reach the server says so through the
+        // scoreboard's own error, not twice.
+      }
+    };
+    const timer = setInterval(() => void check(), 4000);
+    void check();
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  // Ticks only while something is running, so a quiet dashboard is not
+  // re-rendered once a second for ever.
+  useEffect(() => {
+    if (!live) return;
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, [live]);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,6 +279,99 @@ export default function HomePage() {
               />
             </div>
 
+            {/* Live before archive: something happening now outranks
+                everything that already did. Hidden entirely when nothing is
+                running, because an empty "live" panel is a dashboard
+                claiming to have something to watch. */}
+            {live ? (
+              <Widget
+                label="Live scan"
+                action={
+                  <Link
+                    href={`/reviews/${live.id}`}
+                    className="text-aside text-[var(--color-accent)] underline underline-offset-2"
+                  >
+                    Open scan view
+                  </Link>
+                }
+              >
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                  <Mono className="text-heading">
+                    {live.fromBranch} <span className="text-[var(--color-ink-faint)]">into</span>{" "}
+                    {live.intoBranch}
+                  </Mono>
+                  <span className="text-body text-[var(--color-ink-muted)]">
+                    {live.currentStage ? STAGE_NAMES[live.currentStage] : "Preparing"}
+                    {live.currentStage
+                      ? ` · stage ${STAGE_ORDER.indexOf(live.currentStage) + 1} of ${STAGE_ORDER.length}`
+                      : ""}
+                  </span>
+                  {live.startedAt ? (
+                    <span className="font-[family-name:var(--font-mono)] text-body tabular-nums">
+                      {ago(live.startedAt, now).replace(" ago", "")} elapsed
+                    </span>
+                  ) : null}
+                  <span className="font-[family-name:var(--font-mono)] text-body tabular-nums">
+                    ${live.costEquivalentUsd.toFixed(2)}
+                  </span>
+                </div>
+                <div className="mt-3 flex gap-1.5" aria-hidden>
+                  {STAGE_ORDER.map((stage, index) => {
+                    const at = live.currentStage ? STAGE_ORDER.indexOf(live.currentStage) : 0;
+                    return (
+                      <span
+                        key={stage}
+                        className={`h-1.5 flex-1 rounded-sm ${
+                          index === at
+                            ? "pulse bg-[var(--color-accent)]"
+                            : index < at
+                              ? "bg-[var(--color-accent)] opacity-60"
+                              : "gauge-track"
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              </Widget>
+            ) : null}
+
+            {/* The work that wants a person, above the record of work that
+                does not. */}
+            <Widget label="Needs you">
+              {board.awaitingReviews.length === 0 ? (
+                <p className="text-body text-[var(--color-ink-muted)]">
+                  Nothing is waiting on you.
+                </p>
+              ) : (
+                <ul className="grid gap-1">
+                  {board.awaitingReviews.map((row) => (
+                    <li key={row.id}>
+                      <Link
+                        href={`/reviews/${row.id}`}
+                        className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-md border border-[var(--color-question)] bg-[var(--color-question-soft)] px-3 py-2 transition-colors hover:border-[var(--color-question)]"
+                      >
+                        <span className="min-w-0">
+                          <Mono className="block truncate text-dense">
+                            {row.fromBranch} into {row.intoBranch}
+                          </Mono>
+                          <span className="text-aside text-[var(--color-ink-muted)]">
+                            {row.projectName}
+                          </span>
+                        </span>
+                        <span className="text-dense tabular-nums">
+                          {row.total > 0
+                            ? `${row.confirmed} of ${row.total} decided`
+                            : "no findings"}
+                          <span className="ml-3 text-[var(--color-ink-muted)]">
+                            waiting {ago(row.since, now)}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Widget>
             <div className="grid gap-6 xl:grid-cols-[1fr_20rem]">
               <Card className="min-w-0 overflow-x-auto">
                 <h2 className="border-b border-[var(--color-border)] px-4 py-3 text-heading font-semibold">
@@ -255,6 +467,40 @@ export default function HomePage() {
                   </ul>
                 )}
               </Card>
+
+              <Widget label="Projects" className="self-start">
+                <ul className="grid gap-2">
+                  {board.projects.map((project) => (
+                    <li
+                      key={project.id}
+                      className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+                    >
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="text-dense underline-offset-2 hover:underline"
+                      >
+                        {project.name}
+                      </Link>
+                      {project.latest ? (
+                        <span className="flex items-center gap-2 text-aside">
+                          <Badge tone={statusTone(project.latest.status)}>
+                            {statusLabel(project.latest.status)}
+                          </Badge>
+                          <span className="text-[var(--color-ink-muted)] tabular-nums">
+                            {project.latest.total > 0
+                              ? `${project.latest.confirmed} of ${project.latest.total}`
+                              : "no findings"}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-aside text-[var(--color-ink-faint)]">
+                          never reviewed
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </Widget>
             </div>
           </div>
         )}

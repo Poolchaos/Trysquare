@@ -1873,3 +1873,20 @@ verified evidence, in writing, here.
   than begun mid-flight, because the maintainer's first real review is
   running inside the dev server and IA changes deserve the full browser gate
   the running review currently blocks.
+- 2026-08-18 D-82 (M1-M3 of the dashboard shell plan): the five PROPOSED
+  decisions in that plan are DECIDED as built. Dashboard is a nav item and
+  the wordmark also links home, because every screen must mark exactly one
+  current link and `/` is a screen; its match is exact where the others are
+  prefixes, since every path begins with a slash. The widget composition is
+  fixed in v1: arrangeable widgets mean persistence, drag and a settings
+  surface, none of which was asked for, and nothing here forecloses it. The
+  live-scan widget hides when nothing runs, because an empty panel labelled
+  live is a dashboard claiming to have something to watch. The attention
+  endpoint stays the polled one, now for both the bar and the live widget,
+  so there is one source of truth about what is running; the dashboard's
+  richer data loads once per visit. `rail.tsx` is deleted rather than kept
+  as a fallback: two shells is a design decision nobody made.
+  The projects widget matches reviews to projects by id, never by name, for
+  the reason the reviews list already learned: two remotes can end in the
+  same repository name, and merging them would report one project's last
+  finding as another's.
