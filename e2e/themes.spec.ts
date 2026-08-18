@@ -33,6 +33,10 @@ async function photograph(page: import("@playwright/test").Page, file: string): 
 }
 
 const SCREENS = [
+  // The dashboard is a screen now, so it is photographed and checked like
+  // one, including that it marks itself current without lighting every
+  // other link.
+  { path: "/", name: "dashboard", title: "Review scoreboard" },
   { path: "/projects", name: "projects", title: "Projects" },
   { path: "/reviews", name: "reviews", title: "Reviews" },
   { path: "/rulesets", name: "rulesets", title: "Rulesets" },
@@ -48,7 +52,9 @@ for (const screen of SCREENS) {
     await page.goto(screen.path);
     await expect(page.getByRole("heading", { name: screen.title, level: 1 })).toBeVisible();
 
-    // The rail marks where you are, for anyone not going by colour.
+    // The bar marks where you are, for anyone not going by colour, and
+    // marks exactly one place: every path begins with "/", so a prefix test
+    // would light the dashboard on every screen.
     const current = page.locator('nav a[aria-current="page"]');
     await expect(current).toHaveCount(1);
 

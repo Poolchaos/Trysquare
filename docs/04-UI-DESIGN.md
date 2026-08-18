@@ -74,10 +74,18 @@ chosen per review in the advanced fold.
 
 ## 2. Navigation
 
-Left rail: Projects, Reviews, Rulesets, Settings. Global status chip when a
-review is running or paused (click through to the run), and a count badge
-when reviews await a decision, because the state that needs a human is the
-one the rail must never hide. Keyboard-first:
+Top bar (D-81, replacing the left rail): the try-square mark and wordmark
+linking home, then Dashboard, Projects, Reviews, Rulesets, Settings. The
+current destination is marked by `aria-current` and an accent underline, and
+exactly one is marked on every screen: the dashboard matches its path
+exactly rather than by prefix, since every path begins with a slash. On the
+right, a count badge linking to the reviews list when any review awaits a
+decision, because the state that needs a human is the one navigation must
+never hide, and a status chip while a review is running or paused, following
+the job manager rather than the status column, since a row can say running
+while no process owns it. At phone width the wordmark collapses to the mark
+and icons drop before labels: a label without an icon still navigates, an
+icon without a label guesses. Keyboard-first:
 review confirmation flow fully drivable by keys (j/k next/prev, c confirm,
 d dismiss with reason, enter open file context).
 
