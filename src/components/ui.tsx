@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[0_1px_0_0_var(--color-surface-sunken)] ${className}`}
+      className={`rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-[inset_0_1px_0_0_var(--color-edge),0_1px_0_0_var(--color-surface-sunken)] ${className}`}
     >
       {children}
     </div>
@@ -131,7 +131,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${TONES[tone]}`}
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 font-[family-name:var(--font-mono)] text-[11px] font-medium tracking-wide uppercase ${TONES[tone]}`}
     >
       {children}
     </span>
@@ -155,9 +155,13 @@ export function StatTile({
   children?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[0_1px_0_0_var(--color-surface-sunken)]">
-      <p className="text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">{label}</p>
-      <p className="mt-1 text-title font-semibold tabular-nums">{value}</p>
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4 shadow-[inset_0_1px_0_0_var(--color-edge),0_1px_0_0_var(--color-surface-sunken)]">
+      <p className="font-[family-name:var(--font-mono)] text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
+        {label}
+      </p>
+      <p className="mt-1 font-[family-name:var(--font-mono)] text-title font-semibold tabular-nums">
+        {value}
+      </p>
       {note ? <p className="text-aside text-[var(--color-ink-faint)]">{note}</p> : null}
       {children}
     </div>

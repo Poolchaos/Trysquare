@@ -9,7 +9,7 @@
  * rather than holding the connection open.
  */
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import {
   canTransitionReview,
   isResumableReview,
@@ -325,6 +325,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [live, setLive] = useState<LiveEntry[]>([]);
   const [streaming, setStreaming] = useState(true);
   const [loadError, setLoadError] = useState("");
+  // The scan takes the screen while it runs; minimizing steps back to the
+  // ordinary page without touching the run. What is stored is which run was
+  // minimized, not a flag, so the next run (a new startedAt) opens on the
+  // theater again without an effect having to reset anything.
+  const [minimizedRun, setMinimizedRun] = useState<string | null>(null);
   // Ticks only while something is running, so a finished review is not
   // re-rendered once a second forever.
   const [now, setNow] = useState(() => Date.now());
@@ -451,6 +456,23 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   }
 
   const { review, findings } = snapshot;
+
+  const scanMinimized = minimizedRun !== null && minimizedRun === review.startedAt;
+  if (snapshot.running && !scanMinimized) {
+    return (
+      <ScanTheater
+        snapshot={snapshot}
+        live={live}
+        now={now}
+        onMinimize={() => setMinimizedRun(review.startedAt)}
+        onCancel={async () => {
+          await fetch(`/api/reviews/${id}/cancel`, { method: "POST" });
+          await reload();
+        }}
+      />
+    );
+  }
+
   const queueRows = findings.filter((finding) => finding.status !== "killed");
   const undecidedRows = queueRows.filter((finding) =>
     ["verified", "open_question"].includes(finding.status),
@@ -565,6 +587,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         }
         actions={
           <>
+            {snapshot.running ? (
+              <Button variant="quiet" onClick={() => setMinimizedRun(null)}>
+                Scan view
+              </Button>
+            ) : null}
             {review.status === "awaiting_confirmation" && queueRows.length > 0 ? (
               <span className="mr-2 flex items-center gap-2 text-dense">
                 <span className="text-[var(--color-ink-muted)] tabular-nums">
@@ -576,7 +603,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   aria-valuemin={0}
                   aria-valuemax={queueRows.length}
                   aria-label="Findings decided"
-                  className="h-1 w-28 overflow-hidden rounded-full bg-[var(--color-surface-raised)]"
+                  className="gauge-track h-1.5 w-32 overflow-hidden rounded-sm"
                 >
                   <span
                     className="block h-full bg-[var(--color-accent)] transition-[width] duration-[var(--motion-considered)]"
@@ -1232,6 +1259,214 @@ function RenderedReport({ data }: { data: ReportData }) {
         {data.usage.costEquivalentUsd.toFixed(4)}.
       </footer>
     </Card>
+  );
+}
+
+/**
+ * The scan, given the whole screen.
+ *
+ * A review is minutes of real work, and the ordinary page showed it as one
+ * pulsing dot beside a sidebar log. While a run is live this takes over:
+ * the stages as a ruled gauge across the top, the current stage named large
+ * with what it usually takes on this machine, the engine's activity
+ * streaming center-stage, and the clock and the meter running where they can
+ * be seen from across a room. Every figure on it is the run's own.
+ *
+ * It covers the rail deliberately. Watching a scan is a mode, not a page,
+ * and Escape or Hide steps back out without touching the run.
+ */
+function ScanTheater({
+  snapshot,
+  live,
+  now,
+  onMinimize,
+  onCancel,
+}: {
+  snapshot: Snapshot;
+  live: LiveEntry[];
+  now: number;
+  onMinimize: () => void;
+  onCancel: () => Promise<void>;
+}) {
+  const { review, coverage } = snapshot;
+  const done = new Set(
+    snapshot.stages.filter((row) => row.status === "succeeded").map((row) => row.stage),
+  );
+  const executing = executingStage(snapshot, done);
+  const stageIndex = STAGES.findIndex(([stage]) => stage === executing);
+  const usual = executing !== null ? snapshot.stageMedians[executing] : undefined;
+  const feedRef = useRef<HTMLDivElement>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  // The feed follows the work. New entries arrive several times a second
+  // while the engine reads, and a stream someone must scroll by hand is a
+  // stream nobody watches.
+  useEffect(() => {
+    feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight });
+  }, [live.length]);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onMinimize();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onMinimize]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-surface)] px-8 py-6">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <svg viewBox="0 0 16 16" aria-hidden className="h-5 w-5 shrink-0">
+            <path
+              d="M2 2 L2 14 L14 14"
+              fill="none"
+              stroke="var(--color-accent)"
+              strokeWidth="2"
+              strokeLinecap="square"
+            />
+            <path d="M5 11 L11 11 L11 5" fill="none" stroke="currentColor" strokeWidth="1" />
+          </svg>
+          <Mono className="truncate text-heading">
+            {review.fromBranch} <span className="text-[var(--color-ink-faint)]">into</span>{" "}
+            {review.intoBranch}
+          </Mono>
+          <Badge tone={statusTone(review.status)}>
+            {snapshot.queued ? "queued" : statusLabel(review.status)}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-3">
+          {review.startedAt ? (
+            <span className="font-[family-name:var(--font-mono)] text-title font-semibold tabular-nums">
+              {elapsedSince(review.startedAt, now)}
+            </span>
+          ) : null}
+          <Button variant="quiet" onClick={onMinimize}>
+            Hide
+          </Button>
+          <Button
+            variant="quiet"
+            disabled={cancelling}
+            onClick={() => {
+              setCancelling(true);
+              void onCancel().finally(() => setCancelling(false));
+            }}
+          >
+            Cancel
+          </Button>
+        </div>
+      </header>
+
+      {/* The pipeline as a ruled gauge: seven segments, filled as they land,
+          the live one glowing. */}
+      <div className="mt-5">
+        <div className="flex gap-1.5" aria-hidden>
+          {STAGES.map(([stage]) => {
+            const isDone = deterministicDone(stage, snapshot, done) || done.has(stage);
+            const isCurrent = stage === executing;
+            return (
+              <span
+                key={stage}
+                className={`h-1.5 flex-1 rounded-sm ${
+                  isCurrent
+                    ? "pulse bg-[var(--color-accent)]"
+                    : isDone
+                      ? "bg-[var(--color-accent)] opacity-60"
+                      : "gauge-track"
+                }`}
+              />
+            );
+          })}
+        </div>
+        <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="font-[family-name:var(--font-mono)] text-title font-semibold">
+            {executing !== null && stageIndex !== -1
+              ? `${stageLabel(executing)}`
+              : snapshot.queued
+                ? "Waiting for the running review"
+                : "Preparing"}
+          </span>
+          {stageIndex !== -1 ? (
+            <span className="text-body text-[var(--color-ink-muted)]">
+              stage {stageIndex + 1} of {STAGES.length}
+              {usual !== undefined ? ` · usually ${elapsedBetween(0, usual)} here` : ""}
+            </span>
+          ) : null}
+          {stageIndex !== -1 ? (
+            <span className="text-body text-[var(--color-ink-faint)]">
+              {STAGES[stageIndex]?.[2]}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      {/* The work itself, streaming. This is the panel the whole mode exists
+          for: files being opened, stages turning over, the run narrating. */}
+      <div
+        ref={feedRef}
+        tabIndex={0}
+        role="log"
+        aria-label="Scan activity"
+        className="mt-5 min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-4 shadow-[inset_0_1px_0_0_var(--color-edge)]"
+      >
+        {live.length === 0 ? (
+          <p className="text-body text-[var(--color-ink-muted)]">
+            Fetching, pinning and checking out the change set...
+          </p>
+        ) : (
+          <ul className="grid gap-0.5 text-dense">
+            {live.slice(-120).map((entry, index) => (
+              <li key={index} className="leading-6 break-words">
+                {entry.kind === "stage" ? (
+                  <span className="font-medium text-[var(--color-ink)]">
+                    {stageLabel(entry.stage)}{" "}
+                    <span className="font-normal text-[var(--color-ink-faint)]">{entry.phase}</span>
+                  </span>
+                ) : entry.kind === "note" ? (
+                  <span className="block border-l-2 border-[var(--color-border-strong)] py-0.5 pl-2 text-[var(--color-ink-muted)]">
+                    {entry.message}
+                  </span>
+                ) : (
+                  <span className="block overflow-hidden font-[family-name:var(--font-mono)] break-all text-[var(--color-ink-faint)]">
+                    {entry.detail}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <footer className="mt-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-6">
+          <span className="text-dense text-[var(--color-ink-muted)]">
+            <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
+              ${review.costEquivalentUsd.toFixed(2)}
+            </span>{" "}
+            so far
+          </span>
+          {coverage.totalFiles > 0 ? (
+            <span className="text-dense text-[var(--color-ink-muted)]">
+              <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
+                {coverage.totalFiles - coverage.pendingFiles}/{coverage.totalFiles}
+              </span>{" "}
+              files accounted for
+            </span>
+          ) : null}
+          {coverage.totalHunks > 0 ? (
+            <span className="text-dense text-[var(--color-ink-muted)]">
+              <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
+                {coverage.totalHunks - coverage.pendingHunks}/{coverage.totalHunks}
+              </span>{" "}
+              hunks
+            </span>
+          ) : null}
+        </div>
+        <span className="text-aside text-[var(--color-ink-faint)]">
+          Esc hides this view; the run keeps going either way.
+        </span>
+      </footer>
+    </div>
   );
 }
 

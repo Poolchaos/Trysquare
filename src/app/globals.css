@@ -43,6 +43,15 @@
   --color-good: oklch(52% 0.12 155);
   --color-good-soft: oklch(95% 0.04 155);
 
+  /* The machined edge: a one-pixel highlight along a panel's top, which is
+     what makes a surface read as an object under light rather than a
+     rectangle of a second grey. */
+  --color-edge: oklch(99.6% 0.002 245);
+  /* The drafting-board dot. The app is named for a drafting tool, so the
+     ground it sits on is drafting paper: a faint dot grid, spaced on the
+     same 4px rhythm everything else uses. */
+  --color-grid-dot: oklch(93.5% 0.004 245);
+
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
 
   /*
@@ -102,11 +111,23 @@
     --color-question-soft: oklch(27% 0.06 265);
     --color-good: oklch(72% 0.11 155);
     --color-good-soft: oklch(26% 0.05 155);
+
+    --color-edge: oklch(26% 0.016 245);
+    --color-grid-dot: oklch(19.5% 0.013 245);
   }
 }
 
 body {
-  background: var(--color-surface);
+  background-color: var(--color-surface);
+  /* The drafting board. A dot grid on the ground, and one very low wash of
+     the accent falling from the top of the page: together they are why a
+     screen with one card on it no longer reads as a text file. */
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--color-grid-dot) 1px, transparent 1.5px),
+    radial-gradient(70rem 22rem at 50% -8rem, var(--color-accent-soft), transparent 70%);
+  background-size:
+    28px 28px,
+    auto;
   color: var(--color-ink);
   /* 04 section 1: the page never scrolls horizontally. A panel with a line
      too long to break scrolls itself; the document does not move. Set here
@@ -131,6 +152,25 @@ body {
 
 .pulse {
   animation: trysquare-pulse 1.8s ease-in-out infinite;
+  /* The screen's one glow, spent on the one thing that is alive. */
+  box-shadow: 0 0 6px 1px var(--color-accent-soft);
+}
+
+/*
+ * A gauge track: the surface a progress fill moves across, ruled like the
+ * instrument the app is named for. The ticks are the track's own texture, so
+ * the fill reads as a measurement against a scale rather than a bar filling
+ * a box.
+ */
+.gauge-track {
+  background-color: var(--color-surface-sunken);
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 6px,
+    var(--color-border) 6px,
+    var(--color-border) 7px
+  );
 }
 
 /*

@@ -166,7 +166,7 @@ export default function HomePage() {
                   Recent reviews
                 </h2>
                 <table className="w-full text-dense">
-                  <thead className="text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
+                  <thead className="font-[family-name:var(--font-mono)] text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
                     <tr>
                       <th className="px-4 py-2 text-left font-medium">Branch pair</th>
                       <th className="px-4 py-2 text-left font-medium">Model</th>
@@ -237,7 +237,7 @@ export default function HomePage() {
                               {rule.confirmed}/{rule.total}
                             </span>
                           </div>
-                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-sunken)]">
+                          <div className="gauge-track mt-1 h-1.5 w-full overflow-hidden rounded-sm">
                             <div
                               className={`h-full ${
                                 share === 0

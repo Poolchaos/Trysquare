@@ -13,7 +13,9 @@ export function PageHeader({
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-8 py-4">
       <div className="min-w-0">
-        <h1 className="text-title leading-tight font-semibold tracking-tight">{title}</h1>
+        <h1 className="font-[family-name:var(--font-mono)] text-title leading-tight font-semibold tracking-tight">
+          {title}
+        </h1>
         {subtitle ? (
           <div className="mt-1 text-body text-[var(--color-ink-muted)]">{subtitle}</div>
         ) : null}

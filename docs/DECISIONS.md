@@ -1842,3 +1842,34 @@ verified evidence, in writing, here.
   text is lost text, the aside may shrink, and `overflow-x: hidden` on the
   body is the floor so a screen written later cannot forget. A Playwright
   check compares scrollWidth against clientWidth on every top-level screen.
+- 2026-08-18 D-79: the visual identity is the instrument itself, named so it
+  can be judged: the drafting board. The app is named for a drafting tool, so
+  the ground is drafting paper, a faint dot grid on the 4px rhythm with one
+  low wash of accent falling from the top; panels are machined, carrying a
+  one-pixel top highlight so a surface reads as an object under light rather
+  than a rectangle of a second grey; progress tracks are ruled gauges, ticked
+  like the tool, so a fill reads as a measurement against a scale; and the
+  display voice is the monospace face, on titles, tile numerals, micro-labels
+  and badges, because the product's subject is code and its numbers are
+  measurements. The glow budget from D-68 is spent on the live pulse alone.
+- 2026-08-18 D-80: while a review runs, the scan takes the whole screen. The
+  maintainer asked for exactly this ("when doing a scan, I want it to take
+  over the screen, I want to see it do things; people want to see progress"),
+  and the research half of the UX plan supports it: visible work is the
+  honest form of the labor effect. The theater covers the rail because
+  watching a scan is a mode, not a page; it shows the pipeline as a ruled
+  gauge, the current stage named large with its local usually-takes, the
+  engine's activity streaming center-stage, the clock and the running cost at
+  reading distance, and coverage counters once the ledger is seeded. Escape
+  or Hide steps out without touching the run; which run was minimized is
+  stored rather than a flag, so the next run opens on the theater again.
+  Cancel lives in the theater, so the browser suite's cancel path is intact.
+- 2026-08-18 D-81 MAINTAINER DIRECTIVE, recorded for the next structural
+  pass: a widget dashboard as the primary surface in place of the left nav
+  rail. The scoreboard is the seed of it. This is an information-architecture
+  change, not a polish item: navigation moves to a slim top bar, the home
+  becomes composable widgets (scoreboard tiles, awaiting queue, recent runs,
+  rule yield), and the rail retires. Planned as its own work package rather
+  than begun mid-flight, because the maintainer's first real review is
+  running inside the dev server and IA changes deserve the full browser gate
+  the running review currently blocks.

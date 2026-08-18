@@ -309,7 +309,7 @@ export function ConfirmationQueue({
             queue.some((finding) => finding.severity.toUpperCase() === severity),
           ).map((severity) => (
             <div key={severity} className="mb-3">
-              <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold tracking-wide text-[var(--color-ink-muted)] uppercase">
+              <h3 className="mb-1 flex items-center gap-2 font-[family-name:var(--font-mono)] text-xs font-semibold tracking-wide text-[var(--color-ink-muted)] uppercase">
                 {severity}
                 <span className="tabular-nums">
                   ({queue.filter((finding) => finding.severity.toUpperCase() === severity).length})
