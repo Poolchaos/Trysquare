@@ -1800,3 +1800,24 @@ verified evidence, in writing, here.
   raised. Rule yield is sorted worst first, because the rule costing the most
   attention for the least return is the one an author needs to see, and each
   bar names its rule: an anonymous bar is a measurement nobody can act on.
+- 2026-08-18 D-76: the prompt travels on the CLI's stdin, never in argv. The
+  maintainer resumed the first real review of a real project and it died at
+  the second stage with `spawn E2BIG`. Linux caps a single argument at
+  MAX_ARG_STRLEN, 128KB; the comprehension prompt for a 61-file change set
+  measured 297,207 bytes, so execve refused the command outright. The failure
+  was not a large-review failure but a real-review failure: every change set
+  big enough to be worth reviewing was too big to review, and the seeded
+  fixture's prompts are three orders of magnitude smaller, so nothing in the
+  suite could ever have caught it.
+  `-p` is a flag, not a value. The CLI's own help calls it useful for pipes
+  and documents `--input-format text` as the default for print mode, which is
+  the stdin path. The prompt is written to the child and the stream closed at
+  once, since the CLI reads until end of input and a stream left open is a run
+  that waits forever. The probe travels the same way and exports its prompt
+  for the purpose. The fake CLI reads stdin and records what it read, so tests
+  that assert what a stage was told keep working, and a new test refuses an
+  argument vector containing anything above the kernel's limit.
+  Stated rather than left implied: only the per-review prompt was unbounded.
+  The system prompt is composed from the ruleset and stays in argv, so a
+  protocol large enough to matter will need the same treatment, and the test
+  says so.

@@ -9,6 +9,7 @@
 export const READ_ONLY_TOOLS = ["Read", "Grep", "Glob"] as const;
 
 export interface StageCommandOptions {
+  /** Written to the child's stdin, never to argv. See buildStageArgs. */
   prompt: string;
   systemPrompt: string;
   /** Full model id. Short aliases resolve to a previous generation. */
@@ -44,8 +45,14 @@ export function buildStageArgs(options: StageCommandOptions): string[] {
   const tools = options.tools ?? READ_ONLY_TOOLS;
 
   const args = [
+    // A flag, not a value: the prompt goes to the child's stdin, which is
+    // what "useful for pipes" in the CLI's own help means and what
+    // --input-format text describes. It used to ride in argv, and Linux caps
+    // a single argument at MAX_ARG_STRLEN, 128KB. A review of 61 files built
+    // a 297KB prompt, so execve refused it with E2BIG and the run failed at
+    // the second stage: every change set large enough to be worth reviewing
+    // was too large to review.
     "-p",
-    options.prompt,
     "--output-format",
     options.outputFormat,
     "--model",
@@ -78,10 +85,16 @@ export function buildStageArgs(options: StageCommandOptions): string[] {
   return args;
 }
 
+/**
+ * The probe's whole prompt. Exported because it travels on stdin now, so the
+ * caller writes it rather than finding it inside the argument vector.
+ */
+export const PROBE_PROMPT = "Reply with exactly: ok";
+
 /** A minimal, cheap availability check for one model id. */
 export function buildProbeArgs(model: string): string[] {
   return buildStageArgs({
-    prompt: "Reply with exactly: ok",
+    prompt: PROBE_PROMPT,
     // A tiny system prompt and no tools is what makes a probe cost a fraction
     // of a cent instead of several: the default prompt and tool definitions
     // are the bulk of a trivial call.

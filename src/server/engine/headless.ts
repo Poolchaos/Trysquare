@@ -103,9 +103,17 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
       // Session markers are removed here; without that the CLI refuses to run
       // when the app was started from a Claude Code terminal.
       env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
-      stdio: ["ignore", "pipe", "pipe"] as const,
+      // stdin is a pipe now, because the prompt is written to it rather than
+      // passed in argv where the kernel caps a single argument at 128KB.
+      stdio: ["pipe", "pipe", "pipe"] as const,
       windowsHide: true,
     });
+
+    // Written and closed immediately: the CLI reads until end of input, so a
+    // stream left open is a run that waits forever. An EPIPE here means the
+    // child died before reading, which its exit code already reports.
+    child.stdin?.on("error", () => {});
+    child.stdin?.end(options.prompt);
 
     const decoder = new StreamDecoder();
     let stderr = "";

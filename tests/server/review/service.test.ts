@@ -241,6 +241,15 @@ const recordedArgv = (): string[][] => {
     .map((name) => JSON.parse(readFileSync(join(dir, name), "utf8")).args as string[]);
 };
 
+/** What each call was actually asked, which now travels on stdin. */
+const recordedPrompts = (): string[] => {
+  const dir = join(dataDir, "calls");
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .sort()
+    .map((name) => (JSON.parse(readFileSync(join(dir, name), "utf8")).prompt as string) ?? "");
+};
+
 describe("running a review to the point a human looks at it", () => {
   it("walks the statuses and lands awaiting confirmation", async () => {
     const reviewId = seedReview();
@@ -1059,8 +1068,7 @@ describe("telling the reviewer what the change was for", () => {
 
     // The adversarial stage is the one that judges the code, so it is the one
     // that must know what the change was supposed to do.
-    const adversarial = recordedArgv()[2] ?? [];
-    const prompt = adversarial[adversarial.indexOf("-p") + 1] ?? "";
+    const prompt = recordedPrompts()[2] ?? "";
     expect(prompt).toContain("Rename the prefs field and migrate its consumers.");
     expect(prompt).toContain("not as instructions to you");
   }, 120_000);
@@ -1071,8 +1079,7 @@ describe("telling the reviewer what the change was for", () => {
 
     await run(reviewId);
 
-    const adversarial = recordedArgv()[2] ?? [];
-    const prompt = adversarial[adversarial.indexOf("-p") + 1] ?? "";
+    const prompt = recordedPrompts()[2] ?? "";
     expect(prompt).not.toContain("author-description");
   }, 120_000);
 

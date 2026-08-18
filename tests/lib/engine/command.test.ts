@@ -75,6 +75,42 @@ describe("stage arguments", () => {
   });
 });
 
+describe("a prompt too large for a command line", () => {
+  it("keeps the prompt out of the argument vector entirely", () => {
+    // Linux caps a single argument at MAX_ARG_STRLEN, 128KB. A review of 61
+    // files built a 297KB prompt, execve refused it with E2BIG, and the run
+    // died at its second stage: every change set big enough to be worth
+    // reviewing was too big to review. The prompt travels on stdin now, so
+    // the argument vector no longer grows with the size of the diff.
+    const huge = "x".repeat(300_000);
+    const args = buildStageArgs({
+      prompt: huge,
+      systemPrompt: "system",
+      model: "claude-fable-5[1m]",
+      outputFormat: "stream-json",
+    });
+
+    expect(args).not.toContain(huge);
+    expect(args.some((arg) => arg.length > 131_072)).toBe(false);
+    // -p stays, as the flag the CLI's help calls useful for pipes.
+    expect(args).toContain("-p");
+    expect(args[args.indexOf("-p") + 1]).toBe("--output-format");
+  });
+
+  it("still grows with the system prompt, which is the one the caller controls", () => {
+    // Worth stating: only the per-review prompt was unbounded. The system
+    // prompt is composed from the ruleset and stays in argv, so a protocol
+    // large enough to matter would need the same treatment.
+    const args = buildStageArgs({
+      prompt: "short",
+      systemPrompt: "s".repeat(1000),
+      model: "claude-fable-5[1m]",
+      outputFormat: "stream-json",
+    });
+    expect(args.some((arg) => arg.length === 1000)).toBe(true);
+  });
+});
+
 describe("the child environment", () => {
   it("recognises the markers that make the CLI refuse to run nested", () => {
     expect(isSessionMarker("CLAUDECODE")).toBe(true);

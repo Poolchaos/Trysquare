@@ -729,10 +729,14 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   tabIndex={0}
                   role="group"
                   aria-label="Activity log"
-                  className="max-h-64 overflow-y-auto text-xs text-[var(--color-ink-muted)]"
+                  className="max-h-64 overflow-x-hidden overflow-y-auto text-aside text-[var(--color-ink-muted)]"
                 >
                   {live.slice(-40).map((entry, index) => (
-                    <li key={index} className="leading-5">
+                    // Engine output is arbitrary text, including whole JSON
+                    // answers on one line. Without a wrap rule it widened its
+                    // container until the page itself scrolled sideways, which
+                    // 04 forbids outright.
+                    <li key={index} className="leading-5 break-words">
                       {entry.kind === "stage" ? (
                         <span className="text-[var(--color-ink)]">
                           {stageLabel(entry.stage)}{" "}
@@ -746,7 +750,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                         // The engine reaching for a tool. Indented and quiet:
                         // it is the texture of work happening, not a fact to
                         // read line by line.
-                        <span className="pl-3 font-[family-name:var(--font-mono)] text-[var(--color-ink-faint)]">
+                        <span className="block overflow-hidden pl-3 font-[family-name:var(--font-mono)] break-all text-[var(--color-ink-faint)]">
                           {entry.detail}
                         </span>
                       )}

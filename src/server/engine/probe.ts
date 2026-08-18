@@ -10,7 +10,7 @@
 
 import { execFile } from "node:child_process";
 import { z } from "zod";
-import { buildChildEnv, buildProbeArgs } from "@/lib/engine/command";
+import { PROBE_PROMPT, buildChildEnv, buildProbeArgs } from "@/lib/engine/command";
 import type { ReviewProfile } from "@/lib/domain/enums";
 import { contextWindowOf, resultEventSchema } from "@/lib/engine/events";
 
@@ -43,6 +43,8 @@ function runCli(
   args: readonly string[],
   timeoutMs: number,
   claudePath: string,
+  /** Written to the child's stdin, which is where a prompt travels now. */
+  stdin = "",
 ): Promise<CliOutcome> {
   return new Promise((resolve) => {
     const child = execFile(
@@ -66,9 +68,11 @@ function runCli(
         });
       },
     );
-    // The CLI waits on stdin when it is left open, so a probe that never
-    // closes it hangs until the timeout instead of answering in a second.
-    child.stdin?.end();
+    // The CLI reads the prompt from stdin and waits while it is open, so this
+    // both delivers the prompt and ends the wait. A call with nothing to send,
+    // like auth status, closes it empty for the same reason.
+    child.stdin?.on("error", () => {});
+    child.stdin?.end(stdin);
   });
 }
 
@@ -137,6 +141,7 @@ export async function probeModel(
     buildProbeArgs(modelId),
     options.timeoutMs ?? 180_000,
     options.claudePath ?? "claude",
+    PROBE_PROMPT,
   );
 
   if (outcome.timedOut) {

@@ -290,8 +290,9 @@ describe("the repair round", () => {
 
     const record = JSON.parse((await import("node:fs")).readFileSync(recordPath, "utf8")) as {
       args: string[];
+      prompt: string;
     };
-    const prompt = record.args[record.args.indexOf("-p") + 1] ?? "";
+    const prompt = record.prompt ?? "";
     expect(prompt).toContain("did not match the required schema");
     expect(prompt).toContain("riskTags");
     expect(prompt).toContain("only fix the shape");

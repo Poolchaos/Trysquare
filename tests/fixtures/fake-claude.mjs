@@ -17,6 +17,23 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const args = process.argv.slice(2);
+
+/**
+ * The prompt, read from stdin the way the real CLI takes it.
+ *
+ * It used to arrive in argv, which capped a review at whatever the kernel
+ * allows in one argument. Read synchronously because everything below is
+ * synchronous and a fake that answers before it has the question is not a
+ * fake of anything.
+ */
+function readPrompt() {
+  try {
+    return readFileSync(0, "utf8");
+  } catch {
+    return "";
+  }
+}
+const PROMPT = readPrompt();
 const scenario = process.env.FAKE_CLAUDE_SCENARIO ?? "success";
 const recordPath = process.env.FAKE_CLAUDE_RECORD;
 
@@ -35,7 +52,7 @@ if (recordDir) {
   }
   writeFileSync(
     join(recordDir, `call-${String(existing + 1).padStart(3, "0")}.json`),
-    JSON.stringify({ args, cwd: process.cwd() }, null, 2),
+    JSON.stringify({ args, prompt: PROMPT, cwd: process.cwd() }, null, 2),
   );
 }
 
@@ -45,6 +62,9 @@ if (recordPath) {
     JSON.stringify(
       {
         args,
+        // The prompt arrives on stdin, so a test asserting on what a stage
+        // was told reads it here rather than out of the argument vector.
+        prompt: PROMPT,
         cwd: process.cwd(),
         // Recorded so a test can prove the session markers were removed.
         sawSessionMarker: Object.keys(process.env).some(
@@ -257,7 +277,7 @@ switch (scenario) {
     if (isRepair && process.env.FAKE_CLAUDE_RECORD_2) {
       writeFileSync(
         process.env.FAKE_CLAUDE_RECORD_2,
-        JSON.stringify({ args, cwd: process.cwd() }, null, 2),
+        JSON.stringify({ args, prompt: PROMPT, cwd: process.cwd() }, null, 2),
       );
     }
 
@@ -422,7 +442,7 @@ switch (scenario) {
     // resolves it against the question actually asked.
     const tokenPattern = /<<candidate:(.+?):(\d+)>>/g;
     if (tokenPattern.test(answer)) {
-      const prompt = valueOf("-p") ?? "";
+      const prompt = PROMPT;
       const start = prompt.indexOf("{");
       const end = prompt.lastIndexOf("}");
       let candidates = [];
