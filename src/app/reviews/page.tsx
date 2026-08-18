@@ -176,16 +176,20 @@ export default function ReviewsPage() {
                 <Card className="flex flex-wrap items-center justify-between gap-3 p-3">
                   <Link
                     href={`/reviews/${review.id}`}
-                    className="flex min-w-0 flex-1 items-center gap-2"
+                    className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1"
                   >
                     <Badge tone={statusTone(review.status)}>{statusLabel(review.status)}</Badge>
                     {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}
-                    <span className="text-sm font-medium">{review.projectName}</span>
-                    <Mono className="truncate text-xs text-[var(--color-ink-muted)]">
+                    <span className="text-dense font-medium">{review.projectName}</span>
+                    {/* The branch pair is the row's longest and least
+                        essential-to-read-whole part, so it is the part that
+                        gives: full width of its own line on a phone, truncated
+                        beside everything else on a desktop. */}
+                    <Mono className="w-full truncate text-aside text-[var(--color-ink-muted)] sm:w-auto sm:min-w-0 sm:flex-1">
                       {review.fromBranch} into {review.intoBranch}
                     </Mono>
                   </Link>
-                  <span className="flex items-center gap-3">
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     {/* What the review actually produced. Without these a
                         three-hour run that confirmed twelve criticals read
                         exactly like a cancelled one. */}

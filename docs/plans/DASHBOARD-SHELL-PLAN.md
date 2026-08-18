@@ -164,7 +164,7 @@ habit applies: no orphaned helpers left behind.
 | M2 | Data for the widgets | M0 | DONE 2026-08-18 (21b6c22) |
 | M3 | The dashboard | M1, M2 | DONE 2026-08-18 (this commit) |
 | M4 | Live wiring and the batch event | M3 | DONE 2026-08-18. The widget's gauge, clock and deep link landed with M3; this closed D-71's runner half. |
-| M5 | Responsive: the bar and every widget at 360px, the WP-K rules applied to the new shell (monitor and decide first-class; setup desktop-first) | M3 | TODO |
+| M5 | Responsive: the bar and every widget at 360px, the WP-K rules applied to the new shell (monitor and decide first-class; setup desktop-first) | M3 | DONE 2026-08-18 (this commit). The reviews row was the only overflow, at 25px; the reading that said the wrap fix had not worked came from a build that predated it, which is D-70 a second time. |
 | M6 | Evidence and records: both themes re-shot, FG-4 evidence refreshed, README's two embedded images regenerated, 04 home section finalized, PROPOSED entries below recorded DECIDED, rows closed here and in `UX-UPLIFT-PLAN.md` | M1-M5 | TODO |
 
 Sequencing: M1 and M2 are independent after M0 and may land in either

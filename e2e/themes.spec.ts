@@ -222,3 +222,29 @@ test("no screen makes the page scroll sideways", async ({ page }) => {
     expect(overflow, `${path} scrolls horizontally by ${overflow}px`).toBeLessThanOrEqual(0);
   }
 });
+
+test("the shell works at phone width", async ({ page }) => {
+  // WP-K: monitoring a run and deciding findings are first-class on a phone.
+  // The bar is the part every screen depends on, so it is the part measured:
+  // navigation still reachable, nothing pushed off the side, and the page
+  // still not scrolling horizontally at the width where it is likeliest to.
+  await page.setViewportSize({ width: 360, height: 780 });
+
+  for (const path of ["/", "/reviews", "/settings"]) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+    // Every destination is still there and still says what it is: a label
+    // without an icon navigates, an icon without a label guesses.
+    const nav = page.getByRole("navigation", { name: "Main" });
+    for (const label of ["Dashboard", "Projects", "Reviews", "Rulesets", "Settings"]) {
+      await expect(nav.getByRole("link", { name: label })).toBeAttached();
+    }
+    await expect(page.locator('nav a[aria-current="page"]')).toHaveCount(1);
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `${path} scrolls horizontally by ${overflow}px at 360`).toBeLessThanOrEqual(0);
+  }
+});
