@@ -309,8 +309,8 @@ All answered 2026-08-17 by the maintainer, on the recommendations (D-69):
 | WP-K | Responsive monitor-and-decide: every screen lays out at phone width; the queue becomes the picked single-column mobile mock with bracketed thumb-height Confirm/Dismiss; run monitoring readable on a phone; setup flows stay desktop-first (D-69) | WP-B | TODO |
 | WP-L | My branches: settings holds the identities (seeded from git config), branch lists and the new-review picker gain a Mine filter matching tip-commit author email, scoreboard's author column uses the same identity (D-69) | - | TODO |
 
-| WP-M | The dashboard-first shell (D-81): navigation to a slim top bar, the rail retired, home as composable widgets seeded from the scoreboard | full browser gate free (no run in flight) | TODO |
-| WP-N | Scan theater follow-through: batch n of m as a live line once the manager emits it, per-file read ticker, and the browser-gate screenshots of the theater itself | WP-M or gate free | TODO |
+| WP-M | The dashboard-first shell (D-81) | planned in detail: `DASHBOARD-SHELL-PLAN.md` M0-M6 | PLANNED |
+| WP-N | Scan theater follow-through | absorbed by `DASHBOARD-SHELL-PLAN.md` M4 and M6 | PLANNED |
 
 Sequencing intent: WP-B first, it is the proof screen the direction was
 ratified on. Then WP-C and WP-F, the other two heavies. WP-D, E, I, J, L
