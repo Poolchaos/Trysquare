@@ -30,14 +30,25 @@ describe("review lifecycle", () => {
     expect(review.completedAt).toBeNull();
   });
 
-  it("stamps startedAt when it first runs, and does not move it on resume", () => {
+  it("times the run rather than the calendar, so a resume does not report the gap", async () => {
+    // This asserted the opposite until 2026-08-18, and the opposite is what
+    // made a review begun one day and resumed a fortnight later report having
+    // taken 327 hours: a duration made almost entirely of sitting still.
     const review = seedReview(db, seedProject(db).id);
     const running = transitionReview(db, review.id, "running");
     expect(running.startedAt).not.toBeNull();
 
     transitionReview(db, review.id, "interrupted");
+    await new Promise((resolve) => setTimeout(resolve, 12));
     const resumed = transitionReview(db, review.id, "running");
-    expect(resumed.startedAt).toBe(running.startedAt);
+
+    expect(resumed.startedAt).not.toBe(running.startedAt);
+    expect(Date.parse(resumed.startedAt!)).toBeGreaterThan(Date.parse(running.startedAt!));
+    // The failed run's completion is cleared, or the duration would describe a
+    // run that ended and then kept going.
+    expect(resumed.completedAt).toBeNull();
+    // When it was created is a different fact, and it stays put.
+    expect(resumed.createdAt).toBe(review.createdAt);
   });
 
   it("stamps completedAt on every terminal status", () => {

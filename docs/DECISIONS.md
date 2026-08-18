@@ -1821,3 +1821,24 @@ verified evidence, in writing, here.
   The system prompt is composed from the ruleset and stays in argv, so a
   protocol large enough to matter will need the same treatment, and the test
   says so.
+- 2026-08-18 D-77: a review's `startedAt` is stamped on every entry into
+  running, not only the first, so the duration times the run rather than the
+  calendar. It was written once and never again, so the maintainer's review,
+  begun on 2026-08-04 and resumed on 2026-08-18, reported having taken 327
+  hours: a number made almost entirely of sitting still, on a screen whose
+  whole claim is that its numbers are measured. A resumed run is a new run,
+  since every stage already answered replays from its checkpoint for free and
+  what remains is the work actually being done. When a review was created is a
+  separate fact and `createdAt` still holds it. The test that asserted the old
+  behaviour now asserts this one and says in its comment that it used to say
+  the opposite, because a reader finding it later deserves to know the
+  reversal was deliberate.
+- 2026-08-18 D-78: no screen scrolls the page sideways, enforced on the body
+  and checked in the browser. 04 has always said it; nothing measured it. A
+  run note naming sixty-one changed paths, and engine output carrying a whole
+  JSON answer on one line, each widened their container until the document
+  itself scrolled and every panel sat off centre. Long notes wrap, the
+  activity panel scrolls within itself rather than clipping, since clipped
+  text is lost text, the aside may shrink, and `overflow-x: hidden` on the
+  body is the floor so a screen written later cannot forget. A Playwright
+  check compares scrollWidth against clientWidth on every top-level screen.

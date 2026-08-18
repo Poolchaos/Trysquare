@@ -201,3 +201,18 @@ test("the first thing tabbed to is reachable and visibly focused", async ({ page
   const outline = await focused.evaluate((element) => getComputedStyle(element).outlineStyle);
   expect(outline).not.toBe("none");
 });
+
+test("no screen makes the page scroll sideways", async ({ page }) => {
+  // 04 section 1. A run note naming sixty-one changed paths, or an engine
+  // line carrying a whole JSON answer, used to widen the layout until the
+  // document itself scrolled: the review screen was unreadable at the right
+  // edge and every panel was pushed off centre.
+  for (const path of ["/", "/projects", "/reviews", "/rulesets", "/settings"]) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `${path} scrolls horizontally by ${overflow}px`).toBeLessThanOrEqual(0);
+  }
+});

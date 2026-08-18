@@ -108,6 +108,10 @@
 body {
   background: var(--color-surface);
   color: var(--color-ink);
+  /* 04 section 1: the page never scrolls horizontally. A panel with a line
+     too long to break scrolls itself; the document does not move. Set here
+     rather than per screen so a new screen cannot forget it. */
+  overflow-x: hidden;
   /* Counts, token totals and line numbers line up column-wise when they are
      tabular, and a review screen is mostly numbers in columns. */
   font-variant-numeric: tabular-nums;

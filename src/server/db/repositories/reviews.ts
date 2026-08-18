@@ -160,7 +160,15 @@ export function transitionReview(
   patch.pausedReason = to === "paused_limit" ? (options.pausedReason ?? null) : null;
   patch.pausedResetsAt = to === "paused_limit" ? (options.pausedResetsAt ?? null) : null;
 
-  if (to === "running" && review.startedAt === null) patch.startedAt = now;
+  // Stamped on every entry into running, not only the first.
+  //
+  // It used to be written once and never again, so a review begun on one day
+  // and resumed a fortnight later reported having taken 327 hours: a number
+  // made almost entirely of sitting still. This clock times the run, and a
+  // resumed run is a new one, since every stage already answered replays from
+  // its checkpoint for free and what remains is the work actually being done.
+  // When the review was created is a separate fact and `createdAt` keeps it.
+  if (to === "running") patch.startedAt = now;
   // A review that is running again has not finished, whatever the failure that
   // stopped it recorded. Leaving the old completion would make the report's
   // duration describe a run that ended and then kept going.

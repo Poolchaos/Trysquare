@@ -684,7 +684,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             )}
           </div>
 
-          <aside className="grid gap-4 self-start">
+          <aside className="grid min-w-0 gap-4 self-start">
             <Card className="p-4">
               <h2 className="mb-3 text-heading font-semibold">What it cost</h2>
               <dl className="grid gap-1.5 text-sm">
@@ -729,7 +729,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   tabIndex={0}
                   role="group"
                   aria-label="Activity log"
-                  className="max-h-64 overflow-x-hidden overflow-y-auto text-aside text-[var(--color-ink-muted)]"
+                  className="max-h-64 overflow-auto text-aside text-[var(--color-ink-muted)]"
                 >
                   {live.slice(-40).map((entry, index) => (
                     // Engine output is arbitrary text, including whole JSON
@@ -1011,7 +1011,7 @@ function RunDetail({
               divided its work survives a reload. */}
           <ul className="grid gap-2">
             {snapshot.notes.map((note, index) => (
-              <li key={`${note.at}-${index}`} className="text-xs">
+              <li key={`${note.at}-${index}`} className="text-aside break-words">
                 <span className="text-[var(--color-ink-muted)]">
                   {new Date(note.at).toLocaleTimeString()}
                 </span>{" "}
