@@ -163,7 +163,7 @@ habit applies: no orphaned helpers left behind.
 | M1 | The shell swap | M0 | DONE 2026-08-18 (d4cafd9) |
 | M2 | Data for the widgets | M0 | DONE 2026-08-18 (21b6c22) |
 | M3 | The dashboard | M1, M2 | DONE 2026-08-18 (this commit) |
-| M4 | Live wiring: the Live scan widget's gauge and clock, deep link into the theater; batch n of m emitted by the runner as an engine event so the theater and widget can say "request 3 of 9" (the counts already ride `StageRequest`; the emit is the missing half of D-71) | M3 | TODO |
+| M4 | Live wiring and the batch event | M3 | DONE 2026-08-18. The widget's gauge, clock and deep link landed with M3; this closed D-71's runner half. |
 | M5 | Responsive: the bar and every widget at 360px, the WP-K rules applied to the new shell (monitor and decide first-class; setup desktop-first) | M3 | TODO |
 | M6 | Evidence and records: both themes re-shot, FG-4 evidence refreshed, README's two embedded images regenerated, 04 home section finalized, PROPOSED entries below recorded DECIDED, rows closed here and in `UX-UPLIFT-PLAN.md` | M1-M5 | TODO |
 

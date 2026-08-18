@@ -1890,3 +1890,14 @@ verified evidence, in writing, here.
   the reason the reviews list already learned: two remotes can end in the
   same repository name, and merging them would report one project's last
   finding as another's.
+- 2026-08-18 D-71 CLOSED (M4 of the dashboard shell plan): the runner-side
+  half is built. The batch numbers have ridden the stage request since the
+  totals were fixed; nothing carried them out to a watcher, so a stage making
+  nine calls looked exactly like one making a single call for as long as it
+  took. The checkpointing runner reports them on each live attempt, the
+  lifecycle event carries them, the bus emits them, and the scan theater and
+  activity feed say "request 3 of 9". A replayed stage stays silent about
+  requests: replaying costs nothing and spawns nothing, so announcing one
+  would be announcing work that is not happening. Both properties are tested,
+  the second by stopping a run part way, which is the only way to reach a
+  resumable state with checkpoints already stored.

@@ -157,6 +157,8 @@ export interface StageLifecycleEvent {
   stage: ReviewStage;
   /** A replayed stage costs nothing and spawns nothing. */
   kind: "live" | "replayed";
+  /** Present only for a stage that divides its work into several requests. */
+  batch?: { number: number; count: number } | undefined;
 }
 
 export interface PrepareAndRunOptions {
@@ -477,13 +479,17 @@ function buildRunner(
     DEFAULT_STAGE_BUDGET_USD,
   );
 
-  const noteStage = (stage: ReviewStage, kind: "live" | "replayed"): void => {
+  const noteStage = (
+    stage: ReviewStage,
+    kind: "live" | "replayed",
+    batch?: { number: number; count: number },
+  ): void => {
     setCurrentStage(db, reviewId, stage);
     // Driven by replays as well as live calls. A fully resumed run makes no
     // live call at all, and a review that never reached verifying could not
     // then reach awaiting_confirmation.
     if (stage === "s5_verification") ensureVerifying(db, reviewId);
-    options.onStageLifecycle?.({ stage, kind });
+    options.onStageLifecycle?.({ stage, kind, ...(batch === undefined ? {} : { batch }) });
   };
 
   // The engine reports attempts to the wrapper, and the wrapper delegates to
@@ -526,7 +532,7 @@ function buildRunner(
     db,
     reviewId,
     inner: engine.run,
-    onLiveAttempt: (stage) => noteStage(stage, "live"),
+    onLiveAttempt: (stage, batch) => noteStage(stage, "live", batch),
     onReplay: (stage) => noteStage(stage, "replayed"),
     logPathFor: (stage) => join(logsDirFor(dataDir, reviewId), `${stage}.log`),
   });

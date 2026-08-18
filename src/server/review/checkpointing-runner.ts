@@ -64,7 +64,13 @@ export interface CheckpointingRunnerOptions {
   /** The engine runner's `run`, or anything else that answers a stage. */
   inner: StageRunner;
   /** Called before a stage is actually asked, so the UI can follow along. */
-  onLiveAttempt?: ((stage: ReviewStage) => void) | undefined;
+  /**
+   * A live call is starting. The batch numbers ride along when the stage
+   * divides its work, so a watcher can say which request of how many is in
+   * flight rather than only that the stage is still going.
+   */
+  onLiveAttempt?:
+    ((stage: ReviewStage, batch?: { number: number; count: number }) => void) | undefined;
   /** Called instead when a stored answer is replayed, which costs nothing. */
   onReplay?: ((stage: ReviewStage) => void) | undefined;
   /** Where log files for a stage are written, recorded on the row. */
@@ -191,7 +197,12 @@ export function createCheckpointingRunner(
     const firstAttempt = nextAttemptNumber(db, reviewId, request.stage, promptHash);
     pending = [];
     inFlight = request.stage;
-    options.onLiveAttempt?.(request.stage);
+    options.onLiveAttempt?.(
+      request.stage,
+      request.batchNumber !== undefined && request.batchCount !== undefined
+        ? { number: request.batchNumber, count: request.batchCount }
+        : undefined,
+    );
 
     try {
       const response = await options.inner({

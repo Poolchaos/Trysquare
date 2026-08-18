@@ -33,6 +33,9 @@ export type ReviewEvent =
       stage: ReviewStage;
       /** `replayed` costs nothing and spawns nothing; it is not a live call. */
       phase: "started" | "replayed" | "finished" | "failed";
+      /** Which request of how many, when the stage divides its work. */
+      batchNumber?: number | undefined;
+      batchCount?: number | undefined;
       attempt?: number | undefined;
       usage?: StageUsage | undefined;
       errorClass?: StageErrorClass | undefined;

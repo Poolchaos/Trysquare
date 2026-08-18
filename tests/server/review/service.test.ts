@@ -272,6 +272,58 @@ describe("running a review to the point a human looks at it", () => {
     expect(seen.every((e) => e.kind === "live")).toBe(true);
   }, 120_000);
 
+  it("says which request of how many, once per request and never on a replay", async () => {
+    // The prompt has said "this is request 2 of 5" since the batch totals
+    // were fixed; nothing carried it out to a watcher, so a stage making nine
+    // calls looked exactly like one making a single call, for as long as it
+    // took. A replayed stage must stay silent about it: replaying costs
+    // nothing and spawns nothing, so announcing a request would be
+    // announcing work that is not happening.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+
+    const first: StageLifecycleEvent[] = [];
+    await run(reviewId, { onStageLifecycle: (event: StageLifecycleEvent) => first.push(event) });
+
+    const adversarial = first.filter((event) => event.stage === "s3_adversarial");
+    expect(adversarial.length).toBeGreaterThan(0);
+    for (const event of adversarial) {
+      expect(event.batch, "the adversarial stage numbers its requests").toBeDefined();
+      expect(event.batch?.count).toBe(adversarial.length);
+    }
+    // Numbered 1..n, each exactly once.
+    expect(adversarial.map((event) => event.batch?.number)).toEqual(
+      adversarial.map((_, index) => index + 1),
+    );
+    // A stage that makes one call says nothing about batches at all.
+    expect(first.find((event) => event.stage === "s1_risk")?.batch).toBeUndefined();
+  }, 120_000);
+
+  it("claims no request for a stage it only replayed", async () => {
+    // Replaying costs nothing and spawns nothing, so announcing a request
+    // would be announcing work that is not happening. The run is stopped
+    // part way, which is the only way to reach a resumable state with
+    // checkpoints already stored.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    process.env.FAKE_CLAUDE_FAIL_AT = "4";
+    await run(reviewId);
+    delete process.env.FAKE_CLAUDE_FAIL_AT;
+    // Three answers were consumed before the failure; the resumed run asks
+    // the fourth question again, so the fake's cursor goes back to it.
+    writeFileSync(join(dataDir, "calls.txt"), "3");
+
+    const seen: StageLifecycleEvent[] = [];
+    await run(reviewId, { onStageLifecycle: (event: StageLifecycleEvent) => seen.push(event) });
+
+    const replayed = seen.filter((event) => event.kind === "replayed");
+    expect(replayed.length).toBeGreaterThan(0);
+    expect(replayed.every((event) => event.batch === undefined)).toBe(true);
+    // The adversarial stage among them replayed, so this is the real case
+    // and not a stage that never numbers requests anyway.
+    expect(replayed.map((event) => event.stage)).toContain("s3_adversarial");
+  }, 120_000);
+
   it("reports the comment a person rewrote, and keeps the engine's on the row", async () => {
     // The report is read by whoever fixes the code, so it takes the human
     // wording. The engine's own stays: how well it explained itself is the

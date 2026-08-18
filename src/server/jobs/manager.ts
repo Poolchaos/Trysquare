@@ -282,6 +282,9 @@ export class JobManager {
           kind: "stage",
           stage: event.stage,
           phase: event.kind === "replayed" ? "replayed" : "started",
+          ...(event.batch === undefined
+            ? {}
+            : { batchNumber: event.batch.number, batchCount: event.batch.count }),
         });
         options.onStageLifecycle?.(event);
       },

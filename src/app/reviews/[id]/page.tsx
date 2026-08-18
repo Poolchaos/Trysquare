@@ -75,7 +75,7 @@ function stageLabel(stage: string): string {
  * is exactly what a person watching a long run cannot use.
  */
 type LiveEntry =
-  | { kind: "stage"; stage: string; phase: string }
+  | { kind: "stage"; stage: string; phase: string; batch?: { number: number; count: number } }
   | { kind: "engine"; detail: string }
   | { kind: "note"; message: string };
 
@@ -325,6 +325,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [live, setLive] = useState<LiveEntry[]>([]);
   const [streaming, setStreaming] = useState(true);
   const [loadError, setLoadError] = useState("");
+  // Which request of how many is in flight, for the stage that divides its
+  // work. Cleared when a stage without batches starts, so it never describes
+  // the stage before it.
+  const [batch, setBatch] = useState<{ number: number; count: number } | null>(null);
   // The scan takes the screen while it runs; minimizing steps back to the
   // ordinary page without touching the run. What is stored is which run was
   // minimized, not a flag, so the next run (a new startedAt) opens on the
@@ -383,6 +387,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         status?: string;
         note?: { message: string };
         detail?: string;
+        batchNumber?: number;
+        batchCount?: number;
       };
 
       // Kept as a bounded tail: a long run emits thousands of engine lines,
@@ -390,7 +396,19 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       // the event log, not component state.
       const push = (entry: LiveEntry) => setLive((all) => [...all, entry].slice(-200));
       if (parsed.kind === "stage" && parsed.stage && parsed.phase) {
-        push({ kind: "stage", stage: parsed.stage, phase: parsed.phase });
+        push({
+          kind: "stage",
+          stage: parsed.stage,
+          phase: parsed.phase,
+          ...(parsed.batchNumber !== undefined && parsed.batchCount !== undefined
+            ? { batch: { number: parsed.batchNumber, count: parsed.batchCount } }
+            : {}),
+        });
+        setBatch(
+          parsed.batchNumber !== undefined && parsed.batchCount !== undefined
+            ? { number: parsed.batchNumber, count: parsed.batchCount }
+            : null,
+        );
       }
       if (parsed.kind === "engine" && parsed.detail) {
         push({ kind: "engine", detail: parsed.detail });
@@ -464,6 +482,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         snapshot={snapshot}
         live={live}
         now={now}
+        batch={batch}
         onMinimize={() => setMinimizedRun(review.startedAt)}
         onCancel={async () => {
           await fetch(`/api/reviews/${id}/cancel`, { method: "POST" });
@@ -816,7 +835,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                       {entry.kind === "stage" ? (
                         <span className="text-[var(--color-ink)]">
                           {stageLabel(entry.stage)}{" "}
-                          <span className="text-[var(--color-ink-faint)]">{entry.phase}</span>
+                          <span className="text-[var(--color-ink-faint)]">
+                            {entry.batch
+                              ? `request ${entry.batch.number} of ${entry.batch.count}`
+                              : entry.phase}
+                          </span>
                         </span>
                       ) : entry.kind === "note" ? (
                         <span className="block border-l-2 border-[var(--color-border-strong)] py-0.5 pl-2">
@@ -1279,12 +1302,14 @@ function ScanTheater({
   snapshot,
   live,
   now,
+  batch,
   onMinimize,
   onCancel,
 }: {
   snapshot: Snapshot;
   live: LiveEntry[];
   now: number;
+  batch: { number: number; count: number } | null;
   onMinimize: () => void;
   onCancel: () => Promise<void>;
 }) {
@@ -1389,6 +1414,9 @@ function ScanTheater({
           {stageIndex !== -1 ? (
             <span className="text-body text-[var(--color-ink-muted)]">
               stage {stageIndex + 1} of {STAGES.length}
+              {/* A stage that divides its work says which division is in
+                  flight, so nine requests do not look like one long one. */}
+              {batch ? ` · request ${batch.number} of ${batch.count}` : ""}
               {usual !== undefined ? ` · usually ${elapsedBetween(0, usual)} here` : ""}
             </span>
           ) : null}
