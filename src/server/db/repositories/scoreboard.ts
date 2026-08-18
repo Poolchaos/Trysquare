@@ -40,6 +40,25 @@ export interface RuleYield {
   total: number;
 }
 
+export interface AwaitingReview {
+  id: string;
+  projectName: string;
+  fromBranch: string;
+  intoBranch: string;
+  confirmed: number;
+  total: number;
+  /** When the review stopped and started waiting on a person. */
+  since: string;
+}
+
+export interface ProjectOutcome {
+  id: string;
+  name: string;
+  reviews: number;
+  /** The most recent review of this project, if it has one. */
+  latest: { id: string; status: string; confirmed: number; total: number; at: string } | null;
+}
+
 export interface Scoreboard {
   spendUsd: number;
   reviewsCompleted: number;
@@ -49,16 +68,21 @@ export interface Scoreboard {
   /** Killed by the quotation check over everything raised. Null until then. */
   inventionRate: number | null;
   awaiting: number;
+  /** The reviews behind that count, so the screen can list them. */
+  awaitingReviews: AwaitingReview[];
   /** Cost of each completed review, oldest first, for a shape over time. */
   spendHistory: number[];
   recent: ScoreboardRow[];
   ruleYield: RuleYield[];
+  /** Every project with what its last review actually found. */
+  projects: ProjectOutcome[];
 }
 
 export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
   const reviewRows = db
     .select({
       id: reviews.id,
+      projectId: reviews.projectId,
       projectName: projects.name,
       fromBranch: reviews.fromBranch,
       intoBranch: reviews.intoBranch,
@@ -114,6 +138,12 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     }
   }
 
+  const projectRows = db
+    .select({ id: projects.id, name: projects.name })
+    .from(projects)
+    .orderBy(projects.name)
+    .all();
+
   const completed = reviewRows.filter((review) => review.status === "complete");
   const decided = confirmed + dismissed;
   const raised = findingRows.length;
@@ -148,5 +178,44 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     ruleYield: [...byRule.values()].sort(
       (a, b) => a.confirmed / a.total - b.confirmed / b.total || b.total - a.total,
     ),
+    // Oldest wait first: the review that has been waiting longest is the one
+    // most likely to have been forgotten.
+    awaitingReviews: reviewRows
+      .filter((review) => review.status === "awaiting_confirmation")
+      .map((review) => ({
+        id: review.id,
+        projectName: review.projectName,
+        fromBranch: review.fromBranch,
+        intoBranch: review.intoBranch,
+        confirmed: byReview.get(review.id)?.confirmed ?? 0,
+        total: byReview.get(review.id)?.total ?? 0,
+        // When it stopped, which is when the waiting began. A review that
+        // never finished a run has only its creation to go on.
+        since: review.completedAt ?? review.createdAt,
+      }))
+      .sort((a, b) => a.since.localeCompare(b.since)),
+    // Every project, including those with no review yet: a project that has
+    // never been reviewed is the most useful thing this widget can point at.
+    projects: projectRows.map((project) => {
+      // Matched by id, never by name: two remotes can end in the same
+      // repository name, and a widget that merged them would report one
+      // project's last finding as another's.
+      const mine = reviewRows.filter((review) => review.projectId === project.id);
+      const latest = mine[0];
+      return {
+        id: project.id,
+        name: project.name,
+        reviews: mine.length,
+        latest: latest
+          ? {
+              id: latest.id,
+              status: latest.status,
+              confirmed: byReview.get(latest.id)?.confirmed ?? 0,
+              total: byReview.get(latest.id)?.total ?? 0,
+              at: latest.createdAt,
+            }
+          : null,
+      };
+    }),
   };
 }

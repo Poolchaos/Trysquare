@@ -25,7 +25,13 @@ export function GET(): Promise<Response> {
         id: reviews.id,
         status: reviews.status,
         fromBranch: reviews.fromBranch,
+        intoBranch: reviews.intoBranch,
         projectName: projects.name,
+        // What the live widget needs to say more than "something is running":
+        // which stage, since when, and what it has cost so far.
+        currentStage: reviews.currentStage,
+        startedAt: reviews.startedAt,
+        costEquivalentUsd: reviews.costEquivalentUsd,
       })
       .from(reviews)
       .innerJoin(projects, eq(reviews.projectId, projects.id))

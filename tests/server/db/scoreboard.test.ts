@@ -17,6 +17,8 @@ import {
 } from "@/server/db/repositories/findings";
 import { readScoreboard } from "@/server/db/repositories/scoreboard";
 import { transitionReview } from "@/server/db/repositories/reviews";
+import { eq } from "drizzle-orm";
+import { projects } from "@/server/db/schema";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
 
 let ctx: TestDb;
@@ -133,5 +135,52 @@ describe("the recent list", () => {
       transitionReview(db, reviewId, status);
     }
     expect(readScoreboard(db).reviewsCompleted).toBe(1);
+  });
+});
+
+describe("what the dashboard widgets need", () => {
+  it("lists the reviews behind the awaiting count, oldest wait first", () => {
+    // The count alone tells someone there is work without telling them where
+    // it is, which is a notification rather than a way in.
+    const second = seedReview(db, seedProject(db, "other").id).id;
+    for (const id of [reviewId, second]) {
+      transitionReview(db, id, "running");
+      transitionReview(db, id, "verifying");
+      transitionReview(db, id, "awaiting_confirmation");
+    }
+
+    const board = readScoreboard(db);
+    expect(board.awaiting).toBe(2);
+    expect(board.awaitingReviews).toHaveLength(2);
+    // Oldest wait first: the one most likely to have been forgotten.
+    const waits = board.awaitingReviews.map((row) => row.since);
+    expect([...waits].sort()).toEqual(waits);
+    expect(board.awaitingReviews[0]?.fromBranch).toBe("feature/x");
+  });
+
+  it("keeps two projects with the same name apart", () => {
+    // Two remotes can end in the same repository name. Matching on it would
+    // report one project's last finding as another's.
+    const twin = seedProject(db, "example-twin");
+    db.update(projects).set({ name: "example" }).where(eq(projects.id, twin.id)).run();
+    const twinReview = seedReview(db, twin.id).id;
+    transitionReview(db, twinReview, "running");
+
+    const board = readScoreboard(db);
+    const both = board.projects.filter((project) => project.name === "example");
+    expect(both).toHaveLength(2);
+    expect(both.every((project) => project.reviews === 1)).toBe(true);
+    expect(new Set(both.map((project) => project.latest?.id)).size).toBe(2);
+  });
+
+  it("reports a project that has never been reviewed rather than hiding it", () => {
+    // The most useful thing the widget can point at is the project with no
+    // review yet.
+    seedProject(db, "untouched");
+
+    const fresh = readScoreboard(db).projects.find((project) => project.name === "untouched");
+    expect(fresh).toBeDefined();
+    expect(fresh?.reviews).toBe(0);
+    expect(fresh?.latest).toBeNull();
   });
 });
