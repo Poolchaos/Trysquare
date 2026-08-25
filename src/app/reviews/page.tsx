@@ -10,7 +10,8 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { PageBody, PageHeader } from "@/components/page";
 import {
   Badge,
@@ -57,10 +58,16 @@ function ranFor(startedAt: string | null, completedAt: string | null): string | 
 /** Statuses that own a running process, so the row offers no delete. */
 const RUNNING = new Set(["running", "verifying"]);
 
-export default function ReviewsPage() {
+function ReviewsList() {
+  const search = useSearchParams();
   const [reviews, setReviews] = useState<Row[] | null>(null);
   const [project, setProject] = useState("");
-  const [status, setStatus] = useState("");
+  // Seeded from the URL so the awaiting badge in the top bar can land on the
+  // filtered list rather than on every review ever run, which is the list
+  // someone pressing a count of three is least interested in.
+  const [status, setStatus] = useState(() =>
+    search.get("status") === "awaiting" ? "awaiting" : "",
+  );
   const [confirming, setConfirming] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -129,6 +136,9 @@ export default function ReviewsPage() {
             {awaiting > 0 ? (
               <Button
                 variant={status === "awaiting" ? "primary" : "quiet"}
+                // It is a toggle, so it says whether it is on rather than
+                // leaving that to colour alone.
+                aria-pressed={status === "awaiting"}
                 onClick={() => setStatus(status === "awaiting" ? "" : "awaiting")}
               >
                 {awaiting} awaiting your decision
@@ -247,5 +257,24 @@ export default function ReviewsPage() {
         ) : null}
       </PageBody>
     </>
+  );
+}
+
+export default function ReviewsPage() {
+  // Required because the list reads a search param. The fallback is the header
+  // it is about to render anyway, so nothing flashes empty.
+  return (
+    <Suspense
+      fallback={
+        <>
+          <PageHeader title="Reviews" />
+          <PageBody>
+            <p className="text-body text-[var(--color-ink-muted)]">Reading the reviews...</p>
+          </PageBody>
+        </>
+      }
+    >
+      <ReviewsList />
+    </Suspense>
   );
 }

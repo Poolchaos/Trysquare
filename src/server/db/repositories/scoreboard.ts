@@ -45,7 +45,17 @@ export interface AwaitingReview {
   projectName: string;
   fromBranch: string;
   intoBranch: string;
-  confirmed: number;
+  /**
+   * Confirmed or dismissed. Both are decisions, and counting only the
+   * confirmed ones told someone who had dismissed a whole queue that they
+   * had not started it.
+   */
+  decided: number;
+  /**
+   * The size of the queue this person will actually be shown, so killed
+   * findings are not in it: the quotation check hides those, and a total
+   * that counts them can never be reached.
+   */
   total: number;
   /** When the review stopped and started waiting on a person. */
   since: string;
@@ -107,16 +117,22 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     .from(findings)
     .all();
 
-  const byReview = new Map<string, { confirmed: number; total: number }>();
+  const byReview = new Map<
+    string,
+    { confirmed: number; decided: number; queued: number; total: number }
+  >();
   const byRule = new Map<string, RuleYield>();
   let confirmed = 0;
   let dismissed = 0;
   let killed = 0;
 
   for (const row of findingRows) {
-    const tally = byReview.get(row.reviewId) ?? { confirmed: 0, total: 0 };
+    const tally = byReview.get(row.reviewId) ?? { confirmed: 0, decided: 0, queued: 0, total: 0 };
     tally.total += 1;
     if (row.status === "confirmed") tally.confirmed += 1;
+    if (row.status === "confirmed" || row.status === "dismissed") tally.decided += 1;
+    // Everything the queue will show. A killed finding is not in it.
+    if (row.status !== "killed") tally.queued += 1;
     byReview.set(row.reviewId, tally);
 
     if (row.status === "confirmed") confirmed += 1;
@@ -187,8 +203,8 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
         projectName: review.projectName,
         fromBranch: review.fromBranch,
         intoBranch: review.intoBranch,
-        confirmed: byReview.get(review.id)?.confirmed ?? 0,
-        total: byReview.get(review.id)?.total ?? 0,
+        decided: byReview.get(review.id)?.decided ?? 0,
+        total: byReview.get(review.id)?.queued ?? 0,
         // When it stopped, which is when the waiting began. A review that
         // never finished a run has only its creation to go on.
         since: review.completedAt ?? review.createdAt,

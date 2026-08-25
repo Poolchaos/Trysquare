@@ -158,6 +158,28 @@ describe("what the dashboard widgets need", () => {
     expect(board.awaitingReviews[0]?.fromBranch).toBe("feature/x");
   });
 
+  it("counts a dismissal as a decision, and leaves killed findings out of the queue", () => {
+    // The widget's whole job is saying how much is left. Counting only the
+    // confirmed ones told someone who had dismissed a queue that they had not
+    // started it, and counting killed findings in the total set a target the
+    // queue never shows and so can never reach.
+    const kept = candidate();
+    const dropped = candidate({ issue: "Second" });
+    const untouched = candidate({ issue: "Third" });
+    for (const finding of [kept, dropped, untouched]) markVerified(db, finding.id, evidence);
+    confirmFinding(db, kept.id);
+    dismissFinding(db, dropped.id, "Guarded upstream.");
+    markKilled(db, candidate({ issue: "Invented" }).id, "Quoted code that was not there.");
+
+    transitionReview(db, reviewId, "running");
+    transitionReview(db, reviewId, "verifying");
+    transitionReview(db, reviewId, "awaiting_confirmation");
+
+    const row = readScoreboard(db).awaitingReviews[0];
+    expect(row?.decided).toBe(2);
+    expect(row?.total).toBe(3);
+  });
+
   it("keeps two projects with the same name apart", () => {
     // Two remotes can end in the same repository name. Matching on it would
     // report one project's last finding as another's.

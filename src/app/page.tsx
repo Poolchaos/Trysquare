@@ -40,7 +40,7 @@ interface AwaitingRow {
   projectName: string;
   fromBranch: string;
   intoBranch: string;
-  confirmed: number;
+  decided: number;
   total: number;
   since: string;
 }
@@ -202,12 +202,15 @@ export default function HomePage() {
   }, []);
 
   // Ticks only while something is running, so a quiet dashboard is not
-  // re-rendered once a second for ever.
+  // re-rendered once a second for ever. Keyed to whether a run exists rather
+  // than to the polled object, which is a new identity every four seconds and
+  // would restart the clock each time it arrived.
+  const running = live !== null;
   useEffect(() => {
-    if (!live) return;
+    if (!running) return;
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
-  }, [live]);
+  }, [running]);
 
   useEffect(() => {
     let cancelled = false;
@@ -359,9 +362,7 @@ export default function HomePage() {
                           </span>
                         </span>
                         <span className="text-dense tabular-nums">
-                          {row.total > 0
-                            ? `${row.confirmed} of ${row.total} decided`
-                            : "no findings"}
+                          {row.total > 0 ? `${row.decided} of ${row.total} decided` : "no findings"}
                           <span className="ml-3 text-[var(--color-ink-muted)]">
                             waiting {ago(row.since, now)}
                           </span>
@@ -482,20 +483,41 @@ export default function HomePage() {
                         {project.name}
                       </Link>
                       {project.latest ? (
-                        <span className="flex items-center gap-2 text-aside">
-                          <Badge tone={statusTone(project.latest.status)}>
-                            {statusLabel(project.latest.status)}
-                          </Badge>
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-aside">
+                          {/* The outcome is the way into the review that
+                              produced it: a status worth reading is a status
+                              worth opening. */}
+                          <Link href={`/reviews/${project.latest.id}`}>
+                            <Badge tone={statusTone(project.latest.status)}>
+                              {statusLabel(project.latest.status)}
+                            </Badge>
+                          </Link>
                           <span className="text-[var(--color-ink-muted)] tabular-nums">
                             {project.latest.total > 0
-                              ? `${project.latest.confirmed} of ${project.latest.total}`
+                              ? `${project.latest.confirmed} of ${project.latest.total} confirmed`
                               : "no findings"}
                           </span>
+                          {/* When, and how many times. A project reviewed once
+                              last March is a different thing from one reviewed
+                              nine times this week, and the widget said neither. */}
+                          <span className="text-[var(--color-ink-faint)]">
+                            {ago(project.latest.at, now)}
+                            {project.reviews > 1 ? ` · ${project.reviews} reviews` : ""}
+                          </span>
+                          <Link
+                            href={`/reviews/new?projectId=${project.id}`}
+                            className="text-[var(--color-accent)] underline underline-offset-2"
+                          >
+                            Review
+                          </Link>
                         </span>
                       ) : (
-                        <span className="text-aside text-[var(--color-ink-faint)]">
-                          never reviewed
-                        </span>
+                        <Link
+                          href={`/reviews/new?projectId=${project.id}`}
+                          className="text-aside text-[var(--color-accent)] underline underline-offset-2"
+                        >
+                          Review a branch
+                        </Link>
                       )}
                     </li>
                   ))}

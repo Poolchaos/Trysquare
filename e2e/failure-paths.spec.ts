@@ -145,7 +145,21 @@ test("the top bar says how many reviews are waiting on a person", async ({ page 
   await page.goto("/projects");
   const badge = page.getByLabel(/awaiting your decision/);
   await expect(badge).toBeVisible({ timeout: 30_000 });
-  // A link, not an ornament: the count is also the way to the queue.
-  await expect(badge).toHaveAttribute("href", "/reviews");
+  // A link, not an ornament: the count is also the way to the queue. It
+  // asserted a bare "/reviews" until 2026-08-18, which landed on every review
+  // ever run: the list someone pressing a count of three wants least.
+  await expect(badge).toHaveAttribute("href", "/reviews?status=awaiting");
   await expect(badge).toContainText(/\d+/);
+
+  // And the filter is actually applied on arrival, rather than the parameter
+  // being decoration on the href. Asserted through the toggle's own pressed
+  // state rather than by counting rows: how many reviews are waiting depends
+  // on what the tests before this one left behind, and the question here is
+  // whether the link arrives filtered.
+  await badge.click();
+  await expect(page).toHaveURL(/status=awaiting/);
+  await expect(page.getByRole("button", { name: /awaiting your decision/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });

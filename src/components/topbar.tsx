@@ -140,7 +140,7 @@ export function TopBar() {
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {awaiting > 0 ? (
           <Link
-            href="/reviews"
+            href="/reviews?status=awaiting"
             aria-label={`${awaiting} awaiting your decision`}
             className="flex items-center gap-1.5 rounded-md border border-[var(--color-question)] bg-[var(--color-question-soft)] px-2 py-1 text-aside font-medium text-[var(--color-question)]"
           >

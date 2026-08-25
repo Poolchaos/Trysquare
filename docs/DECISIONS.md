@@ -1921,3 +1921,31 @@ verified evidence, in writing, here.
   dashboard is the app's front door and was not in it, and the queue's
   caption claimed a stage timeline and a coverage panel that the shot no
   longer contains, both having moved inside the Run detail fold.
+- 2026-08-18 D-84 (review pass over the dashboard shell, M1-M6): six numbered
+  findings, all fixed in one diff before any new work started.
+  1. The Needs-you widget said "N of M decided" and counted neither. N was the
+  confirmed findings, so someone who had dismissed an entire queue was told
+  they had not started it; M included findings the quotation check killed,
+  which the queue never shows, so the target could not be reached. The
+  scoreboard now carries `decided` (confirmed plus dismissed) and a total that
+  is the size of the queue a person will actually be handed.
+  2. The awaiting badge in the top bar linked to `/reviews`, unfiltered, which
+  is the list someone pressing a count of three wants least. The filter lived
+  only in component state, so nothing could link to it. The reviews list now
+  seeds its filter from `?status=awaiting` and the badge points there.
+  3. The projects widget fetched the last review's timestamp and id and the
+  per-project review count, and rendered none of the three, while the plan's
+  own row asked for "when" and a way to review a branch. All three are on
+  screen now: the age, the count when there is more than one, an outcome chip
+  that opens the review it describes, and a Review link per row.
+  4. That widget's tally read "3 of 12" with no word saying what the numbers
+  were, where every other surface names its number. It says confirmed.
+  5. The dashboard's one-second clock was keyed to the polled object rather
+  than to whether anything is running, so every four-second poll tore the
+  interval down and started it again.
+  6. The e2e assertion for finding 2 was written first as a row scrape over
+  `ul > li`, which matches the projects list on the page it was navigating
+  away from: it passed against the old DOM and then read an empty list, which
+  is a flake and stop-the-line. Root-caused rather than retried, and replaced
+  with a wait on the URL plus the filter toggle's own `aria-pressed`, which
+  the toggle now carries because it is a toggle.
