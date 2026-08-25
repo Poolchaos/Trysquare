@@ -560,7 +560,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           <span className="flex flex-col gap-1">
             {/* The way back up. This screen is the deepest in the app and
                 named neither its project nor a route to one, so the only
-                exit was the rail. */}
+                exit was the top bar. */}
             {snapshot.project ? (
               <a
                 href={`/projects/${snapshot.project.id}`}
@@ -1295,8 +1295,8 @@ function RenderedReport({ data }: { data: ReportData }) {
  * streaming center-stage, and the clock and the meter running where they can
  * be seen from across a room. Every figure on it is the run's own.
  *
- * It covers the rail deliberately. Watching a scan is a mode, not a page,
- * and Escape or Hide steps back out without touching the run.
+ * It covers the top bar deliberately. Watching a scan is a mode, not a
+ * page, and Escape or Hide steps back out without touching the run.
  */
 function ScanTheater({
   snapshot,

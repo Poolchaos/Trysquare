@@ -209,7 +209,7 @@ When, and only when, the maintainer speaks:
   work" verdict naming the D-59 duplication feeds WP-C's real-run
   confirmation.
 - G2 (FG-3): from WP-B's evidence.
-- G3 (FG-4): design acceptance over `review/2026-08-04-fg4/DESIGN-NOTES.md`
+- G3 (FG-4): design acceptance over `review/2026-08-18-fg4/DESIGN-NOTES.md`
   plus the engine quality gate evidence and full e2e. On a pass, v1 is
   closed: update `GATES.md`, `PROJECT-STATE.md`, `BUILD-PLAN.md` milestone
   lines, and the README's Status section in one records commit.

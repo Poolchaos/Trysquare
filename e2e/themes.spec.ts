@@ -23,7 +23,7 @@ const EVIDENCE = join(
  * Photographs the page by capturing the body rather than the whole page.
  *
  * A full-page capture failed intermittently here, and the reason is structural
- * rather than incidental: the rail polls for a running review every few
+ * rather than incidental: the top bar polls for a running review every few
  * seconds, so the page is never idle and a capture can land mid-repaint. An
  * element capture does not take that path, and animations are frozen so two
  * photographs of the same screen are the same photograph.

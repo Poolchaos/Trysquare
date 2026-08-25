@@ -5,8 +5,8 @@
  *
  * Navigation moved off the left edge so the dashboard can use the full width
  * and the drafting-board ground can run edge to edge (D-81). What the bar
- * owes the app is what the rail owed it: where you are, what is running, and
- * what is waiting on you, from any screen.
+ * owes every screen is three things: where you are, what is running, and
+ * what is waiting on you.
  *
  * Dashboard is a real destination rather than the wordmark's job, because
  * every screen must mark exactly one current link and `/` is a screen.

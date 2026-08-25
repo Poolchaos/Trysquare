@@ -1901,3 +1901,23 @@ verified evidence, in writing, here.
   would be announcing work that is not happening. Both properties are tested,
   the second by stopping a run part way, which is the only way to reach a
   resumable state with checkpoints already stored.
+- 2026-08-18 D-83 (M5 and M6 of the dashboard shell plan): the shell's
+  phone-width behaviour is a measured law, not a look. A test sets 360px and
+  compares `document.scrollWidth` against `clientWidth` on the dashboard, the
+  reviews list and settings, and requires every destination reachable with
+  exactly one marked current. It found 25px of real overflow in the reviews
+  list, from a row that kept a status chip, a project name and a full branch
+  pair on one unbreakable line; the branch pair now takes its own line below
+  640px. The reading that said the fix had not worked came from a build that
+  predated it, which is D-70 a second time: `npx playwright test` run by hand
+  serves the last build, and only `./verify.sh --e2e` rebuilds first. Nothing
+  measures the browser except through the gate that builds.
+  The FG-4 argument is refreshed rather than amended:
+  `review/2026-08-18-fg4/DESIGN-NOTES.md` is the document the design verdict
+  is given on, against `review/2026-08-18-e2e/`. The 2026-08-04 notes are
+  marked superseded in place, because they describe a left rail, an older
+  palette and a run screen that put coverage above the queue, none of which
+  exist. The README now carries three screenshots instead of two: the
+  dashboard is the app's front door and was not in it, and the queue's
+  caption claimed a stage timeline and a coverage panel that the shot no
+  longer contains, both having moved inside the Run detail fold.

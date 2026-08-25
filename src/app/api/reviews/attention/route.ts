@@ -1,7 +1,7 @@
 /**
- * The two things the rail needs, and nothing else.
+ * The two things the top bar needs, and nothing else.
  *
- * The rail polls every four seconds on every screen, and it was asking the
+ * The bar polls every four seconds on every screen, and it was asking the
  * full reviews list for it: every review of every project, a merged-branch
  * check across all of them, and now a finding tally too, all to decide
  * whether to draw one chip. This answers the same question with two indexed

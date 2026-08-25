@@ -86,3 +86,8 @@ reality disagree, reality wins and both get fixed in the same session.
   ratification at G0 on 2026-07-30 (`GATES.md`); only the headers were stale.
 - 2026-08-04: `plans/U12-FIXTURE-GAPS.md` added: the remaining seeded-fixture
   work, split out of M4-FINISH-PLAN once it was planned in detail.
+- 2026-08-17: `plans/UX-UPLIFT-PLAN.md` added: the UX audit, the gamification
+  research and its honest version, and work packages WP-A..N.
+- 2026-08-18: `plans/DASHBOARD-SHELL-PLAN.md` added: D-81 planned to commit
+  level, M0-M6. Both entries were backfilled here on 2026-08-18, having been
+  added to the table above without changelog lines at the time.

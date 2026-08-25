@@ -3,7 +3,7 @@
 The live cache. Current facts only; if a change makes a line here wrong,
 fixing it is part of that change. Dates are absolute (YYYY-MM-DD).
 
-Last verified: 2026-08-03
+Last verified: 2026-08-18
 
 ## Status
 
@@ -23,9 +23,16 @@ Last verified: 2026-08-03
   promises that were decorative rather than enforced, and a records set two
   milestones behind the code. The verified gap inventory and the remaining
   work to v1 are in `plans/M4-FINISH-PLAN.md` (items U1 to U13). As of
-  2026-08-04 all twelve build-plan work packages are DONE; what remains is
-  the two maintainer judgments, the G1 verdict and the FG-4 design
-  acceptance.
+  2026-08-04 all twelve build-plan work packages are DONE.
+- The 2026-08-17 UX audit and the 2026-08-18 dashboard shell (D-68, D-69,
+  D-79, D-81) reshaped the surface: a top bar in place of the left rail, a
+  widget dashboard at `/`, a full-screen scan theater, a queue-first review
+  screen and a rendered report. `plans/UX-UPLIFT-PLAN.md` and
+  `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; three rows are
+  open (WP-G completion moment, WP-K queue phone layout, WP-L my branches).
+  What remains beyond them is the two maintainer judgments, the G1 verdict
+  and the FG-4 design acceptance, whose current argument is
+  `review/2026-08-18-fg4/DESIGN-NOTES.md`.
 - The two external AI plans never arrived. They fold in as spec amendments if
   they do; they did not block the build.
 
@@ -43,10 +50,13 @@ TypeScript runs strict plus `noUncheckedIndexedAccess`,
 
 ## Commands
 
-See `CLAUDE.md` section 3. `./verify.sh` is the single gate. As of 2026-08-04
-it passes with `--build --e2e`: 681 unit tests passing and 6 skipped across 45
-files, plus 30 browser tests (the journey, the failure paths, the theme and
-screenshot pass, and axe over every screen in both themes). CI runs `./verify.sh --build --e2e`;
+See `CLAUDE.md` section 3. `./verify.sh` is the single gate. As of 2026-08-18
+it passes with `--e2e`: 725 unit tests passing and 6 skipped across 47 files,
+plus 41 browser tests (the journey, the failure paths, the theme and
+screenshot pass, the phone-width pass, and axe over every screen in both
+themes). `--e2e` implies `--build` since 2026-08-18, because Playwright serves
+the last build and without it the browser gate can pass against output that
+predates the change under test (D-70). CI runs `./verify.sh --build --e2e`;
 the local default leaves both off so it stays fast.
 
 `npm run demo:fixture -- --fake` reviews the seeded fixture end to end with no
@@ -88,9 +98,9 @@ are accepted; anything else is refused by name.
   a row, merged detection, and the report assembler.
 - `src/server/jobs/` - the event bus, the job manager, and the SSE stream.
 - `src/server/api/` - one response shape for every route.
-- `src/app/api/` - 32 route handlers. `src/app/` - 9 screens, plus a root
+- `src/app/api/` - 34 route handlers. `src/app/` - 9 screens, plus a root
   error boundary, a not-found page, and a metadata layout per segment.
-- `src/components/` - the shared UI vocabulary, the left rail, and the
+- `src/components/` - the shared UI vocabulary, the top bar, and the
   confirmation queue.
 - `scripts/` - the house-style gate, the leak gate, the nothing-hidden gate,
   and the fixture demo.
@@ -108,8 +118,10 @@ implemented by `src/lib/paths.ts`.
 
 ## Screens
 
-`/projects`, `/projects/[id]`, `/reviews`, `/reviews/new`, `/reviews/[id]`,
-`/rulesets`, `/rulesets/[id]`, `/settings`. The root redirects to projects.
+`/` (the dashboard), `/projects`, `/projects/[id]`, `/reviews`,
+`/reviews/new`, `/reviews/[id]`, `/rulesets`, `/rulesets/[id]`, `/settings`.
+The root was a redirect to projects until 2026-08-17 and is a screen of its
+own now (D-75, D-81).
 
 ## Known issues
 

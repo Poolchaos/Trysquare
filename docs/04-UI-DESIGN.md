@@ -28,10 +28,13 @@ chosen per review in the advanced fold.
   toggles, sweep patterns, directive bodies and duplicate-to-tier are
   built; free-text rule editing is not.
 - Settings: opening the data directory in a file manager (it is displayed).
-- Everything the 2026-08-17 UX audit found, including the home scoreboard,
-  the awaiting-decision rail badge, the rendered report and HTML export,
-  responsive layouts and the my-branches filter, is specified below and
-  tracked as work in `plans/UX-UPLIFT-PLAN.md` (D-68, D-69).
+- Of the 2026-08-17 UX audit, three items are still owed: the completion
+  moment and queue momentum (WP-G), the queue's own phone layout with
+  bracketed thumb-height actions (WP-K), and the my-branches filter with the
+  identities behind it (WP-L). The rest of that audit is built, including the
+  home dashboard, the awaiting-decision badge, the rendered report and its
+  HTML export, and the shell at phone width;
+  `plans/UX-UPLIFT-PLAN.md` carries the row-by-row state (D-68, D-69, D-81).
 
 ## 1. Design language
 
@@ -91,19 +94,39 @@ d dismiss with reason, enter open file context).
 
 ## 3. Screens
 
-### Home (the scoreboard)
+### Home (the dashboard)
 
-The first screen, replacing the bare redirect to Projects. Everything on it
-is measured, never estimated: stat tiles with large tabular numerals for
-total spend, reviews completed, precision (confirmed vs dismissed) and
-invention rate (quote-check kills), each with a sparkline from this
-machine's own history; a recent-reviews table carrying branch pair, model,
-branch author where known, findings count, cost, duration and a status
-chip, with any review awaiting a decision highlighted; and a rule-yield
-panel naming each rule with the share of its findings that survived to
-confirmation, because a rule that only ever produces dismissals is costing
-review attention for nothing. First run shows the teaching empty state
-(add a project, pick branches, choose rules, run).
+The first screen, replacing the bare redirect to Projects. It is a fixed
+composition of widgets (D-82), ordered so that what needs a person comes
+before what merely happened: needs-you before history, live before archive.
+Everything on it is measured, never estimated, and a rate with no
+denominator renders as a dash rather than as zero, because zero percent
+precision is a claim about findings somebody judged.
+
+- **Stat tiles:** total spend, reviews completed, precision (confirmed vs
+  dismissed) and invention rate (quote-check kills), in large tabular
+  numerals, each with a sparkline from this machine's own history. A
+  sparkline needs two points to be a line and draws nothing below that.
+- **Needs you:** every review awaiting a decision, oldest wait first, each
+  row carrying its branch pair, project, confirmed-of-total and age, and
+  linking straight into that queue. The count in the bar says there is work;
+  this says where it is. Empty, it says so in one line and takes no more
+  room than that.
+- **Live scan:** while a review runs, its stage gauge, current stage,
+  elapsed, spend so far, and a way into the scan theater. When nothing runs
+  it is absent, not empty: a panel labelled live with nothing in it is the
+  dashboard claiming to have something to watch.
+- **Recent reviews:** branch pair, model, findings count, cost, duration and
+  status chip, with any review awaiting a decision highlighted.
+- **Rule yield:** each rule with the share of its findings that survived to
+  confirmation, worst first, because a rule that only ever produces
+  dismissals is costing review attention for nothing.
+- **Projects:** each project with its last review's outcome and a way to
+  review a branch. Projects are matched to their reviews by id, never by
+  name: two remotes can end in the same repository name.
+
+First run shows the teaching empty state (add a project, pick branches,
+choose rules, run).
 
 ### Projects
 

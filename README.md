@@ -84,22 +84,33 @@ allowlist. There is no code path that writes into a repository under review.
 
 ## What it looks like
 
-![The confirmation queue: a stage timeline, the coverage panel, and findings
-grouped by severity beside the rule and the code they cite.](docs/images/confirmation-queue.png)
+![The home dashboard: stat tiles for spend, reviews completed, precision and
+invention rate, above what is waiting on a person and what each project last
+produced.](docs/images/dashboard.png)
 
-Both screenshots are of the seeded test fixture, whose defects are planted on
-purpose and whose findings say so; they are produced by the browser suite on
-every CI run rather than staged for the README, so what they show is the fake
-engine's scripted review. The real-model smoke runs described in Status
-happened locally and their evidence, including every finding's text, lives
-under `review/`, which is deliberately not committed. No real model has
-reviewed a real project through this app yet: that is the next gate, and it
-is the maintainer's to drive.
+The home is a board of widgets ordered by what it costs you to miss: anything
+waiting on a person sits above anything that merely happened. Every number on
+it is counted from runs on this machine, and a rate with nothing judged yet
+renders as a dash rather than as a confident zero.
 
-The panel worth looking at is Coverage. It says how many files, hunks and
-sweep hits were accounted for, which is what separates "nothing is wrong" from
-"nothing was looked at". The two greyed stages at the ends of the timeline,
-Prepare and Audit, are the deterministic halves that no model touches.
+![The confirmation queue: findings grouped by severity, each beside the rule
+it cites and the code it quotes.](docs/images/confirmation-queue.png)
+
+The three screenshots are of the seeded test fixture, whose defects are
+planted on purpose and whose findings say so; they are produced by the browser
+suite on every CI run rather than staged for the README, so what they show is
+the fake engine's scripted review. The real-model smoke runs described in
+Status happened locally and their evidence, including every finding's text,
+lives under `review/`, which is deliberately not committed. No real model has
+reviewed a real project through this app yet: that is the next gate, and it is
+the maintainer's to drive.
+
+The queue is what the screen leads with, and the run's own account of itself
+folds away behind Run detail. The panel worth opening there is Coverage: it
+says how many files, hunks and sweep hits were accounted for, which is what
+separates "nothing is wrong" from "nothing was looked at". Its stage timeline
+greys the two ends, Prepare and Audit, because those are the deterministic
+halves that no model touches.
 
 ![The same review in the dark theme, showing the report it
 produced.](docs/images/run-screen-dark.png)
