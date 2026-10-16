@@ -1949,3 +1949,26 @@ verified evidence, in writing, here.
   is a flake and stop-the-line. Root-caused rather than retried, and replaced
   with a wait on the URL plus the filter toggle's own `aria-pressed`, which
   the toggle now carries because it is a toggle.
+- 2026-10-16 D-85 DECIDED (maintainer, MVP scope, answering four questions
+  put after the 2026-10-16 audits): the MVP supports Linux, Windows and
+  macOS, each proven in CI and named in the README; it serves the
+  maintainer first, and a public release is a later milestone; install
+  stays git clone plus npm, in line with the 2026-07-30 local-web-app
+  decision; interactive Mode B is fixed for the MVP rather than hidden.
+  Rejected: Linux or WSL only (the maintainer's own machine is Windows and
+  the app does not run on it today, `plans/AUDIT-2026-10-16.md` section 2),
+  Windows plus Linux only, public-first, an npx package, a desktop shell,
+  hiding or removing Mode B. The work is `plans/MVP-PLAN.md`, DRAFT until
+  its gate MG-1 is decided.
+- 2026-10-16 D-86 DECIDED (maintainer, `plans/MVP-PLAN.md` gates):
+  MG-1: G1 is re-scoped to "working pipeline on Linux, Windows and macOS";
+  its verdict is given on a fresh real-engine run at MVP WP 7.3, G2 stays
+  as written, and G3 becomes the later public release. Rejected: a G1
+  verdict on the 2026-08-04 runs, which predate five pipeline changes and
+  CLI 2.1.301. MG-8: all three decided-but-unbuilt items are built for the
+  MVP: D-51 project editing, the last-used model default, and the T19
+  dead-export gate. MG-9: CI on `macos-latest` is the macOS proof and the
+  README says so; no Mac is driven by hand. Working rule for the plan: one
+  branch per WP, merged into `main` once `./verify.sh` is green and pushed,
+  so CI proves it; no pull requests (the maintainer's standing consent for
+  this repository, 2026-10-16). The driver runs the plan to completion.

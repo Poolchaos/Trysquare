@@ -7,6 +7,13 @@ Last verified: 2026-08-18
 
 ## Status
 
+- 2026-10-16: two audits on the maintainer's Windows 11 machine found the
+  app does not run there and the gate cannot go green there: `npm ci`
+  fails, 257 of 732 unit tests fail, e2e cannot start, and the fake demo
+  fails (`plans/AUDIT-2026-10-16.md` section 2). Every fact below that names
+  a machine is the Linux machine's. The work to an MVP on Linux, Windows
+  and macOS is `plans/MVP-PLAN.md` (D-85), ratified with G1 re-scoped to
+  cover all three (D-86).
 - Gate G0 (brief and plan) PASSED 2026-07-30. Gate G1 (working pipeline) is
   ACTIVE with all evidence captured, including the 2026-08-04 real-engine
   smoke runs (haiku refusal D-57, the symbol-path fix D-58, two clean fable
@@ -50,8 +57,9 @@ TypeScript runs strict plus `noUncheckedIndexedAccess`,
 
 ## Commands
 
-See `CLAUDE.md` section 3. `./verify.sh` is the single gate. As of 2026-08-18
-it passes with `--e2e`: 725 unit tests passing and 6 skipped across 47 files,
+See `CLAUDE.md` section 3. `./verify.sh` is the single gate. On Linux it
+passes with `--e2e` at df94bb0: CI run 33740537490 (ubuntu-latest,
+2026-09-03) reported 726 unit tests passing and 6 skipped across 47 files,
 plus 41 browser tests (the journey, the failure paths, the theme and
 screenshot pass, the phone-width pass, and axe over every screen in both
 themes). `--e2e` implies `--build` since 2026-08-18, because Playwright serves
@@ -129,10 +137,11 @@ own now (D-75, D-81).
   paths, which cannot be static. It affects only the standalone output
   manifest, which this app does not use. Adopting `output: "standalone"`
   voids that acceptance; the re-check trigger is in `DECISIONS.md`.
-- The 9 high npm advisories accepted on 2026-07-30 are gone. Re-checked
-  2026-08-03: `npm audit` reports 0 vulnerabilities across 586 dependencies
-  (28 production, 520 dev, 187 optional). The accepted risk is discharged; its
-  re-check trigger has fired and needs no further action.
+- `npm audit` on 2026-10-16 reports 13 vulnerabilities: 1 critical, 10
+  high, 2 moderate. The critical is next 16.2.12, whose advisories include
+  "Unauthenticated Remote Code Execution on windows-hosted servers" (fixed
+  in 16.3.3; every next advisory clears at 16.3.8). The 2026-08-03 reading
+  of 0 is superseded. MVP-PLAN WP 2.1 owns the upgrade.
 - Next's build rewrites `tsconfig.json` (sets `jsx: react-jsx`, adds
   `.next/dev/types`). Run prettier on it after a build or the format gate
   fails on the next run.

@@ -45,6 +45,9 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/DASHBOARD-SHELL-PLAN.md](plans/DASHBOARD-SHELL-PLAN.md) | D-81 executed in detail: the widget dashboard, the top bar, the rail's retirement; work packages M0-M6 with the verified e2e blast radius. |
 | [plans/PLAN-TEMPLATE.md](plans/PLAN-TEMPLATE.md) | Template for multi-step plan docs (work packages, decision gates, done tracking).            |
 | [plans/idea-inbox.md](plans/idea-inbox.md)       | One-line dated idea capture. Ideas are not expanded until the active gate passes.            |
+| [plans/AUDIT-2026-10-16-GLM.md](plans/AUDIT-2026-10-16-GLM.md) | The 2026-10-16 audit: gate results on Windows, the unit-failure taxonomy, security findings, open work, and a cross-check against the parallel audit. Read-only report; nothing in it was fixed. |
+| [plans/AUDIT-2026-10-16.md](plans/AUDIT-2026-10-16.md) | The parallel 2026-10-16 audit: finding IDs W, S, E, A, U, T, R, D with proof per finding, and the evidence behind each disagreement with the GLM report. Read-only report. |
+| [plans/MVP-PLAN.md](plans/MVP-PLAN.md) | The MVP: three-OS support, security, engine fixes, spend safety, Claude connect, then the G1 and G2 verdicts. Seven phases, decision gates MG-1..MG-10. RATIFIED 2026-10-16 (D-86). |
 
 ## Specs
 
@@ -91,3 +94,10 @@ reality disagree, reality wins and both get fixed in the same session.
 - 2026-08-18: `plans/DASHBOARD-SHELL-PLAN.md` added: D-81 planned to commit
   level, M0-M6. Both entries were backfilled here on 2026-08-18, having been
   added to the table above without changelog lines at the time.
+- 2026-10-16: `plans/AUDIT-2026-10-16-GLM.md` added: read-only audit report
+  (no code changed). Windows gate results and failure taxonomy, security
+  findings, records staleness, and a claim-by-claim cross-check against the
+  parallel session's audit of the same tree.
+- 2026-10-16: `plans/AUDIT-2026-10-16.md` added: the parallel session's
+  audit with finding IDs, and its cross-check of the GLM report.
+  `plans/MVP-PLAN.md` added: the MVP planned against both audits (D-85).
