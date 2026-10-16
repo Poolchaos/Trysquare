@@ -42,6 +42,8 @@ export interface StageRunOptions extends StageCommandOptions {
   logPath: string;
   /** Path to the CLI, overridable so tests can substitute a fake. */
   claudePath?: string;
+  /** How long a stopped CLI gets before the next, harder step. Default 5s. */
+  stopGraceMs?: number;
   signal?: AbortSignal;
   onEvent?: (event: EngineEvent) => void;
 }
@@ -185,8 +187,11 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
       child.kill(signal);
       escalation = setTimeout(() => {
         child.kill("SIGKILL");
-        escalation = setTimeout(() => finish(() => reject(error)), STOP_GRACE_MS);
-      }, STOP_GRACE_MS);
+        escalation = setTimeout(
+          () => finish(() => reject(error)),
+          options.stopGraceMs ?? STOP_GRACE_MS,
+        );
+      }, options.stopGraceMs ?? STOP_GRACE_MS);
     };
 
     const timer = setTimeout(() => {

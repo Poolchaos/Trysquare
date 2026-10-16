@@ -58,6 +58,11 @@ function readSystemPrompt() {
 }
 const SYSTEM_PROMPT = readSystemPrompt();
 const scenario = process.env.FAKE_CLAUDE_SCENARIO ?? "success";
+
+// So a test can check the process is really gone once a stage says it stopped.
+if (process.env.FAKE_CLAUDE_PID_FILE) {
+  writeFileSync(process.env.FAKE_CLAUDE_PID_FILE, String(process.pid));
+}
 const recordPath = process.env.FAKE_CLAUDE_RECORD;
 
 // FAKE_CLAUDE_RECORD keeps only the last call, which is enough for a test
@@ -278,6 +283,15 @@ switch (scenario) {
   }
 
   case "hang": {
+    emit(initEvent);
+    setTimeout(() => process.exit(0), 60_000);
+    break;
+  }
+
+  case "hang-ignoring-sigterm": {
+    // A CLI that does not stop when asked, so the engine has to kill it.
+    // Windows has no SIGTERM to ignore: a kill there ends the process anyway.
+    process.on("SIGTERM", () => {});
     emit(initEvent);
     setTimeout(() => process.exit(0), 60_000);
     break;

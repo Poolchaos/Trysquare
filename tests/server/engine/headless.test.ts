@@ -4,7 +4,7 @@
  * so it fails the way the real binary fails.
  */
 
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -233,6 +233,87 @@ describe("failure handling", () => {
   });
 });
 
+describe("stopping a stage", () => {
+  // The caller deletes the worktree as soon as a stage settles, and Windows
+  // will not delete a live process's cwd, so a stage must not settle while its
+  // process is still running.
+  const pidFile = () => join(workDir, "pid");
+  const isRunning = (pid: number) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const startedPid = async () => {
+    for (let attempt = 0; attempt < 100 && !existsSync(pidFile()); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    return Number(readFileSync(pidFile(), "utf8"));
+  };
+
+  beforeEach(() => {
+    process.env.FAKE_CLAUDE_PID_FILE = pidFile();
+  });
+  afterEach(() => {
+    delete process.env.FAKE_CLAUDE_PID_FILE;
+  });
+
+  it("settles a cancel only once the process has exited", async () => {
+    const controller = new AbortController();
+    const outcome = run("hang", { timeoutMs: 10_000, signal: controller.signal }).catch(
+      (error: unknown) => error,
+    );
+    const pid = await startedPid();
+    controller.abort();
+    const error = await outcome;
+
+    expect((error as StageFailedError).errorClass).toBe("cancelled");
+    expect(isRunning(pid)).toBe(false);
+  });
+
+  it("settles a timeout only once the process has exited", async () => {
+    const outcome = run("hang", { timeoutMs: 400 }).catch((error: unknown) => error);
+    const pid = await startedPid();
+    const error = await outcome;
+
+    expect((error as StageFailedError).errorClass).toBe("timeout");
+    expect(isRunning(pid)).toBe(false);
+  });
+
+  it("kills a CLI that ignores the request to stop", async () => {
+    const controller = new AbortController();
+    const outcome = run("hang-ignoring-sigterm", {
+      timeoutMs: 10_000,
+      signal: controller.signal,
+      stopGraceMs: 300,
+    }).catch((error: unknown) => error);
+    const pid = await startedPid();
+    const asked = Date.now();
+    controller.abort();
+    const error = await outcome;
+
+    expect((error as StageFailedError).errorClass).toBe("cancelled");
+    expect(isRunning(pid)).toBe(false);
+    // Settled by the kill, not by the give-up timer a further 300ms on.
+    expect(Date.now() - asked).toBeLessThan(5_000);
+  });
+});
+
+describe("a launch the operating system refuses", () => {
+  it("fails the stage as a spawn failure instead of escaping as a plain error", async () => {
+    // A command line over every platform's limit: Windows throws on spawn
+    // (ENAMETOOLONG), Linux and macOS refuse it as the process starts.
+    const error = await run("success", { model: "m".repeat(300_000) }).catch(
+      (thrown: unknown) => thrown,
+    );
+    expect(error).toBeInstanceOf(StageFailedError);
+    expect((error as StageFailedError).errorClass).toBe("spawn");
+    expect((error as Error).message).toContain("Could not start");
+  });
+});
+
 describe("the read-only guarantee", () => {
   it("passes when the CLI grants exactly the requested tools", async () => {
     const outcome = await run("success");
@@ -310,8 +391,11 @@ describe("transcript failures", () => {
   it("does not crash the process when the transcript cannot be written", async () => {
     // A stream error with no handler becomes an uncaught exception, which in
     // the running app would take down the server rather than fail one stage.
-    // Writing to a path that is a directory fails deterministically.
-    const outcome = await run("success", { logPath: workDir });
+    // Writing to a path that is a directory fails deterministically. Inside
+    // the work directory, so the system prompt file beside it is cleaned up.
+    const logPath = join(workDir, "logs-is-a-directory");
+    mkdirSync(logPath);
+    const outcome = await run("success", { logPath });
 
     expect(outcome.result.is_error).toBe(false);
     expect(outcome.transcriptError).toBeDefined();
