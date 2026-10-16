@@ -12,6 +12,14 @@ export interface StageCommandOptions {
   /** Written to the child's stdin, never to argv. See buildStageArgs. */
   prompt: string;
   systemPrompt: string;
+  /**
+   * A file already holding `systemPrompt`, passed instead of the text. A
+   * stage's system prompt carries the ruleset and grows with it, and Windows
+   * caps a whole command line at 32,767 characters (measured 2026-10-16: a
+   * 40,000-character argument failed with ENAMETOOLONG). Needs CLI 2.1.301,
+   * the oldest version measured to accept the flag (D-91).
+   */
+  systemPromptFile?: string | undefined;
   /** Full model id. Short aliases resolve to a previous generation. */
   model: string;
   /** Streaming for a review, single JSON for a probe. */
@@ -60,8 +68,9 @@ export function buildStageArgs(options: StageCommandOptions): string[] {
     // Replace the default system prompt rather than appending to it: the
     // review's instructions are the whole contract, and the default prompt
     // also costs thousands of tokens on every call.
-    "--system-prompt",
-    options.systemPrompt,
+    ...(options.systemPromptFile === undefined
+      ? ["--system-prompt", options.systemPrompt]
+      : ["--system-prompt-file", options.systemPromptFile]),
     "--tools",
     tools.join(","),
     "--setting-sources",

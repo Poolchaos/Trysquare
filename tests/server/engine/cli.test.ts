@@ -12,6 +12,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CliNotFoundError,
   CliUnusableError,
+  isAtLeast,
+  parseCliVersion,
   realCliEnvironment,
   resolveCli,
   type CliEnvironment,
@@ -208,5 +210,25 @@ describe("on POSIX", () => {
     const bin = join(root, "bin");
     const cmd = file(join(bin, "claude.cmd"), EXE_SHIM);
     expect(resolveCli(cmd, environment("linux", [])).command).toBe(cmd);
+  });
+});
+
+describe("the version a review needs", () => {
+  it("reads the version the real CLI prints", () => {
+    // `claude --version`, CLI 2.1.301, 2026-10-16.
+    expect(parseCliVersion("2.1.301 (Claude Code)\n")).toEqual([2, 1, 301]);
+    expect(parseCliVersion("Claude Code")).toBeNull();
+  });
+
+  it.each([
+    [[2, 1, 301], true],
+    [[2, 1, 302], true],
+    [[2, 2, 0], true],
+    [[3, 0, 0], true],
+    [[2, 1, 71], false],
+    [[2, 0, 999], false],
+    [[1, 9, 999], false],
+  ])("judges %j against 2.1.301 as %s", (version, expected) => {
+    expect(isAtLeast(version, [2, 1, 301])).toBe(expected);
   });
 });

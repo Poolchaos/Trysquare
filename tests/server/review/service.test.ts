@@ -250,6 +250,17 @@ const recordedPrompts = (): string[] => {
     .map((name) => (JSON.parse(readFileSync(join(dir, name), "utf8")).prompt as string) ?? "");
 };
 
+/** The system prompt each call was given, which a stage now passes in a file. */
+const recordedSystemPrompts = (): string[] => {
+  const dir = join(dataDir, "calls");
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .sort()
+    .map(
+      (name) => (JSON.parse(readFileSync(join(dir, name), "utf8")).systemPrompt as string) ?? "",
+    );
+};
+
 describe("running a review to the point a human looks at it", () => {
   it("walks the statuses and lands awaiting confirmation", async () => {
     const reviewId = seedReview();
@@ -625,13 +636,12 @@ describe("what a review is judged against", () => {
   it("keeps judging against the frozen ruleset after the rules are edited", async () => {
     // The promise the snapshot exists for. A rule edited today must not change
     // what a review started yesterday is being judged against, and the proof
-    // is what actually reaches the model on the command line.
+    // is what actually reaches the model as its system prompt.
     const reviewId = seedReview();
     writeIdealAnswers();
     await run(reviewId);
 
-    const before = recordedArgv();
-    const systemPromptSent = before[2]?.[before[2].indexOf("--system-prompt") + 1] ?? "";
+    const systemPromptSent = recordedSystemPrompts()[2] ?? "";
     expect(systemPromptSent).toContain(PROTOCOL.rules[0]?.ruleText ?? "never matched");
   }, 120_000);
 });
@@ -1255,8 +1265,7 @@ describe("a rule someone switched off", () => {
     await prepareAndRun(db, reviewId, { dataDir, claudePath: FAKE_CLI });
 
     // The adversarial stage is the one carrying the full rule text.
-    const adversarial = recordedArgv()[2] ?? [];
-    const systemPrompt = adversarial[adversarial.indexOf("--system-prompt") + 1] ?? "";
+    const systemPrompt = recordedSystemPrompts()[2] ?? "";
     expect(systemPrompt).toContain(PROTOCOL.rules[1]!.ruleText);
     expect(systemPrompt).not.toContain(dropped.ruleText);
   }, 120_000);

@@ -216,9 +216,9 @@ describe("driving the CLI", () => {
     await runner.run({ stage: "s1_risk", systemPrompt: "", prompt: "p" });
 
     const record = JSON.parse((await import("node:fs")).readFileSync(recordPath, "utf8")) as {
-      args: string[];
+      systemPrompt: string | null;
     };
-    const systemPrompt = record.args[record.args.indexOf("--system-prompt") + 1] ?? "";
+    const systemPrompt = record.systemPrompt ?? "";
     expect(systemPrompt).toContain("code review under a fixed protocol");
     expect(systemPrompt).toContain("Answer with a single JSON object");
     delete process.env.FAKE_CLAUDE_RECORD;

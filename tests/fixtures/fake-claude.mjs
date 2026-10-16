@@ -18,6 +18,13 @@ import { join } from "node:path";
 
 const args = process.argv.slice(2);
 
+// Answered before stdin is read, as the real CLI answers without waiting for
+// input. FAKE_CLAUDE_VERSION lets a test play an older CLI.
+if (args[0] === "--version") {
+  process.stdout.write(`${process.env.FAKE_CLAUDE_VERSION ?? "2.1.301"} (Claude Code)\n`);
+  process.exit(0);
+}
+
 /**
  * The prompt, read from stdin the way the real CLI takes it.
  *
@@ -34,6 +41,22 @@ function readPrompt() {
   }
 }
 const PROMPT = readPrompt();
+
+/**
+ * The system prompt as the call delivered it: inline for a probe, in a file
+ * for a stage. Read here so a recorded call holds the text either way.
+ */
+function readSystemPrompt() {
+  const flagValue = (flag) => {
+    const index = args.indexOf(flag);
+    return index === -1 ? undefined : args[index + 1];
+  };
+  const inline = flagValue("--system-prompt");
+  if (inline !== undefined) return inline;
+  const file = flagValue("--system-prompt-file");
+  return file === undefined ? null : readFileSync(file, "utf8");
+}
+const SYSTEM_PROMPT = readSystemPrompt();
 const scenario = process.env.FAKE_CLAUDE_SCENARIO ?? "success";
 const recordPath = process.env.FAKE_CLAUDE_RECORD;
 
@@ -52,7 +75,7 @@ if (recordDir) {
   }
   writeFileSync(
     join(recordDir, `call-${String(existing + 1).padStart(3, "0")}.json`),
-    JSON.stringify({ args, prompt: PROMPT, cwd: process.cwd() }, null, 2),
+    JSON.stringify({ args, prompt: PROMPT, systemPrompt: SYSTEM_PROMPT, cwd: process.cwd() }, null, 2),
   );
 }
 
@@ -65,6 +88,7 @@ if (recordPath) {
         // The prompt arrives on stdin, so a test asserting on what a stage
         // was told reads it here rather than out of the argument vector.
         prompt: PROMPT,
+        systemPrompt: SYSTEM_PROMPT,
         cwd: process.cwd(),
         // Recorded so a test can prove the session markers were removed.
         sawSessionMarker: Object.keys(process.env).some(
@@ -277,7 +301,7 @@ switch (scenario) {
     if (isRepair && process.env.FAKE_CLAUDE_RECORD_2) {
       writeFileSync(
         process.env.FAKE_CLAUDE_RECORD_2,
-        JSON.stringify({ args, prompt: PROMPT, cwd: process.cwd() }, null, 2),
+        JSON.stringify({ args, prompt: PROMPT, systemPrompt: SYSTEM_PROMPT, cwd: process.cwd() }, null, 2),
       );
     }
 

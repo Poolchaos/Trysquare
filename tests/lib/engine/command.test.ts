@@ -97,17 +97,34 @@ describe("a prompt too large for a command line", () => {
     expect(args[args.indexOf("-p") + 1]).toBe("--output-format");
   });
 
-  it("still grows with the system prompt, which is the one the caller controls", () => {
-    // Worth stating: only the per-review prompt was unbounded. The system
-    // prompt is composed from the ruleset and stays in argv, so a protocol
-    // large enough to matter would need the same treatment.
+  it("keeps a stage's system prompt out of argv when it travels in a file", () => {
+    // The system prompt is composed from the ruleset and grows with it, and
+    // Windows caps the whole command line at 32,767 characters. A stage
+    // passes a file; the text never enters the argument vector.
+    const big = "s".repeat(40_000);
     const args = buildStageArgs({
       prompt: "short",
-      systemPrompt: "s".repeat(1000),
+      systemPrompt: big,
+      systemPromptFile: "/runs/r1/logs/s3.system-prompt.ab12cd34.md",
       model: "claude-fable-5[1m]",
       outputFormat: "stream-json",
     });
-    expect(args.some((arg) => arg.length === 1000)).toBe(true);
+    expect(valueAfter(args, "--system-prompt-file")).toBe(
+      "/runs/r1/logs/s3.system-prompt.ab12cd34.md",
+    );
+    expect(args).not.toContain("--system-prompt");
+    expect(args).not.toContain(big);
+  });
+
+  it("passes a system prompt inline when no file is given, which is what a probe does", () => {
+    const args = buildStageArgs({
+      prompt: "short",
+      systemPrompt: "tiny",
+      model: "claude-fable-5[1m]",
+      outputFormat: "json",
+    });
+    expect(valueAfter(args, "--system-prompt")).toBe("tiny");
+    expect(args).not.toContain("--system-prompt-file");
   });
 });
 

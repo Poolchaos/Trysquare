@@ -13,8 +13,18 @@
  * a script, and every caller spawns the result directly.
  */
 
+import { execFile } from "node:child_process";
 import { accessSync, constants, readFileSync, statSync } from "node:fs";
 import { delimiter, dirname, extname, isAbsolute, join, resolve } from "node:path";
+import { buildChildEnv } from "@/lib/engine/command";
+
+/**
+ * The oldest Claude Code a review stage runs on. Stages pass their system
+ * prompt with `--system-prompt-file`, and 2.1.301 is the only version this
+ * project has measured accepting it (D-91, 2026-10-16). Probes and the
+ * sign-in check do not need it and run on anything.
+ */
+export const MINIMUM_CLI_VERSION = "2.1.301";
 
 export interface CliCommand {
   /** What to spawn. */
@@ -47,6 +57,95 @@ export class CliUnusableError extends Error {
     super(`The Claude Code CLI at ${path} cannot be started: ${reason}`);
     this.name = "CliUnusableError";
   }
+}
+
+export class CliTooOldError extends Error {
+  constructor(
+    readonly path: string,
+    readonly version: string,
+  ) {
+    super(
+      `The Claude Code CLI at ${path} is version ${version}; reviews need ${MINIMUM_CLI_VERSION} ` +
+        "or newer. Update Claude Code (current versions update with `claude update`).",
+    );
+    this.name = "CliTooOldError";
+  }
+}
+
+/** The first `x.y.z` in what `--version` printed, as numbers. */
+export function parseCliVersion(output: string): [number, number, number] | null {
+  const match = /(\d+)\.(\d+)\.(\d+)/.exec(output);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+export function isAtLeast(version: readonly number[], minimum: readonly number[]): boolean {
+  for (let index = 0; index < minimum.length; index += 1) {
+    const have = version[index] ?? 0;
+    const need = minimum[index] ?? 0;
+    if (have !== need) return have > need;
+  }
+  return true;
+}
+
+/**
+ * Asked once per CLI per process: the answer only changes when someone updates
+ * the CLI, which makes it newer. A failure is not remembered, so the run after
+ * an update sees the new version without a restart.
+ */
+const supportedVersions = new Map<string, Promise<string>>();
+
+/** Forgets every answer, for when the configured CLI changes under a running server. */
+export function forgetCliVersions(): void {
+  supportedVersions.clear();
+}
+
+/** Resolves to the version text, or rejects when the CLI is too old or will not say. */
+export function checkCliVersion(cli: CliCommand, timeoutMs = 30_000): Promise<string> {
+  const key = [cli.command, ...cli.prefixArgs].join("\0");
+  const known = supportedVersions.get(key);
+  if (known) return known;
+
+  const asked = new Promise<string>((resolveVersion, reject) => {
+    const unreadable = (detail: string) =>
+      new CliUnusableError(cli.display, `\`--version\` did not report a version (${detail}).`);
+    try {
+      const child = execFile(
+        cli.command,
+        [...cli.prefixArgs, "--version"],
+        {
+          timeout: timeoutMs,
+          env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
+          encoding: "utf8",
+          windowsHide: true,
+        },
+        (error, stdout, stderr) => {
+          if (error) {
+            reject(unreadable((stderr || error.message).trim().slice(0, 300)));
+            return;
+          }
+          const version = parseCliVersion(stdout);
+          if (version === null) {
+            reject(unreadable(`it printed "${stdout.trim().slice(0, 120)}"`));
+            return;
+          }
+          const minimum = parseCliVersion(MINIMUM_CLI_VERSION) ?? [];
+          if (!isAtLeast(version, minimum)) {
+            reject(new CliTooOldError(cli.display, version.join(".")));
+            return;
+          }
+          resolveVersion(stdout.trim());
+        },
+      );
+      child.stdin?.on("error", () => {});
+      child.stdin?.end();
+    } catch (error) {
+      reject(unreadable((error as Error).message));
+    }
+  });
+  supportedVersions.set(key, asked);
+  asked.catch(() => supportedVersions.delete(key));
+  return asked;
 }
 
 export interface CliEnvironment {

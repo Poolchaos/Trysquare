@@ -8,12 +8,13 @@
 
 import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
-import { mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import type { StageErrorClass } from "@/lib/domain/enums";
 import { buildChildEnv, buildStageArgs, type StageCommandOptions } from "@/lib/engine/command";
 import type { EngineEvent, ResultEvent } from "@/lib/engine/events";
-import { resolveCli, type CliCommand } from "./cli";
+import { checkCliVersion, resolveCli, type CliCommand } from "./cli";
 import { StreamDecoder } from "./stream";
 
 export class StageFailedError extends Error {
@@ -83,15 +84,23 @@ export function classifyFailure(stderr: string, exitCode: number | null): StageE
 }
 
 export async function runStage(options: StageRunOptions): Promise<StageOutcome> {
-  const args = buildStageArgs(options);
+  // Beside the transcript, one file per call, so the run directory keeps the
+  // exact instructions each call was given now that they are not in argv.
+  const systemPromptFile = join(
+    dirname(options.logPath),
+    `${basename(options.logPath, ".log")}.system-prompt.${randomUUID().slice(0, 8)}.md`,
+  );
+  const args = buildStageArgs({ ...options, systemPromptFile });
   let cli: CliCommand;
   try {
     cli = resolveCli(options.claudePath);
+    await checkCliVersion(cli);
   } catch (error) {
     throw new StageFailedError("spawn", `Could not start the CLI: ${(error as Error).message}`);
   }
 
   await mkdir(dirname(options.logPath), { recursive: true });
+  await writeFile(systemPromptFile, options.systemPrompt, "utf8");
   const log = createWriteStream(options.logPath, { flags: "a" });
 
   // A write stream opens asynchronously and can fail at any point: the disk

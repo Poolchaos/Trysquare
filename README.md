@@ -152,7 +152,9 @@ requests, never a shortened rule set.
 
 - Node 22 or newer
 - git
-- [Claude Code](https://claude.com/claude-code) installed and signed in
+- [Claude Code](https://claude.com/claude-code) 2.1.301 or newer, installed and
+  signed in. Reviews refuse an older CLI by name; `claude --version` says
+  which you have.
 
 Trysquare drives the `claude` CLI that is already on your machine, using
 whatever credentials it already holds. It ships no model of its own and has no

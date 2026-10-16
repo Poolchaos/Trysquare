@@ -4,7 +4,7 @@
  * so it fails the way the real binary fails.
  */
 
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -83,6 +83,27 @@ describe("running a stage", () => {
     const log = readFileSync(join(workDir, "logs", "stage.log"), "utf8");
     expect(log).toContain("--system-prompt");
     expect(log).toContain(outcome.sessionId);
+  });
+
+  it("sends the system prompt in a file beside the transcript, not on the command line", async () => {
+    // Windows caps a whole command line at 32,767 characters, and a stage's
+    // system prompt grows with the ruleset.
+    const systemPrompt = `You are a reviewer.\n${"Rule text. ".repeat(4_000)}`;
+    const recordPath = join(workDir, "record-system.json");
+    process.env.FAKE_CLAUDE_RECORD = recordPath;
+    await run("success", { systemPrompt });
+
+    const record = JSON.parse(readFileSync(recordPath, "utf8")) as {
+      args: string[];
+      systemPrompt: string | null;
+    };
+    expect(record.systemPrompt).toBe(systemPrompt);
+    expect(record.args).not.toContain("--system-prompt");
+    expect(record.args.some((arg) => arg.includes("Rule text."))).toBe(false);
+    const file = record.args[record.args.indexOf("--system-prompt-file") + 1] ?? "";
+    expect(file.startsWith(join(workDir, "logs", "stage.system-prompt."))).toBe(true);
+    expect(readFileSync(file, "utf8")).toBe(systemPrompt);
+    delete process.env.FAKE_CLAUDE_RECORD;
   });
 
   it("surfaces live rate-limit state before anything fails", async () => {
@@ -178,6 +199,24 @@ describe("failure handling", () => {
     } catch (error) {
       expect((error as StageFailedError).errorClass).toBe("spawn");
       expect((error as Error).message).toContain("Could not start");
+    }
+  });
+
+  it("refuses a CLI older than the version reviews need, before running anything", async () => {
+    // A copy of the fake under another name, so the version answer cached for
+    // the shared fake by earlier tests does not stand in for this one.
+    const oldCli = join(workDir, "old-claude.mjs");
+    copyFileSync(FAKE_CLI, oldCli);
+    const recordPath = join(workDir, "record-old.json");
+    process.env.FAKE_CLAUDE_VERSION = "2.1.71";
+    process.env.FAKE_CLAUDE_RECORD = recordPath;
+    try {
+      await expect(run("success", { claudePath: oldCli })).rejects.toThrow(
+        /version 2\.1\.71; reviews need 2\.1\.301/,
+      );
+      expect(existsSync(recordPath)).toBe(false);
+    } finally {
+      delete process.env.FAKE_CLAUDE_VERSION;
     }
   });
 

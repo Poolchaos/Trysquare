@@ -2020,3 +2020,15 @@ verified evidence, in writing, here.
   gate refuses. Observed when this session started `npm run dev` to prove the
   loopback bind. Rejected: committing it, which the block itself recommends.
   Re-check trigger: a Next release with an opt-out for the generator.
+- 2026-10-16 D-91 DECIDED (maintainer, MVP-PLAN MG-3 and MG-4).
+  MG-3: review stages require Claude Code 2.1.301 or newer, the only version
+  measured accepting `--system-prompt-file` (its parser takes the flag though
+  `--help` omits it; a missing file fails with "System prompt file not
+  found" before any model call). The engine asks `--version` once per CLI
+  per process and refuses an older one by name; probes and the sign-in check
+  do not need the flag and run on anything. Rejected: bisecting older
+  releases (about 270MB each) for a lower floor.
+  MG-4: private HTTPS clones on Windows keep `GIT_CONFIG_NOSYSTEM`, which is
+  what keeps Git for Windows' `core.autocrlf=true` out of the worktrees, and
+  forward only the system `credential.helper`. Rejected: re-enabling system
+  config and pinning keys one by one, and SSH-only.
