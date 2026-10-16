@@ -2050,3 +2050,45 @@ verified evidence, in writing, here.
   token gets a warning, not a block, because the people using this all have
   a subscription (MVP-PLAN phase 6). Rejected: relying on whatever CLI is
   installed, which let untested versions arrive by self-update.
+- 2026-10-16 D-93 REVIEW (MVP phases 2 and 3, 5d64d54..2e6c699, by a
+  separate read-only reviewer, then each finding re-checked here before it
+  was fixed). Sixteen findings, all dispositioned before new work:
+  1. HIGH: `file:///\host`, `file:///%5Chost` and `file:///%2Fhost` passed
+  the network-share check, and git opened each over SMB. Fixed 5f05bd2.
+  2. The run note said "claude on PATH" for every default run, which
+  resolves the bundled CLI. Fixed 2a15d9f: it names the program and version.
+  3. No test could tell the settle-on-exit and SIGKILL escalation from the
+  code they replaced. Fixed 44af4b7; the old behaviour fails the new tests.
+  4. Two RUNBOOK paths were garbled into a TAB and a CR by a scripted edit.
+  Fixed here, and check-style now refuses a carriage return mid-line.
+  5. RUNBOOK still said the app drives whatever `claude` is on PATH, and the
+  Stack line named a CLI stages now refuse. Fixed here.
+  6. System credential helpers forwarded at command scope landed after
+  global config and undid a user's global reset. Fixed e5fa96b with a
+  stand-in system config. 10 (the machine-dependent test) and 13 (count
+  arithmetic, a remembered failed lookup) went with it.
+  7. Loading the e2e config from anywhere swept every run directory, a live
+  one included. Fixed 1052d56: only directories idle for six hours.
+  8. Two plan rows changed scope with no entry here. Recorded now: 2.3
+  dropped its Content-Type rule because browsers send Origin on every
+  non-GET request, so the Origin rule covers everything a page can forge
+  and a Content-Type rule would only have broken curl; 3.1 reads an npm
+  `.cmd` shim for the program it launches instead of refusing every `.cmd`,
+  because npm writes the target as a quoted `%dp0%` path and the program
+  then starts without a shell.
+  9. The 3.2 figure used a stub output contract without saying so.
+  Re-measured with the real one and corrected in the plan here.
+  11. A test left prompt files in the shared temp directory. Fixed 44af4b7.
+  12. An export with no caller. Removed 2a15d9f.
+  14. The CLI environment was rebuilt on every resolve, and a Mac x64 Node
+  looked for the x64 build the CLI's installer avoids. Fixed 1c16d59.
+  15. D-91 says `--help` omits `--system-prompt-file`; it names it inside
+  the `--bare` description, not as an option of its own. D-92 said the CLI
+  version moves only with the lockfile, which nothing enforced; 1c16d59
+  sets `DISABLE_AUTOUPDATER=1` on every claude the app starts, a variable
+  the 2.1.301 binary lists among those it reads.
+  16. `scripts/claude.ts` spawned claude outside `server/engine`. Moved
+  into the engine, 2a15d9f.
+  Not fixed, carried to MVP WP 4.1: a user's own global `core.autocrlf=true`
+  would still give worktrees CRLF line endings; whether that breaks the
+  quotation check is part of 4.1's line-ending pass.

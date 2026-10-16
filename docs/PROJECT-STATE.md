@@ -47,7 +47,10 @@ Last verified: 2026-08-18
 
 ## Stack (installed and proven 2026-07-31)
 
-Node 22.22.1, npm 11.17.0, git 2.43.0, Claude Code 2.1.71 on Linux.
+Linux, 2026-07-31: Node 22.22.1, npm 11.17.0, git 2.43.0, Claude Code 2.1.71.
+Windows 11, 2026-10-16: Node 22.17.0, npm 10.9.2, git 2.50.0.windows.1,
+Claude Code 2.1.301 (the bundled CLI, D-92). Review stages now refuse a CLI
+below 2.1.301 (D-91), so the Linux line's CLI would be refused today.
 
 next ^16.3.8 (2026-10-16), react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
 drizzle-kit ^0.31.10, better-sqlite3 ^12.11.1 (D-87, 2026-10-16), zod ^4.4.3, tailwindcss ^4.3.3,

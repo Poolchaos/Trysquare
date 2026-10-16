@@ -15,9 +15,12 @@ review is the expensive action. Everything else, including the whole demo with
 - **npm.** No version is declared. Proven on 11.17.0.
 - **git on PATH.** The gate requires it, and the app shells out to it for
   every clone, fetch and worktree.
-- **The Claude Code CLI, signed in**, but only for a real review. Everything
-  else in this runbook works without it. Trysquare drives whatever `claude`
-  binary is on your PATH, under the credentials it already holds.
+- **A Claude subscription, signed in**, but only for a real review. Everything
+  else in this runbook works without it. `npm install` installs the Claude
+  Code CLI the reviews run through (D-92); sign it in with
+  `npm run claude -- auth login`. It shares the `~/.claude` sign-in of any
+  other Claude Code on the machine. `TRYSQUARE_CLAUDE_PATH` picks a
+  different CLI, which must be 2.1.301 or newer.
 - **Chromium**, only if you intend to run `./verify.sh --e2e`:
   `npx playwright install chromium`.
 
@@ -86,9 +89,9 @@ Every step below is free until you press Start review.
 1. **Add a project.** Projects screen, paste a git URL, Add project. The row
    appears immediately and the clone runs in the background; if git fails, its
    own error text is shown rather than a summary of it. Local paths work:
-   a `file:///path/to/repo` URL, or on Windows `C:path	oepo`, is a
+   a `file:///path/to/repo` URL, or on Windows `C:\path\to\repo`, is a
    fast way to try this on something you already have. A network share
-   (`\hostshare` or a `file://` URL with a host) is refused, because
+   (`\\host\share` or a `file://` URL with a host) is refused, because
    opening one sends your Windows credentials to that host.
 2. **Import a ruleset.** Rulesets screen. Paste a markdown protocol document,
    give it a name and a tier, Import. The document becomes numbered rules and

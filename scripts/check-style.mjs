@@ -93,6 +93,13 @@ const CHECKS = [
     name: "Control characters are not permitted in source files",
     pattern: CONTROL_CHARACTERS,
   },
+  {
+    // A carriage return is allowed only as the first half of a CRLF line end.
+    // One mid-line came from a scripted edit that read `\r` in `C:\repo` as
+    // an escape, and the path rendered as two lines nobody could copy.
+    name: "A carriage return may only end a line",
+    pattern: /\r(?!$)/,
+  },
 ];
 
 function collectFiles(entryPath, acc) {
@@ -117,7 +124,8 @@ function collectFiles(entryPath, acc) {
   // review/ is scanned for its authored prose. Its .json files are captured
   // model output (findings, scores): a recording is not subject to the house
   // style, and editing evidence until a gate passes would falsify it.
-  if (extname(name) === ".json" && relative(ROOT, entryPath).split("/")[0] === "review") {
+  // Split on both separators: relative() writes backslashes on Windows.
+  if (extname(name) === ".json" && relative(ROOT, entryPath).split(/[\\/]/)[0] === "review") {
     return acc;
   }
   acc.push(entryPath);
