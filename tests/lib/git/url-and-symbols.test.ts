@@ -38,9 +38,23 @@ describe("git URL validation", () => {
       "file://fileserver/repos/widget",
       "file:////fileserver/repos/widget",
       "file://\\\\fileserver\\repos\\widget",
+      // Each of these is `//fileserver` once git decodes the URL and Windows
+      // reads a backslash as a slash; the first three were accepted until the
+      // 2026-10-16 review, and git listed refs through them over SMB.
+      "file:///\\fileserver\\share\\repo",
+      "file:///%5Cfileserver%5Cshare",
+      "file:///%2Ffileserver/share",
+      "file:///%5c%5cfileserver",
+      "/\\fileserver\\share",
+      "\\/fileserver/share",
+      "\\\\?\\UNC\\fileserver\\share",
     ]) {
       expect(() => validateGitUrl(url), url).toThrow(/network share/);
     }
+  });
+
+  it("refuses a file URL whose escapes do not decode", () => {
+    expect(() => validateGitUrl("file:///srv/%E0%A4%A")).toThrow(/do not decode/);
   });
 
   it("rejects the ext transport, which runs an arbitrary command", () => {

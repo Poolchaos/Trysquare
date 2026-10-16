@@ -51,25 +51,34 @@ export function validateGitUrl(rawUrl: string): string {
     throw new InvalidGitUrlError(rawUrl, "it contains a newline or null byte");
   }
 
-  // `\\host\share`, `//host/share` and a file URL with a host in it name
+  // `\\host\share`, `//host/share` and a file URL naming a host all reach
   // another machine, and opening one makes Windows offer this user's
   // credentials to that host over SMB. A path the user pasted never reaches
-  // out; a file URL is a local path or a drive.
+  // out. The test is made on the path as git will read it: git decodes a file
+  // URL's escapes, and Windows treats `\` and `/` alike, so `file:///%5Chost`,
+  // `file:///\host` and `/\host` are all `//host` by the time anything opens
+  // them (measured 2026-10-16: each listed refs over `\\localhost\C$`).
   const networkShare = () =>
     new InvalidGitUrlError(
       rawUrl,
       "it is a network share, and opening one sends your Windows credentials to that machine",
     );
+  const reachesOut = (path: string) => /^\/\//.test(path.replace(/\\/g, "/"));
   if (lower.startsWith("file://")) {
-    const path = url.slice("file://".length);
-    const local = (path.startsWith("/") && !path.startsWith("//")) || /^[A-Za-z]:[\\/]/.test(path);
-    if (!local) throw networkShare();
+    let path: string;
+    try {
+      path = decodeURIComponent(url.slice("file://".length));
+    } catch {
+      throw new InvalidGitUrlError(rawUrl, "its percent-escapes do not decode");
+    }
+    const drive = /^\/?[A-Za-z]:[\\/]/.test(path);
+    if (!drive && (!/^[\\/]/.test(path) || reachesOut(path))) throw networkShare();
   }
 
   const hasScheme = SUPPORTED_SCHEMES.some((scheme) => lower.startsWith(scheme));
   if (hasScheme) return url;
 
-  if (/^[\\/]{2}/.test(url)) throw networkShare();
+  if (reachesOut(url)) throw networkShare();
 
   if (SCP_LIKE.test(url)) return url;
   if (url.startsWith("/") || url.startsWith("./") || url.startsWith("../")) return url;
