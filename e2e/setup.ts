@@ -15,7 +15,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const E2E_ROOT = join(tmpdir(), "trysquare-e2e");
 export const DATA_DIR = join(E2E_ROOT, "data");
@@ -53,7 +53,7 @@ export default async function globalSetup(): Promise<void> {
   mkdirSync(DATA_DIR, { recursive: true });
 
   const { buildSeededRepos } = (await import(
-    join(REPO_ROOT, "tests", "fixtures", "build-seeded-repos.mjs")
+    pathToFileURL(join(REPO_ROOT, "tests", "fixtures", "build-seeded-repos.mjs")).href
   )) as { buildSeededRepos: (root: string) => { manifest: { defects: { kind: string }[] } } };
   const manifest = buildSeededRepos(FIXTURE_DIR).manifest;
   execFileSync("git", ["clone", "--bare", "--quiet", join(FIXTURE_DIR, "seeded-repo"), APP_REPO]);

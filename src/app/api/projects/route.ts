@@ -86,7 +86,8 @@ function nameFromUrl(url: string): string {
   const last =
     url
       .replace(/\.git$/, "")
-      .split(/[/:]/)
+      // Backslash too: a Windows path is the address someone types there.
+      .split(/[/:\\]/)
       .filter(Boolean)
       .pop() ?? "project";
   return repoSlug(last);

@@ -18,6 +18,31 @@ describe("git URL validation", () => {
     }
   });
 
+  it("accepts the local paths a Windows user pastes", () => {
+    for (const url of [
+      "C:\\Users\\someone\\repos\\widget",
+      "c:/Users/someone/repos/widget.git",
+      ".\\widget",
+      "..\\repos\\widget",
+      "file://C:\\Users\\someone\\repos\\widget",
+      "file:///C:/Users/someone/repos/widget",
+    ]) {
+      expect(() => validateGitUrl(url), url).not.toThrow();
+    }
+  });
+
+  it("refuses a network share, which would send Windows credentials to its host", () => {
+    for (const url of [
+      "\\\\fileserver\\repos\\widget",
+      "//fileserver/repos/widget",
+      "file://fileserver/repos/widget",
+      "file:////fileserver/repos/widget",
+      "file://\\\\fileserver\\repos\\widget",
+    ]) {
+      expect(() => validateGitUrl(url), url).toThrow(/network share/);
+    }
+  });
+
   it("rejects the ext transport, which runs an arbitrary command", () => {
     // git's ext:: transport executes the command in the URL. Cloning a URL a
     // user pasted must never be able to run something.

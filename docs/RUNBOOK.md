@@ -86,8 +86,10 @@ Every step below is free until you press Start review.
 1. **Add a project.** Projects screen, paste a git URL, Add project. The row
    appears immediately and the clone runs in the background; if git fails, its
    own error text is shown rather than a summary of it. Local paths work:
-   a `file:///path/to/repo` URL is a fast way to try this on something you
-   already have.
+   a `file:///path/to/repo` URL, or on Windows `C:path	oepo`, is a
+   fast way to try this on something you already have. A network share
+   (`\hostshare` or a `file://` URL with a host) is refused, because
+   opening one sends your Windows credentials to that host.
 2. **Import a ruleset.** Rulesets screen. Paste a markdown protocol document,
    give it a name and a tier, Import. The document becomes numbered rules and
    process directives. Rules must be headings at level three or deeper whose

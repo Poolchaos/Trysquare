@@ -18,7 +18,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { parseUnifiedDiff } from "@/lib/git/diff";
 import { dbPath } from "@/lib/paths";
@@ -100,7 +100,9 @@ async function main(): Promise<number> {
 
   // Built by the same script the tests use, so the demo and the suite are
   // scoring the same code against the same answer key.
-  const { buildSeededRepos } = (await import(join(FIXTURES, "build-seeded-repos.mjs"))) as {
+  const { buildSeededRepos } = (await import(
+    pathToFileURL(join(FIXTURES, "build-seeded-repos.mjs")).href
+  )) as {
     buildSeededRepos: (root: string) => { appDir: string; coreDir: string; manifest: Manifest };
   };
   const built = buildSeededRepos(fixtureRoot);
@@ -128,6 +130,7 @@ async function main(): Promise<number> {
     if (probe.status !== "available") {
       log(`The model is not usable: ${probe.error}`);
       log("Nothing was spent. Pass --fake to run the demo without a model.");
+      db.$client.close();
       if (!options.keep) rmSync(dataDir, { recursive: true, force: true });
       return 1;
     }
@@ -238,6 +241,8 @@ async function main(): Promise<number> {
   writeFileSync(join(outDir, "findings.json"), `${JSON.stringify(findingRows, null, 2)}\n`);
   log(`Wrote the event log, the score and the findings to ${outDir}`);
 
+  // Closed before the directory goes: Windows will not delete an open database.
+  db.$client.close();
   if (options.keep) log(`Kept the data directory: ${dataDir}`);
   else rmSync(dataDir, { recursive: true, force: true });
 
@@ -376,7 +381,9 @@ async function writeFakeAnswers(
   appClone: string,
   coreClone: string,
 ): Promise<void> {
-  const helpers = (await import(join(REPO_ROOT, "tests", "helpers", "ideal-answers.ts"))) as {
+  const helpers = (await import(
+    pathToFileURL(join(REPO_ROOT, "tests", "helpers", "ideal-answers.ts")).href
+  )) as {
     buildIdealStageOutputs: (input: unknown) => unknown;
     answerSequence: (outputs: unknown) => unknown[];
     writeAnswersDir: (dir: string, answers: readonly unknown[]) => string;

@@ -146,8 +146,10 @@ beforeAll(async () => {
   await jobManager().settled(reviewId);
 }, 240_000);
 
-afterAll(() => {
+afterAll(async () => {
   fixture?.cleanup();
+  // The runtime holds the database open, and Windows will not delete it.
+  (await import("@/server/runtime")).closeRuntime();
   if (dataDir) rmSync(dataDir, { recursive: true, force: true });
   delete process.env.TRYSQUARE_DATA;
   delete process.env.TRYSQUARE_CLAUDE_PATH;

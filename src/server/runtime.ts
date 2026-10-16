@@ -44,3 +44,14 @@ export function runtime(): Runtime {
   const { db, dataDir } = holder[RUNTIME_KEY];
   return { db, dataDir, manager: jobManager() };
 }
+
+/**
+ * Closes the database and forgets the runtime, so the next `runtime()` opens
+ * afresh. Windows will not delete a data directory while the database in it
+ * is open, which is what a test tearing down its data directory does.
+ */
+export function closeRuntime(): void {
+  const holder = globalThis as RuntimeHolder;
+  holder[RUNTIME_KEY]?.db.$client.close();
+  delete holder[RUNTIME_KEY];
+}
