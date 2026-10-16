@@ -200,8 +200,6 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
       );
     };
     options.signal?.addEventListener("abort", onAbort, { once: true });
-    // An abort that landed before this listener existed fired no event.
-    if (options.signal?.aborted) onAbort();
 
     const handle = (event: EngineEvent) => {
       switch (event.kind) {

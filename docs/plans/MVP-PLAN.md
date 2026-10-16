@@ -114,7 +114,7 @@ engine fixes in phase 4 have landed.
 | 4.2 | E1: measure whether a chained stage runs under its own system prompt on the current CLI, then apply MG-5. The measurement spends usage. | MG-5, maintainer go on spend | TODO |
 | 4.3 | E4: an indeterminate probe leaves availability unknown, as decided. | - | TODO |
 | 4.4 | E5: model ids are checked against the alias law at review creation and at stage launch. | - | TODO |
-| 4.5 | E6: `drain()` wired to process shutdown; a stage with no parsed `init` fails closed. (The SIGTERM to SIGKILL escalation and settling on exit landed in 3.1.) | 3.1 | TODO |
+| 4.5 | E6: `drain()` wired to process shutdown; a stage with no parsed `init` fails closed. (The SIGTERM to SIGKILL escalation and settling on exit landed in 3.1.) A cancel that lands after a stage started but before its process spawned is not seen by that stage, which then runs to completion; the 2026-07-30 W4 decision says the stage in flight completes, and `service.test.ts` holds that, so changing it needs its own decision entry first. A 3.1 line that killed such a stage was reverted for that reason (d2070a7, CI run 38926549014). | 3.1 | TODO |
 | 4.6 | E8: the env scrub removes only the variables measured to trigger the CLI's nested-session refusal; user configuration passes through. | 3.1 | TODO |
 | 4.7 | E9: add `xhigh` if the CLI version named in MG-3 accepts it, measured without a paid call. | MG-3 | TODO |
 
