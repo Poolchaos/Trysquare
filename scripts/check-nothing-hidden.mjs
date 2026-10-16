@@ -32,10 +32,19 @@ let hidden;
 try {
   hidden = hiddenFiles();
 } catch (error) {
-  // Not a git repository, or git is unavailable. Nothing to check, and
-  // failing here would block anyone working from a plain copy of the source.
-  console.log(`check-nothing-hidden: skipped (${error.message.split("\n")[0]})`);
-  process.exit(0);
+  const detail = String(error.stderr || error.message).trim();
+  // Two failures mean there is nothing to check: git is absent (verify.sh
+  // requires it, 2026-08-03), or this is a plain copy of the source with no
+  // repository, where no ignore rule can keep a file from a push. Any other
+  // git failure, a bad config value or a repository git refuses to trust,
+  // leaves a real repository unchecked, and that is not a pass.
+  if (error.code === "ENOENT" || /not a git repository/i.test(detail)) {
+    console.log(`check-nothing-hidden: skipped (${detail.split("\n")[0]})`);
+    process.exit(0);
+  }
+  console.error(`check-nothing-hidden: git could not list ignored files, so nothing was checked.`);
+  console.error(detail);
+  process.exit(2);
 }
 
 if (hidden.length > 0) {

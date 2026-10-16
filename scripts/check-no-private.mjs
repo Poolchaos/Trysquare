@@ -49,6 +49,20 @@ const FORBIDDEN_CONTENT = [
  */
 const REAL_HOME = homedir();
 
+/**
+ * Windows writes one home three ways: `C:\Users\name` natively, `C:/Users/name`
+ * from Node and most tools, and `/c/Users/name` from Git Bash. Matching only
+ * the first let the other two through, and its paths ignore case, so the
+ * comparison does too there.
+ */
+const CASE_BLIND = process.platform === "win32";
+const HOME_FORMS = (() => {
+  if (!CASE_BLIND) return [REAL_HOME];
+  const forward = REAL_HOME.replace(/\\/g, "/");
+  const msys = forward.replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`);
+  return [REAL_HOME, forward, msys].map((form) => form.toLowerCase());
+})();
+
 /** Files whose job is to define the markers, so they legitimately contain them. */
 const SELF_REFERENTIAL = new Set(["scripts/check-no-private.mjs"]);
 
@@ -79,8 +93,8 @@ try {
 if (files.length === 0) {
   // Before the first commit nothing is tracked. That is not a pass: it means
   // the gate has nothing to check, and saying "clean" would be a false green.
-  console.log("check-no-private: no tracked or staged files yet, nothing to check.");
-  process.exit(0);
+  console.error("check-no-private: git listed no files at all, so nothing was checked.");
+  process.exit(2);
 }
 
 const violations = [];
@@ -101,7 +115,11 @@ for (const file of files) {
   try {
     if (!statSync(file).isFile()) continue;
     contents = readFileSync(file, "utf8");
-  } catch {
+  } catch (error) {
+    // Tracked but deleted from the working tree: there is nothing left to
+    // publish. Any other failure is a file this gate did not read.
+    if (error.code === "ENOENT") continue;
+    violations.push(`${file}: could not be read, so it was not checked (${error.code})`);
     continue;
   }
 
@@ -111,7 +129,8 @@ for (const file of files) {
         violations.push(`${file}:${index + 1}: ${why}\n    ${line.trim().slice(0, 160)}`);
       }
     }
-    if (line.includes(REAL_HOME)) {
+    const comparable = CASE_BLIND ? line.toLowerCase() : line;
+    if (HOME_FORMS.some((form) => comparable.includes(form))) {
       violations.push(
         `${file}:${index + 1}: this machine home directory path\n    ${line.trim().slice(0, 160)}`,
       );
