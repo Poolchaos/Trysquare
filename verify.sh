@@ -54,12 +54,33 @@ run() {
     FAILED+=("$name (exit ${status})")
     return
   fi
-  if printf '%s' "$output" | grep -Eq "$ERROR_MARKERS"; then
+  if has_error_marker "$output"; then
     echo "GATE FAILED: ${name} exited 0 but printed a runtime error marker"
     FAILED+=("$name (error in output despite exit 0)")
     return
   fi
   echo "ok: ${name}"
+}
+
+# A here-string, not `printf | grep -q`: grep -q exits at its first match,
+# printf then dies of SIGPIPE, and under pipefail the pipeline reports that
+# death, so a marker early in a large output read as a pass. Measured
+# 2026-10-16: unflagged from about 100KB up, in 20 runs of 20.
+has_error_marker() {
+  grep -Eq "$ERROR_MARKERS" <<<"$1"
+}
+
+# The scan proves itself on every run, at the size that once broke it: a gate
+# that cannot see an error is silent in exactly the way it exists to prevent.
+check_scanner() {
+  local filler marker='TypeError: scanner self-check'
+  printf -v filler '%*s' 300000 ''
+  if ! has_error_marker "${marker}"$'\n'"${filler}" ||
+    ! has_error_marker "${filler}"$'\n'"${marker}" ||
+    has_error_marker "${filler}"; then
+    echo "GATE FAILED: the error-marker scan failed its own self-check"
+    FAILED+=("marker scan self-check")
+  fi
 }
 
 require_tool() {
@@ -79,6 +100,8 @@ require_tool npm
 # to git. Without this, a missing git surfaces as an opaque test failure, and
 # the nothing-hidden gate skips itself rather than failing.
 require_tool git
+
+check_scanner
 
 run "Lint" npm run --silent lint
 run "Format check" npm run --silent format:check

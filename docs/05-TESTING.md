@@ -26,6 +26,14 @@ marker list, per-step timeout, VERIFIED/FAILED summary naming what was not
 proven (e.g. "no e2e"). Both failure branches are deliberately exercised
 once at creation to prove the gate fires.
 
+The marker scan reads a here-string, never `printf | grep -q`: under
+`pipefail` the pipe form reported a pass whenever a marker sat early in
+output over about 100KB, because `grep -q` exits at the match and the
+writer dies of SIGPIPE (MVP-PLAN WP 1.1, measured 2026-10-16). Every run
+starts with a self-check that feeds the scan a 300KB output with the
+marker first, then last, then absent, and fails the gate unless all three
+read correctly. The check takes about 0.2s.
+
 ## 2. Unit and integration (vitest)
 
 - `lib/git`: diff/hunk parsing against captured real-git outputs (renames,
