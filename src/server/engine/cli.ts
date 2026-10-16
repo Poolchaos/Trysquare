@@ -13,7 +13,7 @@
  * a script, and every caller spawns the result directly.
  */
 
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { accessSync, constants, readFileSync, statSync } from "node:fs";
 import { arch } from "node:os";
 import { delimiter, dirname, extname, isAbsolute, join, resolve } from "node:path";
@@ -96,9 +96,43 @@ export function isAtLeast(version: readonly number[], minimum: readonly number[]
  */
 const supportedVersions = new Map<string, Promise<string>>();
 
-/** Forgets every answer, for when the configured CLI changes under a running server. */
-export function forgetCliVersions(): void {
-  supportedVersions.clear();
+/**
+ * Runs the CLI attached to this terminal and returns its exit code, for
+ * `npm run claude -- <args>` (`scripts/claude.ts`), so a person signs in to
+ * exactly the program the reviews use. Here rather than in the script because
+ * this module is the only place a claude process is started.
+ */
+export function runCliAttached(args: readonly string[], configured: string | undefined): number {
+  const cli = resolveCli(configured);
+  const result = spawnSync(cli.command, [...cli.prefixArgs, ...args], {
+    stdio: "inherit",
+    // Without this the CLI refuses to run when started from inside a Claude
+    // Code session, the same reason every review scrubs it.
+    env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
+  });
+  if (result.error) {
+    throw new CliUnusableError(cli.display, result.error.message);
+  }
+  return result.status ?? 1;
+}
+
+/**
+ * One line saying which CLI a run will use and what version it reported, or
+ * why there is none. For the run's own record: a fake answering where the
+ * real CLI was meant must be readable from the run, not deduced from tokens.
+ */
+export async function describeCli(configured: string | undefined): Promise<string> {
+  let cli: CliCommand;
+  try {
+    cli = resolveCli(configured);
+  } catch (error) {
+    return `none usable (${(error as Error).message})`;
+  }
+  try {
+    return `${cli.display} (${await checkCliVersion(cli)})`;
+  } catch (error) {
+    return `${cli.display}, refused (${(error as Error).message})`;
+  }
 }
 
 /** Resolves to the version text, or rejects when the CLI is too old or will not say. */

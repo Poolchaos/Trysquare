@@ -1209,6 +1209,8 @@ describe("what the run says about itself", () => {
       entry.message.startsWith("Engine:"),
     );
     expect(note?.message).toContain("fake-claude.mjs");
+    // The version the CLI reported, so the record says which build answered.
+    expect(note?.message).toContain("2.1.301 (Claude Code)");
     expect(note?.message).toContain("claude-fable-5[1m]");
     expect(note?.message).toContain("effort high");
   }, 120_000);

@@ -6,19 +6,11 @@
  * entry is a placeholder until its install script is approved.
  */
 
-import { spawnSync } from "node:child_process";
-import { resolveCli } from "@/server/engine/cli";
-import { buildChildEnv } from "@/lib/engine/command";
+import { runCliAttached } from "@/server/engine/cli";
 
-const cli = resolveCli(process.env.TRYSQUARE_CLAUDE_PATH);
-const result = spawnSync(cli.command, [...cli.prefixArgs, ...process.argv.slice(2)], {
-  stdio: "inherit",
-  // Without this the CLI refuses to run when started from inside a Claude
-  // Code session, the same reason every review scrubs it.
-  env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
-});
-if (result.error) {
-  console.error(`Could not start ${cli.display}: ${result.error.message}`);
+try {
+  process.exit(runCliAttached(process.argv.slice(2), process.env.TRYSQUARE_CLAUDE_PATH));
+} catch (error) {
+  console.error((error as Error).message);
   process.exit(1);
 }
-process.exit(result.status ?? 1);

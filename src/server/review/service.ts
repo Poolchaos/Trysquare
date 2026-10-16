@@ -73,6 +73,7 @@ import {
   writeReviewSnapshot,
 } from "../db/repositories/rulesets";
 import { SETTING_KEYS, readSettingOr } from "../db/repositories/settings";
+import { describeCli } from "../engine/cli";
 import { StageFailedError } from "../engine/headless";
 import { buildBundle, readBaseContents, type RepoSpec } from "../gitops/bundle";
 import { fetchAll, resolveCommit } from "../gitops/repo";
@@ -243,12 +244,10 @@ export async function prepareAndRun(
 
   // Which binary answers matters as much as which model: a fake-versus-real
   // mixup must be readable from the run itself, not deduced from token counts.
-  const enginePath = options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH;
+  const engine = await describeCli(options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH);
   appendRunNote(db, reviewId, {
     kind: "note",
-    message:
-      `Engine: ${enginePath ?? "claude on PATH"}, model ${review.model}, ` +
-      `effort ${review.effort}.`,
+    message: `Engine: ${engine}, model ${review.model}, effort ${review.effort}.`,
   });
 
   try {

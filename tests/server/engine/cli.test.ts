@@ -8,11 +8,13 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CliNotFoundError,
   CliUnusableError,
   bundledCliPaths,
+  describeCli,
   isAtLeast,
   parseCliVersion,
   realCliEnvironment,
@@ -271,6 +273,20 @@ describe("the CLI installed with the app", () => {
     expect(first).toBe(join("/app", "node_modules", "@anthropic-ai", pkg, binary));
     expect(second).toBe(
       join("/app", "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe"),
+    );
+  });
+});
+
+describe("what a run records about its CLI", () => {
+  const fake = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
+
+  it("names the program and the version it reported", async () => {
+    await expect(describeCli(fake)).resolves.toBe(`${fake} (2.1.301 (Claude Code))`);
+  });
+
+  it("says plainly when there is no usable CLI, rather than naming a default", async () => {
+    await expect(describeCli(join(root, "missing", "claude"))).resolves.toMatch(
+      /^none usable \(.*no such file/,
     );
   });
 });
