@@ -7,17 +7,50 @@
  * checkout of the same pinned commits: verification quotes the file it read,
  * and the bytes at a commit are the same wherever that commit is checked out.
  *
- * Paths are fixed rather than random because the Playwright config has to name
- * them in the server's environment before this file runs.
+ * Paths are decided when this module is first loaded, not when global setup
+ * runs, because the Playwright config has to name them in the server's
+ * environment before setup runs and before the server starts.
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const E2E_ROOT = join(tmpdir(), "trysquare-e2e");
+const ROOT_ENV = "TRYSQUARE_E2E_ROOT";
+const ROOT_PREFIX = "trysquare-e2e-";
+
+/**
+ * One fresh directory per run, created when the runner first loads this file.
+ *
+ * Playwright starts the web server before global setup runs
+ * (`createGlobalSetupTasks` in Playwright 1.62), and the server opens its
+ * database the moment it boots. Clearing a fixed directory in global setup
+ * therefore deleted the database out from under a running server: Linux let
+ * it and the server ran on an unlinked file, Windows refused with EBUSY. A new
+ * directory needs no clearing. The runner records it in the environment,
+ * which the workers and the web server inherit, so every process names the
+ * same one; only the first load creates it, and only that load removes the
+ * directories earlier runs left.
+ */
+function runRoot(): string {
+  const existing = process.env[ROOT_ENV];
+  if (existing) return existing;
+  for (const entry of readdirSync(tmpdir())) {
+    if (entry !== "trysquare-e2e" && !entry.startsWith(ROOT_PREFIX)) continue;
+    try {
+      rmSync(join(tmpdir(), entry), { recursive: true, force: true });
+    } catch {
+      // Still held by something; it is not this run's, so it can wait.
+    }
+  }
+  const created = mkdtempSync(join(tmpdir(), ROOT_PREFIX));
+  process.env[ROOT_ENV] = created;
+  return created;
+}
+
+export const E2E_ROOT = runRoot();
 export const DATA_DIR = join(E2E_ROOT, "data");
 export const ANSWERS_DIR = join(E2E_ROOT, "answers");
 export const COUNTER_FILE = join(E2E_ROOT, "calls.txt");
@@ -48,7 +81,6 @@ export const FAKE_CLI = join(REPO_ROOT, "tests", "fixtures", "fake-claude.mjs");
 export const PROTOCOL_PATH = join(REPO_ROOT, "tests", "fixtures", "example-protocol.md");
 
 export default async function globalSetup(): Promise<void> {
-  rmSync(E2E_ROOT, { recursive: true, force: true });
   mkdirSync(FIXTURE_DIR, { recursive: true });
   mkdirSync(DATA_DIR, { recursive: true });
 

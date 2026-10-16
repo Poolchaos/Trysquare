@@ -8,12 +8,14 @@ Last verified: 2026-08-18
 ## Status
 
 - 2026-10-16: two audits on the maintainer's Windows 11 machine found the
-  app does not run there and the gate cannot go green there: `npm ci`
-  fails, 257 of 732 unit tests fail, e2e cannot start, and the fake demo
-  fails (`plans/AUDIT-2026-10-16.md` section 2). Every fact below that names
-  a machine is the Linux machine's. The work to an MVP on Linux, Windows
-  and macOS is `plans/MVP-PLAN.md` (D-85), ratified with G1 re-scoped to
-  cover all three (D-86).
+  app did not install, test or run there (`plans/AUDIT-2026-10-16.md`
+  section 2). The same day MVP phases 1 to 3.4 made it green there:
+  `./verify.sh --build --e2e` exits 0 on Windows 11 (Node 22.17.0, npm
+  10.9.2, git 2.50.0) with 776 unit tests passing, 6 skipped, and 41
+  browser tests, and the fake demo finds 11 of 11. macOS is not yet in CI,
+  and no real model has run on Windows. The work to the MVP is
+  `plans/MVP-PLAN.md` (D-85), with G1 re-scoped to cover Linux, Windows and
+  macOS (D-86).
 - Gate G0 (brief and plan) PASSED 2026-07-30. Gate G1 (working pipeline) is
   ACTIVE with all evidence captured, including the 2026-08-04 real-engine
   smoke runs (haiku refusal D-57, the symbol-path fix D-58, two clean fable
