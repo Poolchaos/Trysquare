@@ -7,7 +7,18 @@ on:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    # The three platforms the MVP supports (D-85). macOS has no person
+    # driving it, so this job is its proof (D-86). fail-fast is off so one
+    # platform's failure never hides another's result.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        # verify.sh is bash; on Windows this is Git Bash, as it is locally.
+        shell: bash
     steps:
       - uses: actions/checkout@v5
 
@@ -16,6 +27,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # Plain, as a user would run it: the install itself is under test
+      # (D-87, D-92).
       - run: npm ci
 
       # The browser the journey runs in. Only chromium: the app is a local
@@ -28,6 +41,9 @@ jobs:
       # check; the local default stays fast by leaving these two off.
       - run: ./verify.sh --build --e2e
 
+      # The free end-to-end demo, which the README tells people to run first.
+      - run: npm run demo:fixture -- --fake
+
       # The evidence a failure is diagnosed from, and the screenshots the
       # design review reads. Uploaded on failure and on success both: a green
       # run's screenshots are the record of what the app actually looked like
@@ -35,7 +51,7 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: evidence
+          name: evidence-${{ matrix.os }}
           path: |
             review/
             test-results/

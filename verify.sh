@@ -34,13 +34,41 @@ ERROR_MARKERS='SyntaxError|ReferenceError|TypeError:|ERR_MODULE_NOT_FOUND|Cannot
 STEP_TIMEOUT="${VERIFY_STEP_TIMEOUT:-900}"
 FAILED=()
 
+# GNU timeout is not on macOS; Homebrew's coreutils names it gtimeout, and
+# Perl ships with the system. Exit 124 means "timed out" whichever runs it,
+# because the hang branch below reads that code.
+with_timeout() {
+  local seconds="$1"
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$seconds" "$@"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout "$seconds" "$@"
+  else
+    # A watchdog that outlives the command, rather than an alarm set before
+    # exec: under Git Bash's Perl the alarm did not survive exec (measured
+    # 2026-10-16, a 3s sleep under a 1s limit exited 0).
+    perl -e '
+      my $limit = shift;
+      my $pid = fork();
+      exit 127 unless defined $pid;
+      if ($pid == 0) { exec @ARGV or exit 127; }
+      local $SIG{ALRM} = sub { kill "TERM", $pid; sleep 2; kill "KILL", $pid; exit 124; };
+      alarm $limit;
+      waitpid($pid, 0);
+      alarm 0;
+      exit(($? & 127) ? 128 + ($? & 127) : $? >> 8);
+    ' "$seconds" "$@"
+  fi
+}
+
 run() {
   local name="$1"
   shift
   echo
   echo "--- ${name} ---"
   local output status
-  output=$(timeout "$STEP_TIMEOUT" "$@" 2>&1)
+  output=$(with_timeout "$STEP_TIMEOUT" "$@" 2>&1)
   status=$?
   printf '%s\n' "$output"
 
