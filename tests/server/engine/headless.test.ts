@@ -4,7 +4,15 @@
  * so it fails the way the real binary fails.
  */
 
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -303,9 +311,10 @@ describe("stopping a stage", () => {
 
 describe("a launch the operating system refuses", () => {
   it("fails the stage as a spawn failure instead of escaping as a plain error", async () => {
-    // A command line over every platform's limit: Windows throws on spawn
-    // (ENAMETOOLONG), Linux and macOS refuse it as the process starts.
-    const error = await run("success", { model: "m".repeat(300_000) }).catch(
+    // A command line over every platform's limit: 32,767 characters for the
+    // whole line on Windows, 128KB for one argument on Linux, about 1MB for
+    // all of them together on macOS, which ran a 300KB one (CI, 2026-10-16).
+    const error = await run("success", { model: "m".repeat(2_000_000) }).catch(
       (thrown: unknown) => thrown,
     );
     expect(error).toBeInstanceOf(StageFailedError);
@@ -374,7 +383,9 @@ describe("what the engine actually invokes", () => {
     process.env.FAKE_CLAUDE_RECORD = recordPath;
     await run("success");
     const record = JSON.parse(readFileSync(recordPath, "utf8"));
-    expect(record.cwd).toBe(workDir);
+    // Compared as real paths: macOS's temp directory is a symlink into
+    // /private, and a process reports where it really is.
+    expect(realpathSync.native(record.cwd)).toBe(realpathSync.native(workDir));
   });
 
   it("resumes an existing session when asked", async () => {
