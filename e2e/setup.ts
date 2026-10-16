@@ -13,7 +13,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -31,18 +31,28 @@ const ROOT_PREFIX = "trysquare-e2e-";
  * it and the server ran on an unlinked file, Windows refused with EBUSY. A new
  * directory needs no clearing. The runner records it in the environment,
  * which the workers and the web server inherit, so every process names the
- * same one; only the first load creates it, and only that load removes the
- * directories earlier runs left.
+ * same one; only the first load creates it.
+ *
+ * That load also clears out directories earlier runs left, but only ones
+ * nobody has touched for STALE_AFTER_MS. Anything that loads this config
+ * without the variable set counts as a first load, a `--list` or an editor
+ * discovering tests included, and sweeping every directory would delete the
+ * one a run in progress is using. A run takes minutes.
  */
+const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
+
 function runRoot(): string {
   const existing = process.env[ROOT_ENV];
   if (existing) return existing;
+  const now = Date.now();
   for (const entry of readdirSync(tmpdir())) {
     if (entry !== "trysquare-e2e" && !entry.startsWith(ROOT_PREFIX)) continue;
+    const path = join(tmpdir(), entry);
     try {
-      rmSync(join(tmpdir(), entry), { recursive: true, force: true });
+      if (now - statSync(path).mtimeMs < STALE_AFTER_MS) continue;
+      rmSync(path, { recursive: true, force: true });
     } catch {
-      // Still held by something; it is not this run's, so it can wait.
+      // Gone already, or still held by something; either way not this run's.
     }
   }
   const created = mkdtempSync(join(tmpdir(), ROOT_PREFIX));
