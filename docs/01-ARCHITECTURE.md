@@ -126,10 +126,14 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
   verified against `claude --help` on this machine at WP-E and recorded in
   `CLAUDE.md` commands, never guessed (workspace law).
 - **InteractiveEngine (Mode B, fallback):** materialises the same prompt to
-  `runs/<id>/bundle/stage-<n>-prompt.md`, prints the one-line launch command
-  for a terminal session, and watches for the session's output contract file
-  to appear. Kept behind the same interface so a policy change never touches
-  the pipeline.
+  `runs/<id>/bundle/<stage>[-b<n>]-<call id>-prompt.md`, with the system
+  prompt beside it as `-system.md`, prints a launch command for PowerShell
+  and for bash or zsh (read-only tools, user settings only, no MCP servers,
+  `--system-prompt-file`, the prompt itself read from the file rather than
+  passed in argv), and watches for that call's own `-output.json`. Each call
+  names its own files, so a batch or a resumed attempt never reads another
+  one's answer (MVP WP 3.7). It starts no process. Kept behind the same
+  interface so a policy change never touches the pipeline.
 - Subprocess hygiene (workspace law, mirrors verify.sh doctrine): every
   spawn is timeout-guarded (stage-level timeout, configurable), stdout and
   stderr captured to `logs/`, exit status checked separately, and output

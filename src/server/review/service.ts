@@ -244,7 +244,11 @@ export async function prepareAndRun(
 
   // Which binary answers matters as much as which model: a fake-versus-real
   // mixup must be readable from the run itself, not deduced from token counts.
-  const engine = await describeCli(options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH);
+  // Mode B starts no process, so it is not asked to report a version either.
+  const engine =
+    engineModeSchema.parse(review.engineMode) === "interactive"
+      ? "interactive, answered in your own session"
+      : await describeCli(options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH);
   appendRunNote(db, reviewId, {
     kind: "note",
     message: `Engine: ${engine}, model ${review.model}, effort ${review.effort}.`,
@@ -507,6 +511,8 @@ function buildRunner(
           directives: snapshot.directives,
           rules: snapshot.rules,
           timeoutMs: timeoutMinutes * 60_000,
+          // The CLI the printed command runs, resolved as a headless stage's.
+          claudePath: options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH,
           ...(options.signal === undefined ? {} : { signal: options.signal }),
           ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
         })

@@ -1,9 +1,9 @@
 /**
  * Mode B: the review runs in your own terminal, not in a subprocess.
  *
- * The app writes the exact prompt for a stage to a file, prints the one-line
- * command that feeds it to a session you control, and then waits for the
- * answer to appear as a file beside it. That is the whole engine.
+ * The app writes the exact prompt for a stage to a file, prints the command
+ * that starts a session you control on it, and then waits for the answer to
+ * appear as a file beside it. That is the whole engine.
  *
  * It exists for the cases Mode A cannot serve: a model this machine's CLI
  * cannot spawn, an account whose limits are better spent interactively, or a
@@ -18,6 +18,7 @@
  * guess would corrupt the one number the user makes decisions with.
  */
 
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ReviewStage } from "@/lib/domain/enums";
@@ -29,6 +30,8 @@ import { StageFailedError } from "@/server/engine/headless";
 import { StageOutputUnreadableError } from "@/server/review/engine-runner";
 import type { StageRequest, StageResponse } from "@/server/review/pipeline";
 import type { ReviewEngine } from "./adapter";
+import { MINIMUM_CLI_VERSION, resolveCli, type CliCommand } from "./cli";
+import { READ_ONLY_TOOLS } from "@/lib/engine/command";
 
 export interface InteractiveEngineOptions {
   /** Where the prompt and answer files live: the review's bundle directory. */
@@ -42,16 +45,40 @@ export interface InteractiveEngineOptions {
   timeoutMs: number;
   /** How often to look for the answer file. */
   pollMs?: number | undefined;
+  /** The CLI the printed command runs; resolved as a review resolves it. */
+  claudePath?: string | undefined;
+  /** Names each call's files. Random by default; tests make it predictable. */
+  newCallId?: (() => string) | undefined;
   signal?: AbortSignal | undefined;
   onEvent?: ((stage: ReviewStage, event: EngineEvent) => void) | undefined;
 }
 
-export function promptPathFor(exchangeDir: string, stage: ReviewStage): string {
-  return join(exchangeDir, `${stage}-prompt.md`);
+export interface ExchangeFiles {
+  /** The document a person reads: instructions, question, where to reply. */
+  prompt: string;
+  /** The same instructions alone, for the session's system prompt. */
+  system: string;
+  answer: string;
 }
 
-export function answerPathFor(exchangeDir: string, stage: ReviewStage): string {
-  return join(exchangeDir, `${stage}-output.json`);
+/**
+ * One set of files per call. S3 asks several questions under one stage name,
+ * and named by stage alone the second batch overwrote the first's prompt and
+ * read the first's answer straight back; a resumed stage likewise read the
+ * answer an earlier attempt left. A file only this call names cannot be stale.
+ */
+export function exchangeFilesFor(
+  exchangeDir: string,
+  stage: ReviewStage,
+  batchNumber: number | undefined,
+  callId: string,
+): ExchangeFiles {
+  const base = `${stage}${batchNumber === undefined ? "" : `-b${batchNumber}`}-${callId}`;
+  return {
+    prompt: join(exchangeDir, `${base}-prompt.md`),
+    system: join(exchangeDir, `${base}-system.md`),
+    answer: join(exchangeDir, `${base}-output.json`),
+  };
 }
 
 /**
@@ -92,13 +119,63 @@ export function renderExchangeDocument(input: {
   ].join("\n");
 }
 
-/** The command that starts a session on this stage's prompt. */
-export function launchCommandFor(promptPath: string, model: string, worktreeRoot: string): string {
-  return `cd ${JSON.stringify(worktreeRoot)} && claude --model ${model} "$(cat ${JSON.stringify(promptPath)})"`;
+/**
+ * The arguments that start a session on one call's files.
+ *
+ * The same isolation a headless stage gets: read-only tools, no settings or
+ * MCP servers from the reviewed repository, the instructions as the system
+ * prompt from a file. The prompt itself stays out of argv, where Windows caps
+ * a command line at 32,767 characters; the session is told where to read it.
+ * `--add-dir` lets it read the exchange directory, which is outside the
+ * worktree, and `--` ends the options, since `--add-dir` and `--tools` take
+ * every value that follows them.
+ */
+export function launchArgsFor(input: {
+  model: string;
+  exchangeDir: string;
+  files: ExchangeFiles;
+}): string[] {
+  return [
+    "--add-dir",
+    input.exchangeDir,
+    "--model",
+    input.model,
+    "--tools",
+    READ_ONLY_TOOLS.join(","),
+    "--setting-sources",
+    "user",
+    "--strict-mcp-config",
+    "--system-prompt-file",
+    input.files.system,
+    "--",
+    `Read ${input.files.prompt} and answer the question in it exactly as it asks.`,
+  ];
+}
+
+const posixQuote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
+const powershellQuote = (value: string) => `'${value.replace(/'/g, "''")}'`;
+
+/**
+ * The command to paste, for both shells a person here is likely to have open.
+ * Every value is single-quoted, the one form neither shell expands inside.
+ */
+export function launchCommandsFor(
+  cli: CliCommand,
+  worktreeRoot: string,
+  args: readonly string[],
+): { posix: string; powershell: string } {
+  const argv = [cli.command, ...cli.prefixArgs, ...args];
+  return {
+    posix: `cd ${posixQuote(worktreeRoot)} && ${argv.map(posixQuote).join(" ")}`,
+    powershell:
+      `Set-Location -LiteralPath ${powershellQuote(worktreeRoot)}; ` +
+      `& ${argv.map(powershellQuote).join(" ")}`,
+  };
 }
 
 export function createInteractiveEngine(options: InteractiveEngineOptions): ReviewEngine {
   const pollMs = options.pollMs ?? 1000;
+  const newCallId = options.newCallId ?? (() => randomUUID().slice(0, 8));
 
   const run = async (request: StageRequest): Promise<StageResponse> => {
     const schema = stageSchemaFor(request.stage);
@@ -112,10 +189,28 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
         outputContract: outputContractFor(schema),
       });
 
-    await mkdir(options.exchangeDir, { recursive: true });
-    const promptPath = promptPathFor(options.exchangeDir, request.stage);
-    const answerPath = answerPathFor(options.exchangeDir, request.stage);
+    // Mode B starts nothing itself: a person runs the printed command. So the
+    // CLI is looked up, which reads the filesystem, and not run, which would
+    // be a spawn; when none is found the command names `claude` and the
+    // person's own PATH decides.
+    let cli: CliCommand;
+    try {
+      cli = resolveCli(options.claudePath);
+    } catch {
+      cli = { command: "claude", prefixArgs: [], display: "claude" };
+    }
 
+    await mkdir(options.exchangeDir, { recursive: true });
+    const files = exchangeFilesFor(
+      options.exchangeDir,
+      request.stage,
+      request.batchNumber,
+      newCallId(),
+    );
+    const promptPath = files.prompt;
+    const answerPath = files.answer;
+
+    await writeFile(files.system, systemPrompt, "utf8");
     await writeFile(
       promptPath,
       renderExchangeDocument({
@@ -132,12 +227,18 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
     // The only way a person learns what to do next, so it goes through the
     // same channel as the engine's own progress and lands in the activity
     // feed rather than in a log nobody has open.
+    const commands = launchCommandsFor(
+      cli,
+      options.worktreeRoot,
+      launchArgsFor({ model: options.model, exchangeDir: options.exchangeDir, files }),
+    );
     options.onEvent?.(request.stage, {
       kind: "text",
       text:
-        `${request.stage} is waiting for you. Run:\n` +
-        `${launchCommandFor(promptPath, options.model, options.worktreeRoot)}\n` +
-        `then save the JSON answer to ${answerPath}`,
+        `${request.stage} is waiting for you. In PowerShell:\n${commands.powershell}\n` +
+        `In bash or zsh:\n${commands.posix}\n` +
+        `then save the JSON answer to ${answerPath}. The command needs Claude Code ` +
+        `${MINIMUM_CLI_VERSION} or newer, for --system-prompt-file.`,
     });
 
     const raw = await waitForAnswer(answerPath, {

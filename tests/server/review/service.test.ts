@@ -491,24 +491,34 @@ describe("the interactive engine", () => {
       "s5_verification",
     ] as const;
 
+    // Each call names its own files, `<stage>-<id>-prompt.md` and the
+    // matching `-output.json`, so this finds the prompt by its stage.
+    const promptOf = (stage: string) =>
+      existsSync(bundle)
+        ? readdirSync(bundle).find(
+            (name) => name.startsWith(`${stage}-`) && name.endsWith("-prompt.md"),
+          )
+        : undefined;
+
     // Stands in for the person: waits for each prompt to be written, then
     // saves that stage's answer next to it.
     let stopped = false;
     const answering = (async () => {
       for (const [index, stage] of stages.entries()) {
         for (let waited = 0; waited < 600 && !stopped; waited += 1) {
-          if (existsSync(join(bundle, `${stage}-prompt.md`))) break;
+          if (promptOf(stage)) break;
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
         if (stopped) return;
+        const promptName = promptOf(stage) ?? "";
         // Answered the way a person would: by reading the prompt they were
         // handed. The verification stage labels each candidate in the prompt
         // itself, and the ideal answers carry placeholders for those labels
         // because no fixture can know them in advance. The fake CLI resolves
         // them from the prompt; here there is no CLI, so this does.
-        const promptText = readFileSync(join(bundle, `${stage}-prompt.md`), "utf8");
+        const promptText = readFileSync(join(bundle, promptName), "utf8");
         writeFileSync(
-          join(bundle, `${stage}-output.json`),
+          join(bundle, promptName.replace(/-prompt\.md$/, "-output.json")),
           resolveCandidateTokens(JSON.stringify(answers[index]), promptText),
           "utf8",
         );
@@ -532,8 +542,13 @@ describe("the interactive engine", () => {
     expect(requireReview(db, reviewId).usageInputTokens).toBe(0);
     // And the prompt a person was handed is on disk for every stage.
     for (const stage of stages) {
-      expect(existsSync(join(bundle, `${stage}-prompt.md`))).toBe(true);
+      expect(promptOf(stage), stage).toBeDefined();
     }
+    // And its run note says no process answered, rather than naming one.
+    const note = readRunNotes(requireReview(db, reviewId)).find((entry) =>
+      entry.message.startsWith("Engine:"),
+    );
+    expect(note?.message).toContain("interactive, answered in your own session");
   }, 180_000);
 });
 
