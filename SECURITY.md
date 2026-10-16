@@ -16,9 +16,9 @@ time for a response.
 
 ## What is in scope
 
-Trysquare runs entirely on your own machine. There is no server, no account
-system, and no telemetry. That rules out whole categories of vulnerability, but
-it leaves some that matter:
+Trysquare runs entirely on your own machine. Its only server listens on
+127.0.0.1, and there is no account system and no telemetry. That rules out
+whole categories of vulnerability, but it leaves some that matter:
 
 - **Code execution from a reviewed repository.** Trysquare clones and reads
   repositories that may be untrusted. Anything that lets a reviewed repository
@@ -34,6 +34,11 @@ it leaves some that matter:
   review. Any path that does is a bug of the highest severity.
 - **Leaking your code or review results off the machine.** Any unexpected
   outbound transmission is in scope.
+- **Reaching the app from a web page.** A page in your browser can address
+  127.0.0.1 directly or rebind its own domain to it. The server refuses
+  requests addressed to anything but this machine and API requests sent by
+  another site. A way past that, a request the app acts on that a page you
+  merely visited sent, is in scope and serious.
 - **Exposure of credentials.** The app relies on the credentials your Claude
   Code CLI already holds and should never read, copy, or log them.
 

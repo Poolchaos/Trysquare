@@ -34,7 +34,10 @@ Versions are pinned at WP-A and recorded in `PROJECT-STATE.md` once installed.
 ## 3. Runtime topology
 
 - **Web/UI:** Next.js App Router pages + route handlers. Mutations go through
-  route handlers (single-user, no auth middleware).
+  route handlers (single-user, no sign-in). The server binds 127.0.0.1, and
+  `src/proxy.ts` refuses any request not addressed to this machine and any
+  API request sent from another site (`src/lib/http/request-guard.ts`,
+  MVP-PLAN WP 2.3).
 - **Job manager:** a server-side singleton (initialised from
   `instrumentation.ts`) that owns review jobs. One review = one job. Jobs run
   in-process (async orchestration), spawning subprocesses per stage. Max one
