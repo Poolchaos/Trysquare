@@ -152,12 +152,21 @@ requests, never a shortened rule set.
 
 - Node 22 or newer
 - git
-- [Claude Code](https://claude.com/claude-code) 2.1.301 or newer, installed and
-  signed in. Reviews refuse an older CLI by name; `claude --version` says
-  which you have.
+- A Claude subscription, signed in to [Claude Code](https://claude.com/claude-code)
 
-Trysquare drives the `claude` CLI that is already on your machine, using
-whatever credentials it already holds. It ships no model of its own and has no
+`npm install` installs the Claude Code CLI with the app (version 2.1.301,
+about 270MB for your platform), so there is nothing else to install. Reviews
+run through that local CLI, never the API, using the sign-in kept in your
+home directory's `.claude` folder, the same one Claude Code uses elsewhere
+on the machine: signed in there, Trysquare is signed in too. To sign in, or
+to check, run the CLI the reviews use:
+
+```bash
+npm run claude -- auth login
+npm run claude -- auth status
+```
+
+Trysquare drives that CLI using whatever credentials it already holds. It ships no model of its own and has no
 account system, no server of its own, and no telemetry.
 
 Be clear about what that does and does not mean. Reviewing code with a model
@@ -194,7 +203,8 @@ the `--fake` and it runs against a real model on your subscription.
 Two environment variables matter. `TRYSQUARE_DATA` is the data root, holding
 `db.sqlite`, `projects/`, `runs/` and `exports/`, and defaults to
 `~/.local/share/trysquare`. `TRYSQUARE_CLAUDE_PATH` is the binary reviews run
-through, and defaults to `claude` on your PATH.
+through; unset, it is the CLI installed with the app, then `claude` on your
+PATH.
 
 ## Development
 

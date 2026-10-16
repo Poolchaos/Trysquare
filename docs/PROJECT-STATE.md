@@ -52,7 +52,7 @@ Node 22.22.1, npm 11.17.0, git 2.43.0, Claude Code 2.1.71 on Linux.
 next ^16.3.8 (2026-10-16), react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
 drizzle-kit ^0.31.10, better-sqlite3 ^12.11.1 (D-87, 2026-10-16), zod ^4.4.3, tailwindcss ^4.3.3,
 vitest ^4.1.12, @playwright/test ^1.62.0 (chromium installed), eslint ^9.39.5,
-prettier ^3.9.6, ulid ^3.0.2.
+prettier ^3.9.6, ulid ^3.0.2, @anthropic-ai/claude-code 2.1.301 (exact).
 
 TypeScript runs strict plus `noUncheckedIndexedAccess`,
 `noImplicitOverride`, `noFallthroughCasesInSwitch`.
@@ -76,8 +76,10 @@ model and no money, scoring the result against the fixture's manifest.
 
 - `TRYSQUARE_DATA` - the data root, default `~/.local/share/trysquare`. Holds
   `db.sqlite`, `projects/`, `runs/` and `exports/`.
-- `TRYSQUARE_CLAUDE_PATH` - the binary reviews run through, default `claude`
-  on PATH. Every run records which one it used as a run note. Resolved by
+- `TRYSQUARE_CLAUDE_PATH` - the binary reviews run through. Unset, it is the
+  Claude Code CLI installed as a dependency (`@anthropic-ai/claude-code`
+  2.1.301, D-92), then `claude` on PATH. Every run records which one it used
+  as a run note. Resolved by
   `src/server/engine/cli.ts`: a bare name is looked up on PATH (PATHEXT order
   on Windows), a `.js`/`.mjs` runs under Node, and on Windows an npm `.cmd`
   shim is read for the program it launches; anything else that cannot be
@@ -168,5 +170,9 @@ own now (D-75, D-81).
 
 ## External services
 
-None. Reviews run through the local `claude` CLI on the maintainer's Max
-subscription; see `06-MODELS-AND-PROFILES.md`.
+None. Reviews run through the local Claude Code CLI, installed with the app
+(D-92), on the user's Claude subscription, never the API; see
+`06-MODELS-AND-PROFILES.md`. The CLI is Anthropic's, "All rights reserved.
+Use is subject to the Legal Agreements" at
+<https://code.claude.com/docs/en/legal-and-compliance>, and each user
+downloads it from npm under those terms.

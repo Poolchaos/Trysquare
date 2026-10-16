@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CliNotFoundError,
   CliUnusableError,
+  bundledCliPaths,
   isAtLeast,
   parseCliVersion,
   realCliEnvironment,
@@ -71,6 +72,7 @@ function environment(
   platform: NodeJS.Platform,
   path: string[],
   runnable: (path: string) => boolean = () => true,
+  bundled: string[] = [],
 ): CliEnvironment {
   const real = realCliEnvironment();
   return {
@@ -79,6 +81,7 @@ function environment(
     nodePath: NODE,
     env: { PATH: path.join(delimiter), PATHEXT: ".COM;.EXE;.BAT;.CMD" },
     isRunnable: (candidate) => real.isFile(candidate) && runnable(candidate),
+    bundled,
   };
 }
 
@@ -230,5 +233,44 @@ describe("the version a review needs", () => {
     [[1, 9, 999], false],
   ])("judges %j against 2.1.301 as %s", (version, expected) => {
     expect(isAtLeast(version, [2, 1, 301])).toBe(expected);
+  });
+});
+
+describe("the CLI installed with the app", () => {
+  it("is used ahead of PATH when nothing is configured", () => {
+    const bundled = file(join(root, "node_modules", "cli", "claude.exe"));
+    const onPath = join(root, "bin");
+    file(join(onPath, "claude.exe"));
+    expect(
+      resolveCli(undefined, environment("win32", [onPath], undefined, [bundled])).command,
+    ).toBe(bundled);
+  });
+
+  it("gives way to a configured path, which is the user saying which one", () => {
+    const bundled = file(join(root, "node_modules", "cli", "claude"));
+    const chosen = file(join(root, "mine", "claude"));
+    expect(resolveCli(chosen, environment("linux", [], undefined, [bundled])).command).toBe(chosen);
+  });
+
+  it("falls back to PATH when the bundled copy is missing", () => {
+    const onPath = join(root, "bin");
+    const found = file(join(onPath, "claude"));
+    const missing = join(root, "node_modules", "cli", "claude");
+    expect(
+      resolveCli(undefined, environment("linux", [onPath], undefined, [missing])).command,
+    ).toBe(found);
+  });
+
+  it.each([
+    ["win32", "x64", false, "claude-code-win32-x64", "claude.exe"],
+    ["darwin", "arm64", false, "claude-code-darwin-arm64", "claude"],
+    ["linux", "x64", false, "claude-code-linux-x64", "claude"],
+    ["linux", "arm64", true, "claude-code-linux-arm64-musl", "claude"],
+  ] as const)("looks for %s-%s (musl %s) in %s", (platform, cpu, musl, pkg, binary) => {
+    const [first, second] = bundledCliPaths("/app", platform, cpu, musl);
+    expect(first).toBe(join("/app", "node_modules", "@anthropic-ai", pkg, binary));
+    expect(second).toBe(
+      join("/app", "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe"),
+    );
   });
 });

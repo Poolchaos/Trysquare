@@ -15,6 +15,7 @@
 
 import { execFile } from "node:child_process";
 import { accessSync, constants, readFileSync, statSync } from "node:fs";
+import { arch } from "node:os";
 import { delimiter, dirname, extname, isAbsolute, join, resolve } from "node:path";
 import { buildChildEnv } from "@/lib/engine/command";
 
@@ -158,6 +159,40 @@ export interface CliEnvironment {
   /** A regular file that exists, whatever its mode. */
   isFile: (path: string) => boolean;
   readText: (path: string) => string;
+  /** Where the CLI installed with this app would be, most direct first. */
+  bundled: readonly string[];
+}
+
+/**
+ * Where `npm install` puts the Claude Code CLI this app depends on (D-92).
+ *
+ * The platform package's own binary comes first. The wrapper package's
+ * `bin/claude.exe` is that same binary only after its postinstall script has
+ * copied it there, and npm 11 holds install scripts until someone approves
+ * them, leaving a 500-byte placeholder in its place; the version check then
+ * refuses it by name rather than letting a stub run a review.
+ */
+export function bundledCliPaths(
+  root: string,
+  platform: NodeJS.Platform,
+  cpu: string,
+  musl: boolean,
+): string[] {
+  const scope = join(root, "node_modules", "@anthropic-ai");
+  const binary = platform === "win32" ? "claude.exe" : "claude";
+  // The package names the CLI's own installer uses (its install.cjs).
+  const key = platform === "linux" ? `linux-${cpu}${musl ? "-musl" : ""}` : `${platform}-${cpu}`;
+  return [
+    join(scope, `claude-code-${key}`, binary),
+    join(scope, "claude-code", "bin", "claude.exe"),
+  ];
+}
+
+/** musl, as the CLI's installer detects it: no glibc version in the process report. */
+function isMusl(): boolean {
+  if (process.platform !== "linux") return false;
+  const report = process.report?.getReport() as { header?: { glibcVersionRuntime?: string } };
+  return report?.header?.glibcVersionRuntime === undefined;
 }
 
 function isFile(path: string): boolean {
@@ -186,6 +221,9 @@ export function realCliEnvironment(): CliEnvironment {
       }
     },
     readText: (path) => readFileSync(path, "utf8"),
+    // The server runs from the repository root (`npm run start`), which is
+    // where node_modules is.
+    bundled: bundledCliPaths(process.cwd(), process.platform, arch(), isMusl()),
   };
 }
 
@@ -283,16 +321,21 @@ function searchPath(name: string, cli: CliEnvironment): CliCommand {
 }
 
 /**
- * Resolves the CLI from an explicit path when one is configured, otherwise
- * from PATH the way the platform's own shell would. A configured value with
- * no directory in it is a name to look up on PATH, as a shell reads it.
+ * Resolves the CLI: an explicit path when one is configured, otherwise the one
+ * installed with this app, otherwise PATH the way the platform's own shell
+ * would search it. A configured value with no directory in it is a name to
+ * look up on PATH, as a shell reads it.
  */
 export function resolveCli(
   configured: string | undefined,
   cli: CliEnvironment = realCliEnvironment(),
 ): CliCommand {
   const explicit = configured?.trim() ?? "";
-  if (explicit === "") return searchPath("claude", cli);
+  if (explicit === "") {
+    const bundled = cli.bundled.find((candidate) => cli.isRunnable(candidate));
+    if (bundled !== undefined) return { command: bundled, prefixArgs: [], display: bundled };
+    return searchPath("claude", cli);
+  }
   if (!/[\\/]/.test(explicit)) return searchPath(explicit, cli);
   return fromPath(isAbsolute(explicit) ? explicit : resolve(explicit), cli);
 }

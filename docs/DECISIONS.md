@@ -2032,3 +2032,21 @@ verified evidence, in writing, here.
   what keeps Git for Windows' `core.autocrlf=true` out of the worktrees, and
   forward only the system `credential.helper`. Rejected: re-enabling system
   config and pinning keys one by one, and SSH-only.
+- 2026-10-16 D-92 DECIDED (maintainer): the app installs and uses its own
+  local Claude Code CLI, never the API. `@anthropic-ai/claude-code` is a
+  dependency pinned exactly to 2.1.301, so `npm install` brings a CLI known
+  to work on Linux, Windows and macOS, and the CLI version moves only when
+  this repository's lockfile does. The resolver takes `TRYSQUARE_CLAUDE_PATH`
+  first, then the platform package's binary in `node_modules` (not the
+  wrapper's `bin`, which npm 11 leaves as a placeholder until its install
+  script is approved), then PATH. `npm run claude -- <args>` runs that same
+  CLI, for `auth login`. Measured: the bundled CLI reads the same
+  `~/.claude` sign-in as the VS Code extension's (signed in, subscription),
+  and the running app answered `/api/auth` through it with nothing on PATH.
+  Cost: about 250 to 272MB per install, by platform. The package's terms:
+  "All rights reserved. Use is subject to the Legal Agreements" at
+  https://code.claude.com/docs/en/legal-and-compliance; each user downloads
+  it from npm under those terms. Also decided: a sign-in that bills per
+  token gets a warning, not a block, because the people using this all have
+  a subscription (MVP-PLAN phase 6). Rejected: relying on whatever CLI is
+  installed, which let untested versions arrive by self-update.
