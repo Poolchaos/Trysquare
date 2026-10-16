@@ -1972,3 +1972,18 @@ verified evidence, in writing, here.
   branch per WP, merged into `main` once `./verify.sh` is green and pushed,
   so CI proves it; no pull requests (the maintainer's standing consent for
   this repository, 2026-10-16). The driver runs the plan to completion.
+- 2026-10-16 D-87 DECIDED (maintainer, MVP-PLAN MG-2): better-sqlite3 goes
+  from ^13.0.2 to ^12.11.1. Measured on Windows 11 without Python or a C++
+  toolchain: 13.0.2 and 13.0.3 fail `npm ci` on npm 10.9.2 and 11.21.1,
+  because a lockfile entry does not record the package's `"gypfile": false`,
+  so npm finds `binding.gyp` and runs `node-gyp rebuild` (arborist
+  `rebuild.js:238-265`). A lockless `npm install` succeeds, and `npm ci` from
+  the lockfile it writes fails. 12.11.1 installs through prebuild-install,
+  which downloads a prebuilt binary: `npm install` and a clean `npm ci` exit
+  0, its tree audits clean, and it bundles SQLite 3.53.2 against 13.0.2's
+  3.53.4. Rejected: requiring npm 11 (fails the same way), patching
+  `gypfile` into the lockfile behind a gate (measured working, and dropped
+  by the next `npm install`), requiring a C++ toolchain, and
+  `--ignore-scripts` (skips esbuild and unrs-resolver installs too).
+  Re-check trigger: a better-sqlite3 13.x with an install script, or an npm
+  that records `gypfile` in the lockfile.

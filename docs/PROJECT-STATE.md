@@ -48,7 +48,7 @@ Last verified: 2026-08-18
 Node 22.22.1, npm 11.17.0, git 2.43.0, Claude Code 2.1.71 on Linux.
 
 next ^16.2.12, react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
-drizzle-kit ^0.31.10, better-sqlite3 ^13.0.2, zod ^4.4.3, tailwindcss ^4.3.3,
+drizzle-kit ^0.31.10, better-sqlite3 ^12.11.1 (D-87, 2026-10-16), zod ^4.4.3, tailwindcss ^4.3.3,
 vitest ^4.1.10, @playwright/test ^1.62.0 (chromium installed), eslint ^9.39.5,
 prettier ^3.9.6, ulid ^3.0.2.
 

@@ -83,8 +83,8 @@ engine fixes in phase 4 have landed.
 | --- | --- | --- | --- |
 | 1.1 | T1: scan step output without a pipe that SIGPIPE can break (a temp file or here-string into `grep`). Exercise both failure branches once, as 05 section 1 requires, including a marker on line 1 of output over 100KB. | - | DONE e95b87d 2026-10-16: verify.sh scans with a here-string and self-checks the scan at 300KB on every run (0.16s). Through the extracted `run()`: markers first and last caught at 10 to 10,000 lines, 20 of 20 at 3,000; clean output passes; the old pipe scan swapped back in fails the self-check. Local Windows unit run unchanged at 257 failed, all in the audit taxonomy. |
 | 1.2 | T4: `check-nothing-hidden` and `check-no-private` fail rather than exit 0 when they could not check. | - | DONE 475afe4 2026-10-16: nothing-hidden exits 2 on any git failure other than git being absent or no repository (both kept as decided 2026-08-03); no-private exits 2 when git lists no files, reports a file it could not read instead of skipping it, and matches the home directory in its native, forward-slash and Git Bash forms, case-blind on Windows. Each branch driven by hand, five cases. |
-| 1.3 | T3 test side: the DB helper closes SQLite before deleting; `paths.test.ts` expects the platform's own separators (the product is correct, the test asserted POSIX); the mode-only fixture sets the bit with `git update-index --chmod=+x` instead of `chmod`, so it exists on every OS. | - | DONE 2026-10-16: local Windows unit run 257 failed to 50 failed (504 passed, 178 skipped); the 50 are all W1 and W3. The API-route suites that open a database through the runtime are still blocked behind W3 and are checked for the same EBUSY when 3.3 unblocks them. |
-| 1.4 | W5: establish why npm 10.9.2 runs `node-gyp rebuild` for better-sqlite3 13.0.2 despite `"gypfile": false`, and whether npm 11 does. Then apply MG-2. | MG-2 after measurement | TODO |
+| 1.3 | T3 test side: the DB helper closes SQLite before deleting; `paths.test.ts` expects the platform's own separators (the product is correct, the test asserted POSIX); the mode-only fixture sets the bit with `git update-index --chmod=+x` instead of `chmod`, so it exists on every OS. | - | DONE 6575bdf 2026-10-16: local Windows unit run 257 failed to 50 failed (504 passed, 178 skipped); the 50 are all W1 and W3. The API-route suites that open a database through the runtime are still blocked behind W3 and are checked for the same EBUSY when 3.3 unblocks them. |
+| 1.4 | W5: establish why npm 10.9.2 runs `node-gyp rebuild` for better-sqlite3 13.0.2 despite `"gypfile": false`, and whether npm 11 does. Then apply MG-2. | MG-2 after measurement | DONE 2026-10-16: root cause is the lockfile dropping `gypfile`, measured on npm 10.9.2 and 11.21.1; MG-2 resolved as D-87, better-sqlite3 ^12.11.1. A clean `npm ci` with no flags exits 0 on this machine; build passes; Windows unit run unchanged at 50 failed. |
 
 ### Phase 2: security and framework
 
@@ -167,7 +167,7 @@ resolved only by an entry in `docs/DECISIONS.md`.
   The 2026-08-04 runs predate five pipeline changes and CLI 2.1.301's
   snapshot default (E1), so a verdict on them judges a pipeline that no
   longer exists.
-- **MG-2: install on npm 10** (after 1.4 measures). (a) Require npm 11 if it
+- **MG-2: install on npm 10. RESOLVED, D-87: better-sqlite3 ^12.11.1.** (a) Require npm 11 if it
   installs cleanly. (b) Pin a better-sqlite3 version whose install works on
   npm 10 without a toolchain. (c) Document `--ignore-scripts`. Recommended:
   decide on the measurement; (c) is rejected in advance because it silently
