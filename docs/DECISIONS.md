@@ -1996,3 +1996,18 @@ verified evidence, in writing, here.
   compare whole paths, not separators; the mode fixture still asserts
   `100755`; CI on `ubuntu-latest` is green for every phase-1 commit,
   including `--build --e2e` on better-sqlite3 12.11.1 (run 38921212190).
+- 2026-10-16 D-89 DECIDED (MVP WP 2.1, accepted risk): five high advisories
+  stay, all one dev-only chain: eslint-config-next 16.3.8 to
+  @next/eslint-plugin-next to fast-glob to micromatch to `braces`, whose
+  advisory ("stack-exhaustion denial of service through deeply nested
+  patterns") covers `<=3.0.3`, and 3.0.3 is the newest `braces` published.
+  The chain runs only when eslint expands this repository's own globs, so
+  the input is ours, never a reviewed repository's or a user's. npm offers
+  only a "fix" to eslint-config-next 14.2.35, which would pair Next 14 lint
+  rules with Next 16. `npm audit --omit=dev` is 0. Re-check trigger: a
+  `braces` release above 3.0.3, or any advisory in this chain reaching a
+  production dependency. Also recorded: npm 10.9.2 crashes in its peer-set
+  resolver (`build-ideal-tree.js:1289`, "Cannot read properties of null
+  (reading 'edgesOut')") on any install that touches vitest or on
+  `npm audit fix`; the vitest bump was written with npm 11.21.1, and a clean
+  `npm ci` on npm 10.9.2 installs the result.

@@ -47,9 +47,9 @@ Last verified: 2026-08-18
 
 Node 22.22.1, npm 11.17.0, git 2.43.0, Claude Code 2.1.71 on Linux.
 
-next ^16.2.12, react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
+next ^16.3.8 (2026-10-16), react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
 drizzle-kit ^0.31.10, better-sqlite3 ^12.11.1 (D-87, 2026-10-16), zod ^4.4.3, tailwindcss ^4.3.3,
-vitest ^4.1.10, @playwright/test ^1.62.0 (chromium installed), eslint ^9.39.5,
+vitest ^4.1.12, @playwright/test ^1.62.0 (chromium installed), eslint ^9.39.5,
 prettier ^3.9.6, ulid ^3.0.2.
 
 TypeScript runs strict plus `noUncheckedIndexedAccess`,
@@ -137,11 +137,12 @@ own now (D-75, D-81).
   paths, which cannot be static. It affects only the standalone output
   manifest, which this app does not use. Adopting `output: "standalone"`
   voids that acceptance; the re-check trigger is in `DECISIONS.md`.
-- `npm audit` on 2026-10-16 reports 13 vulnerabilities: 1 critical, 10
-  high, 2 moderate. The critical is next 16.2.12, whose advisories include
-  "Unauthenticated Remote Code Execution on windows-hosted servers" (fixed
-  in 16.3.3; every next advisory clears at 16.3.8). The 2026-08-03 reading
-  of 0 is superseded. MVP-PLAN WP 2.1 owns the upgrade.
+- `npm audit --omit=dev` reports 0 vulnerabilities (2026-10-16, after MVP
+  WP 2.1 moved next from 16.2.12 to 16.3.8, which carried a critical
+  "Unauthenticated Remote Code Execution on windows-hosted servers"). The
+  full audit reports 5 high, all one dev-only chain through
+  eslint-config-next to `braces`, which has no fixed release; accepted in
+  D-89 with its re-check trigger.
 - Next's build rewrites `tsconfig.json` (sets `jsx: react-jsx`, adds
   `.next/dev/types`). Run prettier on it after a build or the format gate
   fails on the next run.

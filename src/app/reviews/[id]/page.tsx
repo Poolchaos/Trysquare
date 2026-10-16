@@ -9,6 +9,7 @@
  * rather than holding the connection open.
  */
 
+import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import {
   canTransitionReview,
@@ -321,6 +322,7 @@ function CoveragePanel({
 
 export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [live, setLive] = useState<LiveEntry[]>([]);
   const [streaming, setStreaming] = useState(true);
@@ -668,7 +670,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                     variant="primary"
                     onClick={async () => {
                       const response = await fetch(`/api/reviews/${id}`, { method: "DELETE" });
-                      if (response.ok) window.location.href = "/reviews";
+                      if (response.ok) router.push("/reviews");
                       else
                         setActionError(
                           ((await response.json()) as { error?: string }).error ??

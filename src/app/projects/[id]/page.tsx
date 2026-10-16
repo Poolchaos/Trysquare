@@ -10,6 +10,7 @@
  */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { use, useCallback, useEffect, useState } from "react";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import {
@@ -62,6 +63,7 @@ interface Branches {
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loadError, setLoadError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -399,7 +401,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                       setBlockingReviews(null);
                       const response = await fetch(`/api/projects/${id}`, { method: "DELETE" });
                       if (response.ok) {
-                        window.location.href = "/projects";
+                        router.push("/projects");
                         return;
                       }
                       const body = (await response.json()) as {
@@ -444,7 +446,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                           });
                           if (!cleared) return;
                           const gone = await call(`/api/projects/${id}`, { method: "DELETE" });
-                          if (gone) window.location.href = "/projects";
+                          if (gone) router.push("/projects");
                         }}
                       >
                         Delete {blockingReviews} review(s), then the project
