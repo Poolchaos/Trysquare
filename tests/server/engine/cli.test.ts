@@ -263,17 +263,22 @@ describe("the CLI installed with the app", () => {
     ).toBe(found);
   });
 
+  const inScope = (...parts: string[]) => join("/app", "node_modules", "@anthropic-ai", ...parts);
+  const wrapper = inScope("claude-code", "bin", "claude.exe");
+
   it.each([
-    ["win32", "x64", false, "claude-code-win32-x64", "claude.exe"],
-    ["darwin", "arm64", false, "claude-code-darwin-arm64", "claude"],
-    ["linux", "x64", false, "claude-code-linux-x64", "claude"],
-    ["linux", "arm64", true, "claude-code-linux-arm64-musl", "claude"],
-  ] as const)("looks for %s-%s (musl %s) in %s", (platform, cpu, musl, pkg, binary) => {
-    const [first, second] = bundledCliPaths("/app", platform, cpu, musl);
-    expect(first).toBe(join("/app", "node_modules", "@anthropic-ai", pkg, binary));
-    expect(second).toBe(
-      join("/app", "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe"),
-    );
+    ["win32", "x64", false, [inScope("claude-code-win32-x64", "claude.exe")]],
+    ["linux", "x64", false, [inScope("claude-code-linux-x64", "claude")]],
+    ["linux", "arm64", true, [inScope("claude-code-linux-arm64-musl", "claude")]],
+    // arm64 first on a Mac even for an x64 Node, as the CLI's installer does.
+    [
+      "darwin",
+      "x64",
+      false,
+      [inScope("claude-code-darwin-arm64", "claude"), inScope("claude-code-darwin-x64", "claude")],
+    ],
+  ] as const)("looks on %s-%s (musl %s) in %j, then the wrapper", (platform, cpu, musl, first) => {
+    expect(bundledCliPaths("/app", platform, cpu, musl)).toEqual([...first, wrapper]);
   });
 });
 

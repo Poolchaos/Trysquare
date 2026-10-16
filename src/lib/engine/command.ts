@@ -147,5 +147,9 @@ export function buildChildEnv(
   }
   child.LC_ALL = "C";
   child.LANG = "C";
+  // The CLI installed with the app is the version this repository tested
+  // (D-92), and it should stay that version until the lockfile moves. The
+  // 2.1.301 binary lists this variable among those it reads.
+  child.DISABLE_AUTOUPDATER = "1";
   return child;
 }

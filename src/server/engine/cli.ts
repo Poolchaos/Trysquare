@@ -214,10 +214,18 @@ export function bundledCliPaths(
 ): string[] {
   const scope = join(root, "node_modules", "@anthropic-ai");
   const binary = platform === "win32" ? "claude.exe" : "claude";
-  // The package names the CLI's own installer uses (its install.cjs).
-  const key = platform === "linux" ? `linux-${cpu}${musl ? "-musl" : ""}` : `${platform}-${cpu}`;
+  // The package names the CLI's own installer uses (its install.cjs). On a
+  // Mac it prefers arm64 even for an x64 Node, because under Rosetta the x64
+  // build needs AVX the emulation lacks; arm64 is tried first here for the
+  // same reason, whichever npm installed.
+  const keys =
+    platform === "linux"
+      ? [`linux-${cpu}${musl ? "-musl" : ""}`]
+      : platform === "darwin"
+        ? ["darwin-arm64", "darwin-x64"]
+        : [`${platform}-${cpu}`];
   return [
-    join(scope, `claude-code-${key}`, binary),
+    ...keys.map((key) => join(scope, `claude-code-${key}`, binary)),
     join(scope, "claude-code", "bin", "claude.exe"),
   ];
 }
@@ -237,8 +245,14 @@ function isFile(path: string): boolean {
   }
 }
 
+/**
+ * Built once: none of it changes while the server runs, and on Linux the musl
+ * check generates a full process report.
+ */
+let realEnvironment: CliEnvironment | undefined;
+
 export function realCliEnvironment(): CliEnvironment {
-  return {
+  realEnvironment ??= {
     platform: process.platform,
     env: process.env,
     nodePath: process.execPath,
@@ -259,6 +273,7 @@ export function realCliEnvironment(): CliEnvironment {
     // where node_modules is.
     bundled: bundledCliPaths(process.cwd(), process.platform, arch(), isMusl()),
   };
+  return realEnvironment;
 }
 
 const SCRIPT_EXTENSIONS = new Set([".js", ".mjs", ".cjs"]);

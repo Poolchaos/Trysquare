@@ -160,6 +160,10 @@ describe("the child environment", () => {
     expect(child.LANG).toBe("C");
   });
 
+  it("keeps the CLI from updating itself away from the version the app tested", () => {
+    expect(buildChildEnv({}).DISABLE_AUTOUPDATER).toBe("1");
+  });
+
   it("drops undefined values rather than passing them as empty strings", () => {
     const child = buildChildEnv({ DEFINED: "x", MISSING: undefined });
     expect(child.DEFINED).toBe("x");
