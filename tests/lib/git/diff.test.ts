@@ -5,7 +5,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -73,7 +73,6 @@ beforeAll(() => {
 
   rmSync(join(repo, "deleted.ts"));
   git(["mv", "renamed-from.ts", "renamed-to.ts"]);
-  chmodSync(join(repo, "mode-only.sh"), 0o755);
   writeFileSync(join(repo, "no-newline.ts"), "export const a = 1;\nexport const b = 2;");
   writeFileSync(join(repo, "binary.bin"), Buffer.from([9, 9, 9, 9, 9, 9, 9, 9]));
   writeFileSync(join(repo, "added.ts"), "export const fresh = 1;\n");
@@ -81,6 +80,10 @@ beforeAll(() => {
   writeFileSync(join(repo, "café.ts"), "export const accented = true;\n");
 
   git(["add", "-A"]);
+  // Set in the index rather than with chmod: Windows has no executable bit,
+  // so git there records chmod as no change at all and the file vanished
+  // from the change set. The index is where git keeps the mode on every OS.
+  git(["update-index", "--chmod=+x", "mode-only.sh"]);
   git(["commit", "-qm", "the change set"]);
 
   diffText = git(["diff", "-M", `${base}...HEAD`]);

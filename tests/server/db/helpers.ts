@@ -21,7 +21,12 @@ export function makeTestDb(): TestDb {
   runMigrations(db);
   return {
     db,
-    cleanup: () => rmSync(dir, { recursive: true, force: true }),
+    // Closed first: Windows refuses to delete a file a process holds open, so
+    // removing the directory under a live connection failed every test there.
+    cleanup: () => {
+      db.$client.close();
+      rmSync(dir, { recursive: true, force: true });
+    },
   };
 }
 
