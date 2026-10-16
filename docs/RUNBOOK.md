@@ -40,7 +40,10 @@ tests. Add `--build --e2e` for the full gate, which is what CI runs.
 npm run dev
 ```
 
-Serves on <http://localhost:3000> and opens on the projects screen. For a
+Serves on <http://localhost:3000> and opens on the dashboard. `dev` and
+`start` both bind to 127.0.0.1, so the app is unreachable from any other
+machine; that is deliberate (MVP-PLAN WP 2.2), and there is no flag to undo
+it short of editing `package.json`. For a
 production server, `npm run build` first, then
 `npm run start -- --port <n>`. Starting without building serves stale output
 or fails, so build first.
@@ -176,6 +179,14 @@ against a fake CLI committed to the repository.
   existed. `rm -rf .next` fixes it permanently. Note what this is not: a
   production build followed by `npm run dev` was tried afterwards and starts
   cleanly, so sharing `.next` between the two is not the cause.
+- **`npm run dev` started by an AI coding agent appends a block to
+  `CLAUDE.md`.** Next 16.3 does this whenever its bundled
+  `@vercel/detect-agent` finds an agent in the environment
+  (`node_modules/next/dist/server/lib/app-info-log.js`), and there is no
+  setting to turn it off. Revert it with `git checkout -- CLAUDE.md`; it is
+  not committed (D-90), and the house-style gate refuses it anyway, because
+  the block carries an em dash. A person running `npm run dev` in their own
+  terminal is not detected and nothing is written.
 - **Port 3000 in use is not an error.** Dev falls back to 3001 and prints the
   URL it actually took. Read the line rather than assuming 3000.
 - **A real protocol document usually needs one edit before it imports:

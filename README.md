@@ -174,8 +174,9 @@ npm install
 npm run dev
 ```
 
-That serves the app on <http://localhost:3000> and opens on the projects
-screen. [docs/RUNBOOK.md](docs/RUNBOOK.md) walks through a first review from
+That serves the app on <http://localhost:3000>, on this machine only: both
+scripts bind to 127.0.0.1, so nothing else on the network can reach it. It
+opens on the dashboard. [docs/RUNBOOK.md](docs/RUNBOOK.md) walks through a first review from
 there, including which actions spend model usage and which do not.
 
 To see the whole pipeline work without spending anything and without a model:

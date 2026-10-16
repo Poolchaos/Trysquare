@@ -2011,3 +2011,12 @@ verified evidence, in writing, here.
   (reading 'edgesOut')") on any install that touches vitest or on
   `npm audit fix`; the vitest bump was written with npm 11.21.1, and a clean
   `npm ci` on npm 10.9.2 installs the result.
+- 2026-10-16 D-90 DECIDED (MVP WP 2.2): the agent-rules block that
+  `next dev` 16.3.8 appends to `CLAUDE.md` when it detects an AI agent is
+  reverted, not committed. It tells agents to treat Next as unfamiliar and
+  read `node_modules/next/dist/docs/` before writing code; that is a
+  dependency writing standing instructions into the charter, which section
+  4 keeps lean and stable, and the block carries an em dash the house-style
+  gate refuses. Observed when this session started `npm run dev` to prove the
+  loopback bind. Rejected: committing it, which the block itself recommends.
+  Re-check trigger: a Next release with an opt-out for the generator.
