@@ -16,6 +16,7 @@ import {
   ModelAliasRejectedError,
   getModel,
   recordProbeFailure,
+  recordProbeOutcome,
   recordProbeSuccess,
   registerCandidate,
 } from "@/server/db/repositories/models";
@@ -261,6 +262,40 @@ describe("model registry", () => {
     expect(stored?.lastError).toBe("model not available on this account");
     expect(stored?.lastProbedAt).not.toBeNull();
     expect(availabilityOf(stored!)).toBe("unavailable");
+  });
+
+  it("leaves a working model selectable when a probe could not tell", () => {
+    // The 2026-07-30 decision: one slow call must not grey out a model that
+    // works. Recorded as a failure until 2026-10-16, against that decision.
+    registerCandidate(db, fable);
+    recordProbeOutcome(db, fable.id, {
+      status: "available",
+      resolvedId: fable.id,
+      contextWindow: 200_000,
+    });
+    const before = getModel(db, fable.id)!;
+
+    recordProbeOutcome(db, fable.id, {
+      status: "indeterminate",
+      error: "The probe did not finish in time, so availability is unknown.",
+    });
+
+    const stored = getModel(db, fable.id)!;
+    expect(availabilityOf(stored)).toBe("available");
+    expect(stored.lastProbedAt).toBe(before.lastProbedAt);
+    expect(stored.lastError).toMatch(/availability is unknown/);
+  });
+
+  it("leaves a never-probed model unknown, not unavailable, after an indeterminate probe", () => {
+    registerCandidate(db, fable);
+    recordProbeOutcome(db, fable.id, { status: "indeterminate", error: "CLI not found" });
+    expect(availabilityOf(getModel(db, fable.id)!)).toBe("unknown");
+  });
+
+  it("marks a model unavailable only when the CLI said so", () => {
+    registerCandidate(db, fable);
+    recordProbeOutcome(db, fable.id, { status: "unavailable", error: "model not found" });
+    expect(availabilityOf(getModel(db, fable.id)!)).toBe("unavailable");
   });
 
   it("treats a probe older than a day as stale rather than trusted", () => {

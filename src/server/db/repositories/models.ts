@@ -90,6 +90,30 @@ export function recordProbeFailure(db: Db, id: string, error: string): void {
     .run();
 }
 
+/**
+ * Records what a probe found, by kind.
+ *
+ * An indeterminate probe, a timeout or a CLI that could not be reached,
+ * changes nothing but the message. The 2026-07-30 decision: greying a working
+ * model out of the picker on one slow call would be wrong and hard to notice,
+ * so the last real verdict and the time it was reached both stand.
+ */
+export function recordProbeOutcome(
+  db: Db,
+  id: string,
+  outcome:
+    | { status: "available"; resolvedId: string; contextWindow: number }
+    | { status: "unavailable" | "indeterminate"; error: string },
+): void {
+  if (outcome.status === "available") {
+    recordProbeSuccess(db, id, outcome);
+  } else if (outcome.status === "unavailable") {
+    recordProbeFailure(db, id, outcome.error);
+  } else {
+    db.update(models).set({ lastError: outcome.error }).where(eq(models.id, id)).run();
+  }
+}
+
 export class ModelNotFoundError extends Error {
   constructor(readonly modelId: string) {
     super(`No model called "${modelId}" is registered.`);
