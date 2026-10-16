@@ -1987,3 +1987,12 @@ verified evidence, in writing, here.
   `--ignore-scripts` (skips esbuild and unrs-resolver installs too).
   Re-check trigger: a better-sqlite3 13.x with an install script, or an npm
   that records `gypfile` in the lockfile.
+- 2026-10-16 D-88 REVIEW (MVP phase 1, WP 1.1 to 1.4, a45f73f..0f4d35c):
+  the four diffs re-read whole against the plan rows and the charter. No
+  findings. Checked in particular: the self-check cannot pass with a broken
+  scan (driven by swapping the old pipe back in); every new skip or exit in
+  the two leak gates fails toward "not checked" rather than "clean"; the
+  rewritten paths assertions still fail on a wrong layout because they
+  compare whole paths, not separators; the mode fixture still asserts
+  `100755`; CI on `ubuntu-latest` is green for every phase-1 commit,
+  including `--build --e2e` on better-sqlite3 12.11.1 (run 38921212190).
