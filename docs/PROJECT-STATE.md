@@ -9,11 +9,12 @@ Last verified: 2026-08-18
 
 - 2026-10-16: two audits on the maintainer's Windows 11 machine found the
   app did not install, test or run there (`plans/AUDIT-2026-10-16.md`
-  section 2). The same day MVP phases 1 to 3.4 made it green there:
-  `./verify.sh --build --e2e` exits 0 on Windows 11 (Node 22.17.0, npm
-  10.9.2, git 2.50.0) with 776 unit tests passing, 6 skipped, and 41
-  browser tests, and the fake demo finds 11 of 11. macOS is not yet in CI,
-  and no real model has run on Windows. The work to the MVP is
+  section 2). The same day MVP phases 1 to 3 made it green there and on all
+  three platforms in CI: `./verify.sh --build --e2e` exits 0 on the
+  maintainer's Windows 11 machine, and CI run 38954795087 at 268d918 passed
+  it on `ubuntu-latest`, `windows-latest` and `macos-latest` (808 unit
+  tests, 6 skipped, 41 browser tests each), with the fake demo after it. No
+  real model has run on Windows or macOS. The work to the MVP is
   `plans/MVP-PLAN.md` (D-85), with G1 re-scoped to cover Linux, Windows and
   macOS (D-86).
 - Gate G0 (brief and plan) PASSED 2026-07-30. Gate G1 (working pipeline) is
@@ -69,8 +70,9 @@ plus 41 browser tests (the journey, the failure paths, the theme and
 screenshot pass, the phone-width pass, and axe over every screen in both
 themes). `--e2e` implies `--build` since 2026-08-18, because Playwright serves
 the last build and without it the browser gate can pass against output that
-predates the change under test (D-70). CI runs `./verify.sh --build --e2e`;
-the local default leaves both off so it stays fast.
+predates the change under test (D-70). CI runs `./verify.sh --build --e2e`
+and then the fake demo on Ubuntu, Windows and macOS (MVP WP 3.6); the local
+default leaves build and e2e off so it stays fast.
 
 `npm run demo:fixture -- --fake` reviews the seeded fixture end to end with no
 model and no money, scoring the result against the fixture's manifest.
