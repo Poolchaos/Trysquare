@@ -75,7 +75,11 @@ model and no money, scoring the result against the fixture's manifest.
 - `TRYSQUARE_DATA` - the data root, default `~/.local/share/trysquare`. Holds
   `db.sqlite`, `projects/`, `runs/` and `exports/`.
 - `TRYSQUARE_CLAUDE_PATH` - the binary reviews run through, default `claude`
-  on PATH. Every run records which one it used as a run note.
+  on PATH. Every run records which one it used as a run note. Resolved by
+  `src/server/engine/cli.ts`: a bare name is looked up on PATH (PATHEXT order
+  on Windows), a `.js`/`.mjs` runs under Node, and on Windows an npm `.cmd`
+  shim is read for the program it launches; anything else that cannot be
+  started without a shell is refused by name.
 
 ## Settings
 

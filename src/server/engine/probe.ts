@@ -13,6 +13,7 @@ import { z } from "zod";
 import { PROBE_PROMPT, buildChildEnv, buildProbeArgs } from "@/lib/engine/command";
 import type { ReviewProfile } from "@/lib/domain/enums";
 import { contextWindowOf, resultEventSchema } from "@/lib/engine/events";
+import { resolveCli, type CliCommand } from "./cli";
 
 const authStatusSchema = z
   .object({
@@ -42,32 +43,52 @@ interface CliOutcome {
 function runCli(
   args: readonly string[],
   timeoutMs: number,
-  claudePath: string,
+  claudePath: string | undefined,
   /** Written to the child's stdin, which is where a prompt travels now. */
   stdin = "",
 ): Promise<CliOutcome> {
+  const failed = (error: unknown): CliOutcome => ({
+    ok: false,
+    stdout: "",
+    error: (error instanceof Error ? error.message : String(error)).slice(0, 500),
+    timedOut: false,
+  });
+  let cli: CliCommand;
+  try {
+    cli = resolveCli(claudePath);
+  } catch (error) {
+    return Promise.resolve(failed(error));
+  }
   return new Promise((resolve) => {
-    const child = execFile(
-      claudePath,
-      [...args],
-      {
-        timeout: timeoutMs,
-        env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
-        encoding: "utf8",
-        maxBuffer: 8 * 1024 * 1024,
-        windowsHide: true,
-      },
-      (error: Error | null, stdout: string, stderr: string) => {
-        const killed =
-          error !== null && (error as NodeJS.ErrnoException & { killed?: boolean }).killed === true;
-        resolve({
-          ok: error === null,
-          stdout,
-          error: error === null ? "" : (stderr || error.message).trim().slice(0, 500),
-          timedOut: killed,
-        });
-      },
-    );
+    let child: ReturnType<typeof execFile>;
+    try {
+      child = execFile(
+        cli.command,
+        [...cli.prefixArgs, ...args],
+        {
+          timeout: timeoutMs,
+          env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
+          encoding: "utf8",
+          maxBuffer: 8 * 1024 * 1024,
+          windowsHide: true,
+        },
+        (error: Error | null, stdout: string, stderr: string) => {
+          const killed =
+            error !== null &&
+            (error as NodeJS.ErrnoException & { killed?: boolean }).killed === true;
+          resolve({
+            ok: error === null,
+            stdout,
+            error: error === null ? "" : (stderr || error.message).trim().slice(0, 500),
+            timedOut: killed,
+          });
+        },
+      );
+    } catch (error) {
+      // A launch Windows refuses throws here rather than calling back.
+      resolve(failed(error));
+      return;
+    }
     // The CLI reads the prompt from stdin and waits while it is open, so this
     // both delivers the prompt and ends the wait. A call with nothing to send,
     // like auth status, closes it empty for the same reason.
@@ -86,11 +107,7 @@ function runCli(
 export async function readAuthStatus(
   options: { claudePath?: string; timeoutMs?: number } = {},
 ): Promise<AuthSummary> {
-  const outcome = await runCli(
-    ["auth", "status"],
-    options.timeoutMs ?? 30_000,
-    options.claudePath ?? "claude",
-  );
+  const outcome = await runCli(["auth", "status"], options.timeoutMs ?? 30_000, options.claudePath);
   if (!outcome.ok) return { loggedIn: false, usesSubscription: false };
 
   // Parsed defensively: this reads whatever binary TRYSQUARE_CLAUDE_PATH
@@ -140,7 +157,7 @@ export async function probeModel(
   const outcome = await runCli(
     buildProbeArgs(modelId),
     options.timeoutMs ?? 180_000,
-    options.claudePath ?? "claude",
+    options.claudePath,
     PROBE_PROMPT,
   );
 

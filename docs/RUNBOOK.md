@@ -53,7 +53,7 @@ Two environment variables control where things live:
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `TRYSQUARE_DATA` | `~/.local/share/trysquare` | Data root: `db.sqlite`, `projects/`, `runs/`, `exports/`. |
-| `TRYSQUARE_CLAUDE_PATH` | `claude` on PATH | The binary reviews run through. |
+| `TRYSQUARE_CLAUDE_PATH` | `claude` on PATH | The binary reviews run through. On Windows, point it at `claude.exe` or an npm `claude.cmd`; a `.mjs` or `.js` runs under Node. |
 
 Point `TRYSQUARE_DATA` at a scratch directory when you want a clean slate;
 nothing else in the app needs resetting.

@@ -13,6 +13,7 @@ import { dirname } from "node:path";
 import type { StageErrorClass } from "@/lib/domain/enums";
 import { buildChildEnv, buildStageArgs, type StageCommandOptions } from "@/lib/engine/command";
 import type { EngineEvent, ResultEvent } from "@/lib/engine/events";
+import { resolveCli, type CliCommand } from "./cli";
 import { StreamDecoder } from "./stream";
 
 export class StageFailedError extends Error {
@@ -71,6 +72,9 @@ const RUNTIME_ERROR_MARKERS = [
   /FATAL ERROR/,
 ];
 
+/** How long a stopped CLI gets to exit before the next, harder step. */
+const STOP_GRACE_MS = 5_000;
+
 export function classifyFailure(stderr: string, exitCode: number | null): StageErrorClass {
   if (LIMIT_MARKERS.some((pattern) => pattern.test(stderr))) return "limit";
   if (RUNTIME_ERROR_MARKERS.some((pattern) => pattern.test(stderr))) return "spawn";
@@ -80,7 +84,12 @@ export function classifyFailure(stderr: string, exitCode: number | null): StageE
 
 export async function runStage(options: StageRunOptions): Promise<StageOutcome> {
   const args = buildStageArgs(options);
-  const command = options.claudePath ?? "claude";
+  let cli: CliCommand;
+  try {
+    cli = resolveCli(options.claudePath);
+  } catch (error) {
+    throw new StageFailedError("spawn", `Could not start the CLI: ${(error as Error).message}`);
+  }
 
   await mkdir(dirname(options.logPath), { recursive: true });
   const log = createWriteStream(options.logPath, { flags: "a" });
@@ -95,19 +104,40 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
     logError = error;
   });
 
-  log.write(`# ${command} ${args.map((a) => JSON.stringify(a)).join(" ")}\n# cwd=${options.cwd}\n`);
+  const argv = [...cli.prefixArgs, ...args];
+  log.write(
+    `# ${cli.command} ${argv.map((a) => JSON.stringify(a)).join(" ")}\n# cwd=${options.cwd}\n`,
+  );
 
   return new Promise<StageOutcome>((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: options.cwd,
-      // Session markers are removed here; without that the CLI refuses to run
-      // when the app was started from a Claude Code terminal.
-      env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
-      // stdin is a pipe now, because the prompt is written to it rather than
-      // passed in argv where the kernel caps a single argument at 128KB.
-      stdio: ["pipe", "pipe", "pipe"] as const,
-      windowsHide: true,
-    });
+    const spawned = (() => {
+      try {
+        return spawn(cli.command, argv, {
+          cwd: options.cwd,
+          // Session markers are removed here; without that the CLI refuses to
+          // run when the app was started from a Claude Code terminal.
+          env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
+          // stdin is a pipe, because the prompt is written to it rather than
+          // passed in argv where the kernel caps a single argument at 128KB.
+          stdio: ["pipe", "pipe", "pipe"] as const,
+          windowsHide: true,
+        });
+      } catch (error) {
+        // Windows refuses some launches by throwing here instead of emitting
+        // an error event: EINVAL, EFTYPE, ENAMETOOLONG. Measured 2026-10-16.
+        return error as Error;
+      }
+    })();
+    if (spawned instanceof Error) {
+      log.end(`# could not start: ${spawned.message}\n`);
+      reject(
+        new StageFailedError("spawn", `Could not start "${cli.display}": ${spawned.message}`, {
+          logPath: options.logPath,
+        }),
+      );
+      return;
+    }
+    const child = spawned;
 
     // Written and closed immediately: the CLI reads until end of input, so a
     // stream left open is a run that waits forever. An EPIPE here means the
@@ -122,40 +152,56 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
     let toolsGranted: string[] = [];
     let rateLimit: StageOutcome["rateLimit"];
     let settled = false;
+    let stopping: StageFailedError | null = null;
+    let escalation: NodeJS.Timeout | undefined;
 
     const finish = (fn: () => void) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearTimeout(escalation);
       log.end();
       fn();
     };
 
-    // A hang is a failure, not something to wait out.
+    // A stopped stage settles when its process has gone, not when it was
+    // asked to go. The caller deletes the worktree next, and on Windows a
+    // directory that is still a live process's cwd cannot be deleted
+    // (measured 2026-10-16: EBUSY). A process that ignores the request is
+    // killed outright, and one that somehow survives that is given up on
+    // rather than waited for, because a hang is a failure.
+    const stop = (error: StageFailedError, signal: NodeJS.Signals) => {
+      if (settled || stopping !== null) return;
+      stopping = error;
+      child.kill(signal);
+      escalation = setTimeout(() => {
+        child.kill("SIGKILL");
+        escalation = setTimeout(() => finish(() => reject(error)), STOP_GRACE_MS);
+      }, STOP_GRACE_MS);
+    };
+
     const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      finish(() =>
-        reject(
-          new StageFailedError(
-            "timeout",
-            `The stage produced no result within ${Math.round(options.timeoutMs / 1000)}s and was stopped.`,
-            { logPath: options.logPath },
-          ),
+      stop(
+        new StageFailedError(
+          "timeout",
+          `The stage produced no result within ${Math.round(options.timeoutMs / 1000)}s and was stopped.`,
+          { logPath: options.logPath },
         ),
+        "SIGKILL",
       );
     }, options.timeoutMs);
 
     const onAbort = () => {
-      child.kill("SIGTERM");
-      finish(() =>
-        reject(
-          new StageFailedError("cancelled", "The stage was cancelled.", {
-            logPath: options.logPath,
-          }),
-        ),
+      stop(
+        new StageFailedError("cancelled", "The stage was cancelled.", {
+          logPath: options.logPath,
+        }),
+        "SIGTERM",
       );
     };
     options.signal?.addEventListener("abort", onAbort, { once: true });
+    // An abort that landed before this listener existed fired no event.
+    if (options.signal?.aborted) onAbort();
 
     const handle = (event: EngineEvent) => {
       switch (event.kind) {
@@ -195,7 +241,7 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
     child.on("error", (error) => {
       finish(() =>
         reject(
-          new StageFailedError("spawn", `Could not start "${command}": ${error.message}`, {
+          new StageFailedError("spawn", `Could not start "${cli.display}": ${error.message}`, {
             logPath: options.logPath,
           }),
         ),
@@ -205,6 +251,12 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
     child.on("close", (code) => {
       for (const event of decoder.flush()) handle(event);
       options.signal?.removeEventListener("abort", onAbort);
+
+      if (stopping !== null) {
+        const reason = stopping;
+        finish(() => reject(reason));
+        return;
+      }
 
       finish(() => {
         const malformed = decoder.malformedLines();
