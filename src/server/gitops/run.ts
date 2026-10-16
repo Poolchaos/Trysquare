@@ -42,9 +42,12 @@ const DEFAULT_MAX_BUFFER = 256 * 1024 * 1024;
  * Prompts are disabled so a missing credential fails instead of hanging, and
  * the locale is pinned so parsing never depends on the user's language.
  */
-function gitEnv(): NodeJS.ProcessEnv {
-  return {
-    ...process.env,
+export function gitEnv(
+  credentialHelpers: readonly string[],
+  base: Readonly<Record<string, string | undefined>> = process.env,
+): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = {
+    ...base,
     GIT_TERMINAL_PROMPT: "0",
     GIT_ASKPASS: "echo",
     SSH_ASKPASS: "echo",
@@ -52,6 +55,50 @@ function gitEnv(): NodeJS.ProcessEnv {
     LC_ALL: "C",
     LANG: "C",
   };
+  // Appended after any the user set, which GIT_CONFIG_COUNT numbers from 0.
+  const existing = Number.parseInt(env.GIT_CONFIG_COUNT ?? "0", 10) || 0;
+  credentialHelpers.forEach((helper, offset) => {
+    env[`GIT_CONFIG_KEY_${existing + offset}`] = "credential.helper";
+    env[`GIT_CONFIG_VALUE_${existing + offset}`] = helper;
+  });
+  if (credentialHelpers.length > 0) {
+    env.GIT_CONFIG_COUNT = String(existing + credentialHelpers.length);
+  }
+  return env;
+}
+
+/**
+ * The credential helpers the system git config names, read once.
+ *
+ * GIT_CONFIG_NOSYSTEM stays, because system config is where Git for Windows
+ * sets `core.autocrlf=true`, and that would rewrite the line endings of every
+ * worktree the model reads. But it is also where Git for Windows registers
+ * its credential manager, so a private HTTPS repository had no way to
+ * authenticate at all (D-91, MVP-PLAN 3.5). Only the helpers come back, in
+ * their order, empty values included, since an empty one resets the list.
+ */
+let systemHelpers: Promise<string[]> | undefined;
+
+export function systemCredentialHelpers(): Promise<string[]> {
+  systemHelpers ??= new Promise((resolve) => {
+    execFile(
+      "git",
+      ["config", "--system", "--get-all", "credential.helper"],
+      {
+        timeout: 10_000,
+        encoding: "utf8",
+        windowsHide: true,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: "0", LC_ALL: "C", LANG: "C" },
+      },
+      // Exit 1 is "no such key", and no system file says the same; either way
+      // there is nothing to forward.
+      (error, stdout) => {
+        if (error || stdout === "") resolve([]);
+        else resolve(stdout.replace(/\r?\n$/, "").split(/\r?\n/));
+      },
+    );
+  });
+  return systemHelpers;
 }
 
 export async function git(args: readonly string[], options: GitRunOptions = {}): Promise<string> {
@@ -59,10 +106,11 @@ export async function git(args: readonly string[], options: GitRunOptions = {}):
   return stdout;
 }
 
-export function gitWithStderr(
+export async function gitWithStderr(
   args: readonly string[],
   options: GitRunOptions = {},
 ): Promise<{ stdout: string; stderr: string }> {
+  const helpers = await systemCredentialHelpers();
   return new Promise((resolve, reject) => {
     const child = execFile(
       "git",
@@ -71,7 +119,7 @@ export function gitWithStderr(
         cwd: options.cwd,
         timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
         maxBuffer: options.maxBuffer ?? DEFAULT_MAX_BUFFER,
-        env: gitEnv(),
+        env: gitEnv(helpers) as NodeJS.ProcessEnv,
         encoding: "utf8",
         windowsHide: true,
       },
