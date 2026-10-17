@@ -2457,3 +2457,29 @@ verified evidence, in writing, here.
   old lock at its first. Windows' EPERM for a name being deleted is retried,
   and every lock failure, not only a live holder, makes the server print why
   and exit.
+- 2026-10-17 D-117 REVIEW (MVP 4.17 to 4.21, da9cac2..124b773, by a
+  separate read-only reviewer; each finding re-run here before it was
+  fixed). Seven findings, all dispositioned before new work:
+  1. MEDIUM: the tab forgiveness let a quote re-nest a line, so a Python
+  line moved into or out of a block passed. 3. NFC treated different code
+  as the same, and the byte-order mark was dropped from any cited range,
+  not only the file's start. 4. A faithful quote of a file mixing tabs and
+  spaces was still killed. 1, 3 and 4 fixed 37bbcf4 (D-115, correcting
+  D-114).
+  2. LOW, demonstrated: two servers starting together on a stale lock both
+  held it in about one start in ten; and a lock failure other than a live
+  holder left the server up. 6. The in-use message's advice did not fit the
+  only case it is raised in. 7. Closing the runtime and the refused start
+  were untested. 2, 6 and 7 fixed 39b4097 (D-116).
+  5. LOW: the review page's Resume button ignored a 409, so a review another
+  tab had cancelled showed nothing. Fixed 0fbf353, with a stale manager
+  comment.
+  The reviewer could not drive `next dev` without writing into the repo;
+  it was driven here for D-113, and holds the lock in one process.
+  The race test added for finding 2 then failed once in the full gate, with
+  both racers refused. By the lock's own logic that needs the stale holder's
+  pid to be alive: the pid of a process that had exited, which the test used,
+  had been reused while the parallel suite spawned. Ten rounds of 100 trials
+  alone found no fault in the lock. The tests now use a pid no process can
+  have, odd and above every platform's limit (382acd9), and the full gates
+  since are green.
