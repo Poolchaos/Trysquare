@@ -48,12 +48,16 @@ with_timeout() {
     # A watchdog that outlives the command, rather than an alarm set before
     # exec: under Git Bash's Perl the alarm did not survive exec (measured
     # 2026-10-16, a 3s sleep under a 1s limit exited 0).
+    # The command runs in its own process group and the whole group is
+    # signalled, as GNU timeout does: a grandchild left holding the output
+    # pipe kept $(...) waiting after the child was killed (an 8s background
+    # sleep under a 2s limit took 8s; measured 2026-10-17).
     perl -e '
       my $limit = shift;
       my $pid = fork();
       exit 127 unless defined $pid;
-      if ($pid == 0) { exec @ARGV or exit 127; }
-      local $SIG{ALRM} = sub { kill "TERM", $pid; sleep 2; kill "KILL", $pid; exit 124; };
+      if ($pid == 0) { setpgrp(0, 0); exec @ARGV or exit 127; }
+      local $SIG{ALRM} = sub { kill "TERM", -$pid; sleep 2; kill "KILL", -$pid; exit 124; };
       alarm $limit;
       waitpid($pid, 0);
       alarm 0;
