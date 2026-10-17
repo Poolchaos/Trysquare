@@ -21,11 +21,12 @@ describe("stage arguments", () => {
     outputFormat: "stream-json" as const,
   };
 
-  it("isolates the run from the reviewed repository's configuration", () => {
+  it("isolates the run from the reviewed repository's configuration, and the person's", () => {
     // Verified against the real CLI: a repository carrying its own CLAUDE.md
-    // changed the model's reply when these were absent.
+    // changed the model's reply when these were absent. No sources at all
+    // since D-124: `user` still read the person's CLAUDE.md and settings.
     const args = buildStageArgs(base);
-    expect(valueAfter(args, "--setting-sources")).toBe("user");
+    expect(valueAfter(args, "--setting-sources")).toBe("");
     expect(args).toContain("--strict-mcp-config");
   });
 

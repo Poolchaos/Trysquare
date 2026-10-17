@@ -2601,3 +2601,23 @@ verified evidence, in writing, here.
   alternative, offering it everywhere, would not have mislabelled any
   candidate that can run a review. Found on the way, not acted on here: the
   CLI swapped claude-opus-4-1-20250805 for claude-opus-5-5 without a word.
+- 2026-10-17 D-124 DECIDED (maintainer's choice; found by the review of 4.5
+  to 4.7, refining D-121 and the 2026-07-30 WP-E isolation flags): every
+  stage and probe passes --setting-sources naming no source, so no settings
+  file and no CLAUDE.md is read, and CLAUDE_CODE_EXTRA_BODY is stripped from
+  the child like CLAUDE_CODE_EFFORT_LEVEL. Evidence, all against a local
+  stand-in for the API on the bundled 2.1.301, spending nothing: with
+  `user`, a person's CLAUDE.md was sent in every request (on this machine,
+  the maintainer's global rules reached every review), a settings env
+  CLAUDE_CODE_EFFORT_LEVEL made a review at high send low, and a settings
+  maxEffortLevel of high made one at xhigh send high; CLAUDE_CODE_EXTRA_BODY
+  in the shell made it send low even with the effort pinned through
+  --settings; with no sources, neither CLAUDE.md was sent and xhigh was sent
+  as asked. A --settings flag overrides a settings effort but not a
+  maxEffortLevel cap, which is why sources are dropped rather than pinned.
+  The subscription sign-in is still found: the same stand-in received the
+  request with a Bearer token. Kept by tests/server/engine/stand-in-api.test.ts,
+  which runs the real CLI with the engine's own arguments and environment.
+  Not measured: an organisation-managed cap. Rejected: pinning through
+  --settings and reading the person's settings for a cap, and recording
+  the difference as accepted.

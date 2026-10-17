@@ -36,8 +36,9 @@ elsewhere. The engine therefore removes the variables a session and its host
 set for the processes they start, by name, exactly as it sets an explicit
 working directory rather than inheriting one. A person's own settings, such
 as `CLAUDE_CODE_OAUTH_TOKEN`, pass through (D-120), except
-`CLAUDE_CODE_EFFORT_LEVEL`, which the CLI ranks above the `--effort` every
-stage passes (D-121). Older CLIs refused to start at all under `CLAUDECODE`;
+`CLAUDE_CODE_EFFORT_LEVEL` and `CLAUDE_CODE_EXTRA_BODY`, which the CLI ranks
+above the `--effort` every stage passes (D-121, D-124). No settings file is
+read at all, a person's included, for the same reason (D-124). Older CLIs refused to start at all under `CLAUDECODE`;
 2.1.301 does not.
 
 Model discovery is done by probing, and the results below are an example of

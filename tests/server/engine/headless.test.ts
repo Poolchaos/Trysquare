@@ -433,7 +433,7 @@ describe("what the engine actually invokes", () => {
     // CLAUDE.md changes the reviewer's behaviour.
     const settingSourcesIndex = record.args.indexOf("--setting-sources");
     expect(settingSourcesIndex).toBeGreaterThan(-1);
-    expect(record.args[settingSourcesIndex + 1]).toBe("user");
+    expect(record.args[settingSourcesIndex + 1]).toBe("");
     expect(record.args).toContain("--strict-mcp-config");
   });
 
