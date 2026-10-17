@@ -181,6 +181,29 @@ describe("the answer it accepts", () => {
       output: { files: [] },
     });
   });
+
+  it("waits out an answer still being written, not only an empty one", async () => {
+    // An editor can save in more than one write. A half-written answer that
+    // was not empty used to be read as the answer and fail the stage as
+    // unreadable; it now counts once two reads a poll apart agree. The
+    // partial text changes every 5 ms, faster than the 25 ms poll, so no two
+    // reads can agree until the whole answer is down.
+    const answerPath = filesFor(ask).answer;
+    mkdirSync(join(dir, "bundle"), { recursive: true });
+    let writes = 0;
+    const growing = setInterval(() => {
+      writes += 1;
+      writeFileSync(answerPath, `{"files": [${" ".repeat(writes)}`, "utf8");
+    }, 5);
+    setTimeout(() => {
+      clearInterval(growing);
+      writeFileSync(answerPath, JSON.stringify({ files: [] }), "utf8");
+    }, 300);
+
+    await expect(engine({ timeoutMs: 5_000 }).run(ask)).resolves.toMatchObject({
+      output: { files: [] },
+    });
+  });
 });
 
 describe("when no answer comes", () => {

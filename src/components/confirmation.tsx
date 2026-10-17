@@ -159,7 +159,9 @@ export function ConfirmationQueue({
           return;
         }
         if (!response.ok) {
-          const body = (await response.json()) as { error?: string };
+          // A server error page is not JSON, and reading it as JSON threw
+          // past this message, so the refusal went unsaid.
+          const body = (await response.json().catch(() => ({}))) as { error?: string };
           setError(body.error ?? "The decision could not be recorded.");
           return;
         }

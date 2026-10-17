@@ -250,6 +250,25 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByText(/\d+ of \d+ decided/)).toHaveText(String(before));
   });
 
+  await test.step("a decision that does not get through says so, and decides nothing", async () => {
+    // A dropped connection, and a server error whose body is not JSON, both
+    // used to fail in silence: the decision was lost and looked made.
+    const before = await page.getByText(/\d+ of \d+ decided/).textContent();
+    await page.route("**/api/findings/*/confirm", (route) => route.abort(), { times: 1 });
+    await page.locator("body").press("c");
+    await expect(page.getByText(/The decision could not be sent/)).toBeVisible();
+
+    await page.route(
+      "**/api/findings/*/confirm",
+      (route) =>
+        route.fulfill({ status: 500, contentType: "text/html", body: "<html>Server error</html>" }),
+      { times: 1 },
+    );
+    await page.locator("body").press("c");
+    await expect(page.getByText("The decision could not be recorded.")).toBeVisible();
+    await expect(page.getByText(/\d+ of \d+ decided/)).toHaveText(String(before));
+  });
+
   await test.step("one finding is dismissed with a reason", async () => {
     // Nothing is reported until a person says so, so completing is refused
     // while anything is still undecided.
