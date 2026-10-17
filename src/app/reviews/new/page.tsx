@@ -11,7 +11,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { SELECTABLE_REVIEW_EFFORTS } from "@/lib/domain/enums";
+import { SELECTABLE_REVIEW_EFFORTS, type ReviewEffort } from "@/lib/domain/enums";
 import { effortRunsOn } from "@/lib/models/effort-support";
 import {
   isSelectable,
@@ -131,10 +131,20 @@ function NewReview() {
   const [rulesetId, setRulesetId] = useState("");
   const [model, setModel] = useState("");
   const [effort, setEffort] = useState("high");
-  // Extra high chosen and then a model that runs it as high: what is shown
+  // Extra high chosen and then a model that does not run it: what is shown
   // and sent falls back to high rather than an effort the run would not get.
   const efforts = EFFORTS.filter((option) => effortRunsOn(model, option.value));
   const chosenEffort = efforts.some((option) => option.value === effort) ? effort : "high";
+
+  /**
+   * A person picking a model. The choice itself goes back to high when the
+   * model does not run it, not only what is shown: kept, it came back as
+   * Extra high on a model that does, and a review started then ran at it.
+   */
+  function chooseModel(id: string) {
+    setModel(id);
+    setEffort(effortRunsOn(id, chosenEffort as ReviewEffort) ? chosenEffort : "high");
+  }
   const [intent, setIntent] = useState("");
   // "" means the model's own profile; anything else is a deliberate downgrade
   // sent with both the pre-flight and the creation, so the numbers previewed
@@ -552,7 +562,7 @@ function NewReview() {
                         className="sr-only"
                         disabled={!selectable}
                         checked={model === row.id}
-                        onChange={() => setModel(row.id)}
+                        onChange={() => chooseModel(row.id)}
                       />
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
