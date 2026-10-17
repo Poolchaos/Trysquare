@@ -10,9 +10,24 @@
  */
 
 import { SHUTDOWN } from "@/lib/domain/shutdown";
+import { DataDirInUseError } from "@/server/data-dir-lock";
 import { runtime } from "@/server/runtime";
 
-const { manager } = runtime();
+/**
+ * A server that cannot have its data directory is no server: left running,
+ * it answered every request with a 500 while the reason sat in its log.
+ */
+function start(): ReturnType<typeof runtime> {
+  try {
+    return runtime();
+  } catch (error) {
+    if (!(error instanceof DataDirInUseError)) throw error;
+    console.error(error.message);
+    process.exit(1);
+  }
+}
+
+const { manager } = start();
 
 /**
  * Stops every running review when the server is told to stop. Next handles

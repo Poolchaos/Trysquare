@@ -38,6 +38,11 @@ export function projectRepoDir(dataDir: string, projectId: string): string {
   return join(dataDir, "projects", projectId, "repo.git");
 }
 
+/** Held by the one server using a data directory (4.18). */
+export function lockPath(dataDir: string): string {
+  return join(dataDir, "server.lock");
+}
+
 export function runDir(dataDir: string, reviewId: string): string {
   return join(dataDir, "runs", reviewId);
 }

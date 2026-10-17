@@ -2404,3 +2404,17 @@ verified evidence, in writing, here.
   A verdict naming no candidate is still left aside, as a test already
   pinned: its candidate goes to the person as an open question, which
   costs nothing, where refusing would pay for the stage again.
+- 2026-10-17 D-113 DECIDED (WP 4.18): one server per data directory. The
+  runtime takes a lock file, server.lock, naming its process before it
+  opens the database, so a second server neither marks the first one's
+  running reviews interrupted nor migrates beside it. A lock whose process
+  is gone, after a crash or a kill, is taken over; one that cannot be read
+  is too. A server refused the lock prints why and exits, rather than
+  answering every request with a 500 as Next left it doing. Driven for
+  real with two production servers on one directory: the first kept
+  answering 200, the second exited 1 naming the first's process. `next
+  build` was checked not to open the data directory at all, and `next dev`
+  works with the lock, holding it in one process. Rejected: a database
+  level lock, since the first thing a second server does is the orphan
+  sweep, which a SQLite lock would not prevent without one held for the
+  whole life of the server.

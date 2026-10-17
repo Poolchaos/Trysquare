@@ -14,14 +14,17 @@
 
 import { homedir } from "node:os";
 import { dbPath, resolveDataDir } from "@/lib/paths";
+import { acquireDataDirLock } from "./data-dir-lock";
 import { createDb, type Db } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { jobManager, type JobManager } from "./jobs/manager";
 
 const RUNTIME_KEY = Symbol.for("trysquare.runtime");
+const EXIT_HOOK_KEY = Symbol.for("trysquare.runtime.exit-hook");
 
 interface RuntimeHolder {
-  [RUNTIME_KEY]?: { db: Db; dataDir: string };
+  [RUNTIME_KEY]?: { db: Db; dataDir: string; release: () => void };
+  [EXIT_HOOK_KEY]?: true;
 }
 
 export interface Runtime {
@@ -35,10 +38,18 @@ export function runtime(): Runtime {
 
   if (!holder[RUNTIME_KEY]) {
     const dataDir = resolveDataDir(process.env, homedir());
+    // Before the database is opened: a second server on this directory would
+    // mark the first one's running reviews interrupted, and could migrate the
+    // database alongside it (4.18).
+    const release = acquireDataDirLock(dataDir);
     const db = createDb(dbPath(dataDir));
     runMigrations(db);
     jobManager().init({ db, dataDir });
-    holder[RUNTIME_KEY] = { db, dataDir };
+    holder[RUNTIME_KEY] = { db, dataDir, release };
+    if (!holder[EXIT_HOOK_KEY]) {
+      process.once("exit", () => holder[RUNTIME_KEY]?.release());
+      holder[EXIT_HOOK_KEY] = true;
+    }
   }
 
   const { db, dataDir } = holder[RUNTIME_KEY];
@@ -53,5 +64,6 @@ export function runtime(): Runtime {
 export function closeRuntime(): void {
   const holder = globalThis as RuntimeHolder;
   holder[RUNTIME_KEY]?.db.$client.close();
+  holder[RUNTIME_KEY]?.release();
   delete holder[RUNTIME_KEY];
 }

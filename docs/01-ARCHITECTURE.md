@@ -86,6 +86,7 @@ Layering laws:
 
 ```
 db.sqlite
+server.lock                         the one server using this directory (4.18)
 projects/<projectId>/repo.git       bare clone (no working tree to damage)
 runs/<reviewId>/worktree/<slug>/    detached read-only checkout of fromCommit
 runs/<reviewId>/worktree/           parent, and the cwd AI stages are given
