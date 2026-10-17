@@ -6,7 +6,7 @@
  * place rather than restated at each call site.
  */
 
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 
 export const DATA_DIR_ENV_VAR = "TRYSQUARE_DATA";
 
@@ -65,4 +65,30 @@ export function logsDir(dataDir: string, reviewId: string): string {
 
 export function exportsDir(dataDir: string): string {
   return join(dataDir, "exports");
+}
+
+export class PathEscapeError extends Error {
+  constructor(
+    readonly root: string,
+    readonly relativePath: string,
+  ) {
+    super(
+      `${JSON.stringify(relativePath)} resolves outside ${root}, so it is not read or written.`,
+    );
+    this.name = "PathEscapeError";
+  }
+}
+
+/**
+ * Joins a path onto a root and refuses a result outside it. The second line
+ * of defence after the diff parser's own check (MVP-PLAN 4.8): any path that
+ * came from a repository or a model goes through here before a read or write.
+ */
+export function insideRoot(root: string, relativePath: string): string {
+  const base = resolve(root);
+  const target = resolve(base, relativePath);
+  if (target !== base && !target.startsWith(base + sep)) {
+    throw new PathEscapeError(root, relativePath);
+  }
+  return target;
 }

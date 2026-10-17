@@ -14,9 +14,9 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { ReviewProfile, ReviewStage } from "@/lib/domain/enums";
 import type { ChangedSymbol } from "@/lib/git/symbols";
+import { insideRoot } from "@/lib/paths";
 import { assertBatchesCoverEverything, planRuleBatches } from "@/lib/rulesets/compose";
 import type { ImportedRule } from "@/lib/rulesets/model";
 import { budgetFor, estimateTokens, fitsBudget, splitToFit } from "@/lib/review/budget";
@@ -972,7 +972,9 @@ function hunkIndexFor(
 
 async function readFileIfPossible(root: string, qualifiedPath: string): Promise<string | null> {
   try {
-    return await readFile(join(root, qualifiedPath), "utf8");
+    // A path a model named is contained like one from a diff: one that leaves
+    // the worktree reads as unreadable, and the finding citing it is killed.
+    return await readFile(insideRoot(root, qualifiedPath), "utf8");
   } catch {
     return null;
   }

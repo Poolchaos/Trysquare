@@ -10,6 +10,7 @@
  */
 
 import type { ChangeType } from "@/lib/domain/enums";
+import { assertSafeRepoPath } from "./repo-path";
 
 export interface ParsedHunk {
   /** Position within its file, starting at 0. Matches ledger_hunks.hunkIndex. */
@@ -188,6 +189,10 @@ export function parseUnifiedDiff(patch: string): ParsedFile[] {
         current.isModeChangeOnly = true;
       }
     }
+    // Every path is joined onto a directory later; one that could leave it
+    // stops the parse here, before anything reads or writes with it.
+    assertSafeRepoPath(current.path);
+    if (current.oldPath !== undefined) assertSafeRepoPath(current.oldPath);
     files.push(current);
     current = null;
     currentHunk = null;

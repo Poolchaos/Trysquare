@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import type { RepoRole } from "@/lib/domain/enums";
 import { parseUnifiedDiff, summariseDiff, type ParsedFile } from "@/lib/git/diff";
 import { changedExportedSymbols, type ChangedSymbol } from "@/lib/git/symbols";
+import { insideRoot } from "@/lib/paths";
 import { diffText, fileAtCommit } from "./repo";
 
 export interface RepoSpec {
@@ -116,7 +117,7 @@ export async function buildBundle(options: {
       const previous = await fileAtCommit(spec.repoDir, spec.mergeBaseCommit, sourcePath);
       if (previous === null) continue;
 
-      const destination = join(bundleDir, "base", spec.slug, sourcePath);
+      const destination = insideRoot(join(bundleDir, "base", spec.slug), sourcePath);
       await mkdir(dirname(destination), { recursive: true });
       await writeFile(destination, previous, "utf8");
     }
@@ -193,7 +194,7 @@ export async function readBaseContents(
     try {
       contents.set(
         `${entry.slug}/${entry.file.path}`,
-        await readFile(join(bundleDir, "base", entry.slug, source), "utf8"),
+        await readFile(insideRoot(join(bundleDir, "base", entry.slug), source), "utf8"),
       );
     } catch (error) {
       missing.push({
