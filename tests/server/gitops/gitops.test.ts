@@ -323,6 +323,40 @@ describe("a parsed diff that disagrees with git's list of changed files (D-108)"
   });
 });
 
+describe("a tag with a branch's name, there before the clone (D-119 review)", () => {
+  // git then shortens the branch to heads/main, which the 4.22 code read as a
+  // branch called heads/main: the branch list threw and no review could be
+  // started from the screen.
+  let clone: string;
+
+  beforeAll(async () => {
+    const origin = join(root, "tagged-origin");
+    execFileSync("git", ["clone", "-q", originDir, origin]);
+    git(["config", "user.email", "test@example.invalid"], origin);
+    git(["config", "user.name", "Test"], origin);
+    git(["tag", "main", "HEAD"], origin);
+    clone = join(root, "tagged-before.git");
+    await cloneBare(origin, clone);
+  }, 60_000);
+
+  it("lists the branch by its own name", async () => {
+    const names = (await listBranches(clone)).map((branch) => branch.name);
+    expect(names).toContain("main");
+    expect(names).not.toContain("heads/main");
+  });
+
+  it("names the default branch by its own name", async () => {
+    expect(await detectDefaultBranch(clone)).toBe("main");
+  });
+
+  it("measures every listed branch against the default, as the branch list does", async () => {
+    const into = await detectDefaultBranch(clone);
+    for (const branch of await listBranches(clone)) {
+      await expect(divergence(clone, branch.name, into)).resolves.toBeDefined();
+    }
+  });
+});
+
 describe("a tag with a branch's name (4.22)", () => {
   // git resolves a bare name as a tag before a branch, so a tag called main
   // pointing at the feature's tip made the feature look merged into main.
@@ -340,6 +374,8 @@ describe("a tag with a branch's name (4.22)", () => {
 
   it("resolves the branch, not the tag", async () => {
     expect(await resolveBranch(tagged, "main")).toBe(mainTip);
+    // Already qualified, as a caller holding a full ref might pass it.
+    expect(await resolveBranch(tagged, "refs/heads/main")).toBe(mainTip);
   });
 
   it("does not call a branch merged because a tag of that name holds it", async () => {

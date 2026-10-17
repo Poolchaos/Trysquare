@@ -44,9 +44,13 @@ export async function fetchAll(repoDir: string): Promise<void> {
  */
 export async function detectDefaultBranch(repoDir: string): Promise<string> {
   try {
-    const head = await git(["symbolic-ref", "--short", "HEAD"], { cwd: repoDir });
-    const name = head.trim();
-    if (name !== "") return name;
+    // The full name with its prefix taken off, never --short: git shortens a
+    // branch to heads/main when a tag is also called main, and that is not
+    // the branch's name.
+    const head = (await git(["symbolic-ref", "HEAD"], { cwd: repoDir })).trim();
+    if (head.startsWith("refs/heads/") && head.length > "refs/heads/".length) {
+      return head.slice("refs/heads/".length);
+    }
   } catch {
     // Fall through: a bare clone can have a detached or missing HEAD.
   }
@@ -68,7 +72,9 @@ export async function detectDefaultBranch(repoDir: string): Promise<string> {
 }
 
 const BRANCH_FORMAT = [
-  "%(refname:short)",
+  // The name under refs/heads/, never refname:short, which becomes heads/main
+  // when a tag shares the branch's name.
+  "%(refname:lstrip=2)",
   "%(objectname)",
   "%(committerdate:iso-strict)",
   "%(contents:subject)",
@@ -98,7 +104,7 @@ export async function listBranches(repoDir: string): Promise<BranchInfo[]> {
  * whose tip it pointed at looked merged (4.22).
  */
 function branchRef(branch: string): string {
-  return `refs/heads/${branch}`;
+  return branch.startsWith("refs/heads/") ? branch : `refs/heads/${branch}`;
 }
 
 /** The commit a branch points at, never a tag of the same name. */
