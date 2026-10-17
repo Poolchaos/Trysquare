@@ -123,9 +123,12 @@ describe("the data directory lock", () => {
 describe("two servers starting together (D-118)", () => {
   it("lets exactly one take each lock, new or left by a server that stopped", async () => {
     // A lock file managed by hand let both take it, one start in ten on
-    // Windows before D-116 and still now and then on macOS after it.
-    // Thirty: the faults this has caught, both holding one start in ten and
-    // both refusing every time, show in the first few.
+    // Windows before D-116, and on macOS after it at trial 90 of 100 (CI run
+    // 39040825134). Thirty keeps the gate quick, at 12.6 s here: a fault at
+    // one start in ten shows in thirty trials 96 times in 100 (1 - 0.9^30),
+    // and both refusing, the other fault this caught, showed every time. At
+    // macOS's apparent rate, one in 91, a run catches it 28 times in 100
+    // (1 - (90/91)^30), and the runs adding up are what catch it.
     const trials = 30;
     for (let trial = 0; trial < trials; trial += 1) {
       const dir = join(dataDir, `dir-${trial}`);
