@@ -2506,3 +2506,37 @@ verified evidence, in writing, here.
   Windows), shows one holder in every trial. The holder's process id is
   written beside the lock only for the refusal message; a file at the lock
   path that is not a SQLite database is refused and left alone.
+- 2026-10-17 D-119 REVIEW (MVP 4.18 to 4.23, 62ea1a8..63b5e4a, by a
+  separate read-only reviewer; each finding re-run here before it was
+  fixed). Nine findings, all dispositioned before new work:
+  1. HIGH: branch names were read in git's shortened form, heads/main when
+  a tag shares the name, which the 4.22 qualifying turned into a ref that
+  does not exist: the branch list answered 500, and a project cloned after
+  such a tag stored heads/main as its default. Fixed e9bc2e9: names are
+  read unshortened, tested on a clone that had the tag before cloning.
+  2. MEDIUM: an updated Git LFS file, whose version line is context, was
+  not named, and a README quoting a pointer was. Fixed d5f3287: a side of
+  the first hunk must read as a whole pointer from line 1; a real-git test
+  holds the three lines of context that relies on.
+  3. MEDIUM: a page whose stream the server let go polled for the rest of
+  the run, though the stream claimed it reconnected. Fixed 6d9e50c: the
+  last frame says to reconnect, and the page opens a new stream.
+  4. LOW: a failed pid write left the lock held by a handle nothing kept,
+  so the same process then refused itself. Fixed 24ed9d5.
+  5. LOW: a settings change refused part way had written the keys before
+  the refusal and started no waiting review. Fixed 41a131e.
+  6. LOW: the decision queue went on offering decisions after a 409, and
+  completing read an HTML refusal as JSON. Fixed c5badfa.
+  7. LOW: four stale or misplaced comments. Fixed 24ed9d5 and b9bc535.
+  8. LOW: the race test went from 100 trials to 30, below trial 90 where
+  D-118's macOS fault showed, and D-118 gave no count. The test now says
+  what thirty catch (1217e31): a fault at one start in ten 96 times in
+  100, one at macOS's apparent rate 28. D-118's counts: CI runs
+  39043693135, 39044366812, 39044912063, 39045571070 and 39046942782
+  (4c646dd to e9bc2e9) each ran the 30 trials on Windows, macOS and
+  Ubuntu, green at the first attempt: 150 trials on each, one holder in
+  every one.
+  9. LOW: the docs left out the lock's journal and the server.lock a build
+  before D-118 leaves, whose server does not see the new lock; the demo
+  fixture and the e2e setup resolved branch names as commits. Fixed
+  f892e08.
