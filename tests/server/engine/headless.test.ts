@@ -135,6 +135,16 @@ describe("running a stage", () => {
   });
 });
 
+describe("the evidence the read-only check needs", () => {
+  it("fails a stage whose CLI never said which tools it granted", async () => {
+    // An empty granted list passes the read-only check, so a missing init
+    // event used to mean the check was skipped without anyone knowing.
+    const error = await run("no-init").catch((thrown: unknown) => thrown);
+    expect((error as StageFailedError).errorClass).toBe("invalid_output");
+    expect((error as Error).message).toMatch(/no init event/);
+  });
+});
+
 describe("failure handling", () => {
   it("treats exiting zero with no result as a failure", async () => {
     // The dangerous case: a naive runner reads exit code 0 and reports an

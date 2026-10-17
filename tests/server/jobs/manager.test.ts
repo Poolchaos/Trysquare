@@ -14,6 +14,9 @@ import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { importProtocol } from "@/lib/rulesets/import";
+import { isResumableReview, type ReviewStatus } from "@/lib/domain/state-machines";
+import { logsDir, worktreeRootDir } from "@/lib/paths";
+import { SHUTDOWN } from "@/server/review/service";
 import type { Db } from "@/server/db/client";
 import { createProject, setCloneStatus } from "@/server/db/repositories/projects";
 import {
@@ -159,6 +162,28 @@ describe("stopping a review", () => {
     const outcome = await manager.settled(reviewId);
     expect(outcome?.kind).toBe("cancelled");
     expect(requireReview(db, reviewId).status).toBe("cancelled");
+  }, 120_000);
+
+  it("leaves a review the server stopped interrupted, resumable and with its worktree", async () => {
+    // A shutdown is not a person's decision to abandon a review. Cancelled is
+    // terminal, so stopping the server must not end there.
+    process.env.FAKE_CLAUDE_SCENARIO = "hang";
+    const reviewId = seedReview();
+    // Waits for the CLI's init line in the stage transcript, so the process
+    // exists when the server stops: a stage's "started" comes before it spawns.
+    start(reviewId);
+    const transcript = join(logsDir(dataDir, reviewId), "s1_risk.log");
+    for (let attempt = 0; attempt < 300; attempt += 1) {
+      if (existsSync(transcript) && readFileSync(transcript, "utf8").includes('"init"')) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    await manager.drain(SHUTDOWN);
+
+    const review = requireReview(db, reviewId);
+    expect(review.status).toBe("interrupted");
+    expect(isResumableReview(review.status as ReviewStatus)).toBe(true);
+    expect(existsSync(worktreeRootDir(dataDir, reviewId))).toBe(true);
   }, 120_000);
 
   it("takes a queued review out of the line and marks it cancelled", async () => {

@@ -170,6 +170,7 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
     let result: ResultEvent | null = null;
     let sessionId = "";
     let toolsGranted: string[] = [];
+    let sawInit = false;
     let rateLimit: StageOutcome["rateLimit"];
     let settled = false;
     let stopping: StageFailedError | null = null;
@@ -229,6 +230,7 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
         case "init":
           sessionId = event.sessionId;
           toolsGranted = event.tools;
+          sawInit = true;
           break;
         case "rate-limit":
           rateLimit = {
@@ -331,6 +333,22 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
                 logPath: options.logPath,
                 ...(rateLimit?.resetsAt === undefined ? {} : { resetsAt: rateLimit.resetsAt }),
               },
+            ),
+          );
+          return;
+        }
+
+        // The init event is the only evidence of which tools the CLI granted.
+        // Without it the granted list stayed empty, and an empty list passes
+        // the read-only check, so a CLI that stopped reporting it would have
+        // been trusted rather than checked.
+        if (!sawInit) {
+          reject(
+            new StageFailedError(
+              "invalid_output",
+              "The CLI finished without reporting the tools it granted (no init event), " +
+                "so the read-only guarantee could not be checked.",
+              { exitCode: code, stderr, logPath: options.logPath },
             ),
           );
           return;

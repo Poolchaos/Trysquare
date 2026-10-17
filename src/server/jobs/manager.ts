@@ -197,10 +197,16 @@ export class JobManager {
     return this.active.get(reviewId)?.settled;
   }
 
-  /** Cancels everything and waits, so a test or a shutdown leaves nothing running. */
-  async drain(): Promise<void> {
+  /**
+   * Stops everything and waits, so a test or a shutdown leaves nothing
+   * running. The aborts happen before the first await: aborting signals each
+   * stage's CLI at once, which is what a shutdown needs when the process may
+   * exit before the wait finishes. With SHUTDOWN as the reason the reviews are
+   * left interrupted and resumable rather than cancelled.
+   */
+  async drain(reason?: unknown): Promise<void> {
     this.queue.length = 0;
-    for (const [, run] of this.active) run.controller.abort();
+    for (const [, run] of this.active) run.controller.abort(reason);
     await Promise.allSettled([...this.active.values()].map((run) => run.settled));
   }
 

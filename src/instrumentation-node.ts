@@ -9,6 +9,20 @@
  * at server start instead of at the first request.
  */
 
+import { SHUTDOWN } from "@/server/review/service";
 import { runtime } from "@/server/runtime";
 
-runtime();
+const { manager } = runtime();
+
+/**
+ * Stops every running review when the server is told to stop. Next handles
+ * the same signals and exits once its own cleanup is done, which this cannot
+ * hold up, but the aborts inside drain() run before its first await, so each
+ * stage's CLI has been signalled before Next gets that far. Without this a
+ * killed server left its claude children running and spending on POSIX,
+ * where a child outlives its parent. The reviews end interrupted, as a crash
+ * leaves them, and resume from their checkpoints.
+ */
+const stop = () => void manager.drain(SHUTDOWN);
+process.once("SIGTERM", stop);
+process.once("SIGINT", stop);

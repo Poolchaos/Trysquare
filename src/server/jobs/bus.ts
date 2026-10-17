@@ -45,7 +45,7 @@ export type ReviewEvent =
   | { kind: "note"; note: RunNote }
   | {
       kind: "done";
-      outcome: "completed" | "paused" | "cancelled" | "failed";
+      outcome: "completed" | "paused" | "cancelled" | "interrupted" | "failed";
       reason?: string | undefined;
     };
 

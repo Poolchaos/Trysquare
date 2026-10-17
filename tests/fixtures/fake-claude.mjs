@@ -331,6 +331,14 @@ switch (scenario) {
     break;
   }
 
+  case "no-init": {
+    // A result with no init event before it, so nothing says which tools were
+    // granted. The engine must not take that silence as read-only.
+    emit(resultEvent());
+    process.exit(0);
+    break;
+  }
+
   case "json-result": {
     // Returns whatever FAKE_CLAUDE_RESULT holds as the run's result text, so
     // a test can drive the answer a stage gets without changing this file.

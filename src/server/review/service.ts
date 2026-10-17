@@ -179,7 +179,15 @@ export type RunOutcome =
   | { kind: "completed"; result: PipelineResult }
   | { kind: "paused"; reason: string }
   | { kind: "cancelled"; reason: string }
+  | { kind: "interrupted"; reason: string }
   | { kind: "failed"; reason: string; logPath?: string | undefined };
+
+/**
+ * The reason a run is aborted with when the server, not a person, stops it.
+ * A cancel is final; a shutdown is not, so the review is left interrupted, as
+ * a crash leaves it, and resumes from its checkpoints.
+ */
+export const SHUTDOWN = Symbol.for("trysquare.shutdown");
 
 interface RepoSide {
   slug: string;
@@ -591,6 +599,13 @@ async function recordFailure(
       ...(resetsAt === undefined ? {} : { pausedResetsAt: resetsAt }),
     });
     return { kind: "paused", reason: message };
+  }
+
+  // Before the cancel branch, which an abort would otherwise reach. The
+  // worktrees stay: a resumed run checks them out again only if they are gone.
+  if (signal?.aborted === true && signal.reason === SHUTDOWN) {
+    settle(db, reviewId, "interrupted");
+    return { kind: "interrupted", reason: "The server stopped while this review was running." };
   }
 
   if (errorClass === "cancelled" || signal?.aborted === true) {
