@@ -2395,3 +2395,12 @@ verified evidence, in writing, here.
   TIME_WAIT and 12 established. Neither the app, the tests, nor the
   machine's ports were near a limit, so the refusal comes from the
   runner's network stack. The D-105 rule stands: re-run once, record each.
+- 2026-10-17 D-112 DECIDED (WP 4.17): two verdicts for one candidate,
+  counted by the candidate a label resolves to so that C1 and c1 are one,
+  refuse the verification stage's answer, which strikes it so a resume
+  asks again. The second verdict used to be applied as a second state
+  change and threw outside the checks that strike a refused answer, so
+  every resume replayed it and failed the same way; a test shows both.
+  A verdict naming no candidate is still left aside, as a test already
+  pinned: its candidate goes to the person as an open question, which
+  costs nothing, where refusing would pay for the stage again.

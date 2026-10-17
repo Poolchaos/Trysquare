@@ -629,9 +629,11 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       ),
     ),
   });
-  const verification = rejecting("s5_verification", () =>
-    verificationStageSchema.parse(verificationResponse.output),
-  );
+  const verification = rejecting("s5_verification", () => {
+    const parsed = verificationStageSchema.parse(verificationResponse.output);
+    assertVerdictsMatch(parsed.verdicts, candidates.length);
+    return parsed;
+  });
 
   let verified = 0;
   let killed = 0;
@@ -963,6 +965,41 @@ function assertSymbolVerdictsAreBacked(output: AdversarialStageOutput): void {
   }
 
   if (problems.length > 0) throw new SymbolVerdictUnbackedError(problems);
+}
+
+export class VerdictsMismatchError extends Error {
+  constructor(readonly problems: readonly string[]) {
+    super(
+      `The verification stage's verdicts do not match the candidates it was asked about: ` +
+        `${problems.join("; ")}. A candidate takes one verdict, so the answer is ` +
+        `refused.`,
+    );
+    this.name = "VerdictsMismatchError";
+  }
+}
+
+/**
+ * No candidate is given two verdicts. The second was applied as a second
+ * state change and threw outside the checks that strike a refused answer, so
+ * every resume replayed it (4.17). A verdict for no candidate is left aside
+ * as before: its candidate goes to the person as an open question.
+ */
+function assertVerdictsMatch(verdicts: readonly { ref: string }[], candidateCount: number): void {
+  const problems: string[] = [];
+  const named = new Map<number, string>();
+  for (const verdict of verdicts) {
+    const index = indexOfRef(verdict.ref);
+    if (index < 0 || index >= candidateCount) continue;
+    const earlier = named.get(index);
+    if (earlier !== undefined) {
+      problems.push(
+        `${refFor(index)} was given more than one verdict (as ${earlier} and ${verdict.ref})`,
+      );
+      continue;
+    }
+    named.set(index, verdict.ref);
+  }
+  if (problems.length > 0) throw new VerdictsMismatchError(problems);
 }
 
 export class FindingPathError extends Error {

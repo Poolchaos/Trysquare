@@ -796,6 +796,49 @@ describe("a verdict that never arrives", () => {
   });
 });
 
+describe("verdicts that do not match the candidates asked about (4.17)", () => {
+  const verdict = (ref: string, kind: "verified" | "killed") => ({
+    ref,
+    verdict: kind,
+    quotedCode: "  const user = payload as User;",
+    lineStart: 2,
+    lineEnd: 2,
+    note: kind === "killed" ? "Refuted." : "checked",
+  });
+
+  async function verifyingWith(verdicts: unknown[]) {
+    const struck: string[] = [];
+    const outcome = run(
+      { ...BASE_ANSWERS, s5_verification: { verdicts } },
+      { invalidate: (stage: string) => struck.push(stage) },
+    );
+    return { outcome, struck };
+  }
+
+  it("refuses two verdicts for one candidate, and strikes the answer so a resume asks again", async () => {
+    // The second verdict used to throw from the state machine, outside the
+    // checks that strike a refused answer, so every resume replayed it.
+    const { outcome, struck } = await verifyingWith([
+      verdict("C1", "verified"),
+      verdict("C1", "killed"),
+    ]);
+    await expect(outcome).rejects.toThrow(/C1 was given more than one verdict/);
+    expect(struck).toEqual(["s5_verification"]);
+  });
+
+  it("counts two spellings of one label as one candidate", async () => {
+    const { outcome } = await verifyingWith([verdict("C1", "verified"), verdict("c1", "killed")]);
+    await expect(outcome).rejects.toThrow(/more than one verdict/);
+  });
+
+  it("still leaves a verdict for no candidate aside, as it always did", async () => {
+    // Its candidate is left without a verdict and goes to the person as an
+    // open question, which costs nothing; refusing it would re-run the stage.
+    const { outcome } = await verifyingWith([verdict("C9", "killed")]);
+    await expect(outcome).resolves.toMatchObject({ openQuestions: 1, killed: 0 });
+  });
+});
+
 describe("attaching a sweep hit to the finding it produced", () => {
   it("picks the finding whose line range contains the hit", async () => {
     // Matching on path alone would attach the hit to whichever finding came
