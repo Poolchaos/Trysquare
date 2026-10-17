@@ -30,6 +30,21 @@ const EVIDENCE = join(
 /** Distinctive enough that finding it in the export cannot be a coincidence. */
 const EDITED_COMMENT = "Rewritten by hand: this bills a sub-cent invoice as zero.";
 
+/**
+ * Counts the page reading the review it shows afresh, from now until stopped.
+ * That review's own path, not any under /api/reviews: the top bar polls
+ * /api/reviews/attention, which counted as a reload the page never made.
+ */
+function countReviewReads(page: import("@playwright/test").Page) {
+  const own = `/api${new URL(page.url()).pathname}`;
+  const counter = { count: 0, stop: () => page.off("request", onRequest) };
+  function onRequest(request: import("@playwright/test").Request) {
+    if (request.method() === "GET" && new URL(request.url()).pathname === own) counter.count += 1;
+  }
+  page.on("request", onRequest);
+  return counter;
+}
+
 test("a review, from an empty app to an exported report", async ({ page }) => {
   await test.step("an app with nothing in it says what to do first", async () => {
     await page.goto("/projects");
@@ -267,6 +282,30 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.locator("body").press("c");
     await expect(page.getByText("The decision could not be recorded.")).toBeVisible();
     await expect(page.getByText(/\d+ of \d+ decided/)).toHaveText(String(before));
+
+    // A review another tab completed or cancelled refuses the decision, and
+    // the page used to keep offering decisions on it (D-119 review). Answered
+    // once by the route, the way the server does, and the page reads the
+    // review again so it shows where the review really is.
+    const reloads = countReviewReads(page);
+    await page.route(
+      "**/api/findings/*/confirm",
+      (route) =>
+        route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error:
+              'Review "01J" is completed: its findings are decided only while it awaits confirmation.',
+            code: "ReviewNotDecidingError",
+          }),
+        }),
+      { times: 1 },
+    );
+    await page.locator("body").press("c");
+    await expect(page.getByText(/its findings are decided only while it awaits/)).toBeVisible();
+    await expect.poll(() => reloads.count, { timeout: 15_000 }).toBeGreaterThan(0);
+    reloads.stop();
   });
 
   await test.step("one finding is dismissed with a reason", async () => {
@@ -346,6 +385,39 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
   });
 
   await test.step("completing it produces a report that can be exported", async () => {
+    // A refusal whose body was not JSON threw past the message (D-119 review).
+    await page.route(
+      "**/api/reviews/*/complete",
+      (route) =>
+        route.fulfill({ status: 500, contentType: "text/html", body: "<html>Server error</html>" }),
+      { times: 1 },
+    );
+    await page.getByRole("button", { name: "Complete review" }).click();
+    await expect(page.getByText("The review could not be completed.")).toBeVisible();
+
+    // Refused as another tab having completed it first, the page says so and
+    // reads the review again, to show where it really is.
+    const reloads = countReviewReads(page);
+    await page.route(
+      "**/api/reviews/*/complete",
+      (route) =>
+        route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: "This review is completed, so there is nothing to complete.",
+            code: "NotAwaitingConfirmation",
+          }),
+        }),
+      { times: 1 },
+    );
+    await page.getByRole("button", { name: "Complete review" }).click();
+    await expect(
+      page.getByText("This review is completed, so there is nothing to complete."),
+    ).toBeVisible();
+    await expect.poll(() => reloads.count, { timeout: 15_000 }).toBeGreaterThan(0);
+    reloads.stop();
+
     await page.getByRole("button", { name: "Complete review" }).click();
     await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
 

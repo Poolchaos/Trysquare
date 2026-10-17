@@ -163,6 +163,9 @@ export function ConfirmationQueue({
           // past this message, so the refusal went unsaid.
           const body = (await response.json().catch(() => ({}))) as { error?: string };
           setError(body.error ?? "The decision could not be recorded.");
+          // A review completed or cancelled elsewhere: shown as it now is,
+          // rather than still offering decisions the server will refuse.
+          if (response.status === 409) await onChanged();
           return;
         }
         setEditingFor(null);
@@ -267,8 +270,9 @@ export function ConfirmationQueue({
     try {
       const response = await fetch(`/api/reviews/${reviewId}/complete`, { method: "POST" });
       if (!response.ok) {
-        const body = (await response.json()) as { error?: string };
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
         setError(body.error ?? "The review could not be completed.");
+        if (response.status === 409) await onChanged();
         return;
       }
       await onChanged();
