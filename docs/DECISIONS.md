@@ -2106,3 +2106,38 @@ verified evidence, in writing, here.
   always kept in a log, and nothing that commits or pushes runs unless the
   gate before it exited 0. If any step fails again, its log is the root
   cause's starting point.
+- 2026-10-17 D-95 REVIEW (MVP 3.6 to 4.9, 1052d56..a680cc3, by a separate
+  read-only reviewer; each finding re-checked here before it was fixed).
+  Fourteen findings, all dispositioned before new work:
+  1. HIGH: a hunk line starting `--- ` or `+++ ` was read as a file header,
+  dropped from the hunk or renaming its file; the 4.9 note's reason for
+  dropping a line-count check was false. Fixed b2ecd0f, note rewritten.
+  2. The file-context route joined a finding's path onto the worktree
+  without containment and could serve a file outside it. Fixed 1de0365.
+  3. Mode B's timeout told a person to resume, but a resume asked again at a
+  new path. Fixed 46a60d6: files are named by a hash of the question.
+  4. CI run 39005536267 failed on macOS in the browser journey at a commit
+  identical in code to one that passed, and was not recorded. Root-caused:
+  after a confirm or dismiss replied, the queue moved the selection even
+  when the person had moved meanwhile, here with `g g`. A product bug, fixed
+  e1eb4e5; the journey now holds the reply back and fails the old code every
+  time. This is not D-94's failure, which stays unexplained.
+  5. The Perl timeout signalled only the step's own process. Fixed 8b34b1a.
+  6. Mode B did not refuse a model alias. 7. A shutdown between a stage's
+  start and its spawn still started the CLI (fixed 955b85b). 8. An
+  unreadable engine mode left a review marked running. 9. The Mode B run
+  note claimed an effort it never passes. 10. PowerShell ends a quoted
+  string at U+2018 to U+201B. 12. No test exercised the default call id.
+  14. The bash quoting test could run WSL's bash. 6, 8, 9, 10, 12 and 14
+  fixed 46a60d6.
+  11. DECIDED: a changed path holding a backslash or starting with a drive
+  letter refuses the whole review on every platform, though both are legal
+  names on Linux and macOS. Such a name in a change set is rare, a review
+  that stops and names it is recoverable, and a looser rule is what wrote a
+  file outside the data directory on Windows (4.8). Noted in the RUNBOOK.
+  13. DECIDED, restating the 2026-07-30 probe decision as the code keeps it:
+  an indeterminate probe changes nothing but its message, so the last
+  definite verdict stands, available, unavailable, or never probed and
+  unknown. The original wording said such a probe leaves availability
+  unknown; its reason, that one slow call must not grey out a working model,
+  is what the code holds.

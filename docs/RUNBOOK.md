@@ -192,6 +192,11 @@ against a fake CLI committed to the repository.
   not committed (D-90), and the house-style gate refuses it anyway, because
   the block carries an em dash. A person running `npm run dev` in their own
   terminal is not detected and nothing is written.
+- **A review that stops naming a path with a backslash or a drive letter**
+  refused it on purpose (D-95). A file named like `a\b.ts` is legal on Linux
+  and macOS, but joined onto a directory on Windows it reaches outside it,
+  which is how a hostile branch once wrote outside the data directory. Rename
+  the file in the branch, or review it some other way.
 - **Port 3000 in use is not an error.** Dev falls back to 3001 and prints the
   URL it actually took. Read the line rather than assuming 3000.
 - **A real protocol document usually needs one edit before it imports:
