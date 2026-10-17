@@ -274,12 +274,17 @@ export function parseUnifiedDiff(patch: string): ParsedFile[] {
       continue;
     }
 
-    if (line.startsWith("--- ")) {
+    // File headers come only before a file's first hunk. After it, a line
+    // starting `--- ` or `+++ ` is content: a removed `-- comment` or an added
+    // `++ x`. Read as headers they were dropped from the hunk, or renamed the
+    // file to whatever followed the plus signs (review of MVP 3.6 to 4.9).
+    const beforeFirstHunk = current.hunks.length === 0;
+    if (beforeFirstHunk && line.startsWith("--- ")) {
       const raw = line.slice(4).trim();
       headerOldPath = raw === "/dev/null" ? null : stripPrefix(unquoteGitPath(raw));
       continue;
     }
-    if (line.startsWith("+++ ")) {
+    if (beforeFirstHunk && line.startsWith("+++ ")) {
       const raw = line.slice(4).trim();
       headerNewPath = raw === "/dev/null" ? null : stripPrefix(unquoteGitPath(raw));
 

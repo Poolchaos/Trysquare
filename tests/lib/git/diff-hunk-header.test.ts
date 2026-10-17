@@ -70,3 +70,38 @@ describe("a hunk the parser cannot account for", () => {
     expect(() => parseUnifiedDiff(patch)).toThrow(DiffParseError);
   });
 });
+
+describe("hunk lines that look like file headers", () => {
+  it("keeps a removed `-- ` line and an added `++ ` line as content", () => {
+    // A removed SQL comment is `--- keep...` in the patch, and an added
+    // `++ injected` is `+++ injected`. Read as headers, both left the hunk.
+    writeFileSync(join(repo, "query.sql"), "select 1;\n-- keep auth check\nselect 2;\n");
+    git(["add", "-A"]);
+    git(["commit", "-qm", "sql base"]);
+    writeFileSync(join(repo, "query.sql"), "select 1;\n++ injected\nselect 2;\n");
+
+    const [file] = parseUnifiedDiff(git(["diff"]));
+    expect(file?.path).toBe("query.sql");
+    expect(file?.removedLines).toBe(1);
+    expect(file?.addedLines).toBe(1);
+    expect(file?.hunks[0]?.lines).toContain("--- keep auth check");
+    expect(file?.hunks[0]?.lines).toContain("+++ injected");
+    git(["checkout", "-q", "--", "query.sql"]);
+  });
+
+  it("does not let an added line rename the file it is in", () => {
+    // A new file whose second line is `++ b/README.md` was reported as
+    // README.md, carrying evil.js's eval with it.
+    writeFileSync(join(repo, "evil.js"), "eval(input);\n++ b/README.md\n");
+    git(["add", "-N", "evil.js"]);
+
+    const files = parseUnifiedDiff(git(["diff"]));
+    const evil = files.find((file) => file.path === "evil.js");
+    expect(evil?.hunks[0]?.lines.filter((line) => line !== "")).toEqual([
+      "+eval(input);",
+      "+++ b/README.md",
+    ]);
+    expect(files.some((file) => file.path === "README.md")).toBe(false);
+    git(["rm", "-q", "--cached", "evil.js"]);
+  });
+});
