@@ -311,9 +311,9 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       appendRunNote(db, reviewId, {
         kind: "note",
         message:
-          `${opaque.lfsPointers.length} file(s) are Git LFS pointers: ` +
-          `${opaque.lfsPointers.join(", ")}. Their content is stored outside the repository ` +
-          `and was not reviewed.`,
+          `${opaque.lfsPointers.length} file(s) are or were Git LFS pointers: ` +
+          `${opaque.lfsPointers.join(", ")}. The content they point to is stored outside ` +
+          `the repository and was not reviewed.`,
       });
     }
   }

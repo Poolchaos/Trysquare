@@ -437,6 +437,52 @@ describe("what the review cannot read (4.23)", () => {
     );
     expect(notes.join(" ")).toContain("was not reviewed");
   });
+
+  it("says on the run that an updated Git LFS file's content was not reviewed", async () => {
+    // Only the oid and size move, so the version line is context. Passed over
+    // until the D-119 review, which looked only for an added version line.
+    const pointer = parseUnifiedDiff(
+      [
+        "diff --git a/assets/model.bin b/assets/model.bin",
+        "index 4444444..5555555 100644",
+        "--- a/assets/model.bin",
+        "+++ b/assets/model.bin",
+        "@@ -1,3 +1,3 @@",
+        " version https://git-lfs.github.com/spec/v1",
+        `-oid sha256:${"a".repeat(64)}`,
+        "-size 12345",
+        `+oid sha256:${"b".repeat(64)}`,
+        "+size 67890",
+        "",
+      ].join("\n"),
+    ).map((file) => ({ repo: "primary" as const, slug: "app", file }));
+    await run(
+      {
+        ...BASE_ANSWERS,
+        s3_adversarial: {
+          ...COMPLETE_ADVERSARIAL,
+          clearedHunks: [{ path: "app/assets/model.bin", hunkIndex: 0, reason: "a pointer only" }],
+        },
+        s4_deletions: {
+          findings: [],
+          reviewedDeletions: [
+            {
+              path: "app/assets/model.bin",
+              behaviourRemoved: "The old pointer.",
+              dependents: [],
+              reason: "A pointer moved; no code here was removed.",
+            },
+          ],
+        },
+        s5_verification: { verdicts: [] },
+      },
+      { files: [...FILES, ...pointer] },
+    );
+    const notes = readRunNotes(requireReview(db, reviewId)).map((note) => note.message);
+    expect(notes).toContainEqual(
+      expect.stringContaining("1 file(s) are or were Git LFS pointers: app/assets/model.bin."),
+    );
+  });
 });
 
 describe("refusing to accept an incomplete stage", () => {

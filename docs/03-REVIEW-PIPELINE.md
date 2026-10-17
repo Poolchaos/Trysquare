@@ -49,7 +49,9 @@ is named.
      names exactly the files `git diff --name-only` lists (D-108, D-110)
    - submodule pointers and Git LFS pointer files in the change set are
      named in the run notes as not reviewed: the diff holds only the pointer
-     (4.23)
+     (4.23). An LFS file is known by either side of its first hunk reading
+     as a whole pointer from line 1 (version line first, an oid and a size,
+     nothing else), not by a line mentioning the spec (D-119 review)
    - `inventory.json`: every changed file and hunk across both repos
      (parsed by `lib/git`), repo-tagged, including renames and deletions;
      this seeds ledger_files/ledger_hunks

@@ -35,3 +35,7 @@ the line entirely would lose the trail.
 - 2026-08-04: S3 ruleCode arrives from real models as prose ("Rule 11")
   where the ruleset speaks bare codes ("11"); normalise or validate at the
   stage boundary (observed in both clean fable runs, D-59).
+- 2026-10-17: parseUnifiedDiff reads the empty line after a diff's final
+  newline as one more context line of the last hunk (src/lib/git/diff.ts,
+  the `line === ""` branch), so that hunk holds one line more than its
+  header declares; stop each hunk at its declared counts.

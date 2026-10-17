@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parseUnifiedDiff } from "@/lib/git/diff";
+import { opaqueChanges } from "@/lib/git/opaque";
 import {
   ChangeSetMismatchError,
   checkChangeSet,
@@ -301,6 +302,40 @@ describe("diff settings that change which lines or entries the diff holds (D-110
     const plain = await diffText(clone, base, head);
     withGlobalConfig("[diff]\n\talgorithm = patience\n");
     expect(await diffText(clone, base, head)).toBe(plain);
+  });
+});
+
+describe("a Git LFS pointer as git diffs it (D-119 review)", () => {
+  const SPEC = "version https://git-lfs.github.com/spec/v1";
+  const pointerFor = (oid: string, size: number) => `${SPEC}\noid sha256:${oid}\nsize ${size}\n`;
+
+  it("is named when only its oid and size moved, and a document quoting one is not", async () => {
+    // Real diff output, so the three lines of context the detector counts on
+    // are git's and not this test's.
+    const origin = join(root, "lfs-origin");
+    execFileSync("git", ["init", "-q", "-b", "main", origin]);
+    git(["config", "core.autocrlf", "false"], origin);
+    writeFileSync(join(origin, "model.bin"), pointerFor("a".repeat(64), 12345));
+    writeFileSync(join(origin, "notes.md"), "# Notes\n");
+    git(["add", "model.bin", "notes.md"], origin);
+    git(["commit", "-qm", "old"], origin);
+    git(["checkout", "-qb", "feature"], origin);
+    writeFileSync(join(origin, "model.bin"), pointerFor("b".repeat(64), 67890));
+    writeFileSync(
+      join(origin, "notes.md"),
+      `# Notes\n\nA pointer looks like this:\n\n${pointerFor("c".repeat(64), 1)}`,
+    );
+    git(["add", "model.bin", "notes.md"], origin);
+    git(["commit", "-qm", "new"], origin);
+    const clone = join(root, "lfs.git");
+    await cloneBare(origin, clone);
+
+    const { files } = await readChangeSet(
+      clone,
+      await mergeBase(clone, "main", "feature"),
+      await resolveBranch(clone, "feature"),
+    );
+    expect(opaqueChanges(files).lfsPointers).toEqual(["model.bin"]);
   });
 });
 
