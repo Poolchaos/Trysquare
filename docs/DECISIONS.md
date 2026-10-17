@@ -2092,3 +2092,17 @@ verified evidence, in writing, here.
   Not fixed, carried to MVP WP 4.1: a user's own global `core.autocrlf=true`
   would still give worktrees CRLF line endings; whether that breaks the
   quotation check is part of 4.1's line-ending pass.
+- 2026-10-17 D-94 FOUND (open, not root-caused): one `./verify.sh` run on
+  the maintainer's Windows machine exited 1 on 2026-10-16, just before
+  f58981a (MVP WP 4.3) was committed, and the commit and push went ahead,
+  because the gate's output was sent to /dev/null and the commit was chained
+  after it with `;` rather than `&&`. Which step failed is unknown. Tried
+  since: the same sequence again (production build, the two probe servers
+  of the 4.3 proof, then the gate) and five further full unit runs, all
+  green (817 passed, 6 skipped each); CI run 38970405121 passed f58981a on
+  Ubuntu, Windows and macOS. That narrows it to something intermittent,
+  which the suite has not shown since, and does not explain it. The two
+  process faults are fixed in how this plan is driven: the gate's output is
+  always kept in a log, and nothing that commits or pushes runs unless the
+  gate before it exited 0. If any step fails again, its log is the root
+  cause's starting point.
