@@ -39,3 +39,6 @@ the line entirely would lose the trail.
   newline as one more context line of the last hunk (src/lib/git/diff.ts,
   the `line === ""` branch), so that hunk holds one line more than its
   header declares; stop each hunk at its declared counts.
+- 2026-10-17: the probe's candidate models (fable-5, opus-5, sonnet-5,
+  haiku-4-5) trail the bundled CLI 2.1.301's own model table, which lists
+  fable-5-1, opus-5-5, sonnet-5-5 and haiku-5-5 (found during 4.7, D-122).
