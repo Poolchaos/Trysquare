@@ -330,6 +330,14 @@ export const findings = sqliteTable(
     filePath: text("file_path").notNull(),
     lineStart: integer("line_start").notNull(),
     lineEnd: integer("line_end").notNull(),
+    /**
+     * The lines as the finding was raised, before verification corrected
+     * them. Coverage is counted against these (D-102): the hunks a finding
+     * accounted for were decided when it was raised. Null on rows from
+     * before the column, which fall back to the current lines.
+     */
+    raisedLineStart: integer("raised_line_start"),
+    raisedLineEnd: integer("raised_line_end"),
     severity: text("severity").notNull(),
     ruleCode: text("rule_code"),
     issue: text("issue").notNull(),

@@ -160,7 +160,9 @@ past review was judged against.
 ### ledger_hunks
 
 (id, ledgerFileId, hunkIndex, oldStart, oldLines, newStart, newLines,
-status: pending, cleared, has_findings; clearReason text null).
+status: pending, cleared, has_findings; clearReason text null). A
+has_findings hunk keeps a clearReason when another request of a divided
+stage cleared it (D-102).
 Invariant: a review cannot leave `verifying` while any hunk is pending. The
 invariant is checked in code (S6) and by unit test, not by prompt trust.
 
@@ -178,6 +180,7 @@ no pending sweep hits past S6.
 | repo                             | text      | primary or linked                                                |
 | filePath                         | text      | repo-relative within that repo, from the checked-out branch      |
 | lineStart, lineEnd               | int       | verified against worktree file in S5                             |
+| raisedLineStart, raisedLineEnd   | int null  | as raised, before S5 corrected them; coverage counts these (D-102) |
 | severity                         | text      |                                                                  |
 | ruleCode                         | text null | which rule it violates, if rule-based                            |
 | issue                            | text      | one-line statement                                               |
@@ -194,7 +197,8 @@ Finding status machine:
 `candidate -> verified | killed | open_question` (S5, fresh session);
 `verified -> confirmed | dismissed` (the maintainer only, S7 UI);
 `open_question -> confirmed | dismissed` (surfaced to the maintainer as questions).
-Killed findings are kept (hidden by default) for engine-quality metrics.
+Killed findings are kept for engine-quality metrics, and listed with their
+reasons under the review's run detail (D-97).
 
 ### models
 

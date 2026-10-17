@@ -415,7 +415,10 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     const ledgerFile = ledgerFiles.find((file) => file.path === hunkRef.path);
     if (!ledgerFile) continue;
     const hunk = listHunks(db, ledgerFile.id).find((h) => h.hunkIndex === hunkRef.hunkIndex);
-    if (hunk) markHunkHasFindings(db, hunk.id);
+    const alsoCleared = adversarial.clearedHunks.find(
+      (cleared) => cleared.path === hunkRef.path && cleared.hunkIndex === hunkRef.hunkIndex,
+    );
+    if (hunk) markHunkHasFindings(db, hunk.id, alsoCleared?.reason ?? null);
   }
 
   const candidates = [...adversarial.findings].map((finding) =>

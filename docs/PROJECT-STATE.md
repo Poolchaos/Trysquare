@@ -108,7 +108,7 @@ are accepted; anything else is refused by name.
   quotation check, stage schemas, budget arithmetic, ruleset import with a
   fidelity gate, prompt composition, batch planning, the report renderer,
   and the request guard.
-- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0009, and
+- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0010, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings and stage executions.
 - `src/server/gitops/` - the only code that spawns git.

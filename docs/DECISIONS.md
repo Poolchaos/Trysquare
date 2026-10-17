@@ -2222,3 +2222,23 @@ verified evidence, in writing, here.
   range that only passes over a hunk no longer counts for it. The S3
   prompt states the rule, and, when a deleted file is shown, that its hunk
   can only be cleared, which D-96 decided but the prompt never said.
+- 2026-10-17 D-102 DECIDED (review of 4.10 to 4.12, findings 2, 3, 5 and
+  6; refines how D-97 counts): what rests only on refuted findings is
+  judged by the lines each finding was raised at, now kept on the finding
+  as raised_line_start and raised_line_end (migration 0010), because those
+  decided what it accounted for. A hunk or hit counts only when a killed
+  finding is about it and no standing one is, and a hunk another request
+  of a divided stage cleared keeps that reason and does not count.
+  Evidence, each reproduced and now a test that fails on the D-97 code: a
+  standing finding verified one line past its hunk made the report say the
+  hunk rested on a refutation with nothing killed; a refuted hunk was
+  hidden when another finding's corrected range moved onto it; a resume,
+  which removes the findings while the ledger keeps its marks, stated
+  refutations that never happened; and a hunk one batch cleared was said
+  to rest only on another batch's refuted finding. Rows from before 0010
+  fall back to their current lines, so a review verified before D-99 can
+  still be counted by where verification moved its findings. The count
+  reads hunks and hits only in files with a killed finding; measured with
+  the reviewer's benchmark at 2,000 files, 20,000 hunks and 2,000
+  findings, a call takes 9.4 ms with nothing killed (5.5 ms before 4.10,
+  193.4 ms at fc96c7a) and 43.0 ms with every finding killed.

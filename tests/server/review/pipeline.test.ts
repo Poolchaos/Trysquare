@@ -13,9 +13,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { parseUnifiedDiff } from "@/lib/git/diff";
 import { DeletionsNotAccountedError, StageDidNotAccountError } from "@/lib/review/coverage";
 import type { Db } from "@/server/db/client";
-import { listFindings, statusOf } from "@/server/db/repositories/findings";
+import { deleteAllForReview, listFindings, statusOf } from "@/server/db/repositories/findings";
 import {
   IncompleteCoverageError,
+  coverageReport,
+  listHunks,
   listLedgerFiles,
   listSweepHits,
 } from "@/server/db/repositories/ledger";
@@ -1727,5 +1729,149 @@ describe("the paths a symbol is spoken of by", () => {
       },
     });
     expect(echoed.coverage.pendingHunks).toBe(0);
+  });
+});
+
+describe("counting what rests only on refuted findings (D-102)", () => {
+  // The only hunk is lines 3 to 9 after the change.
+  const SOURCE_LINES = ["l1", "l2", "l3", "l4", "l5", "added", "l6", "l7", "l8", "l9", "l10", ""];
+  const FILES_ONE_HUNK = parseUnifiedDiff(
+    [
+      "diff --git a/long.ts b/long.ts",
+      "--- a/long.ts",
+      "+++ b/long.ts",
+      "@@ -3,6 +3,7 @@",
+      " l3",
+      " l4",
+      " l5",
+      "+added",
+      " l6",
+      " l7",
+      " l8",
+      "",
+    ].join("\n"),
+  ).map((file) => ({ repo: "primary" as const, slug: "app", file }));
+
+  const raised = (lineStart: number, lineEnd: number, issue = "x") => ({
+    ...COMPLETE_ADVERSARIAL.findings[0]!,
+    path: "app/long.ts",
+    lineStart,
+    lineEnd,
+    issue,
+  });
+  const verdict = (
+    ref: string,
+    verdictKind: "verified" | "killed",
+    lineStart: number,
+    lineEnd: number,
+  ) => ({
+    ref,
+    verdict: verdictKind,
+    quotedCode: SOURCE_LINES.slice(lineStart - 1, lineEnd).join("\n"),
+    lineStart,
+    lineEnd,
+    note: verdictKind === "killed" ? "Refuted." : "checked",
+  });
+
+  function runOneHunk(
+    s3: (batch: number) => Record<string, unknown>,
+    verdicts: unknown[],
+    overrides: Record<string, unknown> = {},
+  ) {
+    writeFileSync(join(worktreeRoot, "app", "long.ts"), SOURCE_LINES.join("\n"));
+    return runReviewPipeline({
+      db,
+      reviewId,
+      worktreeRoot,
+      files: FILES_ONE_HUNK,
+      rules: RULES,
+      profile: "full-context",
+      systemPromptFor: (stage) => `prompt for ${stage}`,
+      run: async (request) => ({
+        sessionId: "s",
+        output:
+          request.stage === "s3_adversarial"
+            ? { clearedHunks: [], sweepDispositions: [], ...s3(request.batchNumber ?? 1) }
+            : request.stage === "s4_deletions"
+              ? { findings: [], reviewedDeletions: [] }
+              : request.stage === "s5_verification"
+                ? { verdicts }
+                : { files: [] },
+      }),
+      ...overrides,
+    });
+  }
+
+  it("does not call a hunk refuted when verification moved a standing finding off it", async () => {
+    // Raised at 9 to 10, so it accounted for the hunk; verified at line 10,
+    // just past it. Nothing was refuted.
+    const result = await runOneHunk(
+      () => ({ findings: [raised(9, 10)] }),
+      [verdict("C1", "verified", 10, 10)],
+    );
+    expect(result.killed).toBe(0);
+    expect(result.coverage.refutedOnlyHunks).toBe(0);
+  });
+
+  it("still says so when a corrected range moved another finding onto the hunk", async () => {
+    // F at line 6 is the hunk's only finding and is refuted. G, raised at 10
+    // to 11 outside the hunk, is verified at 9 to 10, inside it.
+    const result = await runOneHunk(
+      () => ({ findings: [raised(6, 6, "F"), raised(10, 11, "G")] }),
+      [verdict("C1", "killed", 6, 6), verdict("C2", "verified", 9, 10)],
+    );
+    expect(result.coverage.refutedOnlyHunks).toBe(1);
+  });
+
+  it("does not call a sweep hit refuted when its standing finding was moved off its line", async () => {
+    const result = await run({
+      ...BASE_ANSWERS,
+      s3_adversarial: {
+        ...COMPLETE_ADVERSARIAL,
+        findings: [{ ...COMPLETE_ADVERSARIAL.findings[0]!, lineStart: 2, lineEnd: 3 }],
+      },
+      s5_verification: {
+        verdicts: [
+          {
+            ref: "C1",
+            verdict: "verified",
+            quotedCode: SOURCE.split("\n")[2],
+            lineStart: 3,
+            lineEnd: 3,
+            note: "checked",
+          },
+        ],
+      },
+    });
+    expect(result.verified).toBe(1);
+    expect(result.coverage.refutedOnlySweepHits).toBe(0);
+  });
+
+  it("states no refutation while a resume has removed the findings", async () => {
+    const result = await runOneHunk(
+      () => ({ findings: [raised(6, 6)] }),
+      [verdict("C1", "killed", 6, 6)],
+    );
+    expect(result.coverage.refutedOnlyHunks).toBe(1);
+
+    // What a resume does before running again: the findings go, the ledger's
+    // marks stay until the stages are replayed.
+    deleteAllForReview(db, reviewId);
+    expect(coverageReport(db, reviewId).refutedOnlyHunks).toBe(0);
+  });
+
+  it("does not say a hunk rests only on a refutation when another request cleared it", async () => {
+    const result = await runOneHunk(
+      (batch) =>
+        batch === 1
+          ? { findings: [], clearedHunks: [{ path: "app/long.ts", hunkIndex: 0, reason: "fine" }] }
+          : { findings: [raised(6, 6)] },
+      [verdict("C1", "killed", 6, 6)],
+      { profile: "chunked", rules: [rule("1", ["typescript"]), rule("2", ["security"])] },
+    );
+    expect(result.adversarialRequests).toBe(2);
+    expect(result.coverage.refutedOnlyHunks).toBe(0);
+    const [file] = listLedgerFiles(db, reviewId);
+    expect(listHunks(db, file!.id)[0]?.clearReason).toBe("fine");
   });
 });

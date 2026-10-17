@@ -9,9 +9,9 @@
  * to be honest about what it skipped.
  */
 
-import { and, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { newId } from "@/lib/ids";
-import { citesHunk, citesLine } from "@/lib/review/coverage";
+import { citesHunk, citesLine, type CitedLines } from "@/lib/review/coverage";
 import type {
   ChangeType,
   HunkStatus,
@@ -122,9 +122,17 @@ export function listHunks(db: Db, ledgerFileId: string): LedgerHunk[] {
   return db.select().from(ledgerHunks).where(eq(ledgerHunks.ledgerFileId, ledgerFileId)).all();
 }
 
-/** A hunk was examined and produced findings. */
-export function markHunkHasFindings(db: Db, hunkId: string): void {
-  setHunkStatus(db, hunkId, "has_findings", null);
+/**
+ * A hunk was examined and produced findings. A divided stage can also have
+ * cleared it in another request; that reason is kept, so a hunk whose
+ * findings were all refuted is not said to rest on them alone (D-102).
+ */
+export function markHunkHasFindings(
+  db: Db,
+  hunkId: string,
+  alsoClearedBecause: string | null = null,
+): void {
+  setHunkStatus(db, hunkId, "has_findings", alsoClearedBecause);
 }
 
 /**
@@ -267,33 +275,76 @@ export function coverageReport(db: Db, reviewId: string): CoverageReport {
     .where(eq(sweepHits.reviewId, reviewId))
     .get() ?? { total: 0, pending: 0 };
 
-  const unresolvedCandidates = db
-    .select()
-    .from(findings)
-    .where(and(eq(findings.reviewId, reviewId), eq(findings.status, "candidate")))
-    .all().length;
+  const reviewFindings = db.select().from(findings).where(eq(findings.reviewId, reviewId)).all();
+  const unresolvedCandidates = reviewFindings.filter((f) => f.status === "candidate").length;
 
-  const standing = db
-    .select()
-    .from(findings)
-    .where(and(eq(findings.reviewId, reviewId), ne(findings.status, "killed")))
-    .all();
-  const standingIn = (path: string) => standing.filter((finding) => finding.filePath === path);
-  const refutedOnlyHunks = files.reduce(
-    (count, file) =>
-      count +
-      listHunks(db, file.id).filter(
-        (hunk) =>
-          hunk.status === "has_findings" &&
-          !standingIn(file.path).some((finding) => citesHunk(finding, hunk)),
-      ).length,
-    0,
+  // What rests only on refuted findings (D-97), judged by the lines each
+  // finding was raised at, since those decided what it accounted for: a
+  // range verification corrected must not move a refutation in or out
+  // (D-102). Something counts only when a killed finding is about it, so a
+  // resume, which removes the findings while the ledger keeps its marks,
+  // states no refutation that never happened.
+  const raisedByPath = new Map<string, { standing: CitedLines[]; killed: CitedLines[] }>();
+  for (const finding of reviewFindings) {
+    const entry = raisedByPath.get(finding.filePath) ?? { standing: [], killed: [] };
+    (finding.status === "killed" ? entry.killed : entry.standing).push({
+      lineStart: finding.raisedLineStart ?? finding.lineStart,
+      lineEnd: finding.raisedLineEnd ?? finding.lineEnd,
+    });
+    raisedByPath.set(finding.filePath, entry);
+  }
+  const restsOnlyOnRefuted = (path: string, cites: (finding: CitedLines) => boolean) => {
+    const entry = raisedByPath.get(path);
+    return entry !== undefined && entry.killed.some(cites) && !entry.standing.some(cites);
+  };
+
+  // Only a file with a killed finding can hold something resting on one, so
+  // the common case, nothing killed, reads no hunk or hit at all.
+  const filesWithKills = files.filter(
+    (file) => (raisedByPath.get(file.path)?.killed.length ?? 0) > 0,
   );
-  const refutedOnlySweepHits = listSweepHits(db, reviewId).filter(
-    (hit) =>
-      hit.disposition === "finding" &&
-      !standingIn(hit.path).some((finding) => citesLine(finding, hit.line)),
+  const pathOfFile = new Map(filesWithKills.map((file) => [file.id, file.path]));
+  const markedHunks =
+    filesWithKills.length === 0
+      ? []
+      : db
+          .select()
+          .from(ledgerHunks)
+          .where(
+            and(
+              inArray(
+                ledgerHunks.ledgerFileId,
+                filesWithKills.map((file) => file.id),
+              ),
+              eq(ledgerHunks.status, "has_findings"),
+              isNull(ledgerHunks.clearReason),
+            ),
+          )
+          .all();
+  const refutedOnlyHunks = markedHunks.filter((hunk) =>
+    restsOnlyOnRefuted(pathOfFile.get(hunk.ledgerFileId) ?? "", (finding) =>
+      citesHunk(finding, hunk),
+    ),
   ).length;
+  const killedPaths = [...raisedByPath]
+    .filter(([, entry]) => entry.killed.length > 0)
+    .map(([path]) => path);
+  const refutedOnlySweepHits =
+    killedPaths.length === 0
+      ? 0
+      : db
+          .select()
+          .from(sweepHits)
+          .where(
+            and(
+              eq(sweepHits.reviewId, reviewId),
+              eq(sweepHits.disposition, "finding"),
+              inArray(sweepHits.path, killedPaths),
+            ),
+          )
+          .all()
+          .filter((hit) => restsOnlyOnRefuted(hit.path, (finding) => citesLine(finding, hit.line)))
+          .length;
 
   return {
     totalFiles: files.length,

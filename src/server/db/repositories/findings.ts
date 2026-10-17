@@ -49,6 +49,8 @@ export function createCandidate(db: Db, input: CreateCandidateInput): Finding {
     filePath: input.filePath,
     lineStart: input.lineStart,
     lineEnd: input.lineEnd,
+    raisedLineStart: input.lineStart,
+    raisedLineEnd: input.lineEnd,
     severity: input.severity,
     ruleCode: input.ruleCode ?? null,
     issue: input.issue,
