@@ -255,19 +255,24 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // which is what a quick hand does and what macOS CI hit by chance (run
     // 39005536267): the queue used to move the selection when the reply came,
     // taking the person away from where they had just gone.
-    await page.route("**/api/findings/*/dismiss", async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      await route.continue();
-    });
-    const replied = page.waitForResponse("**/api/findings/*/dismiss");
+    // Routed once and never unrouted: unrouting while the held request was
+    // being delivered is the likeliest reason its fetch failed in the page on
+    // Ubuntu CI (run 39014501683), the server having answered 200.
+    await page.route(
+      "**/api/findings/*/dismiss",
+      async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        await route.continue();
+      },
+      { times: 1 },
+    );
     await page.getByRole("button", { name: "Dismiss" }).click();
 
     // The decision is a record, not a transient: g g returns to the top of the
     // queue, where the dismissed finding still sits with its reason.
     await page.locator("body").press("g");
     await page.locator("body").press("g");
-    await replied;
-    await page.unroute("**/api/findings/*/dismiss");
+    await expect(page.getByText(/1 of \d+ decided/)).toBeVisible();
     await expect(page.getByText("Deliberate: the caller already guards this.")).toBeVisible();
   });
 

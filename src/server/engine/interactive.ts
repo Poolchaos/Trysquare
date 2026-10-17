@@ -241,8 +241,8 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
     const promptPath = files.prompt;
     const answerPath = files.answer;
 
-    await writeFile(files.system, systemPrompt, "utf8");
-    await writeFile(
+    await writeWhole(files.system, systemPrompt);
+    await writeWhole(
       promptPath,
       renderExchangeDocument({
         stage: request.stage,
@@ -252,7 +252,6 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
         worktreeRoot: options.worktreeRoot,
         model: options.model,
       }),
-      "utf8",
     );
 
     // The only way a person learns what to do next, so it goes through the
@@ -338,11 +337,24 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
  * stage timeout Mode A uses, which is generous for a person but finite, and
  * cancelling the review stops the wait immediately rather than after it.
  */
+/**
+ * Writes a file under a temporary name and renames it into place, so whoever
+ * is watching for it never opens it half written. A prompt read while it was
+ * still being written lost the candidate labels its answer must quote back
+ * (Windows CI, run 39014903213).
+ */
+async function writeWhole(path: string, text: string): Promise<void> {
+  const partial = `${path}.writing-${process.pid}`;
+  await writeFile(partial, text, "utf8");
+  await rename(partial, path);
+}
+
 async function waitForAnswer(
   path: string,
   options: { timeoutMs: number; pollMs: number; stage: ReviewStage; signal?: AbortSignal },
 ): Promise<string> {
   const deadline = Date.now() + options.timeoutMs;
+  let lastSeen: string | undefined;
 
   for (;;) {
     if (options.signal?.aborted) {
@@ -353,8 +365,12 @@ async function waitForAnswer(
       const contents = await readFile(path, "utf8");
       // A file caught mid-write is empty or truncated, and reading it as an
       // answer would fail the stage over the reader's timing rather than the
-      // writer's content.
-      if (contents.trim() !== "") return contents;
+      // writer's content. So an answer counts once two reads a poll apart
+      // agree: a person's editor may save in more than one write.
+      if (contents.trim() !== "") {
+        if (contents === lastSeen) return contents;
+        lastSeen = contents;
+      }
     } catch {
       // Not written yet, which is the normal case for most of this loop.
     }

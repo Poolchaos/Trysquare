@@ -145,12 +145,19 @@ export function ConfirmationQueue({
       setBusy(true);
       const movesWhenSent = moves.current;
       try {
+        // A request that never got an answer, the connection dropped or the
+        // server gone, used to reject with nothing to catch it: the decision
+        // vanished without a word, and the person took it as made.
         const response = await fetch(`/api/findings/${finding.id}/${action}`, {
           method: "POST",
           body: JSON.stringify(
             action === "dismiss" ? { reason: detail } : { comment: detail ?? "" },
           ),
-        });
+        }).catch((error: unknown) => (error instanceof Error ? error : new Error(String(error))));
+        if (response instanceof Error) {
+          setError(`The decision could not be sent: ${response.message}`);
+          return;
+        }
         if (!response.ok) {
           const body = (await response.json()) as { error?: string };
           setError(body.error ?? "The decision could not be recorded.");
