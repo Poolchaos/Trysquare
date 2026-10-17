@@ -110,7 +110,13 @@ function stripPrefix(path: string): string {
   return path;
 }
 
-const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/;
+/**
+ * The trailing text is the enclosing scope, copied from the source. The `s`
+ * flag lets it hold U+2028 or U+2029, which `.` otherwise refuses: an author
+ * who put one in a comment above a change made the header miss, and the
+ * hunk's lines were dropped as if the file had none (MVP-PLAN 4.9).
+ */
+const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/s;
 
 /**
  * Extracts the path from a `diff --git a/x b/x` line.
@@ -294,6 +300,9 @@ export function parseUnifiedDiff(patch: string): ParsedFile[] {
     }
 
     const hunkMatch = HUNK_HEADER.exec(line);
+    if (!hunkMatch && line.startsWith("@@ ")) {
+      throw new DiffParseError(`a hunk header that does not parse: ${JSON.stringify(line)}`, i + 1);
+    }
     if (hunkMatch) {
       // An omitted count means exactly one line, not zero.
       const oldStart = Number(hunkMatch[1]);
