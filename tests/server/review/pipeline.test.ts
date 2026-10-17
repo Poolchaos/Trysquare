@@ -1353,6 +1353,65 @@ describe("the deletion stage's account of what was removed", () => {
   });
 });
 
+describe("where a deletion finding may point", () => {
+  const finding = (path: string) => ({
+    path,
+    lineStart: 3,
+    lineEnd: 3,
+    severity: "CRITICAL",
+    ruleCode: "9",
+    issue: "A caller still uses the removed guard.",
+    comment: "The call now fails at load time.",
+    mechanism: "imports guardRate from the deleted module",
+  });
+
+  it("keeps a finding in a file the change never touched", async () => {
+    // Who depended on the removed code is what this stage is for, and that
+    // caller is usually outside the change set (D-98).
+    const result = await runDeleting({
+      findings: [finding("app/src/caller.ts")],
+      reviewedDeletions: [ACCOUNTED],
+    });
+    expect(result.candidatesRaised).toBe(1);
+  });
+
+  it("refuses a finding whose path climbs out of the repository", async () => {
+    // The 4.1 audit's path, which was verified with the file's contents
+    // quoted into the report before reads were contained.
+    const struck: string[] = [];
+    await expect(
+      runDeleting(
+        { findings: [finding("app/../../outside-secret.txt")], reviewedDeletions: [ACCOUNTED] },
+        { invalidate: (stage: string) => struck.push(stage) },
+      ),
+    ).rejects.toThrow(/"app\/\.\.\/\.\.\/outside-secret\.txt", which has a "\.\." segment/);
+    expect(struck).toEqual(["s4_deletions"]);
+    expect(listFindings(db, reviewId)).toHaveLength(0);
+  });
+
+  it("refuses a finding in a repository the review does not have", async () => {
+    await expect(
+      runDeleting({ findings: [finding("other/src/caller.ts")], reviewedDeletions: [ACCOUNTED] }),
+    ).rejects.toThrow(/is not in any repository of this review \(app\)/);
+  });
+
+  it("refuses a finding that names a repository and no file in it", async () => {
+    await expect(
+      runDeleting({ findings: [finding("app")], reviewedDeletions: [ACCOUNTED] }),
+    ).rejects.toThrow(/names no file/);
+  });
+
+  it("accepts a repository that changed nothing, when the review has one", async () => {
+    // A linked review's other side can hold the dependent while every change
+    // is in this one; the service names both directories.
+    const result = await runDeleting(
+      { findings: [finding("shared-core/src/use.ts")], reviewedDeletions: [ACCOUNTED] },
+      { repoSlugs: ["app", "shared-core"] },
+    );
+    expect(result.candidatesRaised).toBe(1);
+  });
+});
+
 const RISK_PATCH = ["orders", "billing", "theme", "session"]
   .map((name) =>
     [

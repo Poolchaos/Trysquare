@@ -15,6 +15,7 @@
 
 import { readFile } from "node:fs/promises";
 import type { ReviewProfile, ReviewStage } from "@/lib/domain/enums";
+import { unsafeRepoPathReason } from "@/lib/git/repo-path";
 import type { ChangedSymbol } from "@/lib/git/symbols";
 import { insideRoot } from "@/lib/paths";
 import { assertBatchesCoverEverything, planRuleBatches } from "@/lib/rulesets/compose";
@@ -112,6 +113,11 @@ export interface PipelineInput {
   worktreeRoot: string;
   /** Changed files per repository, from the deterministic inventory. */
   files: readonly ChangedFileEntry[];
+  /**
+   * Each repository's directory under worktreeRoot. Defaults to those with a
+   * changed file, which misses a linked repository that changed nothing.
+   */
+  repoSlugs?: readonly string[] | undefined;
   /** The full rules, used both for the sweep and for planning the batches. */
   rules: readonly ImportedRule[];
   /** Decides how the adversarial work is divided. See docs/06. */
@@ -477,6 +483,8 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         parsed.reviewedDeletions.map((entry) => entry.path),
       ),
     );
+    const repoSlugs = input.repoSlugs ?? [...new Set(input.files.map((entry) => entry.slug))];
+    for (const finding of parsed.findings) assertNamesRepoFile(finding.path, repoSlugs);
     return {
       ...parsed,
       findings: parsed.findings.map((finding) => ({
@@ -906,6 +914,40 @@ function assertSymbolVerdictsAreBacked(output: AdversarialStageOutput): void {
   }
 
   if (problems.length > 0) throw new SymbolVerdictUnbackedError(problems);
+}
+
+export class FindingPathError extends Error {
+  constructor(
+    readonly path: string,
+    reason: string,
+  ) {
+    super(
+      `The deletions stage raised a finding at ${JSON.stringify(path)}, which ${reason}. ` +
+        `A finding must name a file in one of this review's repositories, so the answer is refused.`,
+    );
+    this.name = "FindingPathError";
+  }
+}
+
+/**
+ * Refuses a deletion finding whose path cannot name a file in this review
+ * (D-98), before verification spends anything on it.
+ *
+ * Not refused for lying outside the change set: who depended on the removed
+ * code is what the stage looks for, and that caller is usually a file the
+ * change never touched.
+ */
+function assertNamesRepoFile(path: string, repoSlugs: readonly string[]): void {
+  const unsafe = unsafeRepoPathReason(path);
+  if (unsafe !== null) throw new FindingPathError(path, unsafe);
+  const [slug, ...rest] = path.split("/");
+  if (!repoSlugs.includes(slug ?? "")) {
+    throw new FindingPathError(
+      path,
+      `is not in any repository of this review (${repoSlugs.join(", ")})`,
+    );
+  }
+  if (rest.length === 0) throw new FindingPathError(path, "names no file inside it");
 }
 
 export class SweepDispositionUnmatchedError extends Error {

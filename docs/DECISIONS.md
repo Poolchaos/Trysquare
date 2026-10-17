@@ -2172,3 +2172,16 @@ verified evidence, in writing, here.
   when read, so a review finished before D-96 also counts a hunk whose only
   finding sat outside it: no standing finding is about that hunk either,
   though the sentence names refutation as the reason.
+- 2026-10-17 D-98 DECIDED (WP 4.11, corrects that row's stated fix): a
+  deletion-stage finding is refused, with the stage's answer struck, when
+  its path cannot name a file in one of the review's repositories: a path
+  the 4.8 rule calls unsafe, a first segment that is no repository of the
+  review, or a repository with no file named. It is not refused for lying
+  outside the change set, as the row first said. S4 is asked who depended
+  on what was removed, and that dependent is usually a file the change
+  never touched: the seeded deleted-module-live-caller finding sits in
+  exactly such a file, so the row's fix would have refused a finding the
+  fixture exists to catch. Refused at the stage rather than killed at S5,
+  so verification spends nothing on it. The repositories are the ones the
+  service checked out, passed in, since a linked repository that changed
+  nothing has no changed file to name it.
