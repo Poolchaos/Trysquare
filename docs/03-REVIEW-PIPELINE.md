@@ -157,7 +157,9 @@ claim). No S2/S3 reasoning is passed. Instruction per finding:
    the cited lines exist in the file, and quotedCode matches the worktree
    file at those lines once both sides are normalised.
    Normalisation forgives only what carries no meaning: CRLF, trailing
-   whitespace, a trailing newline, and lost common indentation. Anything
+   whitespace, a trailing newline, lost common indentation, a byte-order
+   mark, how Unicode composes a character, and the width of indentation where
+   a tab is involved (D-114). Anything
    looser would let a paraphrase pass as a quotation. A mechanical mismatch
    kills the finding regardless of the AI verdict.
 

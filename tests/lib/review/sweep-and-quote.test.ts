@@ -210,3 +210,37 @@ describe("checking a finding's quotation", () => {
     expect(stripCommonIndent("    a\n      b")).toBe("a\n  b");
   });
 });
+
+describe("valid quotations the check used to kill (4.21)", () => {
+  it("forgives the byte-order mark at the start of a file, across lines", () => {
+    // The mark is invisible, so no quote carries it; on one line it already
+    // passed as indentation, across two it did not.
+    const bom = "\uFEFFimport { a } from './a';\nexport const b = a;\n";
+    expect(
+      checkQuotedCode(bom, 1, 2, "import { a } from './a';\nexport const b = a;").matches,
+    ).toBe(true);
+  });
+
+  it("forgives text composed differently in Unicode but the same text", () => {
+    // \u00e9 as one code point in the quote, as e and a combining accent in the
+    // file: the same text by Unicode's own definition.
+    const nfd = "const cafe\u0301 = 1;\n";
+    expect(checkQuotedCode(nfd, 1, 1, "const caf\u00e9 = 1;").matches).toBe(true);
+  });
+
+  it("forgives tabs quoted as spaces, nested", () => {
+    const tabbed = "function f() {\n\tif (x) {\n\t\treturn 1;\n\t}\n}\n";
+    const quoted = "  if (x) {\n    return 1;\n  }";
+    expect(checkQuotedCode(tabbed, 2, 4, quoted).matches).toBe(true);
+  });
+
+  it("still holds space indentation to what the file has, where no tab is involved", () => {
+    const spaced = "if (x) {\n  y();\n}\n";
+    expect(checkQuotedCode(spaced, 1, 3, "if (x) {\n    y();\n}").matches).toBe(false);
+  });
+
+  it("still kills a quote whose code differs under a tab", () => {
+    const tabbed = "\tif (x) {\n\t\treturn 1;\n\t}\n";
+    expect(checkQuotedCode(tabbed, 1, 3, "if (x) {\n  return 2;\n}").matches).toBe(false);
+  });
+});

@@ -33,15 +33,39 @@ export function stripCommonIndent(text: string): string {
 
 function normalise(text: string): string {
   // Trailing whitespace on a line and a trailing newline are invisible and
-  // carry no meaning, so they are not grounds to kill a finding.
+  // carry no meaning, so they are not grounds to kill a finding. Nor is a
+  // byte-order mark, nor composing a character from one code point or two,
+  // which Unicode defines as the same text (4.21).
   return stripCommonIndent(
     text
+      .replace(/^\uFEFF/, "")
+      .normalize("NFC")
       .replace(/\r\n/g, "\n")
       .split("\n")
       .map((line) => line.trimEnd())
       .join("\n")
       .replace(/\n+$/, ""),
   );
+}
+
+/**
+ * Line by line, with one more forgiveness: where a tab is part of either
+ * line's indentation, the indentation itself is not compared. A quote cannot
+ * show a tab's width, so tabs come back as spaces, and nested lines then
+ * differ by however wide the reader took a tab to be (4.21). Spaces against
+ * spaces are still held to the file.
+ */
+function sameCode(actual: string, quoted: string): boolean {
+  const left = actual.split("\n");
+  const right = quoted.split("\n");
+  if (left.length !== right.length) return false;
+  return left.every((line, index) => {
+    const other = right[index]!;
+    if (line === other) return true;
+    const indent = (text: string) => text.slice(0, text.length - text.trimStart().length);
+    const tabbed = indent(line).includes("\t") || indent(other).includes("\t");
+    return tabbed && line.trimStart() === other.trimStart();
+  });
 }
 
 /**
@@ -69,7 +93,7 @@ export function checkQuotedCode(
   }
 
   const actual = lines.slice(lineStart - 1, lineEnd).join("\n");
-  if (normalise(actual) === normalise(quotedCode)) return { matches: true, actual };
+  if (sameCode(normalise(actual), normalise(quotedCode))) return { matches: true, actual };
 
   return { matches: false, reason: { kind: "content-differs", actual } };
 }

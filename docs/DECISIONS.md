@@ -2418,3 +2418,15 @@ verified evidence, in writing, here.
   level lock, since the first thing a second server does is the orphan
   sweep, which a SQLite lock would not prevent without one held for the
   whole life of the server.
+- 2026-10-17 D-114 DECIDED (WP 4.21): the quotation check forgives three
+  more things that carry no meaning, each a valid quote it was killing,
+  each reproduced by a test that fails on the old check: a byte-order mark
+  at the start of a file, which no quote carries (one line already passed,
+  since JavaScript trims it as whitespace; across lines it did not); a
+  character composed of one code point in the quote and two in the file,
+  compared after NFC, which Unicode defines as the same text; and the
+  indentation of a line where a tab is part of it, since a quote shows a
+  tab as however many spaces its writer chose. Kept strict: space
+  indentation against space indentation, and every character after the
+  indentation; tests show a respaced line and changed code under a tab
+  still fail. A paraphrase still cannot pass.
