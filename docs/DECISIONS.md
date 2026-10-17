@@ -2483,3 +2483,26 @@ verified evidence, in writing, here.
   alone found no fault in the lock. The tests now use a pid no process can
   have, odd and above every platform's limit (382acd9), and the full gates
   since are green.
+- 2026-10-17 D-118 DECIDED (supersedes D-116's mechanism; revisits D-113's
+  rejected alternative with new evidence): the data directory lock is
+  SQLite's, an exclusive transaction opened on a small database of its own,
+  server-lock.sqlite, and never committed, so it is held for as long as the
+  server's connection is open and released by the operating system when the
+  process ends, however it ends. Evidence: the hand-managed lock of D-116
+  still let two servers both take it on macOS (CI run 39040825134, trial 90
+  of the race test): a process that read the lock path as empty removed a
+  fresh lock linked there in the moment after, which Windows' refusal to
+  reuse a name being deleted had hidden in 600 local starts. Fixing that
+  check would have left the same kind of window in removing a stale
+  takeover token. A kernel-held lock has no staleness, no process ids to
+  trust and no takeover. D-113 rejected a database lock as needing to be
+  held for the server's whole life; held for its whole life is what this
+  is, on a file of its own. Two traps met on the way: SQLite's exclusive
+  locking mode keeps even a failed attempt's shared lock, so two servers
+  starting together blocked each other and both refused, every time; and a
+  busy timeout of zero can make both fail. A one-second wait settles the
+  instant two start together; the race test, which runs each process as
+  itself rather than under the tsx command (whose child outlived a kill on
+  Windows), shows one holder in every trial. The holder's process id is
+  written beside the lock only for the refusal message; a file at the lock
+  path that is not a SQLite database is refused and left alone.

@@ -205,13 +205,13 @@ against a fake CLI committed to the repository.
   path the parser misreads: a file name ending in a space is one (plan row
   4.27). Run that `git diff` yourself in the project's clone to see which,
   and report it.
-- **A second server on the same data directory exits at once**, naming the
-  process that holds it (4.18): a second server would mark the first one's
-  running reviews interrupted. Stop the first, or set `TRYSQUARE_DATA` to
-  another directory. A server killed outright leaves its lock behind; the
-  next start sees that process is gone and takes the lock over. Only if the
-  message names a process that is not Trysquare (an id the system reused)
-  delete `server.lock` by hand.
+- **A second server on the same data directory exits within a second**,
+  naming the process that holds it (4.18, D-118): a second server would mark
+  the first one's running reviews interrupted. Stop the first, or set
+  `TRYSQUARE_DATA` to another directory. The lock is released by the
+  operating system when its server ends, however it ends, so there is never a
+  stale lock to delete. Keep the data directory on a local disk: file locks on
+  a network share are not to be trusted.
 - **Port 3000 in use is not an error.** Dev falls back to 3001 and prints the
   URL it actually took. Read the line rather than assuming 3000.
 - **A real protocol document usually needs one edit before it imports:
@@ -228,7 +228,8 @@ against a fake CLI committed to the repository.
 | Path | What is there |
 | --- | --- |
 | `$TRYSQUARE_DATA/db.sqlite` | Projects, reviews, findings, rulesets, settings. |
-| `$TRYSQUARE_DATA/server.lock` | The process id of the server using this directory. |
+| `$TRYSQUARE_DATA/server-lock.sqlite` | The lock the one server using this directory holds. |
+| `$TRYSQUARE_DATA/server-lock.pid` | That server's process id, named when another is refused. |
 | `$TRYSQUARE_DATA/projects/` | Bare clones. Never written to by a review. |
 | `$TRYSQUARE_DATA/runs/<id>/` | One review's worktree, its checkout baseline, prompt bundle and stage logs. |
 | `$TRYSQUARE_DATA/exports/` | Exported reports. Survive deleting the review. |

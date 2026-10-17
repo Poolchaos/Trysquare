@@ -38,9 +38,14 @@ export function projectRepoDir(dataDir: string, projectId: string): string {
   return join(dataDir, "projects", projectId, "repo.git");
 }
 
-/** Held by the one server using a data directory (4.18). */
+/** Held by the one server using a data directory (4.18, D-118). */
 export function lockPath(dataDir: string): string {
-  return join(dataDir, "server.lock");
+  return join(dataDir, "server-lock.sqlite");
+}
+
+/** The process holding the lock, written beside it for a refused server to name. */
+export function lockHolderPath(dataDir: string): string {
+  return join(dataDir, "server-lock.pid");
 }
 
 export function runDir(dataDir: string, reviewId: string): string {

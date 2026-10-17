@@ -4,12 +4,19 @@
  * A server starting marks every review it finds running as interrupted,
  * which is right after a crash and wrong while another server is running
  * them; and two servers starting together could migrate one database at once.
- * So the first holds a lock file naming its process, and a second refuses to
- * start while that process is alive.
+ *
+ * The lock is SQLite's own: a small database beside the app's, held in
+ * exclusive locking mode for as long as the server runs. The operating system
+ * releases it when the process ends, however it ends, so there is no stale
+ * lock to judge and no process id to trust. A lock file managed by hand
+ * needed both, and on macOS two servers starting together each took it
+ * (D-118). The holder's process id is written beside it, only so a refused
+ * server can name it.
  */
 
-import { linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { lockPath } from "@/lib/paths";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import Database from "better-sqlite3";
+import { lockHolderPath, lockPath } from "@/lib/paths";
 
 /** Any reason the lock could not be taken; the server cannot start. */
 export class DataDirLockError extends Error {
@@ -22,123 +29,69 @@ export class DataDirLockError extends Error {
 export class DataDirInUseError extends DataDirLockError {
   constructor(
     readonly dataDir: string,
-    readonly pid: number,
+    readonly pid: number | null,
   ) {
     super(
-      `Another Trysquare server, process ${pid}, is using ${dataDir}. Stop it first, or point ` +
-        `TRYSQUARE_DATA at another directory. If process ${pid} is not a Trysquare server, the ` +
-        `system has reused the id of one that stopped: delete ${lockPath(dataDir)} and start ` +
-        "again.",
+      `Another Trysquare server${pid === null ? "" : `, process ${pid},`} is using ${dataDir}. ` +
+        "Stop it first, or point TRYSQUARE_DATA at another directory.",
     );
     this.name = "DataDirInUseError";
   }
 }
 
-/** How long a starting server waits on another one taking over a stale lock. */
-const TAKEOVER_WAIT_MS = 3_000;
-const RETRY_MS = 10;
-
-/** Takes the lock, and returns the function that gives it back. */
-export function acquireDataDirLock(dataDir: string): () => void {
-  mkdirSync(dataDir, { recursive: true });
-  const path = lockPath(dataDir);
-  const token = `${path}.takeover`;
-  const release = () => {
-    // Only ever this process's own lock: one a later server has taken over
-    // is not ours to remove.
-    if (holderOf(path) === process.pid) rmSync(path, { force: true });
-  };
-
-  const deadline = Date.now() + TAKEOVER_WAIT_MS;
-  while (Date.now() < deadline) {
-    if (createWhole(path)) return release;
-
-    const seen = readText(path);
-    const holder = holderIn(seen);
-    if (holder === process.pid) return release;
-    if (holder !== null && isRunning(holder)) throw new DataDirInUseError(dataDir, holder);
-
-    // The lock is stale: its process is gone, or it cannot be read. Only the
-    // process holding the takeover token may remove it, and only if it is
-    // still the stale lock that was seen. Removing it unguarded let two
-    // servers starting together each remove the other's fresh lock and both
-    // go on as its holder (D-116).
-    if (createWhole(token)) {
-      try {
-        if (readText(path) === seen) rmSync(path, { force: true });
-      } finally {
-        rmSync(token, { force: true });
-      }
-      continue;
-    }
-    const takingOver = holderOf(token);
-    if (takingOver !== null && takingOver !== process.pid && !isRunning(takingOver)) {
-      // A server that crashed part way through a takeover.
-      rmSync(token, { force: true });
-      continue;
-    }
-    pause(RETRY_MS);
-  }
-  throw new DataDirLockError(
-    `Could not take the lock at ${path}: another server kept it in the middle of starting for ` +
-      `${TAKEOVER_WAIT_MS / 1000} seconds. Start again.`,
-  );
-}
+/** Locks this process holds, so taking one it already holds is not refused. */
+const held = new Map<string, Database.Database>();
 
 /**
- * Creates the file holding this process's id, whole or not at all. Written
- * aside first and linked into place, so no reader ever sees it half written,
- * and linking fails if the file already exists.
+ * Takes the lock, and returns the function that gives it back.
+ *
+ * @param waitMs How long to wait on another server's lock before refusing.
+ *   A second, no more: a server holding the lock keeps it for as long as it
+ *   runs, so waiting longer is waiting for nothing. Without any wait, two
+ *   servers taking the lock at the same instant could each find the other
+ *   part way and both refuse. A test racing many starts shortens it.
  */
-function createWhole(path: string): boolean {
-  const aside = `${path}.${process.pid}.writing`;
-  writeFileSync(aside, JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString() }));
+export function acquireDataDirLock(dataDir: string, waitMs = 1_000): () => void {
+  mkdirSync(dataDir, { recursive: true });
+  const path = lockPath(dataDir);
+  const release = () => {
+    held.get(path)?.close();
+    held.delete(path);
+  };
+  if (held.has(path)) return release;
+
+  const handle = new Database(path, { timeout: waitMs });
   try {
-    linkSync(aside, path);
-    return true;
+    // An exclusive transaction opened and never committed: it holds the lock
+    // for as long as the connection is open, and a failed attempt lets go of
+    // what it took. SQLite's exclusive locking mode was tried first and keeps
+    // even a failed attempt's shared lock, so two servers starting together
+    // each blocked the other and both refused.
+    handle.exec("BEGIN EXCLUSIVE");
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    // EPERM is Windows refusing a name whose file is being deleted.
-    if (code === "EEXIST" || code === "EPERM") return false;
+    handle.close();
+    const code = (error as { code?: unknown }).code;
+    if (code === "SQLITE_BUSY" || code === "SQLITE_LOCKED") {
+      throw new DataDirInUseError(dataDir, holderOf(dataDir));
+    }
+    if (code === "SQLITE_NOTADB") {
+      throw new DataDirLockError(
+        `${path} is not a lock Trysquare wrote, so it is left alone. If nothing else uses it, ` +
+          "delete it and start again.",
+      );
+    }
     throw error;
-  } finally {
-    rmSync(aside, { force: true });
   }
+  writeFileSync(lockHolderPath(dataDir), String(process.pid));
+  held.set(path, handle);
+  return release;
 }
 
-function readText(path: string): string | null {
+function holderOf(dataDir: string): number | null {
   try {
-    return readFileSync(path, "utf8");
+    const pid = Number(readFileSync(lockHolderPath(dataDir), "utf8").trim());
+    return Number.isInteger(pid) && pid > 0 ? pid : null;
   } catch {
     return null;
   }
-}
-
-function holderIn(text: string | null): number | null {
-  if (text === null) return null;
-  try {
-    const pid = (JSON.parse(text) as { pid?: unknown }).pid;
-    return typeof pid === "number" && Number.isInteger(pid) && pid > 0 ? pid : null;
-  } catch {
-    return null;
-  }
-}
-
-function holderOf(path: string): number | null {
-  return holderIn(readText(path));
-}
-
-/** Signal 0 tests for a process without touching it; EPERM means it exists. */
-function isRunning(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === "EPERM";
-  }
-}
-
-/** A synchronous wait: the runtime is opened synchronously, so it cannot await. */
-function pause(ms: number): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
