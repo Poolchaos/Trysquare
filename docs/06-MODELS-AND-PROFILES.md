@@ -35,8 +35,10 @@ run as that session's child: the CLI reads `CLAUDECODE` and
 elsewhere. The engine therefore removes the variables a session and its host
 set for the processes they start, by name, exactly as it sets an explicit
 working directory rather than inheriting one. A person's own settings, such
-as `CLAUDE_CODE_OAUTH_TOKEN`, pass through (D-120). Older CLIs refused to
-start at all under `CLAUDECODE`; 2.1.301 does not.
+as `CLAUDE_CODE_OAUTH_TOKEN`, pass through (D-120), except
+`CLAUDE_CODE_EFFORT_LEVEL`, which the CLI ranks above the `--effort` every
+stage passes (D-121). Older CLIs refused to start at all under `CLAUDECODE`;
+2.1.301 does not.
 
 Model discovery is done by probing, and the results below are an example of
 what one account returned on one day. They are recorded to show the shape of

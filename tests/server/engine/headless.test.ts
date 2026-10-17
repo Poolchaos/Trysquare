@@ -389,15 +389,17 @@ describe("the read-only guarantee", () => {
 });
 
 describe("what the engine actually invokes", () => {
-  it("removes inherited session markers and keeps a person's own settings (D-120)", async () => {
+  it("removes inherited session markers and keeps a person's own settings (D-120, D-121)", async () => {
     // A stage run from inside a Claude Code session would otherwise run as
-    // that session's child.
+    // that session's child, and one with CLAUDE_CODE_EFFORT_LEVEL set at an
+    // effort other than the one it records.
     const recordPath = join(workDir, "record.json");
     process.env.FAKE_CLAUDE_RECORD = recordPath;
     const set = {
       CLAUDECODE: "1",
       CLAUDE_CODE_ENTRYPOINT: "cli",
       CLAUDE_PID: "1",
+      CLAUDE_CODE_EFFORT_LEVEL: "low",
       CLAUDE_CODE_OAUTH_TOKEN: "a-token",
     };
     // Put back as found: a run started from inside a session has some of
@@ -410,6 +412,7 @@ describe("what the engine actually invokes", () => {
       expect(record.claudeVariables).not.toContain("CLAUDECODE");
       expect(record.claudeVariables).not.toContain("CLAUDE_CODE_ENTRYPOINT");
       expect(record.claudeVariables).not.toContain("CLAUDE_PID");
+      expect(record.claudeVariables).not.toContain("CLAUDE_CODE_EFFORT_LEVEL");
       expect(record.claudeVariables).toContain("CLAUDE_CODE_OAUTH_TOKEN");
       expect(record.env.CLAUDECODE).toBeNull();
     } finally {

@@ -4,7 +4,7 @@ import {
   buildChildEnv,
   buildProbeArgs,
   buildStageArgs,
-  isSessionMarker,
+  isStrippedFromChild,
 } from "@/lib/engine/command";
 import { toEngineEvent } from "@/lib/engine/events";
 
@@ -142,11 +142,11 @@ describe("the child environment", () => {
       "CLAUDE_CODE_MESSAGING_SOCKET",
       "CLAUDE_CODE_SSE_PORT",
     ]) {
-      expect(isSessionMarker(name), name).toBe(true);
+      expect(isStrippedFromChild(name), name).toBe(true);
     }
-    expect(isSessionMarker("PATH")).toBe(false);
-    expect(isSessionMarker("HOME")).toBe(false);
-    expect(isSessionMarker("ANTHROPIC_API_KEY")).toBe(false);
+    expect(isStrippedFromChild("PATH")).toBe(false);
+    expect(isStrippedFromChild("HOME")).toBe(false);
+    expect(isStrippedFromChild("ANTHROPIC_API_KEY")).toBe(false);
   });
 
   it("passes a person's own Claude Code settings through (D-120)", () => {
@@ -159,8 +159,14 @@ describe("the child environment", () => {
       "CLAUDE_CODE_USE_BEDROCK",
       "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
     ]) {
-      expect(isSessionMarker(name), name).toBe(false);
+      expect(isStrippedFromChild(name), name).toBe(false);
     }
+  });
+
+  it("strips the one setting that outranks a flag every stage pins (D-121)", () => {
+    // 2.1.301 takes CLAUDE_CODE_EFFORT_LEVEL ahead of --effort, so a review
+    // created at high ran at whatever it said and still recorded high.
+    expect(isStrippedFromChild("CLAUDE_CODE_EFFORT_LEVEL")).toBe(true);
   });
 
   it("strips every session marker while keeping the rest of the environment", () => {

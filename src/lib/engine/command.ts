@@ -115,8 +115,9 @@ export function buildProbeArgs(model: string): string[] {
 }
 
 /**
- * What a Claude Code session, or the editor or SDK hosting one, sets for the
- * processes it starts (D-120).
+ * What a review's CLI does not inherit: what a Claude Code session, or the
+ * editor or SDK hosting one, sets for the processes it starts (D-120), and a
+ * setting that would override a flag every stage pins (D-121).
  *
  * A review is an independent run that may have been started from a terminal
  * inside a session, and must not run as that session's child: the 2.1.301
@@ -126,7 +127,7 @@ export function buildProbeArgs(model: string): string[] {
  * prefix: the same prefix carries a person's own settings, such as
  * CLAUDE_CODE_OAUTH_TOKEN for a headless sign-in, and those reach the CLI.
  */
-const SESSION_MARKERS: ReadonlySet<string> = new Set([
+const STRIPPED: ReadonlySet<string> = new Set([
   // Set by the CLI on every process it starts.
   "CLAUDECODE",
   "CLAUDE_CODE_CHILD_SESSION",
@@ -142,16 +143,19 @@ const SESSION_MARKERS: ReadonlySet<string> = new Set([
   "CLAUDE_CODE_MESSAGING_TOKEN",
   "CLAUDE_CODE_EXECPATH",
   "CLAUDE_CODE_SSE_PORT",
+  // A person's setting, but 2.1.301 ranks it above --effort, so a review
+  // created at high ran at whatever it said and still recorded high.
+  "CLAUDE_CODE_EFFORT_LEVEL",
 ]);
 
-export function isSessionMarker(name: string): boolean {
-  return SESSION_MARKERS.has(name);
+export function isStrippedFromChild(name: string): boolean {
+  return STRIPPED.has(name);
 }
 
 /**
  * The environment for a child `claude` process: the current environment minus
- * any inherited session markers, plus a pinned locale so parsing never
- * depends on the user's language.
+ * what it must not inherit, plus a pinned locale so parsing never depends on
+ * the user's language.
  */
 export function buildChildEnv(
   parentEnv: Readonly<Record<string, string | undefined>>,
@@ -159,7 +163,7 @@ export function buildChildEnv(
   const child: Record<string, string> = {};
   for (const [key, value] of Object.entries(parentEnv)) {
     if (value === undefined) continue;
-    if (isSessionMarker(key)) continue;
+    if (isStrippedFromChild(key)) continue;
     child[key] = value;
   }
   child.LC_ALL = "C";

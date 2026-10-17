@@ -2562,3 +2562,15 @@ verified evidence, in writing, here.
   drops any setting not yet listed. Accepted risk: a marker a later CLI
   adds passes until it is named. TRACEPARENT, which the CLI also sets when
   tracing, is generic and passes.
+- 2026-10-17 D-121 DECIDED (maintainer's choice; refines D-120 with new
+  evidence): CLAUDE_CODE_EFFORT_LEVEL is stripped from a review's CLI as
+  well. It is a person's setting, so D-120 let it through, but the 2.1.301
+  binary resolves effort with it first, ahead of the --effort flag every
+  stage passes, and its own /effort command says the variable "overrides
+  effort this session". A review created at high therefore ran at whatever
+  it said and still recorded high, against the 2026-07-31 decision that
+  effort is fixed when a review is created. --model, the other pinned value
+  a review records, ranks ahead of ANTHROPIC_MODEL in the same binary, so
+  nothing is stripped for it. Rejected: setting the variable to the
+  review's effort (the same result, one more value the engine writes), and
+  accepting a recorded effort that can be wrong.
