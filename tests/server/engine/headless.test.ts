@@ -26,6 +26,7 @@ import {
   type StageRunOptions,
 } from "@/server/engine/headless";
 import { readAuthStatus } from "@/server/engine/probe";
+import { SHUTDOWN } from "@/lib/domain/shutdown";
 
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
 
@@ -316,6 +317,33 @@ describe("stopping a stage", () => {
     expect(isRunning(pid)).toBe(false);
     // Settled by the kill, not by the give-up timer a further 300ms on.
     expect(Date.now() - asked).toBeLessThan(5_000);
+  });
+});
+
+describe("a stop that arrives before the CLI has started", () => {
+  it("starts nothing when the server is shutting down", async () => {
+    // The abort listener is attached late, after the version check and the
+    // prompt file, so a shutdown in between fired no event. Spawning then
+    // would leave a CLI running and spending after the server exits.
+    const recordPath = join(workDir, "record-shutdown.json");
+    process.env.FAKE_CLAUDE_RECORD = recordPath;
+    const controller = new AbortController();
+    controller.abort(SHUTDOWN);
+
+    const error = await run("success", { signal: controller.signal }).catch(
+      (thrown: unknown) => thrown,
+    );
+    expect((error as StageFailedError).errorClass).toBe("cancelled");
+    expect(existsSync(recordPath)).toBe(false);
+  });
+
+  it("still runs a stage a person cancelled in that window, as decided", async () => {
+    // The 2026-07-30 W4 decision: the stage in flight completes and is
+    // checkpointed, so a cancel loses nothing already paid for.
+    const controller = new AbortController();
+    controller.abort();
+    const outcome = await run("success", { signal: controller.signal });
+    expect(outcome.result.is_error).toBe(false);
   });
 });
 

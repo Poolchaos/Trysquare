@@ -16,7 +16,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { importProtocol } from "@/lib/rulesets/import";
 import { isResumableReview, type ReviewStatus } from "@/lib/domain/state-machines";
 import { logsDir, worktreeRootDir } from "@/lib/paths";
-import { SHUTDOWN } from "@/server/review/service";
+import { SHUTDOWN } from "@/lib/domain/shutdown";
 import type { Db } from "@/server/db/client";
 import { createProject, setCloneStatus } from "@/server/db/repositories/projects";
 import {

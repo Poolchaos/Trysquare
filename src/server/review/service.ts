@@ -27,6 +27,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 import type { EngineEvent } from "@/lib/engine/events";
+import { SHUTDOWN } from "@/lib/domain/shutdown";
 import {
   engineModeSchema,
   reviewEffortSchema,
@@ -181,13 +182,6 @@ export type RunOutcome =
   | { kind: "cancelled"; reason: string }
   | { kind: "interrupted"; reason: string }
   | { kind: "failed"; reason: string; logPath?: string | undefined };
-
-/**
- * The reason a run is aborted with when the server, not a person, stops it.
- * A cancel is final; a shutdown is not, so the review is left interrupted, as
- * a crash leaves it, and resumes from its checkpoints.
- */
-export const SHUTDOWN = Symbol.for("trysquare.shutdown");
 
 interface RepoSide {
   slug: string;

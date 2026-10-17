@@ -9,7 +9,7 @@
  * at server start instead of at the first request.
  */
 
-import { SHUTDOWN } from "@/server/review/service";
+import { SHUTDOWN } from "@/lib/domain/shutdown";
 import { runtime } from "@/server/runtime";
 
 const { manager } = runtime();

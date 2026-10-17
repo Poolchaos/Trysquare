@@ -15,6 +15,7 @@ import type { StageErrorClass } from "@/lib/domain/enums";
 import { buildChildEnv, buildStageArgs, type StageCommandOptions } from "@/lib/engine/command";
 import type { EngineEvent, ResultEvent } from "@/lib/engine/events";
 import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
+import { SHUTDOWN } from "@/lib/domain/shutdown";
 import { checkCliVersion, resolveCli, type CliCommand } from "./cli";
 import { StreamDecoder } from "./stream";
 
@@ -130,6 +131,21 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
   );
 
   return new Promise<StageOutcome>((resolve, reject) => {
+    // A shutdown that landed while this stage was getting ready fired no
+    // event here, so it is read off the signal. Starting the CLI now would
+    // leave it running after the server exits, spending, with nothing to read
+    // its answer. A person's cancel in the same window still lets the stage
+    // finish and be checkpointed, as the 2026-07-30 W4 decision has it.
+    if (options.signal?.aborted && options.signal.reason === SHUTDOWN) {
+      log.end("# not started: the server is stopping\n");
+      reject(
+        new StageFailedError("cancelled", "The server is stopping, so the stage was not started.", {
+          logPath: options.logPath,
+        }),
+      );
+      return;
+    }
+
     const spawned = (() => {
       try {
         return spawn(cli.command, argv, {
