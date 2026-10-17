@@ -13,6 +13,7 @@
 
 import { rmSync, writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { answerOnce } from "./answer-once";
 import { LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
 
 /** Unix seconds, and deliberately a fixed moment so the banner is checkable. */
@@ -162,26 +163,25 @@ test("a screen whose data cannot be read says so instead of loading forever", as
 test("a page the server let go of opens a new stream rather than polling", async ({ page }) => {
   // The server lets a stream go when its page falls 256 frames behind, and
   // says so last. The page used to read any end as a dropped connection and
-  // poll instead. Answered once by the route as the server answers then.
+  // poll instead. Answered once by the route as the server answers then; not
+  // `times: 1`, see answerOnce.
   let streams = 0;
   page.on("request", (request) => {
     if (/\/api\/reviews\/[^/]+\/events$/.test(new URL(request.url()).pathname)) streams += 1;
   });
-  await page.route(
-    "**/api/reviews/*/events",
-    (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        body: "event: reconnect\ndata: {}\n\n",
-      }),
-    { times: 1 },
+  const stopAnswering = await answerOnce(page, "**/api/reviews/*/events", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: "event: reconnect\ndata: {}\n\n",
+    }),
   );
   await page.goto("/reviews");
   const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
   await expect(row).toBeVisible({ timeout: 30_000 });
   await row.getByRole("link").click();
   await expect.poll(() => streams, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+  await stopAnswering();
 });
 
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {

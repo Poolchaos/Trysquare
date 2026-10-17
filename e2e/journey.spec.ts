@@ -15,6 +15,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { answerOnce } from "./answer-once";
 import { APP_REPO, PROTOCOL_PATH, REFUTED_ISSUE, REFUTED_NOTE } from "./setup";
 
 /**
@@ -306,26 +307,25 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // A review another tab completed or cancelled refuses the decision, and
     // the page used to keep offering decisions on it (D-119 review). Answered
     // once by the route, the way the server does, and the page reads the
-    // review again so it shows where the review really is.
+    // review again so it shows where the review really is. Not `times: 1`:
+    // see answerOnce.
     const reloads = countReviewReads(page);
-    await page.route(
-      "**/api/findings/*/confirm",
-      (route) =>
-        route.fulfill({
-          status: 409,
-          contentType: "application/json",
-          body: JSON.stringify({
-            error:
-              'Review "01J" is completed: its findings are decided only while it awaits confirmation.',
-            code: "ReviewNotDecidingError",
-          }),
+    const stopRefusing = await answerOnce(page, "**/api/findings/*/confirm", (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error:
+            'Review "01J" is completed: its findings are decided only while it awaits confirmation.',
+          code: "ReviewNotDecidingError",
         }),
-      { times: 1 },
+      }),
     );
     await page.locator("body").press("c");
     await expect(page.getByText(/its findings are decided only while it awaits/)).toBeVisible();
     await expect.poll(() => reloads.count, { timeout: 15_000 }).toBeGreaterThan(0);
     reloads.stop();
+    await stopRefusing();
   });
 
   await test.step("one finding is dismissed with a reason", async () => {
@@ -418,18 +418,15 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // Refused as another tab having completed it first, the page says so and
     // reads the review again, to show where it really is.
     const reloads = countReviewReads(page);
-    await page.route(
-      "**/api/reviews/*/complete",
-      (route) =>
-        route.fulfill({
-          status: 409,
-          contentType: "application/json",
-          body: JSON.stringify({
-            error: "This review is completed, so there is nothing to complete.",
-            code: "NotAwaitingConfirmation",
-          }),
+    const stopRefusing = await answerOnce(page, "**/api/reviews/*/complete", (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "This review is completed, so there is nothing to complete.",
+          code: "NotAwaitingConfirmation",
         }),
-      { times: 1 },
+      }),
     );
     await page.getByRole("button", { name: "Complete review" }).click();
     await expect(
@@ -437,6 +434,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     ).toBeVisible();
     await expect.poll(() => reloads.count, { timeout: 15_000 }).toBeGreaterThan(0);
     reloads.stop();
+    await stopRefusing();
 
     await page.getByRole("button", { name: "Complete review" }).click();
     await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
