@@ -9,16 +9,31 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import type { ReviewEffort } from "@/lib/domain/enums";
 import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
 import { importProtocol } from "@/lib/rulesets/import";
-import { bundleDir, logsDir, runDir, worktreeRepoDir, worktreeRootDir } from "@/lib/paths";
+import {
+  bundleDir,
+  logsDir,
+  runDir,
+  worktreeBaselinePath,
+  worktreeRepoDir,
+  worktreeRootDir,
+} from "@/lib/paths";
 import type { Db } from "@/server/db/client";
 import {
   confirmFinding,
@@ -615,6 +630,21 @@ describe("the commits a review is pinned to", () => {
     expect(
       execFileSync("git", ["rev-parse", "HEAD"], { cwd: worktree, encoding: "utf8" }).trim(),
     ).toBe(appHead);
+  }, 120_000);
+
+  it("checks out again over a baseline it cannot read, rather than failing at the end", async () => {
+    // What a crash part way through writing the baseline leaves. Trusted
+    // because it existed, it failed the run's last step after every stage
+    // was paid for, and every resume after.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await addWorktree(appClone, worktreeRepoDir(dataDir, reviewId, "app"), appHead);
+    const baseline = worktreeBaselinePath(dataDir, reviewId, "app");
+    mkdirSync(dirname(baseline), { recursive: true });
+    writeFileSync(baseline, '{"chan');
+
+    const outcome = await run(reviewId);
+    expect(outcome.kind === "failed" ? outcome.reason : outcome.kind).toBe("completed");
   }, 120_000);
 
   it("fails the run when something wrote inside the worktree", async () => {

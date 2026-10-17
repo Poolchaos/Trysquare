@@ -25,6 +25,7 @@ import {
   resolveCommit,
 } from "@/server/gitops/repo";
 import {
+  CheckoutMismatchError,
   WorktreeModifiedError,
   addWorktree,
   assertWorktreeClean,
@@ -38,10 +39,11 @@ let root: string;
 let originDir: string;
 let cloneDir: string;
 
-function git(args: string[], cwd: string): string {
+function git(args: string[], cwd: string, input?: string): string {
   return execFileSync("git", args, {
     cwd,
     encoding: "utf8",
+    ...(input === undefined ? {} : { input }),
     env: {
       ...process.env,
       GIT_AUTHOR_NAME: "Test",
@@ -344,6 +346,51 @@ describe("review worktrees", () => {
       writeFileSync(join(dir, "notes.md"), "scratch\n");
       await expect(assertWorktreeClean(dir, baseline)).rejects.toThrow(/notes\.md/);
       await removeWorktree(normalisingClone, dir);
+    });
+
+    it("refuses a checkout holding bytes git's own filters do not explain (D-110)", async () => {
+      // Only what checkout's filters make of the commit is accepted as the
+      // baseline. Anything else on disk at checkout is not the commit, and a
+      // review of it would check every quotation against the wrong bytes.
+      const dir = join(root, "wt-unexplained");
+      await addWorktree(cloneDir, dir, await resolveCommit(cloneDir, "main"));
+      writeFileSync(join(dir, "app.ts"), "export const version = 999;\n");
+      await expect(worktreeBaseline(dir)).rejects.toThrow(CheckoutMismatchError);
+      await expect(worktreeBaseline(dir)).rejects.toThrow(/app\.ts/);
+      await removeWorktree(cloneDir, dir);
+    });
+
+    it("refuses two paths differing only in case where the file system cannot hold both", async () => {
+      // One checks out over the other on Windows and default macOS, so the
+      // file named Config.ts holds config.ts's bytes. On a case-sensitive
+      // file system both check out and there is nothing to refuse.
+      const origin = join(root, "case-origin");
+      execFileSync("git", ["init", "-q", "-b", "main", origin]);
+      const upper = git(
+        ["hash-object", "-w", "--stdin"],
+        origin,
+        "export const which = 'UPPER';\n",
+      );
+      const lower = git(
+        ["hash-object", "-w", "--stdin"],
+        origin,
+        "export const which = 'lower';\n",
+      );
+      git(["update-index", "--add", "--cacheinfo", `100644,${upper.trim()},Config.ts`], origin);
+      git(["update-index", "--add", "--cacheinfo", `100644,${lower.trim()},config.ts`], origin);
+      git(["commit", "-qm", "two configs"], origin);
+      const clone = join(root, "case.git");
+      await cloneBare(origin, clone);
+      const dir = join(root, "wt-case");
+      await addWorktree(clone, dir, await resolveCommit(clone, "main"));
+
+      const caseInsensitive = readFileSync(join(dir, "Config.ts"), "utf8").includes("lower");
+      if (caseInsensitive) {
+        await expect(worktreeBaseline(dir)).rejects.toThrow(/Config\.ts/);
+      } else {
+        expect((await worktreeBaseline(dir)).changes).toEqual([]);
+      }
+      await removeWorktree(clone, dir);
     });
   });
 

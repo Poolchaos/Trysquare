@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, rm } from "node:fs/promises";
 import { z } from "zod";
 import { insideRoot } from "@/lib/paths";
-import { git, toLines } from "./run";
+import { git, gitBytes, toLines } from "./run";
 
 export class WorktreeModifiedError extends Error {
   constructor(
@@ -84,11 +84,41 @@ export const worktreeBaselineSchema = z.object({
 });
 export type WorktreeBaseline = z.infer<typeof worktreeBaselineSchema>;
 
+export class CheckoutMismatchError extends Error {
+  constructor(
+    readonly worktreeDir: string,
+    readonly paths: readonly string[],
+  ) {
+    super(
+      `The checkout at ${worktreeDir} does not hold what its commit holds, even after git's ` +
+        `own line-ending and attribute filters: ${paths.join(", ")}. Two paths that differ ` +
+        "only in case, on a file system that cannot tell them apart, are one way this happens. " +
+        "Every quotation would be checked against the wrong bytes, so the review is refused " +
+        "before any stage runs.",
+    );
+    this.name = "CheckoutMismatchError";
+  }
+}
+
+/**
+ * The baseline for a fresh checkout. A file it names is accepted only when
+ * its bytes are what git's checkout filters make of the commit, which is the
+ * normalisation case; anything else on disk is not the commit (D-110).
+ */
 export async function worktreeBaseline(worktreeDir: string): Promise<WorktreeBaseline> {
-  return {
-    changes: await worktreeChanges(worktreeDir),
-    contents: await contentsOfChanged(worktreeDir),
-  };
+  const changes = await worktreeChanges(worktreeDir);
+  const contents = await contentsOfChanged(worktreeDir);
+  const unexplained: string[] = [];
+  for (const [path, hash] of Object.entries(contents)) {
+    const committed = await gitBytes(["cat-file", "--filters", `HEAD:${path}`], {
+      cwd: worktreeDir,
+    }).catch(() => null);
+    const expected =
+      committed === null ? null : createHash("sha256").update(committed).digest("hex");
+    if (hash === null || expected !== hash) unexplained.push(path);
+  }
+  if (unexplained.length > 0) throw new CheckoutMismatchError(worktreeDir, unexplained);
+  return { changes, contents };
 }
 
 /**

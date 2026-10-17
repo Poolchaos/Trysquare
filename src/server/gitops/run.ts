@@ -188,6 +188,47 @@ export async function gitWithStderr(
   });
 }
 
+/**
+ * Runs git and returns its output as bytes, for content that is compared
+ * exactly: decoding as text first can make two different byte strings equal.
+ */
+export async function gitBytes(
+  args: readonly string[],
+  options: GitRunOptions = {},
+): Promise<Buffer> {
+  const system = await systemGitConfig();
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      "git",
+      [...args],
+      {
+        cwd: options.cwd,
+        timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+        maxBuffer: options.maxBuffer ?? DEFAULT_MAX_BUFFER,
+        env: gitEnv(system) as NodeJS.ProcessEnv,
+        encoding: "buffer",
+        windowsHide: true,
+      },
+      (error, stdout, stderr) => {
+        if (!error) {
+          resolve(stdout);
+          return;
+        }
+        const timedOut =
+          (error as NodeJS.ErrnoException & { killed?: boolean }).killed === true &&
+          (error as NodeJS.ErrnoException & { signal?: string }).signal !== null;
+        const exitCode = typeof error.code === "number" ? error.code : null;
+        reject(
+          new GitCommandError(args, exitCode, stderr.toString("utf8") || error.message, timedOut),
+        );
+      },
+    );
+    child.on("error", (error) => {
+      reject(new GitCommandError(args, null, String(error), false));
+    });
+  });
+}
+
 /** Runs git and returns whether it succeeded, for genuinely optional checks. */
 export async function gitSucceeds(
   args: readonly string[],

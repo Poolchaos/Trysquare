@@ -22,7 +22,7 @@
  */
 
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { z } from "zod";
@@ -480,15 +480,20 @@ async function assertPinnedCommitsExist(side: RepoSide, reviewId: string): Promi
 async function ensureWorktree(side: RepoSide): Promise<WorktreeBaseline | null> {
   if (existsSync(join(side.worktreeDir, ".git"))) {
     const present = await worktreeCommit(side.worktreeDir).catch(() => null);
-    // Without its baseline the end check cannot tell a checkout that was
-    // already changed from one something wrote to, so it is made again.
-    if (present === side.headCommit && existsSync(side.baselinePath)) return null;
+    // Without a baseline it can read, the end check cannot tell a checkout
+    // that was already changed from one something wrote to, so it is made
+    // again. A file cut short by a crash is no baseline.
+    const kept = await readBaseline(side.baselinePath).catch(() => undefined);
+    if (present === side.headCommit && kept !== undefined) return null;
     await removeWorktree(side.clonePath, side.worktreeDir);
   }
   await addWorktree(side.clonePath, side.worktreeDir, side.headCommit);
   const baseline = await worktreeBaseline(side.worktreeDir);
   await mkdir(dirname(side.baselinePath), { recursive: true });
-  await writeFile(side.baselinePath, JSON.stringify(baseline), "utf8");
+  // Written whole or not at all, so a crash cannot leave half a baseline.
+  const partial = `${side.baselinePath}.writing-${process.pid}`;
+  await writeFile(partial, JSON.stringify(baseline), "utf8");
+  await rename(partial, side.baselinePath);
   return baseline;
 }
 
