@@ -19,7 +19,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { formatHunkHeader, hunkForLine, parseUnifiedDiff } from "@/lib/git/diff";
-import { bundleDir, worktreeRootDir } from "@/lib/paths";
+import { bundleDir, insideRoot, worktreeRootDir } from "@/lib/paths";
 import { listFindings } from "@/server/db/repositories/findings";
 import { requireReview, statusOf } from "@/server/db/repositories/reviews";
 import { failed, handler, notFound, ok } from "@/server/api/respond";
@@ -73,7 +73,9 @@ export async function GET(
 
     let contents: string;
     try {
-      contents = await readFile(join(worktreeRootDir(dataDir, id), path), "utf8");
+      // Contained like every other path a model named: an S4 finding path is
+      // not reconciled against the change set, so it could point anywhere.
+      contents = await readFile(insideRoot(worktreeRootDir(dataDir, id), path), "utf8");
     } catch {
       // A deleted file has no worktree copy, and its hunk is the only view of
       // it there is. Answering with the hunk alone beats a 404 that reads as

@@ -7,7 +7,7 @@
  * with hand-written findings would prove nothing about the real one.
  */
 
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -270,6 +270,35 @@ describe("reading the code a finding is about", () => {
       params(reviewId),
     );
     expect(response.status).toBe(404);
+  }, 120_000);
+
+  it("never serves a file outside the checkout, whatever path a finding names", async () => {
+    // A deletion-stage finding's path came straight from the model, and this
+    // route joined it onto the worktree: a killed finding at a path climbing
+    // out of it served whatever file sat there (review of MVP 3.6 to 4.9).
+    const { runtime } = await import("@/server/runtime");
+    const { createCandidate } = await import("@/server/db/repositories/findings");
+    const outside = join(worktreeRootDir(dataDir, reviewId), "..", "..", "outside-secret.txt");
+    writeFileSync(outside, "SECRET=hunter2\n", "utf8");
+    const escaping = "app/../../../outside-secret.txt";
+    createCandidate(runtime().db, {
+      reviewId,
+      repo: "primary",
+      filePath: escaping,
+      lineStart: 1,
+      lineEnd: 1,
+      severity: "CRITICAL",
+      issue: "x",
+      comment: "x",
+      mechanism: "x",
+    });
+
+    const response = await routes.fileContext.GET(
+      new Request(`http://localhost/x?path=${encodeURIComponent(escaping)}&line=1`),
+      params(reviewId),
+    );
+    expect(response.status).toBe(404);
+    expect(await response.text()).not.toContain("hunter2");
   }, 120_000);
 });
 
