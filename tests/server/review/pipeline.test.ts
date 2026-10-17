@@ -1449,9 +1449,17 @@ describe("where a deletion finding may point", () => {
     // is in this one; the service names both directories.
     const result = await runDeleting(
       { findings: [finding("shared-core/src/use.ts")], reviewedDeletions: [ACCOUNTED] },
-      { repoSlugs: ["app", "shared-core"] },
+      {
+        repositories: [
+          { slug: "app", repo: "primary" },
+          { slug: "shared-core", repo: "linked" },
+        ],
+      },
     );
     expect(result.candidatesRaised).toBe(1);
+    // Recorded against the repository it is in, which the file context
+    // shown beside it is read from.
+    expect(listFindings(db, reviewId)[0]?.repo).toBe("linked");
   });
 });
 

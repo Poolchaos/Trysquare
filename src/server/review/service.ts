@@ -344,7 +344,7 @@ export async function prepareAndRun(
       reviewId,
       worktreeRoot: worktreeRootDir(dataDir, reviewId),
       files,
-      repoSlugs: sides.map((side) => side.slug),
+      repositories: sides.map((side) => ({ slug: side.slug, repo: side.role })),
       rules: snapshot.rules,
       // Parsed rather than asserted: the column is text, and a profile the
       // code does not know would otherwise reach the batch planner as a

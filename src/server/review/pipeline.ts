@@ -14,7 +14,7 @@
  */
 
 import { readFile } from "node:fs/promises";
-import type { ReviewProfile, ReviewStage } from "@/lib/domain/enums";
+import type { RepoRole, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
 import { unsafeRepoPathReason } from "@/lib/git/repo-path";
 import type { ChangedSymbol } from "@/lib/git/symbols";
 import { insideRoot } from "@/lib/paths";
@@ -115,10 +115,11 @@ export interface PipelineInput {
   /** Changed files per repository, from the deterministic inventory. */
   files: readonly ChangedFileEntry[];
   /**
-   * Each repository's directory under worktreeRoot. Defaults to those with a
-   * changed file, which misses a linked repository that changed nothing.
+   * Each repository's directory under worktreeRoot, and its role. Defaults to
+   * those with a changed file, which misses a linked repository that changed
+   * nothing.
    */
-  repoSlugs?: readonly string[] | undefined;
+  repositories?: readonly { slug: string; repo: RepoRole }[] | undefined;
   /** The full rules, used both for the sweep and for planning the batches. */
   rules: readonly ImportedRule[];
   /** Decides how the adversarial work is divided. See docs/06. */
@@ -487,7 +488,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         parsed.reviewedDeletions.map((entry) => entry.path),
       ),
     );
-    const repoSlugs = input.repoSlugs ?? [...new Set(input.files.map((entry) => entry.slug))];
+    const repoSlugs = repositoriesOf(input).map((repository) => repository.slug);
     for (const finding of parsed.findings) assertNamesRepoFile(finding.path, repoSlugs);
     return {
       ...parsed,
@@ -1005,9 +1006,15 @@ function spanOf(range: { lineStart: number; lineEnd: number }): string {
     : `lines ${range.lineStart} to ${range.lineEnd}`;
 }
 
-function repoOf(path: string, input: PipelineInput): "primary" | "linked" {
+function repositoriesOf(input: PipelineInput): readonly { slug: string; repo: RepoRole }[] {
+  if (input.repositories) return input.repositories;
+  const bySlug = new Map(input.files.map((entry) => [entry.slug, entry.repo]));
+  return [...bySlug].map(([slug, repo]) => ({ slug, repo }));
+}
+
+function repoOf(path: string, input: PipelineInput): RepoRole {
   const slug = path.split("/")[0];
-  return input.files.find((entry) => entry.slug === slug)?.repo ?? "primary";
+  return repositoriesOf(input).find((repository) => repository.slug === slug)?.repo ?? "primary";
 }
 
 /**
