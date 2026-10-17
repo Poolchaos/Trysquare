@@ -332,9 +332,7 @@ export function renderDeletionPrompt(input: StageContentInput): string {
             "Contents before deletion, numbered as a finding in this file must cite",
             "them; the numbers are not part of the code:",
             "",
-            fenceFor(numberedLines(previous).join("\n")),
-            numberedLines(previous).join("\n"),
-            fenceFor(numberedLines(previous).join("\n")),
+            fenced(numberedLines(previous).join("\n")),
           ].join("\n");
     }
 
@@ -371,13 +369,6 @@ export function renderDeletionPrompt(input: StageContentInput): string {
 }
 
 /**
- * A fence one backtick longer than any run inside the text it wraps.
- *
- * Deleted files are inlined verbatim, and a markdown file full of its own
- * code fences would otherwise terminate the block early, turning the rest of
- * the file into instructions.
- */
-/**
  * A file's lines with the numbers a finding cites them by, in the width the
  * hunks use. A closing newline ends the last line rather than starting one.
  */
@@ -387,9 +378,16 @@ export function numberedLines(text: string): string[] {
   return lines.map((line, index) => `${String(index + 1).padStart(6)}  ${line}`);
 }
 
-function fenceFor(text: string): string {
+/**
+ * Wraps text in a fence one backtick longer than any run inside it. A
+ * deleted file is shown numbered, and a numbered line is indented past the
+ * three spaces a closing fence allows, so its own fences cannot end the
+ * block; the longer fence keeps that true for a reader less strict about it.
+ */
+function fenced(text: string): string {
   const longest = text.match(/`+/g)?.reduce((max, run) => Math.max(max, run.length), 0) ?? 0;
-  return "`".repeat(Math.max(3, longest + 1));
+  const fence = "`".repeat(Math.max(3, longest + 1));
+  return [fence, text, fence].join("\n");
 }
 
 /**

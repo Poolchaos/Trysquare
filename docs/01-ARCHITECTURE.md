@@ -89,6 +89,7 @@ db.sqlite
 projects/<projectId>/repo.git       bare clone (no working tree to damage)
 runs/<reviewId>/worktree/<slug>/    detached read-only checkout of fromCommit
 runs/<reviewId>/worktree/           parent, and the cwd AI stages are given
+runs/<reviewId>/worktree-baseline/  what each checkout reported changed (D-107)
 runs/<reviewId>/bundle/             precomputed review inputs (see 03)
 runs/<reviewId>/logs/               subprocess transcripts per stage
 exports/                            saved reports

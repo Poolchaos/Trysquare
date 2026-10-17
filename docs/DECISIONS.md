@@ -2346,3 +2346,52 @@ verified evidence, in writing, here.
   cannot be known from a count. Tests: a hit the database refuses leaves no
   file and no hit behind, and fails if the transaction is removed; a
   ledger holding the files but not the hit stops the run by name.
+- 2026-10-17 D-110 REVIEW (MVP 4.13 to 4.16, cc954b0..8cce64d, by a
+  separate read-only reviewer; each finding re-run here before it was
+  fixed). Nine findings, all dispositioned before new work:
+  1. MEDIUM: the checkout baseline accepted any difference git reported at
+  checkout. With two paths differing only in case on a case-insensitive
+  file system, Config.ts held config.ts's bytes and the review completed.
+  DECIDED: a file enters the baseline only when its bytes equal
+  `git cat-file --filters` for the commit, the normalisation case; any
+  other difference refuses the review before a stage runs. 6. A baseline
+  cut short by a crash failed every run at its end; it is now written
+  whole or not at all, and one that cannot be read means a fresh checkout.
+  1 and 6 fixed 8f1b1f2.
+  2. MEDIUM: verification carried a deleted file whole for every candidate
+  in it, so five candidates in a 2,000-line file made a 725,290-character
+  prompt. DECIDED: each deleted file goes once, in a map beside the
+  candidates. Fixed 3e1a94b.
+  3. MEDIUM: diff.submodule=log refused every review that moved a
+  submodule, and diff.ignoreSubmodules=all left the move out unnoticed,
+  since it drops the entry from the name list too. 4. diff.algorithm
+  changed which lines a hunk held, so the same commits gave different
+  sweep hits, which D-109's premise missed. DECIDED: both diff commands pin
+  the submodule display and the algorithm (git's default, myers). 3 and 4
+  fixed 570c49b, with the resume error naming its other cause.
+  5. LOW: a typechange's new file is quote-checked against its old link
+  target. Hidden by a worse, older failure of the same change, so both
+  are plan row 4.25.
+  7. LOW, accepted: a review interrupted before 4.14 is checked out again
+  on resume, losing any write the old end check would have caught. Only
+  reviews from before 4.14 can be in that state, and none is known.
+  8. Records: D-108 gave the wrong reason for explicit prefixes, since
+  --default-prefix arrived in git 2.41 (git-diff docs for 2.41.0 list it,
+  for 2.40.0 do not); the decision stands on the explicit flags working on
+  far older git. Also the data layout in 01, the RUNBOOK bullet, and the
+  preflight comment. 9. A doc comment had lost its function in content.ts.
+  8 and 9 fixed in the commit recording this review.
+  Found on the way, older than the range: writes to gitignored paths pass
+  the end check (plan row 4.26), and the parser trims a trailing space
+  from a path (4.27).
+- 2026-10-17 D-111 UNEXPLAINED, continuing D-100 and D-104, now located:
+  Windows CI run 39030140623 at 70baf02 failed a third time with
+  net::ERR_NO_BUFFER_SPACE, on a script chunk of /projects, and passed on
+  its D-105 re-run. Chromium's net log, which D-105 added, names the call:
+  a TCP connect to 127.0.0.1:3100 failed within 1 ms with OS error 10055,
+  WSAENOBUFS, from Winsock's connect. At that moment the browser held 3
+  sockets (6 at most in its log), had made 9 connect attempts in the
+  previous second and 32 in all, and the runner's TCP table held 180
+  TIME_WAIT and 12 established. Neither the app, the tests, nor the
+  machine's ports were near a limit, so the refusal comes from the
+  runner's network stack. The D-105 rule stands: re-run once, record each.

@@ -198,11 +198,13 @@ against a fake CLI committed to the repository.
   which is how a hostile branch once wrote outside the data directory. Rename
   the file in the branch, or review it some other way.
 - **A review that stops because the diff and git's list of changed files
-  disagree** refused on purpose (D-108). The diff is taken with your git
-  config's formatting overridden (external diff tools, textconv, prefixes),
-  then checked file by file against `git diff --name-only`. A mismatch means
-  some setting still reshaped it; run that `git diff` yourself in the
-  project's clone to see which, and report it.
+  disagree** was refused on purpose (D-108). The diff is taken with your git
+  config overridden (external diff tools, textconv, prefixes, submodule
+  display, the diff algorithm), then checked file by file against
+  `git diff --name-only`. A mismatch means a setting still reshaped it, or a
+  path the parser misreads: a file name ending in a space is one (plan row
+  4.27). Run that `git diff` yourself in the project's clone to see which,
+  and report it.
 - **Port 3000 in use is not an error.** Dev falls back to 3001 and prints the
   URL it actually took. Read the line rather than assuming 3000.
 - **A real protocol document usually needs one edit before it imports:

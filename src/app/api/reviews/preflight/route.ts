@@ -82,7 +82,8 @@ export function POST(request: Request): Promise<Response> {
         recordFetch(db, dependency.id);
       }
     } catch (error) {
-      // A branch that vanished, or a remote that will not answer. Git's own
+      // A branch that vanished, a remote that will not answer, or a diff that
+      // disagrees with git's own list of changed files. The error's own
       // words, because they say which of those it was.
       return failed(error, 400);
     }
