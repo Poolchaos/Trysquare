@@ -549,6 +549,8 @@ describe("the interactive engine", () => {
       entry.message.startsWith("Engine:"),
     );
     expect(note?.message).toContain("interactive, answered in your own session");
+    // Mode B passes no effort to anyone, so the record does not claim one.
+    expect(note?.message).not.toContain("effort");
   }, 180_000);
 });
 
@@ -1209,6 +1211,18 @@ describe("what a run is allowed to spend", () => {
     await run(reviewId);
 
     for (const args of recordedArgv()) expect(args).not.toContain("--max-budget-usd");
+  }, 120_000);
+});
+
+describe("a review whose stored engine mode cannot be read", () => {
+  it("fails to start without being left marked running", async () => {
+    // The mode was read after the row was set running and outside the
+    // handler that records failures, so a bad value left it running for good.
+    const reviewId = seedReview();
+    db.update(reviews).set({ engineMode: "bogus" }).where(eq(reviews.id, reviewId)).run();
+
+    await expect(run(reviewId)).rejects.toThrow();
+    expect(requireReview(db, reviewId).status).toBe("draft");
   }, 120_000);
 });
 

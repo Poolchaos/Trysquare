@@ -247,19 +247,23 @@ export async function prepareAndRun(
     );
   }
   const snapshot = readReviewSnapshot(db, reviewId);
+  // Read before the review is marked running: an unreadable value fails the
+  // start here, rather than leaving a row that says running with nothing
+  // behind it.
+  const interactive = engineModeSchema.parse(review.engineMode) === "interactive";
 
   transitionReview(db, reviewId, "running", { currentStage: null });
 
   // Which binary answers matters as much as which model: a fake-versus-real
   // mixup must be readable from the run itself, not deduced from token counts.
-  // Mode B starts no process, so it is not asked to report a version either.
-  const engine =
-    engineModeSchema.parse(review.engineMode) === "interactive"
-      ? "interactive, answered in your own session"
-      : await describeCli(options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH);
+  // Mode B starts no process, so it reports no version, and passes no effort:
+  // the person's own session decides how hard it thinks.
   appendRunNote(db, reviewId, {
     kind: "note",
-    message: `Engine: ${engine}, model ${review.model}, effort ${review.effort}.`,
+    message: interactive
+      ? `Engine: interactive, answered in your own session, model ${review.model}.`
+      : `Engine: ${await describeCli(options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH)}, ` +
+        `model ${review.model}, effort ${review.effort}.`,
   });
 
   try {

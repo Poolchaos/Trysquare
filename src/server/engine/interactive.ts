@@ -18,8 +18,8 @@
  * guess would corrupt the one number the user makes decisions with.
  */
 
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ReviewStage } from "@/lib/domain/enums";
 import type { EngineEvent } from "@/lib/engine/events";
@@ -31,6 +31,7 @@ import { StageOutputUnreadableError } from "@/server/review/engine-runner";
 import type { StageRequest, StageResponse } from "@/server/review/pipeline";
 import type { ReviewEngine } from "./adapter";
 import { MINIMUM_CLI_VERSION, resolveCli, type CliCommand } from "./cli";
+import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
 import { READ_ONLY_TOOLS } from "@/lib/engine/command";
 
 export interface InteractiveEngineOptions {
@@ -47,8 +48,6 @@ export interface InteractiveEngineOptions {
   pollMs?: number | undefined;
   /** The CLI the printed command runs; resolved as a review resolves it. */
   claudePath?: string | undefined;
-  /** Names each call's files. Random by default; tests make it predictable. */
-  newCallId?: (() => string) | undefined;
   signal?: AbortSignal | undefined;
   onEvent?: ((stage: ReviewStage, event: EngineEvent) => void) | undefined;
 }
@@ -62,11 +61,29 @@ export interface ExchangeFiles {
 }
 
 /**
- * One set of files per call. S3 asks several questions under one stage name,
- * and named by stage alone the second batch overwrote the first's prompt and
- * read the first's answer straight back; a resumed stage likewise read the
- * answer an earlier attempt left. A file only this call names cannot be stale.
+ * Names a call by the question it asks. S3 asks several questions under one
+ * stage name, and named by stage alone the second batch overwrote the first's
+ * prompt and read the first's answer straight back. Named by the question, a
+ * different one never reads another's answer, and the same one asked again on
+ * resume finds the answer a person saved after the first attempt timed out.
  */
+export function callIdFor(request: {
+  stage: ReviewStage;
+  batchNumber?: number | undefined;
+  systemPrompt: string;
+  prompt: string;
+}): string {
+  return createHash("sha256")
+    .update(
+      [request.stage, String(request.batchNumber ?? ""), request.systemPrompt, request.prompt].join(
+        "\0",
+      ),
+    )
+    .digest("hex")
+    .slice(0, 12);
+}
+
+/** One set of files per question, named by `callIdFor`. */
 export function exchangeFilesFor(
   exchangeDir: string,
   stage: ReviewStage,
@@ -153,7 +170,13 @@ export function launchArgsFor(input: {
 }
 
 const posixQuote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
-const powershellQuote = (value: string) => `'${value.replace(/'/g, "''")}'`;
+/**
+ * PowerShell also ends a single-quoted string at the typographic quotes
+ * U+2018 to U+201B, so each is doubled like the ASCII one (an apostrophe in
+ * a name such as D'Angelo, typed on a phone, broke the command; measured).
+ */
+const powershellQuote = (value: string) =>
+  `'${value.replace(/['\u2018\u2019\u201A\u201B]/g, "$&$&")}'`;
 
 /**
  * The command to paste, for both shells a person here is likely to have open.
@@ -175,7 +198,6 @@ export function launchCommandsFor(
 
 export function createInteractiveEngine(options: InteractiveEngineOptions): ReviewEngine {
   const pollMs = options.pollMs ?? 1000;
-  const newCallId = options.newCallId ?? (() => randomUUID().slice(0, 8));
 
   const run = async (request: StageRequest): Promise<StageResponse> => {
     const schema = stageSchemaFor(request.stage);
@@ -200,12 +222,21 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
       cli = { command: "claude", prefixArgs: [], display: "claude" };
     }
 
+    // The same refusal a headless stage makes: a review stored before review
+    // creation checked aliases must not hand a person `--model opus`.
+    if (!isFullModelId(options.model)) {
+      throw new StageFailedError(
+        "spawn",
+        `Refused to start the stage: ${aliasRefusal(options.model)}`,
+      );
+    }
+
     await mkdir(options.exchangeDir, { recursive: true });
     const files = exchangeFilesFor(
       options.exchangeDir,
       request.stage,
       request.batchNumber,
-      newCallId(),
+      callIdFor({ ...request, systemPrompt }),
     );
     const promptPath = files.prompt;
     const answerPath = files.answer;
@@ -248,10 +279,20 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     });
 
+    // An answer that is refused is moved aside, or the same question asked
+    // again on resume would read it back and fail the same way for ever.
+    const setAside = async () => {
+      await rename(
+        answerPath,
+        answerPath.replace(/-output\.json$/, `-output.rejected-${Date.now()}.json`),
+      );
+    };
+
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
     } catch (error) {
+      await setAside();
       throw new StageOutputUnreadableError(
         request.stage,
         error instanceof Error ? error.message : String(error),
@@ -264,6 +305,7 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
     // about an answer they cannot see.
     const checked = schema.safeParse(parsed);
     if (!checked.success) {
+      await setAside();
       throw new StageOutputUnreadableError(
         request.stage,
         `${answerPath} did not match the ${request.stage} schema: ` +
@@ -321,8 +363,8 @@ async function waitForAnswer(
       throw new StageFailedError(
         "timeout",
         `No answer appeared at ${path} within ${Math.round(options.timeoutMs / 60_000)} minutes. ` +
-          `The ${options.stage} stage is still waiting for one; resuming the review picks up ` +
-          `where it stopped.`,
+          `Save the answer there and resume the review: the same question is asked from the ` +
+          `same files, so it is read at once.`,
       );
     }
 

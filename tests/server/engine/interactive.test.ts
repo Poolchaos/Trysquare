@@ -12,6 +12,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -22,6 +23,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  callIdFor,
   createInteractiveEngine,
   exchangeFilesFor,
   launchArgsFor,
@@ -33,41 +35,46 @@ import { StageOutputUnreadableError } from "@/server/review/engine-runner";
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
 
 let dir: string;
-let calls: number;
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "trysquare-interactive-"));
-  calls = 0;
 });
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-function engine(options: { timeoutMs?: number; signal?: AbortSignal } = {}) {
+function engine(options: { timeoutMs?: number; signal?: AbortSignal; model?: string } = {}) {
   return createInteractiveEngine({
     exchangeDir: join(dir, "bundle"),
     worktreeRoot: join(dir, "worktree"),
-    model: "claude-fable-5[1m]",
+    model: options.model ?? "claude-fable-5[1m]",
     directives: [],
     rules: [],
     timeoutMs: options.timeoutMs ?? 5_000,
     pollMs: 25,
     claudePath: FAKE_CLI,
-    // c1, c2, ... in call order, so a test can name the files a call will use.
-    newCallId: () => `c${(calls += 1)}`,
     ...(options.signal === undefined ? {} : { signal: options.signal }),
   });
 }
 
-const ask = { stage: "s1_risk" as const, systemPrompt: "You are a reviewer.", prompt: "Assess." };
+type Question = {
+  stage: "s1_risk" | "s3_adversarial";
+  systemPrompt: string;
+  prompt: string;
+  batchNumber?: number;
+  batchCount?: number;
+};
 
-const filesOf = (callId: string, batch?: number, stage: "s1_risk" | "s3_adversarial" = "s1_risk") =>
-  exchangeFilesFor(join(dir, "bundle"), stage, batch, callId);
+const ask: Question = { stage: "s1_risk", systemPrompt: "You are a reviewer.", prompt: "Assess." };
+
+/** The files a question is asked through, named as the engine names them. */
+const filesFor = (question: Question) =>
+  exchangeFilesFor(join(dir, "bundle"), question.stage, question.batchNumber, callIdFor(question));
 
 /**
- * Writes an answer once its call's prompt exists, the way a person would: the
- * folder is created by the engine, so writing on a fixed delay raced it.
+ * Writes an answer once its question's prompt exists, the way a person would:
+ * the folder is created by the engine, so writing on a fixed delay raced it.
  */
-function answerLater(contents: string, afterMs = 60, path = filesOf("c1").answer): void {
+function answerLater(contents: string, afterMs = 60, path = filesFor(ask).answer): void {
   const prompt = path.replace(/-output\.json$/, "-prompt.md");
   const started = Date.now();
   const attempt = () => {
@@ -85,11 +92,11 @@ describe("the file a person is handed", () => {
     answerLater(JSON.stringify({ files: [] }));
     await engine().run(ask);
 
-    const prompt = readFileSync(filesOf("c1").prompt, "utf8");
+    const prompt = readFileSync(filesFor(ask).prompt, "utf8");
     expect(prompt).toContain("You are a reviewer.");
     expect(prompt).toContain("Assess.");
     // Where the answer goes, or the exchange has no second half.
-    expect(prompt).toContain(filesOf("c1").answer);
+    expect(prompt).toContain(filesFor(ask).answer);
     // The checkout is read-only and the review verifies against those bytes.
     expect(prompt).toContain("Do not edit anything in it");
   });
@@ -97,7 +104,42 @@ describe("the file a person is handed", () => {
   it("puts the instructions in their own file for the session's system prompt", async () => {
     answerLater(JSON.stringify({ files: [] }));
     await engine().run(ask);
-    expect(readFileSync(filesOf("c1").system, "utf8")).toBe("You are a reviewer.");
+    expect(readFileSync(filesFor(ask).system, "utf8")).toBe("You are a reviewer.");
+  });
+
+  it("tells the person the command and the CLI version it needs, starting nothing itself", async () => {
+    // Mode B spawns nothing, a version check included: it names the CLI and
+    // says what the command needs, and the person runs it.
+    const said: string[] = [];
+    const reviewer = createInteractiveEngine({
+      exchangeDir: join(dir, "bundle"),
+      worktreeRoot: join(dir, "worktree"),
+      model: "claude-fable-5[1m]",
+      directives: [],
+      rules: [],
+      timeoutMs: 5_000,
+      pollMs: 25,
+      claudePath: FAKE_CLI,
+      onEvent: (_stage, event) => {
+        if (event.kind === "text") said.push(event.text);
+      },
+    });
+    answerLater(JSON.stringify({ files: [] }));
+    await reviewer.run(ask);
+
+    expect(said).toHaveLength(1);
+    expect(said[0]).toContain("Set-Location -LiteralPath");
+    expect(said[0]).toContain("fake-claude.mjs");
+    expect(said[0]).toContain("2.1.301 or newer");
+    expect(said[0]).toContain(filesFor(ask).answer);
+  });
+
+  it("refuses to hand out a command for a model alias", async () => {
+    // Headless stages refuse one at launch; a person must not be handed
+    // `--model opus` by a review stored before creation checked.
+    await expect(engine({ model: "opus" }).run(ask)).rejects.toThrow(
+      /"opus" does not name a single model/,
+    );
   });
 });
 
@@ -130,7 +172,8 @@ describe("the answer it accepts", () => {
   it("ignores a file caught mid-write rather than failing on it", async () => {
     // A reader that treated an empty file as an answer would fail the stage
     // over its own timing instead of the writer's content.
-    const answerPath = filesOf("c1").answer;
+    const answerPath = filesFor(ask).answer;
+    mkdirSync(join(dir, "bundle"), { recursive: true });
     setTimeout(() => writeFileSync(answerPath, "", "utf8"), 40);
     setTimeout(() => writeFileSync(answerPath, JSON.stringify({ files: [] }), "utf8"), 120);
 
@@ -156,14 +199,39 @@ describe("when no answer comes", () => {
     // expired, which for a person-paced stage is twenty minutes away.
     await expect(running).rejects.toThrow(/cancelled/i);
   });
+
+  it("reads an answer saved after the timeout when the same question is asked again", async () => {
+    // What the timeout message promises: a person who answers late and then
+    // resumes is not made to run, and pay for, the session again.
+    await expect(engine({ timeoutMs: 150 }).run(ask)).rejects.toThrow(
+      /the same question is asked from the same files/,
+    );
+    writeFileSync(filesFor(ask).answer, JSON.stringify({ files: [] }), "utf8");
+
+    const started = Date.now();
+    await expect(engine({ timeoutMs: 5_000 }).run(ask)).resolves.toMatchObject({
+      output: { files: [] },
+    });
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
+  it("sets a refused answer aside, so asking again waits for a new one", async () => {
+    answerLater("not JSON");
+    await expect(engine().run(ask)).rejects.toBeInstanceOf(StageOutputUnreadableError);
+    expect(existsSync(filesFor(ask).answer)).toBe(false);
+    expect(readdirSync(join(dir, "bundle")).some((name) => name.includes(".rejected-"))).toBe(true);
+
+    // Without the move this would fail at once on the same bad file.
+    await expect(engine({ timeoutMs: 200 }).run(ask)).rejects.toThrow(/No answer appeared at/);
+  });
 });
 
-describe("one call's files belong to that call", () => {
+describe("one question's files belong to that question", () => {
   it("does not hand a second batch the first batch's answer", async () => {
     // S3 asks several questions under one stage name. Named by stage alone,
     // batch 2 read batch 1's answer straight back.
-    const adversarial = (batchNumber: number) => ({
-      stage: "s3_adversarial" as const,
+    const adversarial = (batchNumber: number): Question => ({
+      stage: "s3_adversarial",
       systemPrompt: "Rules.",
       prompt: `Batch ${batchNumber}.`,
       batchNumber,
@@ -171,55 +239,40 @@ describe("one call's files belong to that call", () => {
     });
     const answer = JSON.stringify({ findings: [], clearedHunks: [], sweepDispositions: [] });
     const reviewer = engine();
-    answerLater(answer, 40, filesOf("c1", 1, "s3_adversarial").answer);
+    answerLater(answer, 40, filesFor(adversarial(1)).answer);
     await reviewer.run(adversarial(1));
 
-    answerLater(answer, 150, filesOf("c2", 2, "s3_adversarial").answer);
+    answerLater(answer, 150, filesFor(adversarial(2)).answer);
     const started = Date.now();
     await reviewer.run(adversarial(2));
     // Waited for its own file rather than reading the one already on disk.
     expect(Date.now() - started).toBeGreaterThanOrEqual(100);
-    expect(readFileSync(filesOf("c2", 2, "s3_adversarial").prompt, "utf8")).toContain("Batch 2.");
-    expect(readFileSync(filesOf("c1", 1, "s3_adversarial").prompt, "utf8")).toContain("Batch 1.");
+    expect(readFileSync(filesFor(adversarial(2)).prompt, "utf8")).toContain("Batch 2.");
+    expect(readFileSync(filesFor(adversarial(1)).prompt, "utf8")).toContain("Batch 1.");
   });
 
-  it("ignores an answer an earlier attempt left behind", async () => {
+  it("does not read an answer to a different question", async () => {
     mkdirSync(join(dir, "bundle"), { recursive: true });
-    writeFileSync(filesOf("earlier").answer, JSON.stringify({ files: [] }), "utf8");
+    const other = { ...ask, prompt: "Assess something else." };
+    writeFileSync(filesFor(other).answer, JSON.stringify({ files: [] }), "utf8");
     await expect(engine({ timeoutMs: 200 }).run(ask)).rejects.toThrow(/No answer appeared at/);
   });
 
-  it("tells the person the command and the CLI version it needs, starting nothing itself", async () => {
-    // Mode B spawns nothing, a version check included: it names the CLI and
-    // says what the command needs, and the person runs it.
-    const said: string[] = [];
-    const reviewer = createInteractiveEngine({
-      exchangeDir: join(dir, "bundle"),
-      worktreeRoot: join(dir, "worktree"),
-      model: "m",
-      directives: [],
-      rules: [],
-      timeoutMs: 5_000,
-      pollMs: 25,
-      claudePath: FAKE_CLI,
-      newCallId: () => "c1",
-      onEvent: (_stage, event) => {
-        if (event.kind === "text") said.push(event.text);
-      },
-    });
-    answerLater(JSON.stringify({ files: [] }));
-    await reviewer.run(ask);
-
-    expect(said).toHaveLength(1);
-    expect(said[0]).toContain("Set-Location -LiteralPath");
-    expect(said[0]).toContain("fake-claude.mjs");
-    expect(said[0]).toContain("2.1.301 or newer");
-    expect(said[0]).toContain(filesOf("c1").answer);
+  it.each([
+    ["stage", { ...ask, stage: "s3_adversarial" as const }],
+    ["batch", { ...ask, batchNumber: 2 }],
+    ["system prompt", { ...ask, systemPrompt: "Other rules." }],
+    ["prompt", { ...ask, prompt: "Assess again." }],
+  ])("names a question differently when its %s differs", (_, changed) => {
+    expect(callIdFor(changed)).not.toBe(callIdFor(ask));
+    expect(callIdFor({ ...ask })).toBe(callIdFor(ask));
   });
 });
 
 describe("the command a person is given", () => {
-  const exchangeDir = "/data dir/it's";
+  // An ASCII and a typographic apostrophe both: PowerShell ends a quoted
+  // string at either.
+  const exchangeDir = "/data dir/it's D’Angelo";
   const files = {
     prompt: `${exchangeDir}/s1_risk-c1-prompt.md`,
     system: `${exchangeDir}/s1_risk-c1-system.md`,
@@ -246,14 +299,24 @@ describe("the command a person is given", () => {
       script,
       "process.stdout.write(JSON.stringify({ cwd: process.cwd(), argv: process.argv.slice(2) }));",
     );
-    const worktree = join(dir, "work tree's");
+    const worktree = join(dir, "work tree's ’quoted‘");
     mkdirSync(worktree);
     return {
       cli: { command: process.execPath, prefixArgs: [script], display: script },
       worktree,
     };
   }
-  const bash = spawnSync("bash", ["-c", "exit 0"]).status === 0;
+
+  /**
+   * A bash this process can hand Windows paths to. On Windows that is Git
+   * Bash; a bash.exe from WSL would run Linux and could not start this
+   * Node, which would fail the test for a reason that is not the quoting.
+   */
+  const bash = (() => {
+    const probe = spawnSync("bash", ["-c", "uname -s"], { encoding: "utf8" });
+    if (probe.status !== 0) return false;
+    return process.platform !== "win32" || /MINGW|MSYS|CYGWIN/.test(probe.stdout);
+  })();
   const powershell = ["pwsh", "powershell"].find(
     (shell) => spawnSync(shell, ["-NoProfile", "-Command", "exit 0"]).status === 0,
   );
@@ -269,7 +332,7 @@ describe("the command a person is given", () => {
   });
 
   it.runIf(powershell !== undefined)(
-    "reaches the CLI intact through PowerShell, spaces and quotes included",
+    "reaches the CLI intact through PowerShell, typographic quotes included",
     () => {
       const { cli, worktree } = standIn();
       const command = launchCommandsFor(cli, worktree, args).powershell;
