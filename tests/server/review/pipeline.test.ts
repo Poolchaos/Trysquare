@@ -393,6 +393,52 @@ describe("a finding two stages both report", () => {
   });
 });
 
+describe("what the review cannot read (4.23)", () => {
+  it("says on the run that a submodule's code was not reviewed", async () => {
+    // The diff shows a moved pointer and nothing of the code it points to,
+    // and the run used to pass over it in silence.
+    const submodule = parseUnifiedDiff(
+      [
+        "diff --git a/vendor/lib b/vendor/lib",
+        "index 1111111..2222222 160000",
+        "--- a/vendor/lib",
+        "+++ b/vendor/lib",
+        "@@ -1 +1 @@",
+        "-Subproject commit 1111111111111111111111111111111111111111",
+        "+Subproject commit 2222222222222222222222222222222222222222",
+        "",
+      ].join("\n"),
+    ).map((file) => ({ repo: "primary" as const, slug: "app", file }));
+    await run(
+      {
+        ...BASE_ANSWERS,
+        s3_adversarial: {
+          ...COMPLETE_ADVERSARIAL,
+          clearedHunks: [{ path: "app/vendor/lib", hunkIndex: 0, reason: "a pointer only" }],
+        },
+        s4_deletions: {
+          findings: [],
+          reviewedDeletions: [
+            {
+              path: "app/vendor/lib",
+              behaviourRemoved: "The old submodule pointer.",
+              dependents: [],
+              reason: "A pointer moved; no code here was removed.",
+            },
+          ],
+        },
+        s5_verification: { verdicts: [] },
+      },
+      { files: [...FILES, ...submodule] },
+    );
+    const notes = readRunNotes(requireReview(db, reviewId)).map((note) => note.message);
+    expect(notes).toContainEqual(
+      expect.stringContaining("1 submodule pointer(s) moved: app/vendor/lib."),
+    );
+    expect(notes.join(" ")).toContain("was not reviewed");
+  });
+});
+
 describe("refusing to accept an incomplete stage", () => {
   it("fails when a hunk was neither given a finding nor cleared", async () => {
     await expect(

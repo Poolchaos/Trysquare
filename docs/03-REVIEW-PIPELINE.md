@@ -47,6 +47,9 @@ is named.
      with the user's diff config overridden (external tools, textconv,
      prefixes, submodule display, the diff algorithm) and refused unless it
      names exactly the files `git diff --name-only` lists (D-108, D-110)
+   - submodule pointers and Git LFS pointer files in the change set are
+     named in the run notes as not reviewed: the diff holds only the pointer
+     (4.23)
    - `inventory.json`: every changed file and hunk across both repos
      (parsed by `lib/git`), repo-tagged, including renames and deletions;
      this seeds ledger_files/ledger_hunks

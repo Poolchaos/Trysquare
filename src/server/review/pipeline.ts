@@ -15,6 +15,7 @@
 
 import { readFile } from "node:fs/promises";
 import type { RepoRole, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
+import { opaqueChanges } from "@/lib/git/opaque";
 import { unsafeRepoPathReason } from "@/lib/git/repo-path";
 import type { ChangedSymbol } from "@/lib/git/symbols";
 import { insideRoot } from "@/lib/paths";
@@ -289,6 +290,32 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
           .join(", ") +
         `.`,
     });
+  }
+
+  // What the review reads only a pointer to is said, not passed over (4.23).
+  // Written on the first run only, like the note above.
+  if (!alreadySeeded) {
+    const opaque = opaqueChanges(
+      input.files.map((entry) => ({ ...entry.file, path: qualified(entry.slug, entry.file.path) })),
+    );
+    if (opaque.submodules.length > 0) {
+      appendRunNote(db, reviewId, {
+        kind: "note",
+        message:
+          `${opaque.submodules.length} submodule pointer(s) moved: ` +
+          `${opaque.submodules.join(", ")}. The code they point to is another repository's ` +
+          `and was not reviewed.`,
+      });
+    }
+    if (opaque.lfsPointers.length > 0) {
+      appendRunNote(db, reviewId, {
+        kind: "note",
+        message:
+          `${opaque.lfsPointers.length} file(s) are Git LFS pointers: ` +
+          `${opaque.lfsPointers.join(", ")}. Their content is stored outside the repository ` +
+          `and was not reviewed.`,
+      });
+    }
   }
 
   const content: StageContentInput = {
