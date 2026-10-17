@@ -59,13 +59,14 @@ export type ReviewProfile = z.infer<typeof reviewProfileSchema>;
 /**
  * How hard the model is asked to think.
  *
- * These four are what the CLI accepts, read from its own validator rather than
- * its help text, which is out of date and omits `max`. There is no tier
- * between high and max. Fixed when a review is created rather than changeable
- * while one runs: a stage answered at one effort and replayed at another would
- * report a thoroughness the answer never had.
+ * These five are what the CLI accepts: the list its 2.1.301 binary validates
+ * against, which its help text now matches (4.7). xhigh sits between high and
+ * max, and runs only on some models (`effortRunsOn`). Fixed when a review is
+ * created rather than changeable while one runs: a stage answered at one
+ * effort and replayed at another would report a thoroughness the answer never
+ * had.
  */
-export const REVIEW_EFFORTS = ["low", "medium", "high", "max"] as const;
+export const REVIEW_EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 export const reviewEffortSchema = z.enum(REVIEW_EFFORTS);
 export type ReviewEffort = z.infer<typeof reviewEffortSchema>;
 

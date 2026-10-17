@@ -23,7 +23,8 @@ describe("the effort a review runs at", () => {
   });
 
   it("still offers every other tier, rather than narrowing to one", () => {
-    expect([...SELECTABLE_REVIEW_EFFORTS]).toEqual(["low", "medium", "high"]);
+    // xhigh since 4.7, offered only where the model runs it (D-122).
+    expect([...SELECTABLE_REVIEW_EFFORTS]).toEqual(["low", "medium", "high", "xhigh"]);
   });
 
   it("still parses a review that was created at the withdrawn tier", () => {

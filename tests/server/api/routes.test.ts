@@ -321,6 +321,34 @@ describe("creating a review", () => {
     expect(((await response.json()) as { review: { effort: string } }).review.effort).toBe("low");
   }, 120_000);
 
+  it("takes xhigh only on a model that runs it (4.7, D-122)", async () => {
+    // The CLI runs xhigh as high, without a word, on a model it does not mark
+    // as supporting it, and the review would have recorded xhigh.
+    const refused = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-sonnet-5",
+        effort: "xhigh",
+      }),
+    );
+    expect(refused.status).toBe(400);
+    expect(((await refused.json()) as { code: string }).code).toBe("EffortNotSupported");
+
+    const taken = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+        effort: "xhigh",
+      }),
+    );
+    expect(taken.status).toBe(201);
+    expect(((await taken.json()) as { review: { effort: string } }).review.effort).toBe("xhigh");
+  }, 120_000);
+
   it("refuses a model that is registered for mechanical work only", async () => {
     // Its plan contains no judgment requests, so the run would raise nothing
     // and then fail with every hunk unaccounted for. Better refused up front.

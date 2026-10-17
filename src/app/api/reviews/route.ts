@@ -22,6 +22,7 @@ import {
 } from "@/server/db/repositories/projects";
 import { appendRunNote, createReview, listActiveReviews } from "@/server/db/repositories/reviews";
 import { getModel } from "@/server/db/repositories/models";
+import { effortRunsOn } from "@/lib/models/effort-support";
 import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
 import { resolveProfile } from "@/lib/review/profiles";
 import { fetchAll, mergeBase, resolveBranch } from "@/server/gitops/repo";
@@ -138,6 +139,18 @@ export function POST(request: Request): Promise<Response> {
             `spawn its own workflows, which turns one unattended review into an unbounded ` +
             `amount of usage. Choose high, which is the recommended tier.`,
           code: "EffortNotAvailable",
+        },
+        { status: 400 },
+      );
+    }
+    if (!effortRunsOn(input.model, input.effort)) {
+      throw Response.json(
+        {
+          error:
+            `${input.model} runs ${input.effort} as high, without saying so, so a review ` +
+            `there would record an effort it never had. Choose high, or a model that runs ` +
+            `${input.effort}.`,
+          code: "EffortNotSupported",
         },
         { status: 400 },
       );

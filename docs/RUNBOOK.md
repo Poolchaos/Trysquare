@@ -106,7 +106,8 @@ Every step below is free until you press Start review.
    deliberately not offered and is refused by the server: it is the ultracode
    setting, extra-high reasoning plus the ability to spawn its own workflows,
    and a review already fans out across five stages unattended, so that tier
-   would make one review an unbounded amount of usage. A model can only be
+   would make one review an unbounded amount of usage. Extra high is offered
+   only for a model that runs it, and costs more than high (D-122). A model can only be
    chosen while a
    probe from the last day vouches for it; anything unprobed or stale shows a
    Probe button instead, and one press (a real but tiny paid call) unlocks it

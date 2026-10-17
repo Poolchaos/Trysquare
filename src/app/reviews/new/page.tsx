@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { SELECTABLE_REVIEW_EFFORTS } from "@/lib/domain/enums";
+import { effortRunsOn } from "@/lib/models/effort-support";
 import {
   isSelectable,
   pickerOrder,
@@ -94,15 +95,17 @@ interface Model {
 /**
  * Derived from the shared list rather than restated, so the screen cannot
  * drift from what the server accepts. The CLI's top tier is deliberately
- * absent; the server refuses it too.
+ * absent; the server refuses it too. Extra high is listed only for a model
+ * that runs it (D-122).
  */
 const EFFORT_LABELS: Record<string, string> = {
   low: "Low",
   medium: "Medium",
   high: "High (recommended)",
+  xhigh: "Extra high",
 };
-const EFFORTS = ["high", "medium", "low"]
-  .filter((effort) => (SELECTABLE_REVIEW_EFFORTS as readonly string[]).includes(effort))
+const EFFORTS = (["xhigh", "high", "medium", "low"] as const)
+  .filter((effort) => SELECTABLE_REVIEW_EFFORTS.includes(effort))
   .map((effort) => ({ value: effort, label: EFFORT_LABELS[effort] ?? effort }));
 
 function NewReview() {
@@ -128,6 +131,10 @@ function NewReview() {
   const [rulesetId, setRulesetId] = useState("");
   const [model, setModel] = useState("");
   const [effort, setEffort] = useState("high");
+  // Extra high chosen and then a model that runs it as high: what is shown
+  // and sent falls back to high rather than an effort the run would not get.
+  const efforts = EFFORTS.filter((option) => effortRunsOn(model, option.value));
+  const chosenEffort = efforts.some((option) => option.value === effort) ? effort : "high";
   const [intent, setIntent] = useState("");
   // "" means the model's own profile; anything else is a deliberate downgrade
   // sent with both the pre-flight and the creation, so the numbers previewed
@@ -318,7 +325,7 @@ function NewReview() {
           fromBranch,
           intoBranch,
           model,
-          effort,
+          effort: chosenEffort,
           ...(engineMode === "headless" ? {} : { engineMode }),
           ...(profileOverride === "" ? {} : { profileId: profileOverride }),
           ...(intent.trim() === "" ? {} : { intent }),
@@ -511,8 +518,8 @@ function NewReview() {
             </Field>
 
             <Field label="Effort" hint="How hard the model thinks. Fixed once the review starts.">
-              <Select value={effort} onChange={(event) => setEffort(event.target.value)}>
-                {EFFORTS.map((option) => (
+              <Select value={chosenEffort} onChange={(event) => setEffort(event.target.value)}>
+                {efforts.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

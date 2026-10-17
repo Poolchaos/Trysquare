@@ -136,10 +136,30 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
 
     // The CLI's top effort tier is never offered: it lets the session spawn
     // its own workflows, and a review already fans out across five stages
-    // unattended.
+    // unattended. The tier below it is, since this model runs it (D-122).
     const effort = page.getByLabel("Effort");
-    await expect(effort.locator("option")).toHaveCount(3);
+    await expect(effort.locator("option")).toHaveCount(4);
+    await expect(effort.locator("option", { hasText: "Extra high" })).toHaveCount(1);
     await expect(effort.locator("option", { hasText: "Max" })).toHaveCount(0);
+    await expect(effort).toHaveValue("high");
+
+    // Extra high chosen, then a model that would run it as high: the picker
+    // shows and sends high instead, rather than an effort the run would not
+    // get. Back on Fable the choice is high again for the rest of the journey.
+    const picker = page.getByTestId("model-picker");
+    await effort.selectOption("xhigh");
+    await page.getByRole("button", { name: /model\(s\) that need probing/ }).click();
+    const sonnet = picker
+      .locator("li")
+      .filter({ has: page.getByText("Sonnet 5", { exact: true }) });
+    await sonnet.getByRole("button", { name: "Probe" }).click();
+    await expect(sonnet.getByText(/probed just now/)).toBeVisible({ timeout: 30_000 });
+    await sonnet.locator("label").click();
+    await expect(effort.locator("option")).toHaveCount(3);
+    await expect(effort).toHaveValue("high");
+    await picker.locator("li").filter({ hasText: "Fable 5 (1M context)" }).locator("label").click();
+    await expect(effort.locator("option")).toHaveCount(4);
+    await effort.selectOption("high");
 
     // The pre-flight is free and read-only, so it appears on its own once the
     // four decisions are made.

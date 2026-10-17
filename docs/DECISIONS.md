@@ -2574,3 +2574,16 @@ verified evidence, in writing, here.
   nothing is stripped for it. Rejected: setting the variable to the
   review's effort (the same result, one more value the engine writes), and
   accepting a recorded effort that can be wrong.
+- 2026-10-17 D-122 DECIDED (maintainer's choice; MVP 4.7): xhigh is a
+  review effort, offered only on a model that runs it, and refused at the
+  API for any other. Evidence, from the bundled CLI 2.1.301 and spending
+  nothing: its effort validator and its help both list low, medium, high,
+  xhigh and max, so the enum's "no tier between high and max" was out of
+  date; it runs xhigh as high, without a word, on a model its table does
+  not mark with the xhigh capability; of this app's candidates the table
+  marks claude-fable-5 and claude-opus-5, not claude-sonnet-5 or
+  claude-haiku-4-5; and its cost index prices xhigh at 1.74 times high on
+  fable-5 and 1.6 on opus-5. The models the table marks are listed in
+  lib/models/effort-support.ts. High stays the default. Rejected: offering
+  it on every model, which records xhigh for a high run on two of the four
+  families, and not offering it.
