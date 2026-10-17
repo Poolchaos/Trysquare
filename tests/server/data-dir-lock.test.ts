@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { lockPath } from "@/lib/paths";
+import { lockHolderPath, lockPath } from "@/lib/paths";
 import { DataDirInUseError, DataDirLockError, acquireDataDirLock } from "@/server/data-dir-lock";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -107,6 +107,16 @@ describe("the data directory lock", () => {
     expect(() => take()).toThrow(DataDirLockError);
     expect(() => take()).toThrow(/is not a lock Trysquare wrote, so it is left alone/);
     expect(readFileSync(lockPath(dataDir), "utf8")).toContain("not ours to delete");
+  });
+
+  it("gives the lock back when it cannot record its holder (D-119 review)", () => {
+    // Taken, then kept by a handle nothing held, so the next attempt in the
+    // same process was refused as another server.
+    mkdirSync(lockHolderPath(dataDir));
+    expect(() => take()).toThrow(DataDirLockError);
+    expect(() => take()).toThrow(/server-lock\.pid/);
+    rmSync(lockHolderPath(dataDir), { recursive: true });
+    expect(() => take()).not.toThrow();
   });
 });
 

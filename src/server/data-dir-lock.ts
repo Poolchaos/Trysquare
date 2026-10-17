@@ -5,8 +5,8 @@
  * which is right after a crash and wrong while another server is running
  * them; and two servers starting together could migrate one database at once.
  *
- * The lock is SQLite's own: a small database beside the app's, held in
- * exclusive locking mode for as long as the server runs. The operating system
+ * The lock is SQLite's own: a small database beside the app's, held by an
+ * exclusive transaction for as long as the server runs. The operating system
  * releases it when the process ends, however it ends, so there is no stale
  * lock to judge and no process id to trust. A lock file managed by hand
  * needed both, and on macOS two servers starting together each took it
@@ -82,7 +82,16 @@ export function acquireDataDirLock(dataDir: string, waitMs = 1_000): () => void 
     }
     throw error;
   }
-  writeFileSync(lockHolderPath(dataDir), String(process.pid));
+  try {
+    writeFileSync(lockHolderPath(dataDir), String(process.pid));
+  } catch (error) {
+    // Closed, or the lock stays held by a handle nothing has, and the next
+    // attempt in this process is refused as another server.
+    handle.close();
+    throw new DataDirLockError(
+      `Could not write ${lockHolderPath(dataDir)}: ${(error as Error).message}`,
+    );
+  }
   held.set(path, handle);
   return release;
 }
