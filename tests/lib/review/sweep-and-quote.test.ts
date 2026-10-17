@@ -221,17 +221,16 @@ describe("valid quotations the check used to kill (4.21)", () => {
     ).toBe(true);
   });
 
-  it("forgives text composed differently in Unicode but the same text", () => {
-    // \u00e9 as one code point in the quote, as e and a combining accent in the
-    // file: the same text by Unicode's own definition.
-    const nfd = "const cafe\u0301 = 1;\n";
-    expect(checkQuotedCode(nfd, 1, 1, "const caf\u00e9 = 1;").matches).toBe(true);
-  });
-
   it("forgives tabs quoted as spaces, nested", () => {
     const tabbed = "function f() {\n\tif (x) {\n\t\treturn 1;\n\t}\n}\n";
     const quoted = "  if (x) {\n    return 1;\n  }";
     expect(checkQuotedCode(tabbed, 2, 4, quoted).matches).toBe(true);
+  });
+
+  it("forgives a faithful quote of a file that mixes tabs and spaces", () => {
+    const mixed = "\tif (a) {\n        b();\n";
+    expect(checkQuotedCode(mixed, 1, 2, "    if (a) {\n        b();").matches).toBe(true);
+    expect(checkQuotedCode(mixed, 1, 2, "        if (a) {\n        b();").matches).toBe(true);
   });
 
   it("still holds space indentation to what the file has, where no tab is involved", () => {
@@ -242,5 +241,59 @@ describe("valid quotations the check used to kill (4.21)", () => {
   it("still kills a quote whose code differs under a tab", () => {
     const tabbed = "\tif (x) {\n\t\treturn 1;\n\t}\n";
     expect(checkQuotedCode(tabbed, 1, 3, "if (x) {\n  return 2;\n}").matches).toBe(false);
+  });
+});
+
+describe("what the tab and Unicode forgiveness must not let through (D-115)", () => {
+  // Indentation is meaning in Python and YAML, and a quote that re-nests a
+  // line misstates the code however the tabs are written.
+  const python = "if x:\n\tif y:\n\t\tfoo()\n\tbar()\n";
+
+  it("kills a quote that moves a line into a deeper block", () => {
+    expect(
+      checkQuotedCode(python, 1, 4, "if x:\n    if y:\n        foo()\n        bar()").matches,
+    ).toBe(false);
+  });
+
+  it("kills a quote that moves a line out of its block", () => {
+    expect(checkQuotedCode(python, 1, 4, "if x:\n    if y:\n    foo()\n    bar()").matches).toBe(
+      false,
+    );
+  });
+
+  it("kills a re-nesting written in tabs on both sides", () => {
+    expect(checkQuotedCode(python, 1, 4, "if x:\n\tif y:\n\t\tfoo()\n\t\tbar()").matches).toBe(
+      false,
+    );
+  });
+
+  it("kills a re-nesting a quote writes in tabs over a space-indented file", () => {
+    const spaced = "if x:\n    if y:\n        foo()\n    bar()\n";
+    expect(checkQuotedCode(spaced, 1, 4, "if x:\n\tif y:\n\t\tfoo()\n\t\tbar()").matches).toBe(
+      false,
+    );
+  });
+
+  it("kills a quote that re-nests one line with tabs over a space-indented file", () => {
+    // At a tab width of 2 the two tabs equal the file's four spaces, but a
+    // file with no tab has no tab width to forgive.
+    const spaced = "if x:\n    if y:\n        foo()\n    bar()\n";
+    expect(
+      checkQuotedCode(spaced, 1, 4, "if x:\n    if y:\n        foo()\n\t\tbar()").matches,
+    ).toBe(false);
+  });
+
+  it("kills characters Unicode calls equivalent, since code tells them apart", () => {
+    // OHM SIGN and GREEK CAPITAL OMEGA are one character after NFC, and two
+    // different values in a string or two different identifiers in code.
+    const ohm = 'if (unit === "\u2126") {}\n';
+    expect(checkQuotedCode(ohm, 1, 1, 'if (unit === "\u03A9") {}').matches).toBe(false);
+    const decomposed = "const cafe\u0301 = 1;\n";
+    expect(checkQuotedCode(decomposed, 1, 1, "const caf\u00e9 = 1;").matches).toBe(false);
+  });
+
+  it("forgives a byte-order mark only at the start of the file", () => {
+    const midFile = "a();\n\uFEFFb();\nc();\n";
+    expect(checkQuotedCode(midFile, 2, 3, "b();\nc();").matches).toBe(false);
   });
 });

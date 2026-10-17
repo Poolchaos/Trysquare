@@ -8,10 +8,14 @@
  * citation that does not match the code is not evidence of anything.
  *
  * The comparison is deliberately strict about content and forgiving only about
- * things that carry no meaning: a trailing newline, and the common indentation
- * a quote may have lost. Anything looser would let a paraphrase pass as a
- * quotation, which is exactly the failure being prevented.
+ * things that carry no meaning: line endings, trailing whitespace and a
+ * trailing newline, the common indentation a quote may have lost, a
+ * byte-order mark at the start of the file, and the width a tab was shown at
+ * (D-114, D-115). Anything looser would let a paraphrase pass as a quotation,
+ * which is exactly the failure being prevented.
  */
+
+const BYTE_ORDER_MARK = String.fromCharCode(0xfeff);
 
 export type QuoteMismatch =
   | { kind: "out-of-range"; fileLines: number }
@@ -33,13 +37,9 @@ export function stripCommonIndent(text: string): string {
 
 function normalise(text: string): string {
   // Trailing whitespace on a line and a trailing newline are invisible and
-  // carry no meaning, so they are not grounds to kill a finding. Nor is a
-  // byte-order mark, nor composing a character from one code point or two,
-  // which Unicode defines as the same text (4.21).
+  // carry no meaning, so they are not grounds to kill a finding.
   return stripCommonIndent(
     text
-      .replace(/^\uFEFF/, "")
-      .normalize("NFC")
       .replace(/\r\n/g, "\n")
       .split("\n")
       .map((line) => line.trimEnd())
@@ -48,24 +48,38 @@ function normalise(text: string): string {
   );
 }
 
+/** Tabs in each line's indentation expanded to stops of one width. */
+function expandLeadingTabs(text: string, width: number): string {
+  return text
+    .split("\n")
+    .map((line) => {
+      const indent = /^[ \t]*/.exec(line)![0];
+      let column = 0;
+      for (const character of indent) {
+        column = character === "\t" ? (Math.floor(column / width) + 1) * width : column + 1;
+      }
+      return " ".repeat(column) + line.slice(indent.length);
+    })
+    .join("\n");
+}
+
+const TAB_WIDTHS = [1, 2, 3, 4, 5, 6, 7, 8];
+
 /**
- * Line by line, with one more forgiveness: where a tab is part of either
- * line's indentation, the indentation itself is not compared. A quote cannot
- * show a tab's width, so tabs come back as spaces, and nested lines then
- * differ by however wide the reader took a tab to be (4.21). Spaces against
- * spaces are still held to the file.
+ * Whether the quote is the code. A quote cannot show how wide the file's tabs
+ * are, so where the file indents with a tab, they match if at one width, for
+ * every line alike, the two indentations come out the same. One width for all
+ * lines is what keeps nesting: forgiving each line's indentation on its own
+ * let a quote move a line into another block (D-115). A file with no tab has
+ * no width to forgive, so a tab in its quote is held to the file.
  */
 function sameCode(actual: string, quoted: string): boolean {
-  const left = actual.split("\n");
-  const right = quoted.split("\n");
-  if (left.length !== right.length) return false;
-  return left.every((line, index) => {
-    const other = right[index]!;
-    if (line === other) return true;
-    const indent = (text: string) => text.slice(0, text.length - text.trimStart().length);
-    const tabbed = indent(line).includes("\t") || indent(other).includes("\t");
-    return tabbed && line.trimStart() === other.trimStart();
-  });
+  if (normalise(actual) === normalise(quoted)) return true;
+  if (!actual.split("\n").some((line) => /^[ \t]*\t/.test(line))) return false;
+  return TAB_WIDTHS.some(
+    (width) =>
+      normalise(expandLeadingTabs(actual, width)) === normalise(expandLeadingTabs(quoted, width)),
+  );
 }
 
 /**
@@ -82,7 +96,10 @@ export function checkQuotedCode(
 ): QuoteCheck {
   if (quotedCode.trim() === "") return { matches: false, reason: { kind: "empty-quote" } };
 
-  const lines = fileContents.split("\n");
+  // A byte-order mark is no part of the first line, and no quote carries one.
+  const lines = (
+    fileContents.startsWith(BYTE_ORDER_MARK) ? fileContents.slice(1) : fileContents
+  ).split("\n");
   // A file ending in a newline yields a trailing empty element that is not a
   // real line, and citing it would otherwise look valid.
   const lineCount =
@@ -93,7 +110,7 @@ export function checkQuotedCode(
   }
 
   const actual = lines.slice(lineStart - 1, lineEnd).join("\n");
-  if (sameCode(normalise(actual), normalise(quotedCode))) return { matches: true, actual };
+  if (sameCode(actual, quotedCode)) return { matches: true, actual };
 
   return { matches: false, reason: { kind: "content-differs", actual } };
 }

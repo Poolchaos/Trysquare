@@ -2430,3 +2430,17 @@ verified evidence, in writing, here.
   indentation against space indentation, and every character after the
   indentation; tests show a respaced line and changed code under a tab
   still fail. A paraphrase still cannot pass.
+- 2026-10-17 D-115 DECIDED (review of 4.17 to 4.21, finding 1 and 3;
+  corrects D-114 with new evidence): the tab forgiveness compares each line's
+  indentation only at one tab width shared by every line, and only when the
+  file itself indents with a tab. D-114 ignored indentation per line wherever
+  a tab was involved, so a quote that moved a Python line into or out of a
+  block passed, with tabs on one side or both, and so did a quote re-nesting
+  a space-indented file with tabs; each is now a test, and each is killed.
+  One width for all lines keeps nesting, and it also verifies a faithful
+  quote of a file mixing tabs and spaces, which D-114 still killed. NFC is
+  withdrawn: canonically equivalent text is different code, since a string
+  holding OHM SIGN and one holding GREEK CAPITAL OMEGA are unequal in
+  JavaScript though one character after NFC, so a quote could misstate the
+  very character a finding is about. The byte-order mark is dropped from the
+  start of the file only, as D-114 said and the code did not.

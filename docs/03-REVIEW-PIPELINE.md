@@ -158,8 +158,9 @@ claim). No S2/S3 reasoning is passed. Instruction per finding:
    file at those lines once both sides are normalised.
    Normalisation forgives only what carries no meaning: CRLF, trailing
    whitespace, a trailing newline, lost common indentation, a byte-order
-   mark, how Unicode composes a character, and the width of indentation where
-   a tab is involved (D-114). Anything
+   mark at the start of the file, and the width the file's tabs were shown
+   at, one width for every line so nesting still counts (D-114, D-115).
+   Anything
    looser would let a paraphrase pass as a quotation. A mechanical mismatch
    kills the finding regardless of the AI verdict.
 
