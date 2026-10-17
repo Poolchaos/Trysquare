@@ -126,7 +126,8 @@ from the dependency diff, and S3's output must disposition every symbol.
 
 ### S4 Deletion review (protocol step 5)
 
-Input: deleted files/hunks list + `bundle/base/` copies. Instruction: for
+Input: deleted files/hunks list + `bundle/base/` copies, a deleted file's
+lines numbered as a finding in it must cite them (D-106). Instruction: for
 every deletion state what behaviour the removed code provided, search the
 worktree for who depended on it, flag removed guards/awaits/cleanups/error
 handlers. Output: candidate findings and per-deletion clears.
@@ -137,6 +138,9 @@ Input: candidate findings only (file, lines, issue, mechanism, quoted
 claim). No S2/S3 reasoning is passed. Instruction per finding:
 
 1. Open the actual file at the cited lines in the worktree; quote the code.
+   A file the change deleted is not there: its contents before deletion
+   come with the candidate, and the quotation is checked against them
+   (D-106).
 2. Confirm quoted code, line numbers, and mechanism match exactly. Line
    numbers must come from the checked-out file, never the diff.
 3. Hunt neutralizing context: guards, defaults, narrowing, upstream

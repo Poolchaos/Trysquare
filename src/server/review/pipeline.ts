@@ -49,6 +49,7 @@ import type { Db } from "@/server/db/client";
 import { appendRunNote } from "@/server/db/repositories/reviews";
 import {
   isDeletionCandidate,
+  numberedLines,
   renderAdversarialPrompt,
   renderComprehensionPrompt,
   renderDeletionPrompt,
@@ -606,6 +607,11 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         severity: finding.severity,
         issue: finding.issue,
         mechanism: finding.mechanism,
+        // The verifier reads only the worktree, which a deleted file has left
+        // (D-106).
+        ...(input.baseContents?.has(finding.filePath)
+          ? { contentsBeforeDeletion: numberedLines(input.baseContents.get(finding.filePath)!) }
+          : {}),
       })),
     ),
   });
@@ -651,7 +657,12 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     // The verifier says it confirmed the finding. The program now checks that
     // claim against the file, because a citation that does not match the code
     // is not evidence, however confident the wording.
-    const contents = await readFileIfPossible(input.worktreeRoot, finding.filePath);
+    // A deleted file is checked against what it held, the only copy there is:
+    // read from the worktree, every finding in one was killed as unreadable
+    // (D-106).
+    const contents =
+      input.baseContents?.get(finding.filePath) ??
+      (await readFileIfPossible(input.worktreeRoot, finding.filePath));
     if (contents === null) {
       markKilled(db, finding.id, `The cited file could not be read: ${finding.filePath}`);
       killed += 1;

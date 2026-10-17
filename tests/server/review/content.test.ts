@@ -203,6 +203,23 @@ describe("the deletion prompt", () => {
     expect(prompt).toContain("export const guard = true;");
   });
 
+  it("numbers the lines of a deleted file, as a finding there must cite them", () => {
+    // Counting lines is where citations drift (T1), and a finding in a
+    // deleted file is now quote-checked against these very lines (D-106).
+    const input: StageContentInput = {
+      ...inputFor(DELETED),
+      baseContents: new Map([
+        ["app/legacy.ts", "export const guard = true;\nexport const other = 1;\n"],
+      ]),
+    };
+    const prompt = renderDeletionPrompt(input);
+    expect(prompt).toContain(
+      "     1  export const guard = true;\n     2  export const other = 1;\n",
+    );
+    // A file's closing newline is not a third line.
+    expect(prompt).not.toContain("     3  ");
+  });
+
   it("outfences a deleted file that contains fences of its own", () => {
     // A deleted README full of ``` examples would otherwise close the block
     // at its first fence, and the rest of the file would read as prompt text.
@@ -212,8 +229,15 @@ describe("the deletion prompt", () => {
       baseContents: new Map([["app/legacy.ts", body]]),
     };
     const prompt = renderDeletionPrompt(input);
-    const wrapped = prompt.slice(prompt.indexOf("Contents before deletion:"));
-    expect(wrapped).toContain("````\n" + body + "\n````");
+    const wrapped = prompt.slice(prompt.indexOf("Contents before deletion"));
+    const numbered = [
+      "     1  Usage:",
+      "     2  ",
+      "     3  ```ts",
+      "     4  const x = 1;",
+      "     5  ```",
+    ].join("\n");
+    expect(wrapped).toContain("````\n" + numbered + "\n````");
   });
 
   it("says outright when it could not open the file it is judging", () => {
@@ -221,7 +245,7 @@ describe("the deletion prompt", () => {
     // not, because the transcript would then read like a file that was read.
     const prompt = renderDeletionPrompt(inputFor(DELETED));
     expect(prompt).toContain("Contents before deletion were not available");
-    expect(prompt).not.toContain("Contents before deletion:");
+    expect(prompt).not.toContain("Contents before deletion, numbered");
   });
 
   it("asks for every listed path back, so an omission is detectable", () => {
@@ -292,6 +316,26 @@ describe("the verification prompt", () => {
       mechanism: "payload is asserted rather than parsed",
     },
   ];
+
+  it("hands over a deleted file's contents, since the worktree no longer has it", () => {
+    const prompt = renderVerificationPrompt([
+      {
+        ...candidates[0]!,
+        path: "app/legacy.ts",
+        lineStart: 2,
+        lineEnd: 2,
+        contentsBeforeDeletion: [
+          "     1  export const guard = true;",
+          "     2  export const other = 1;",
+        ],
+      },
+    ]);
+    expect(prompt).toContain('"contentsBeforeDeletion"');
+    expect(prompt).toContain("     2  export const other = 1;");
+    expect(prompt.replace(/\s+/g, " ")).toContain("quote from those lines");
+    // Said only when a candidate is in a deleted file.
+    expect(renderVerificationPrompt(candidates)).not.toContain("contentsBeforeDeletion");
+  });
 
   it("asks the stage to refute rather than to agree", () => {
     expect(renderVerificationPrompt(candidates)).toContain("try to refute");

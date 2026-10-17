@@ -2295,3 +2295,15 @@ verified evidence, in writing, here.
   ran. Occurrences: 39022106093 (19bc554; 4180bd0, the same code plus the
   TCP table step, then passed) and 39024193784 (77be1e4, re-run under this
   rule).
+- 2026-10-17 D-106 DECIDED (WP 4.13): a finding in a file the change
+  deleted is verified against the file's contents before deletion, the
+  copy the bundle keeps, since the worktree no longer has it. S4 is shown
+  those contents with their lines numbered, as hunks are (T1), and S5 gets
+  them inside the candidate's own JSON entry, which keeps the prompt one
+  block for the two readers that parse it. Evidence, reproduced by tests
+  that fail on the old code: a finding at line 2 of a deleted file, quoted
+  exactly, was killed as unreadable, so the finding the deletion stage
+  exists to raise could never survive verification. The row's fix alone,
+  checking quotes against the base copy, would still have failed: S5 can
+  read only the worktree, and S4 had no line numbers to cite. A file with
+  no base copy, a binary or a missing one, is still killed as unreadable.

@@ -40,6 +40,8 @@ export interface CandidateEntry {
   severity: string;
   issue: string;
   mechanism: string;
+  /** A deleted file's lines before deletion, numbered; absent otherwise. */
+  contentsBeforeDeletion?: readonly string[];
 }
 
 export interface StageContentInput {
@@ -329,11 +331,12 @@ export function renderDeletionPrompt(input: StageContentInput): string {
         : [
             heading,
             "",
-            "Contents before deletion:",
+            "Contents before deletion, numbered as a finding in this file must cite",
+            "them; the numbers are not part of the code:",
             "",
-            fenceFor(previous),
-            previous,
-            fenceFor(previous),
+            fenceFor(numberedLines(previous).join("\n")),
+            numberedLines(previous).join("\n"),
+            fenceFor(numberedLines(previous).join("\n")),
           ].join("\n");
     }
 
@@ -376,6 +379,16 @@ export function renderDeletionPrompt(input: StageContentInput): string {
  * code fences would otherwise terminate the block early, turning the rest of
  * the file into instructions.
  */
+/**
+ * A file's lines with the numbers a finding cites them by, in the width the
+ * hunks use. A closing newline ends the last line rather than starting one.
+ */
+export function numberedLines(text: string): string[] {
+  const lines = text.split("\n");
+  if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+  return lines.map((line, index) => `${String(index + 1).padStart(6)}  ${line}`);
+}
+
 function fenceFor(text: string): string {
   const longest = text.match(/`+/g)?.reduce((max, run) => Math.max(max, run.length), 0) ?? 0;
   return "`".repeat(Math.max(3, longest + 1));
@@ -397,6 +410,13 @@ export function renderVerificationPrompt(candidates: readonly CandidateEntry[]):
     "the ones given: a quotation from elsewhere in the file is about other code.",
     "The quotation is compared against the file: if it does not match, or the",
     "lines do not overlap, the finding is discarded.",
+    ...(candidates.some((candidate) => candidate.contentsBeforeDeletion)
+      ? [
+          "",
+          "A candidate with contentsBeforeDeletion is in a file the change deleted, so",
+          "the worktree no longer has it: quote from those lines, without their numbers.",
+        ]
+      : []),
     "",
     "```json",
     JSON.stringify({ candidates }, null, 2),

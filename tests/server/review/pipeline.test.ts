@@ -1883,3 +1883,70 @@ describe("counting what rests only on refuted findings (D-102)", () => {
     expect(listHunks(db, file!.id)[0]?.clearReason).toBe("fine");
   });
 });
+
+describe("verifying a finding in a file the change deleted (D-106)", () => {
+  const BEFORE = [
+    "export function guardRate(value: number) {",
+    "  if (value < 0) throw new Error('negative');",
+    "}",
+    "",
+  ].join("\n");
+  const GUARD_GONE = {
+    path: "app/legacy.ts",
+    lineStart: 2,
+    lineEnd: 2,
+    severity: "CRITICAL",
+    ruleCode: "9",
+    issue: "The negative-rate guard is gone.",
+    comment: "Negative rates are now accepted.",
+    mechanism: "the guard at line 2 was removed with its file",
+  };
+
+  async function verifyDeleted(quotedCode: string) {
+    const prompts: string[] = [];
+    const result = await runReviewPipeline({
+      db,
+      reviewId,
+      worktreeRoot,
+      files: DELETING_FILES,
+      rules: [rule("9", ["typescript"])],
+      profile: "full-context",
+      baseContents: new Map([["app/legacy.ts", BEFORE]]),
+      systemPromptFor: (stage) => `prompt for ${stage}`,
+      run: async (request: StageRequest): Promise<StageResponse> => {
+        if (request.stage === "s5_verification") prompts.push(request.prompt);
+        const answers: Record<string, unknown> = {
+          ...DELETION_BASE_ANSWERS,
+          s4_deletions: { findings: [GUARD_GONE], reviewedDeletions: [ACCOUNTED] },
+          s5_verification: {
+            verdicts: [
+              { ref: "C1", verdict: "verified", quotedCode, lineStart: 2, lineEnd: 2, note: "ok" },
+            ],
+          },
+        };
+        return { sessionId: "s", output: answers[request.stage] ?? {} };
+      },
+    });
+    return { result, prompts };
+  }
+
+  it("checks the quotation against the file as it was, and verifies it", async () => {
+    // The worktree has no such file, so this used to be killed as unreadable
+    // every time: the finding the deletion stage exists to raise could not
+    // survive verification.
+    const { result, prompts } = await verifyDeleted(
+      "  if (value < 0) throw new Error('negative');",
+    );
+    expect(result.verified).toBe(1);
+    expect(statusOf(listFindings(db, reviewId)[0]!)).toBe("verified");
+    // And the verifier was handed what it quoted from.
+    expect(prompts[0]).toContain("contentsBeforeDeletion");
+    expect(prompts[0]).toContain("     2    if (value < 0) throw new Error('negative');");
+  });
+
+  it("still kills a quotation that is not what the file held", async () => {
+    const { result } = await verifyDeleted("  if (value <= 0) throw new Error('negative');");
+    expect(result.killedByQuoteCheck).toBe(1);
+    expect(listFindings(db, reviewId)[0]?.verificationNote).toContain("did not match the file");
+  });
+});
