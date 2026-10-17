@@ -26,7 +26,7 @@ import {
   transitionReview,
 } from "@/server/db/repositories/reviews";
 import { models, projects } from "@/server/db/schema";
-import { JobManager } from "@/server/jobs/manager";
+import { JobManager, ReviewNotStartableError } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
 import {
   answerSequence,
@@ -150,6 +150,17 @@ describe("deciding what runs now", () => {
   it("refuses an id that is not a review at all", () => {
     // Fails here rather than inside a promise nobody is awaiting.
     expect(() => start("not-a-review")).toThrow();
+  });
+
+  it("refuses a review that cannot run, before claiming it (4.19)", () => {
+    // It used to answer "running" and fail later, inside a run nobody was
+    // told about: the page waited on a review that was never going to move.
+    const reviewId = seedReview();
+    transitionReview(db, reviewId, "cancelled");
+    expect(() => start(reviewId)).toThrow(ReviewNotStartableError);
+    expect(() => start(reviewId)).toThrow(/is cancelled, which cannot be started or resumed/);
+    expect(manager.isRunning(reviewId)).toBe(false);
+    expect(manager.queueDepth()).toBe(0);
   });
 });
 

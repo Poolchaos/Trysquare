@@ -177,6 +177,16 @@ describe("a review waiting on a person", () => {
     expect(body.code).toBe("UndecidedFindings");
     expect(body.error).toMatch(/\d+ finding\(s\) still need a decision/);
   }, 120_000);
+
+  it("refuses to be started again, saying why, and stays where it is (4.19)", async () => {
+    // It used to be answered "running" while nothing would ever run.
+    const response = await routes.start.POST(post(), params(reviewId));
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { error: string; code: string };
+    expect(body.code).toBe("ReviewNotStartableError");
+    expect(body.error).toMatch(/is awaiting confirmation, which cannot be started or resumed/);
+    expect((await snapshot()).review.status).toBe("awaiting_confirmation");
+  }, 120_000);
 });
 
 describe("reading the code a finding is about", () => {

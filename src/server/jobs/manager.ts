@@ -50,6 +50,18 @@ export interface ManagerInit {
 
 export type StartState = "running" | "queued" | "already-running";
 
+export class ReviewNotStartableError extends Error {
+  constructor(
+    readonly reviewId: string,
+    readonly status: ReviewStatus,
+  ) {
+    super(
+      `Review "${reviewId}" is ${status.replace(/_/g, " ")}, which cannot be started or resumed.`,
+    );
+    this.name = "ReviewNotStartableError";
+  }
+}
+
 export interface ReviewSnapshot {
   review: ReturnType<typeof requireReview>;
   stages: ReturnType<typeof listForReview>;
@@ -124,10 +136,16 @@ export class JobManager {
     const db = this.requireDb();
     // Reads the row so an unknown id fails here rather than inside a promise
     // nobody is awaiting.
-    requireReview(db, reviewId);
+    const review = requireReview(db, reviewId);
 
     if (this.active.has(reviewId)) return "already-running";
     if (this.queue.some((entry) => entry.reviewId === reviewId)) return "queued";
+
+    // Judged before the claim (4.19): a review that cannot run used to be
+    // answered "running" and then fail inside a run nobody was told about.
+    const status = statusOf(review);
+    if (!canTransitionReview(status, "running"))
+      throw new ReviewNotStartableError(reviewId, status);
 
     if (this.active.size >= this.maxConcurrent()) {
       this.queue.push({ reviewId, options });

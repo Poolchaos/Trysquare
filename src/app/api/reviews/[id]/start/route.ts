@@ -8,7 +8,8 @@
 import { z } from "zod";
 import { rulesetTierSchema } from "@/lib/domain/enums";
 import { loadRuleset, readReviewSnapshot, requireRuleset } from "@/server/db/repositories/rulesets";
-import { handler, ok, readJson } from "@/server/api/respond";
+import { failed, handler, ok, readJson } from "@/server/api/respond";
+import { ReviewNotStartableError } from "@/server/jobs/manager";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +45,12 @@ export async function POST(
       };
     }
 
-    const state = manager.start(id, ...(ruleset ? [{ ruleset }] : []));
-    return ok({ state, snapshot: manager.snapshot(id) });
+    try {
+      const state = manager.start(id, ...(ruleset ? [{ ruleset }] : []));
+      return ok({ state, snapshot: manager.snapshot(id) });
+    } catch (error) {
+      if (error instanceof ReviewNotStartableError) return failed(error, 409);
+      throw error;
+    }
   });
 }
