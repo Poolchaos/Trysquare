@@ -44,8 +44,9 @@ is named.
    `runs/<id>/worktree-baseline/<slug>.json` for the end check (D-107).
 3. Build the **bundle** under `runs/<id>/bundle/`:
    - `diff.patch` (and `diff-linked.patch`): full text per repo, taken
-     with the user's diff formatting config overridden and refused unless
-     it names exactly the files `git diff --name-only` lists (D-108)
+     with the user's diff config overridden (external tools, textconv,
+     prefixes, submodule display, the diff algorithm) and refused unless it
+     names exactly the files `git diff --name-only` lists (D-108, D-110)
    - `inventory.json`: every changed file and hunk across both repos
      (parsed by `lib/git`), repo-tagged, including renames and deletions;
      this seeds ledger_files/ledger_hunks

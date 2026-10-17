@@ -187,6 +187,122 @@ describe("a diff the user's own git config would reshape (D-108)", () => {
   });
 });
 
+describe("diff settings that change which lines or entries the diff holds (D-110)", () => {
+  // Two more the review of 4.15 found. diff.submodule=log prints a summary
+  // instead of a diff section, so the cross-check refused every review that
+  // moved a submodule; diff.ignoreSubmodules=all drops the submodule from the
+  // diff and the list alike, so it passed with the change left out. And
+  // diff.algorithm changes which lines a hunk holds, so what the sweep finds
+  // in the same two commits depended on the user's config.
+  let clone: string;
+  let base: string;
+  let head: string;
+  let previous: string | undefined;
+
+  const OLD = [
+    "#include <stdio.h>",
+    "",
+    "// Frobs foo heartily",
+    "int frobnitz(int foo)",
+    "{",
+    "    int i;",
+    "    for(i = 0; i < 10; i++)",
+    "    {",
+    '        printf("Your answer is: ");',
+    '        printf("%d", foo);',
+    "    }",
+    "}",
+    "",
+    "int fact(int n)",
+    "{",
+    "    if(n > 1)",
+    "    {",
+    "        return fact(n-1) * n;",
+    "    }",
+    "    return 1;",
+    "}",
+    "",
+    "int main(int argc, char **argv)",
+    "{",
+    "    frobnitz(fact(10));",
+    "}",
+    "",
+  ].join("\n");
+  const NEW = [
+    "#include <stdio.h>",
+    "",
+    "int fib(int n)",
+    "{",
+    "    if(n > 2)",
+    "    {",
+    "        return fib(n-1) + fib(n-2);",
+    "    }",
+    "    return 1;",
+    "}",
+    "",
+    "// Frobs foo heartily",
+    "int frobnitz(int foo)",
+    "{",
+    "    int i;",
+    "    for(i = 0; i < 10; i++)",
+    "    {",
+    '        printf("%d", foo);',
+    "    }",
+    "}",
+    "",
+    "int main(int argc, char **argv)",
+    "{",
+    "    frobnitz(fib(10));",
+    "}",
+    "",
+  ].join("\n");
+
+  function withGlobalConfig(text: string): void {
+    const path = join(root, `global-${text.length}-${Date.now()}.gitconfig`);
+    writeFileSync(path, text);
+    process.env.GIT_CONFIG_GLOBAL = path;
+  }
+
+  beforeAll(async () => {
+    previous = process.env.GIT_CONFIG_GLOBAL;
+    const origin = join(root, "settings-origin");
+    execFileSync("git", ["init", "-q", "-b", "main", origin]);
+    git(["config", "core.autocrlf", "false"], origin);
+    writeFileSync(join(origin, "f.c"), OLD);
+    git(["add", "f.c"], origin);
+    git(["update-index", "--add", "--cacheinfo", `160000,${"1".repeat(40)},sub`], origin);
+    git(["commit", "-qm", "old"], origin);
+    git(["checkout", "-qb", "feature"], origin);
+    writeFileSync(join(origin, "f.c"), NEW);
+    git(["add", "f.c"], origin);
+    git(["update-index", "--cacheinfo", `160000,${"2".repeat(40)},sub`], origin);
+    git(["commit", "-qm", "new"], origin);
+    clone = join(root, "settings.git");
+    withGlobalConfig("");
+    await cloneBare(origin, clone);
+    base = await mergeBase(clone, "main", "feature");
+    head = await resolveCommit(clone, "feature");
+  }, 60_000);
+
+  afterAll(() => {
+    if (previous === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+    else process.env.GIT_CONFIG_GLOBAL = previous;
+  });
+
+  it("keeps a moved submodule pointer in the diff and the list, whatever they say", async () => {
+    withGlobalConfig("[diff]\n\tsubmodule = log\n\tignoreSubmodules = all\n");
+    const { files } = await readChangeSet(clone, base, head);
+    expect(files.map((file) => file.path).sort()).toEqual(["f.c", "sub"]);
+  });
+
+  it("reads the same diff whatever diff.algorithm says", async () => {
+    withGlobalConfig("");
+    const plain = await diffText(clone, base, head);
+    withGlobalConfig("[diff]\n\talgorithm = patience\n");
+    expect(await diffText(clone, base, head)).toBe(plain);
+  });
+});
+
 describe("a parsed diff that disagrees with git's list of changed files (D-108)", () => {
   const parsed = (...paths: string[]) => paths.map((path) => ({ path }));
 

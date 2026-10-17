@@ -147,6 +147,15 @@ export async function diffText(repoDir: string, base: string, head: string): Pro
       "--no-textconv",
       "--src-prefix=a/",
       "--dst-prefix=b/",
+      // A moved submodule pointer stays a diff section, never a log summary
+      // or nothing at all (D-110).
+      "--submodule=short",
+      "--ignore-submodules=none",
+      // Which lines a hunk holds is git's default, not the user's choice, so
+      // the same two commits always make the same hunks and sweep hits.
+      "--diff-algorithm=myers",
+      "--indent-heuristic",
+      "--inter-hunk-context=0",
       `${base}..${head}`,
     ],
     { cwd: repoDir },
@@ -176,9 +185,10 @@ export class ChangeSetMismatchError extends Error {
 
 /**
  * Refuses a parsed diff that does not name exactly the files git lists as
- * changed. The list comes from `--name-only`, which no diff formatting
- * setting touches, so a diff some setting reshaped fails here rather than
- * becoming a review of less than the change (D-108).
+ * changed. The list comes from `--name-only`, which formatting settings do
+ * not touch, so a diff one of them reshaped fails here rather than becoming
+ * a review of less than the change (D-108). A setting that drops an entry
+ * from both, as diff.ignoreSubmodules does, is overridden on both (D-110).
  */
 export function checkChangeSet(
   parsed: readonly { path: string }[],
@@ -202,7 +212,16 @@ export async function readChangeSet(
   const patch = await diffText(repoDir, base, head);
   const files = parseUnifiedDiff(patch);
   const listed = await git(
-    ["diff", "--name-only", "-z", "-M", "-C", "--no-ext-diff", `${base}..${head}`],
+    [
+      "diff",
+      "--name-only",
+      "-z",
+      "-M",
+      "-C",
+      "--no-ext-diff",
+      "--ignore-submodules=none",
+      `${base}..${head}`,
+    ],
     { cwd: repoDir },
   );
   checkChangeSet(

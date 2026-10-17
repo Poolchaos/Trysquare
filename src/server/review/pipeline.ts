@@ -261,17 +261,19 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         sweepHitRows,
       );
 
-  // The sweep is deterministic over frozen commits and a frozen ruleset, so a
-  // resumed ledger holding a different number of hits was seeded in part,
-  // before seeding was one transaction. Its missing hits would never be
-  // dispositioned, and the review would read as a clean sweep.
+  // Over frozen commits, a frozen ruleset and a diff taken the same way every
+  // time (D-110), the sweep finds the same hits on every run. A resumed
+  // ledger holding a different number was seeded in part, before seeding
+  // was one transaction, or by a version of the app that read the diff
+  // differently. Either way its hits are not this run's, and ones never
+  // dispositioned would leave the review reading as a clean sweep.
   if (alreadySeeded) {
     const stored = listSweepHits(db, reviewId).length;
     if (stored !== sweepHitRows.length) {
       throw new Error(
         `This review's ledger holds ${stored} sweep hit(s) where the sweep finds ` +
-          `${sweepHitRows.length}, so it was seeded only in part. Start the review again ` +
-          `rather than resume it.`,
+          `${sweepHitRows.length}: it was seeded only in part, or by a version of the app ` +
+          `that read the change differently. Start the review again rather than resume it.`,
       );
     }
   }
