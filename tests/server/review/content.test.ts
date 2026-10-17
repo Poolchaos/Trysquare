@@ -116,9 +116,22 @@ describe("the adversarial prompt", () => {
   it("states that a finding accounts only for the hunks its lines fall in", () => {
     // The pipeline refuses an answer whose only finding for a hunk sits
     // outside it, so the stage is told before it answers, not after.
-    expect(renderAdversarialPrompt(INPUT)).toContain(
-      "every hunk still needs a finding inside it or a clear",
+    const prompt = renderAdversarialPrompt(INPUT).replace(/\s+/g, " ");
+    expect(prompt).toContain("only for the hunks its first or last cited line falls in");
+    expect(prompt).toContain("every hunk still needs a finding there or a clear");
+  });
+
+  it("says a deleted file's hunk can only be cleared, when one is shown", () => {
+    // Its hunk has no line a finding could cite, so a finding there accounts
+    // for nothing and the run would fail without the stage knowing why.
+    const withDeletion = renderAdversarialPrompt({
+      ...INPUT,
+      files: [...INPUT.files, ...inputFor(DELETED).files],
+    });
+    expect(withDeletion.replace(/\s+/g, " ")).toContain(
+      "A deleted file has no lines to cite: clear its hunk",
     );
+    expect(renderAdversarialPrompt(INPUT)).not.toContain("A deleted file");
   });
 
   it("tells the stage which line numbers to cite", () => {

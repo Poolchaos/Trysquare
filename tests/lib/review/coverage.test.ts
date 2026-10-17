@@ -126,6 +126,11 @@ describe("which hunk or line a finding is about", () => {
     expect(citesHunk({ lineStart: 15, lineEnd: 15 }, HUNK)).toBe(false);
   });
 
+  it("does not count a finding whose range only passes over the hunk (D-101)", () => {
+    expect(citesHunk({ lineStart: 1, lineEnd: 30 }, HUNK)).toBe(false);
+    expect(citesHunk({ lineStart: 1, lineEnd: 999999 }, HUNK)).toBe(false);
+  });
+
   it("reads a range written end first the same as one written start first", () => {
     expect(citesHunk({ lineStart: 11, lineEnd: 3 }, HUNK)).toBe(true);
     expect(citesLine({ lineStart: 9, lineEnd: 5 }, 7)).toBe(true);

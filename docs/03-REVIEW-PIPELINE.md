@@ -162,11 +162,12 @@ from the reconciled ledger, not written by a model, because a model
 summarising its own coverage is exactly the claim this app exists to
 distrust (D-52). Review moves to `awaiting_confirmation`.
 
-A finding accounts for the hunks its cited lines overlap, and a sweep hit
-dispositioned as a finding needs a finding whose lines include it (D-96). A
-hunk or hit whose every finding S5 refuted stays accounted for, but the
-statement of what was examined counts it, and the review page lists every
-refuted finding with its reason (D-97).
+A finding accounts for the hunks its first or last cited line falls in, and
+a sweep hit dispositioned as a finding needs a finding whose lines include
+it (D-96, D-101). A deleted file has no lines to cite, so S3 accounts for
+its hunk only by clearing it. A hunk or hit whose every finding S5 refuted
+stays accounted for, but the statement of what was examined counts it, and
+the review page lists every refuted finding with its reason (D-97).
 
 ## 2. S7 Human confirmation (UI, the user only)
 

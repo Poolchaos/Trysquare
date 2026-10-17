@@ -18,6 +18,7 @@ import type { z } from "zod";
 import type { ParsedFile } from "@/lib/git/diff";
 import { changedExportedSymbols } from "@/lib/git/symbols";
 import type { ImportedRule } from "@/lib/rulesets/model";
+import { citesHunk, citesLine } from "@/lib/review/coverage";
 import { runSweeps } from "@/lib/review/sweep";
 import type {
   adversarialStageSchema,
@@ -124,7 +125,7 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
   });
 
   // A deleted-file defect cannot be an S3 finding: its caller is not in the
-  // change set, and the pipeline rejects an S3 finding whose file has no hunk.
+  // change set, and the pipeline refuses an S3 finding in a file outside it.
   // It is raised by S4, the stage that reads removals, and faces only the
   // quote check against the surviving caller in the worktree.
   const findingFor = (defect: SeededDefect) => ({
@@ -147,23 +148,16 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
     .filter((defect) => defect.kind === "deleted-file")
     .map(findingFor);
 
-  /** The hunk a finding falls in, mirroring how the pipeline maps them. */
-  const hunkFor = (path: string, line: number): number => {
-    const entry = files.find((f) => `${f.slug}/${f.file.path}` === path);
-    if (!entry) return 0;
-    const containing = entry.file.hunks.find(
-      (hunk) => line >= hunk.newStart && line < hunk.newStart + Math.max(hunk.newLines, 1),
-    );
-    return containing?.hunkIndex ?? entry.file.hunks[0]?.hunkIndex ?? 0;
-  };
-
-  const withFindings = new Set(
-    findings.map((finding) => `${finding.path}::${hunkFor(finding.path, finding.lineStart)}`),
-  );
-
+  // Cleared unless a finding accounts for it, by the pipeline's own rule.
   const clearedHunks = files.flatMap((entry) =>
     entry.file.hunks
-      .filter((hunk) => !withFindings.has(`${entry.slug}/${entry.file.path}::${hunk.hunkIndex}`))
+      .filter(
+        (hunk) =>
+          !findings.some(
+            (finding) =>
+              finding.path === `${entry.slug}/${entry.file.path}` && citesHunk(finding, hunk),
+          ),
+      )
       .map((hunk) => ({
         path: `${entry.slug}/${entry.file.path}`,
         hunkIndex: hunk.hunkIndex,
@@ -173,7 +167,7 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
 
   const sweepDispositions = sweepHits.map((hit) => {
     const backing = findings.find(
-      (finding) => finding.path === hit.path && Math.abs(finding.lineStart - hit.line) <= 2,
+      (finding) => finding.path === hit.path && citesLine(finding, hit.line),
     );
     return backing
       ? {

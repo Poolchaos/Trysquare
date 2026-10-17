@@ -52,17 +52,18 @@ export interface CitedLines {
 }
 
 /**
- * Whether a finding is about a hunk: its cited lines overlap the hunk's lines
- * after the change (D-96). A hunk that adds nothing is given its start line,
- * so it can still be cited.
+ * Whether a finding is about a hunk: its first or last cited line falls in
+ * the hunk's lines after the change (D-101). Any overlap used to count, so one
+ * finding at lines 1 to 999999 accounted for every hunk in its file. A hunk
+ * that adds nothing is given its start line, so it can still be cited.
  */
 export function citesHunk(
   finding: CitedLines,
   hunk: { newStart: number; newLines: number },
 ): boolean {
-  const first = Math.min(finding.lineStart, finding.lineEnd);
-  const last = Math.max(finding.lineStart, finding.lineEnd);
-  return first < hunk.newStart + Math.max(hunk.newLines, 1) && last >= hunk.newStart;
+  const inHunk = (line: number) =>
+    line >= hunk.newStart && line < hunk.newStart + Math.max(hunk.newLines, 1);
+  return inHunk(finding.lineStart) || inHunk(finding.lineEnd);
 }
 
 /** Whether two cited ranges share a line. */

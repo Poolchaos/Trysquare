@@ -495,6 +495,18 @@ describe("refusing to accept an incomplete stage", () => {
       expect(listFindings(db, reviewId)[0]?.lineStart).toBe(11);
     });
 
+    it("does not account for a hunk its range only passes over", async () => {
+      // Lines 1 to 11 start and end outside the hunk at 3 to 9. Counting any
+      // overlap let one finding at 1 to 999999 account for every hunk in its
+      // file (D-101).
+      await expect(runLong({ findings: [finding(1, 11)] })).rejects.toThrow(
+        /neither given a finding nor cleared/,
+      );
+      await expect(runLong({ findings: [finding(1, 999999)] })).rejects.toThrow(
+        /neither given a finding nor cleared/,
+      );
+    });
+
     it("accounts for a hunk its line range reaches into from above", async () => {
       // Lines 1 to 6 start outside the hunk and end on the inserted line, so
       // the finding is about what changed.

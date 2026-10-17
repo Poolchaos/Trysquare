@@ -2211,3 +2211,14 @@ verified evidence, in writing, here.
   under Playwright or GitHub Actions, and it did not reproduce locally. It
   is not retried away: a Windows job that fails now saves the runner's TCP
   table to its evidence, so a recurrence shows whether ports ran out.
+- 2026-10-17 D-101 DECIDED (review of 4.10 to 4.12, finding 1; narrows
+  D-96): a finding accounts for the hunks its first or last cited line
+  falls in, not every hunk its range overlaps. New evidence, reproduced
+  against the code: one finding at lines 1 to 999999 accounted for both
+  hunks of a 30-line file and the review completed, where the code before
+  D-96 refused it. First or last line rather than one hunk only, because a
+  finding that runs from one hunk into the next is about both, and a range
+  reaching into a hunk from either side stays counted as D-96 meant. A
+  range that only passes over a hunk no longer counts for it. The S3
+  prompt states the rule, and, when a deleted file is shown, that its hunk
+  can only be cleared, which D-96 decided but the prompt never said.

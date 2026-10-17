@@ -230,6 +230,10 @@ export function renderAdversarialPrompt(
   const hits = inScope
     ? input.sweepHits.filter((hit) => inScope.includes(hit.path))
     : input.sweepHits;
+  const deletedInScope = input.files.some(
+    (entry) =>
+      entry.file.changeType === "deleted" && (!inScope || inScope.includes(qualifiedPath(entry))),
+  );
 
   const header =
     scope.batchNumber && scope.batchCount
@@ -251,8 +255,15 @@ export function renderAdversarialPrompt(
     "Cite line numbers exactly as shown in the left column above: those are the",
     "line numbers in the file as it stands after the change. A hunk you do not",
     "mention is treated as unreviewed and fails the run. A finding accounts",
-    "only for the hunks its lines fall in: one elsewhere in a changed file is",
-    "kept, but every hunk still needs a finding inside it or a clear.",
+    "only for the hunks its first or last cited line falls in: one elsewhere in",
+    "a changed file is kept, but every hunk still needs a finding there or a",
+    "clear.",
+    ...(deletedInScope
+      ? [
+          "A deleted file has no lines to cite: clear its hunk, and leave what its",
+          "removal breaks to the deletion review that follows.",
+        ]
+      : []),
     "",
     "For each finding: the issue is one sentence naming the problem, and the",
     "comment explains what is wrong and what it breaks in plain language that",

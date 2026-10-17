@@ -1008,7 +1008,8 @@ function repoOf(path: string, input: PipelineInput): "primary" | "linked" {
 }
 
 /**
- * The hunks a finding accounts for: those its line range overlaps (D-96).
+ * The hunks a finding accounts for: those its first or last cited line falls
+ * in (D-96, D-101).
  *
  * A finding elsewhere in a changed file is kept, since unchanged code can
  * break with the change, but it accounts for no hunk. It used to stand in for
