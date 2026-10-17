@@ -653,9 +653,25 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               <Button
                 variant="primary"
                 onClick={async () => {
+                  setActionError("");
                   // No ruleset needed: a resumed review already carries the
                   // one it was frozen with.
-                  await fetch(`/api/reviews/${id}/start`, { method: "POST" });
+                  const response = await fetch(`/api/reviews/${id}/start`, {
+                    method: "POST",
+                  }).catch((error: unknown) =>
+                    error instanceof Error ? error : new Error(String(error)),
+                  );
+                  // A refusal, such as a review another tab already cancelled,
+                  // is said, and the page shows where the review really is.
+                  if (response instanceof Error || !response.ok) {
+                    const body =
+                      response instanceof Error
+                        ? { error: `The review could not be resumed: ${response.message}` }
+                        : ((await response.json().catch(() => ({}))) as { error?: string });
+                    setActionError(body.error ?? "The review could not be resumed.");
+                    await reload();
+                    return;
+                  }
                   watchAgain();
                 }}
               >

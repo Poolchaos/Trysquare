@@ -69,6 +69,27 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   await expect(page.getByText(/The limit clears at/)).toBeVisible();
   await expect(page.getByText(/resuming before then will pause again/i)).toBeVisible();
 
+  // A resume the server refuses, as it does when another tab has already
+  // cancelled the review, says why rather than watching a run that never
+  // comes (4.19 review). Answered once by the route, the way the server does.
+  await page.route(
+    "**/api/reviews/*/start",
+    (route) =>
+      route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "Review is cancelled, which cannot be started or resumed.",
+          code: "ReviewNotStartableError",
+        }),
+      }),
+    { times: 1 },
+  );
+  await page.getByRole("button", { name: "Resume" }).click();
+  await expect(
+    page.getByText("Review is cancelled, which cannot be started or resumed."),
+  ).toBeVisible();
+
   // The trigger armed one call and disarmed itself, so the resume runs to the
   // end, paying only for the stages the first attempt never reached.
   await page.getByRole("button", { name: "Resume" }).click();

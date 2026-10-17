@@ -156,7 +156,7 @@ export class JobManager {
     return "running";
   }
 
-  /** Same as start; the service is what decides whether the status allows it. */
+  /** Same as start, which judges whether the review's status lets it run. */
   resume(reviewId: string, options: PrepareAndRunOptions = {}): StartState {
     return this.start(reviewId, options);
   }
