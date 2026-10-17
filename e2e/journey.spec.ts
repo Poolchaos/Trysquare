@@ -15,7 +15,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { APP_REPO, PROTOCOL_PATH } from "./setup";
+import { APP_REPO, PROTOCOL_PATH, REFUTED_ISSUE, REFUTED_NOTE } from "./setup";
 
 /**
  * The confirmation queue can only be photographed from here: by the time the
@@ -173,10 +173,17 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(
       page.getByText("Everything the change touched ended with a finding or an explicit clear."),
     ).toBeVisible();
+    // Accounted for, but a refutation is said, not folded away with the rest.
+    await expect(
+      page.getByText("1 hunk(s) were accounted for only by findings that verification refuted."),
+    ).toBeVisible();
 
     await page.getByText("Run detail", { exact: true }).click();
     await expect(page.getByRole("heading", { name: "Coverage" })).toBeVisible();
     await expect(page.getByText(/Files.*\d+ of \d+ accounted for/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Refuted in verification" })).toBeVisible();
+    await expect(page.getByText(REFUTED_ISSUE)).toBeVisible();
+    await expect(page.getByText(`Refuted: ${REFUTED_NOTE}`)).toBeVisible();
 
     // The deterministic ends of the pipeline. They write no stage row, so
     // they are the rows most easily lost, and they are the parts of a review
@@ -367,6 +374,12 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     const dismissedSection = report.slice(report.indexOf("## Dismissed"));
     expect(dismissedSection).toContain("Deliberate: the caller already guards this.");
     expect(findingsSection).not.toContain("Deliberate: the caller already guards this.");
+
+    // A refuted finding is counted in what was examined and is not reported.
+    expect(report).toContain(
+      "1 hunk(s) were accounted for only by findings that verification refuted.",
+    );
+    expect(report).not.toContain(REFUTED_ISSUE);
   });
 });
 

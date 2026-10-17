@@ -45,6 +45,34 @@ export interface Reconciliation {
   unknownSymbols: SymbolRef[];
 }
 
+/** The lines a finding cites. A stage may write the ends either way round. */
+export interface CitedLines {
+  lineStart: number;
+  lineEnd: number;
+}
+
+/**
+ * Whether a finding is about a hunk: its cited lines overlap the hunk's lines
+ * after the change (D-96). A hunk that adds nothing is given its start line,
+ * so it can still be cited.
+ */
+export function citesHunk(
+  finding: CitedLines,
+  hunk: { newStart: number; newLines: number },
+): boolean {
+  const first = Math.min(finding.lineStart, finding.lineEnd);
+  const last = Math.max(finding.lineStart, finding.lineEnd);
+  return first < hunk.newStart + Math.max(hunk.newLines, 1) && last >= hunk.newStart;
+}
+
+/** Whether a finding's cited lines include a sweep hit's line (D-96). */
+export function citesLine(finding: CitedLines, line: number): boolean {
+  return (
+    line >= Math.min(finding.lineStart, finding.lineEnd) &&
+    line <= Math.max(finding.lineStart, finding.lineEnd)
+  );
+}
+
 const hunkKey = (ref: HunkRef) => `${ref.path}::${ref.hunkIndex}`;
 const sweepKey = (ref: SweepRef) => `${ref.path}::${ref.line}::${ref.ruleCode}`;
 const symbolKey = (ref: SymbolRef) => `${ref.path}::${ref.symbol}`;

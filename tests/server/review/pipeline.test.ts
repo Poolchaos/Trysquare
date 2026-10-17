@@ -678,6 +678,60 @@ describe("the quotation check", () => {
     const { result } = await verifyWith("wrong code", 2, 2);
     expect(result.coverage.unresolvedCandidates).toBe(0);
   });
+
+  it("counts what was accounted for only by the finding it killed", async () => {
+    // Still covered (D-97), but said, so a refutation never reads as a pass.
+    const { result } = await verifyWith("wrong code", 2, 2);
+    expect(result.coverage.pendingHunks).toBe(0);
+    expect(result.coverage.refutedOnlyHunks).toBe(1);
+    expect(result.coverage.refutedOnlySweepHits).toBe(1);
+  });
+
+  it("counts nothing as refuted when the finding stands", async () => {
+    const { result } = await verifyWith("  const user = payload as User;", 2, 2);
+    expect(result.coverage.refutedOnlyHunks).toBe(0);
+    expect(result.coverage.refutedOnlySweepHits).toBe(0);
+  });
+});
+
+describe("a hunk with one finding refuted and another standing", () => {
+  // Line 2 holds the cast the sweep hit, line 3 the sum; both are in the
+  // file's only hunk.
+  const BOTH = {
+    ...COMPLETE_ADVERSARIAL,
+    findings: [
+      { ...COMPLETE_ADVERSARIAL.findings[0]!, lineStart: 2, lineEnd: 2 },
+      { ...COMPLETE_ADVERSARIAL.findings[0]!, lineStart: 3, lineEnd: 3, issue: "Float sum" },
+    ],
+  };
+  const verdict = (ref: string, line: number, verdict: "verified" | "killed") => ({
+    ref,
+    verdict,
+    quotedCode: SOURCE.split("\n")[line - 1],
+    lineStart: line,
+    lineEnd: line,
+    note: verdict === "killed" ? "Refuted." : "checked",
+  });
+
+  it("counts the hunk as standing, and the hit as refuted when its own finding fell", async () => {
+    const result = await run({
+      ...BASE_ANSWERS,
+      s3_adversarial: BOTH,
+      s5_verification: { verdicts: [verdict("C1", 2, "killed"), verdict("C2", 3, "verified")] },
+    });
+    expect(result.coverage.refutedOnlyHunks).toBe(0);
+    expect(result.coverage.refutedOnlySweepHits).toBe(1);
+  });
+
+  it("counts neither when the finding on the hit's line stands", async () => {
+    const result = await run({
+      ...BASE_ANSWERS,
+      s3_adversarial: BOTH,
+      s5_verification: { verdicts: [verdict("C1", 2, "verified"), verdict("C2", 3, "killed")] },
+    });
+    expect(result.coverage.refutedOnlyHunks).toBe(0);
+    expect(result.coverage.refutedOnlySweepHits).toBe(0);
+  });
 });
 
 describe("a verdict that never arrives", () => {

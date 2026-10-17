@@ -2158,3 +2158,17 @@ verified evidence, in writing, here.
   refusing a finding outside every hunk, since verification is what judges
   it. Cost: a stage that cites loosely now fails the run where it used to
   pass, so the S3 prompt states both rules.
+- 2026-10-17 D-97 DECIDED by the maintainer (WP 4.10): a hunk or sweep hit
+  whose every finding verification refuted stays accounted for, since S3
+  and S5 both read the code and the refutation carries a reason. It is said,
+  not assumed: the coverage report counts such hunks and hits, the report's
+  statement of what was examined gives the count, and the review page lists
+  every refuted finding with its reason. Every refuted finding, not only
+  those a hunk rested on, because a list titled refuted that left some out
+  would be its own silence. Rejected: sending each one to the person, which
+  adds a decision to every review where verification refutes something; and
+  failing S6, which the pipeline spec keeps for pipeline bugs and which
+  would fail a review after its whole run was spent. The counts are taken
+  when read, so a review finished before D-96 also counts a hunk whose only
+  finding sat outside it: no standing finding is about that hunk either,
+  though the sentence names refutation as the reason.

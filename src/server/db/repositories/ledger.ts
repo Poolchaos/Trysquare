@@ -9,8 +9,9 @@
  * to be honest about what it skipped.
  */
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { newId } from "@/lib/ids";
+import { citesHunk, citesLine } from "@/lib/review/coverage";
 import type {
   ChangeType,
   HunkStatus,
@@ -232,6 +233,13 @@ export interface CoverageReport {
   pendingFiles: number;
   /** Candidate findings with no verification verdict yet. */
   unresolvedCandidates: number;
+  /**
+   * Given findings, every one of which verification refuted (D-97). Still
+   * accounted for, since the code was read and the refutation has a reason,
+   * but counted so a refutation never reads as a clean pass.
+   */
+  refutedOnlyHunks: number;
+  refutedOnlySweepHits: number;
 }
 
 export function coverageReport(db: Db, reviewId: string): CoverageReport {
@@ -265,6 +273,28 @@ export function coverageReport(db: Db, reviewId: string): CoverageReport {
     .where(and(eq(findings.reviewId, reviewId), eq(findings.status, "candidate")))
     .all().length;
 
+  const standing = db
+    .select()
+    .from(findings)
+    .where(and(eq(findings.reviewId, reviewId), ne(findings.status, "killed")))
+    .all();
+  const standingIn = (path: string) => standing.filter((finding) => finding.filePath === path);
+  const refutedOnlyHunks = files.reduce(
+    (count, file) =>
+      count +
+      listHunks(db, file.id).filter(
+        (hunk) =>
+          hunk.status === "has_findings" &&
+          !standingIn(file.path).some((finding) => citesHunk(finding, hunk)),
+      ).length,
+    0,
+  );
+  const refutedOnlySweepHits = listSweepHits(db, reviewId).filter(
+    (hit) =>
+      hit.disposition === "finding" &&
+      !standingIn(hit.path).some((finding) => citesLine(finding, hit.line)),
+  ).length;
+
   return {
     totalFiles: files.length,
     totalHunks: Number(hunkCounts.total ?? 0),
@@ -273,6 +303,8 @@ export function coverageReport(db: Db, reviewId: string): CoverageReport {
     pendingSweepHits: Number(sweepCounts.pending ?? 0),
     pendingFiles: files.filter((f) => f.status === "pending").length,
     unresolvedCandidates,
+    refutedOnlyHunks,
+    refutedOnlySweepHits,
   };
 }
 

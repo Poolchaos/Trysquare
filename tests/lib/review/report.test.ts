@@ -34,7 +34,13 @@ const BASE: ReportInput = {
   confirmed: [FINDING],
   dismissed: [],
   openQuestions: [],
-  coverage: { totalFiles: 10, totalHunks: 12, totalSweepHits: 0 },
+  coverage: {
+    totalFiles: 10,
+    totalHunks: 12,
+    totalSweepHits: 0,
+    refutedOnlyHunks: 0,
+    refutedOnlySweepHits: 0,
+  },
   chainFilesRead: 3,
   rulesetName: "Example protocol",
   rulesetVersion: 2,
@@ -145,6 +151,36 @@ describe("what the report says was examined", () => {
       coverage: { ...BASE.coverage, totalSweepHits: 4 },
     });
     expect(report).toContain("4 mechanical sweep hit(s) were each dispositioned.");
+  });
+
+  it("says what rests only on findings verification refuted", () => {
+    // Accounted for (D-97), but a reader is not left to assume the findings
+    // raised there stood.
+    const report = renderReport({
+      ...BASE,
+      coverage: {
+        ...BASE.coverage,
+        totalSweepHits: 4,
+        refutedOnlyHunks: 2,
+        refutedOnlySweepHits: 1,
+      },
+    });
+    expect(report).toContain(
+      "2 hunk(s) and 1 sweep hit(s) were accounted for only by findings that verification refuted.",
+    );
+  });
+
+  it("names only the kind that rests on a refutation", () => {
+    const report = renderReport({
+      ...BASE,
+      coverage: { ...BASE.coverage, refutedOnlyHunks: 3 },
+    });
+    expect(report).toContain("3 hunk(s) were accounted for only by findings");
+    expect(report).not.toContain("sweep hit(s) were accounted for only");
+  });
+
+  it("says nothing of refutations when every finding raised stood", () => {
+    expect(renderReport(BASE)).not.toContain("refuted");
   });
 });
 
@@ -299,5 +335,16 @@ describe("the report as a file someone else can open", () => {
     const fromMarkdown = /(\d+) confirmed finding/.exec(markdown)?.[1];
     expect(fromMarkdown).toBeDefined();
     expect(html).toContain(`${fromMarkdown} confirmed finding`);
+  });
+
+  it("states what was examined in the markdown's own words", () => {
+    // It was written out twice and had drifted: with no sweep hits the HTML
+    // claimed "0 mechanical sweep hit(s) were each dispositioned".
+    const input = { ...BASE, coverage: { ...BASE.coverage, refutedOnlyHunks: 1 } };
+    const html = renderReportHtml(input);
+    expect(html).toContain("The mechanical sweep found nothing to disposition.");
+    expect(html).toContain(
+      "1 hunk(s) were accounted for only by findings that verification refuted.",
+    );
   });
 });

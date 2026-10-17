@@ -74,6 +74,8 @@ export function buildReportInput(db: Db, reviewId: string): ReportInput {
       totalFiles: coverage.totalFiles,
       totalHunks: coverage.totalHunks,
       totalSweepHits: coverage.totalSweepHits,
+      refutedOnlyHunks: coverage.refutedOnlyHunks,
+      refutedOnlySweepHits: coverage.refutedOnlySweepHits,
     },
     chainFilesRead,
 

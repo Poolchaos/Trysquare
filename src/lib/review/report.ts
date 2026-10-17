@@ -50,6 +50,8 @@ export interface ReportInput {
     totalFiles: number;
     totalHunks: number;
     totalSweepHits: number;
+    refutedOnlyHunks: number;
+    refutedOnlySweepHits: number;
   };
   chainFilesRead: number;
 
@@ -158,8 +160,12 @@ function summary(input: ReportInput): string {
  * Every number here is what the app counted and reconciled, not what a model
  * claimed: the coverage invariants mean the review could not have finished
  * with a hunk unaccounted for.
+ *
+ * Exported for the page's typeset report, so the two cannot say different
+ * things about what was examined.
  */
-function completeness(input: ReportInput): string {
+export function completeness(input: Pick<ReportInput, "coverage" | "chainFilesRead">): string {
+  const refuted = refutedOnlySentence(input.coverage);
   const sweep =
     input.coverage.totalSweepHits === 0
       ? "The mechanical sweep found nothing to disposition."
@@ -168,8 +174,29 @@ function completeness(input: ReportInput): string {
   return (
     `${input.coverage.totalFiles} changed file(s) and ${input.coverage.totalHunks} hunk(s) were ` +
     `read, and each hunk was either given a finding or cleared with a reason. ${sweep} ` +
+    (refuted ? `${refuted} ` : "") +
     `${input.chainFilesRead} file(s) outside the change set were opened to follow what it calls into.`
   );
+}
+
+/**
+ * What rests only on refuted findings (D-97), or null when nothing does.
+ *
+ * Such a hunk or hit counts as accounted for, since verification read the code
+ * and gave its reason, but a reader is told rather than left to assume every
+ * finding raised there stood.
+ */
+export function refutedOnlySentence(coverage: {
+  refutedOnlyHunks: number;
+  refutedOnlySweepHits: number;
+}): string | null {
+  const parts = [
+    ...(coverage.refutedOnlyHunks > 0 ? [`${coverage.refutedOnlyHunks} hunk(s)`] : []),
+    ...(coverage.refutedOnlySweepHits > 0 ? [`${coverage.refutedOnlySweepHits} sweep hit(s)`] : []),
+  ];
+  return parts.length === 0
+    ? null
+    : `${parts.join(" and ")} were accounted for only by findings that verification refuted.`;
 }
 
 /**
@@ -337,7 +364,7 @@ footer { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: .75
 <h1>${escapeHtml(input.fromBranch)} into ${escapeHtml(input.intoBranch)}</h1>
 <p class="sum">${escapeHtml(summary)}</p>
 <h3>What was examined</h3>
-<p class="c">${input.coverage.totalFiles} changed file(s) and ${input.coverage.totalHunks} hunk(s) were read, and each hunk was either given a finding or cleared with a reason. ${input.coverage.totalSweepHits} mechanical sweep hit(s) were each dispositioned. ${input.chainFilesRead} file(s) outside the change set were opened to follow what it calls into.</p>
+<p class="c">${escapeHtml(completeness(input))}</p>
 ${input.intent ? `<h3>What the change was for</h3><blockquote>${escapeHtml(input.intent)}</blockquote>` : ""}
 ${group("Confirmed", input.confirmed)}
 ${group("Open questions", input.openQuestions)}

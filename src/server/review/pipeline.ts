@@ -23,6 +23,8 @@ import { budgetFor, estimateTokens, fitsBudget, splitToFit } from "@/lib/review/
 import {
   assertDeletionsReconciled,
   assertReconciled,
+  citesHunk,
+  citesLine,
   reconcileAdversarial,
   reconcileDeletions,
   type HunkRef,
@@ -933,12 +935,7 @@ function findingAt(
   path: string,
   line: number,
 ): { id: string } | undefined {
-  return candidates.find(
-    (finding) =>
-      finding.filePath === path &&
-      line >= Math.min(finding.lineStart, finding.lineEnd) &&
-      line <= Math.max(finding.lineStart, finding.lineEnd),
-  );
+  return candidates.find((finding) => finding.filePath === path && citesLine(finding, line));
 }
 
 function repoOf(path: string, input: PipelineInput): "primary" | "linked" {
@@ -962,10 +959,8 @@ function hunksCoveredBy(
   // Reported against a hunk that does not exist, so reconciliation refuses
   // the answer as describing a file outside the change set.
   if (!ledgerFile) return [{ path: finding.path, hunkIndex: 0 }];
-  const first = Math.min(finding.lineStart, finding.lineEnd);
-  const last = Math.max(finding.lineStart, finding.lineEnd);
   return listHunks(db, ledgerFile.id)
-    .filter((hunk) => first < hunk.newStart + Math.max(hunk.newLines, 1) && last >= hunk.newStart)
+    .filter((hunk) => citesHunk(finding, hunk))
     .map((hunk) => ({ path: finding.path, hunkIndex: hunk.hunkIndex }));
 }
 

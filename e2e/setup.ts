@@ -90,6 +90,10 @@ const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 export const FAKE_CLI = join(REPO_ROOT, "tests", "fixtures", "fake-claude.mjs");
 export const PROTOCOL_PATH = join(REPO_ROOT, "tests", "fixtures", "example-protocol.md");
 
+/** The one finding the scripted verification refutes, and why. */
+export const REFUTED_ISSUE = "A guard is missing before this value is used.";
+export const REFUTED_NOTE = "The value is checked before it arrives here, so nothing is missing.";
+
 export default async function globalSetup(): Promise<void> {
   mkdirSync(FIXTURE_DIR, { recursive: true });
   mkdirSync(DATA_DIR, { recursive: true });
@@ -124,17 +128,45 @@ export default async function globalSetup(): Promise<void> {
   const head = await resolveCommit(referenceClone, "feature/rename-prefs");
   const files = parseUnifiedDiff(await diffText(referenceClone, base, head));
 
-  const sequence = helpers.answerSequence(
-    helpers.buildIdealStageOutputs({
-      files: files.map((file) => ({ repo: "primary" as const, slug: "app", file })),
-      manifest: {
-        ...manifest,
-        defects: manifest.defects.filter((defect) => defect.kind !== "cross-repo"),
-      } as never,
-      worktreeRoot: referenceRoot,
-      rules: importProtocol(readFileSync(PROTOCOL_PATH, "utf8")).ruleset.rules,
-    }),
-  );
+  const outputs = helpers.buildIdealStageOutputs({
+    files: files.map((file) => ({ repo: "primary" as const, slug: "app", file })),
+    manifest: {
+      ...manifest,
+      defects: manifest.defects.filter((defect) => defect.kind !== "cross-repo"),
+    } as never,
+    worktreeRoot: referenceRoot,
+    rules: importProtocol(readFileSync(PROTOCOL_PATH, "utf8")).ruleset.rules,
+  });
+
+  // One finding verification refutes, on a hunk nothing else is about, so the
+  // journey sees a refutation said out loud rather than vanishing (D-97). The
+  // hunk is taken from those the ideal answers clear, and is no longer cleared.
+  const [refutedHunk, ...stillCleared] = outputs.s3.clearedHunks;
+  if (!refutedHunk) throw new Error("The ideal answers cleared no hunk to refute a finding on.");
+  const hunk = files
+    .find((file) => `app/${file.path}` === refutedHunk.path)
+    ?.hunks.find((candidate) => candidate.hunkIndex === refutedHunk.hunkIndex);
+  if (!hunk) throw new Error(`No hunk ${refutedHunk.hunkIndex} in ${refutedHunk.path}.`);
+  outputs.s3.clearedHunks = stillCleared;
+  outputs.s3.findings.push({
+    path: refutedHunk.path,
+    lineStart: hunk.newStart,
+    lineEnd: hunk.newStart,
+    severity: "WARNING",
+    ruleCode: null,
+    issue: REFUTED_ISSUE,
+    comment: "The value is used without being checked first.",
+    mechanism: "traced from the change to where the value is used",
+  });
+  outputs.s5ByLine.push({
+    path: refutedHunk.path,
+    lineStart: hunk.newStart,
+    verdict: "killed",
+    quotedCode: "",
+    note: REFUTED_NOTE,
+  });
+
+  const sequence = helpers.answerSequence(outputs);
   // Twice over: the journey runs one review and the failure-path spec runs
   // another, and the fake hands out one sequence per directory.
   helpers.writeAnswersDir(ANSWERS_DIR, [...sequence, ...sequence]);

@@ -16,6 +16,7 @@ import {
   isResumableReview,
   type ReviewStatus,
 } from "@/lib/domain/state-machines";
+import { completeness, refutedOnlySentence } from "@/lib/review/report";
 import { ConfirmationQueue, type Finding } from "@/components/confirmation";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import {
@@ -124,6 +125,8 @@ interface Snapshot {
     pendingSweepHits: number;
     pendingFiles: number;
     unresolvedCandidates: number;
+    refutedOnlyHunks: number;
+    refutedOnlySweepHits: number;
   };
   notes: { kind: string; message: string; at: string }[];
   findings: Finding[];
@@ -158,7 +161,13 @@ interface ReportData {
   confirmed: ReportFinding[];
   dismissed: ReportFinding[];
   openQuestions: ReportFinding[];
-  coverage: { totalFiles: number; totalHunks: number; totalSweepHits: number };
+  coverage: {
+    totalFiles: number;
+    totalHunks: number;
+    totalSweepHits: number;
+    refutedOnlyHunks: number;
+    refutedOnlySweepHits: number;
+  };
   chainFilesRead: number;
   rulesetName: string;
   rulesetVersion: number;
@@ -309,6 +318,11 @@ function CoveragePanel({
           {outstanding === 0
             ? "Everything the change touched ended with a finding or an explicit clear."
             : `${outstanding} still outstanding. The review cannot finish while anything is.`}
+        </p>
+      ) : null}
+      {withSentence && refutedOnlySentence(coverage) ? (
+        <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+          {refutedOnlySentence(coverage)}
         </p>
       ) : null}
       {coverage.unresolvedCandidates > 0 ? (
@@ -998,6 +1012,7 @@ function RunDetail({
 }) {
   const { coverage } = snapshot;
   const outstanding = coverage.pendingFiles + coverage.pendingHunks + coverage.pendingSweepHits;
+  const refuted = snapshot.findings.filter((finding) => finding.status === "killed");
   const usualFor = (stage: string): string | null => {
     const ms = snapshot.stageMedians[stage];
     return ms === undefined ? null : elapsedBetween(0, ms);
@@ -1105,6 +1120,34 @@ function RunDetail({
         withSentence={!folded}
       />
 
+      {refuted.length > 0 ? (
+        <Card className="mb-6 p-4">
+          <h2 className="mb-1 text-heading font-medium">Refuted in verification</h2>
+          {/* Every one, not only those a hunk rested on (D-97): a list
+              titled refuted that left some out would be its own silence. */}
+          <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
+            Raised by the review and refuted when checked against the file. None of these reach the
+            report.
+          </p>
+          <ul className="grid gap-3">
+            {refuted.map((finding) => (
+              <li key={finding.id} className="text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={severityTone(finding.severity)}>{finding.severity}</Badge>
+                  <Mono className="text-xs text-[var(--color-ink-muted)]">
+                    {finding.filePath}:{finding.lineStart}
+                  </Mono>
+                </div>
+                <p className="mt-1">{finding.issue}</p>
+                <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+                  Refuted: {finding.verificationNote ?? "no reason was recorded."}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+
       {snapshot.notes.length > 0 ? (
         <Card className="mb-6 p-4">
           <h2 className="mb-2 text-heading font-medium">What this run recorded</h2>
@@ -1138,6 +1181,7 @@ function RunDetail({
           {outstanding === 0
             ? "Everything the change touched ended with a finding or an explicit clear."
             : `${outstanding} still outstanding. The review cannot finish while anything is.`}
+          {refutedOnlySentence(coverage) ? ` ${refutedOnlySentence(coverage)}` : null}
         </p>
       ) : null}
       <details>
@@ -1205,13 +1249,7 @@ function RenderedReport({ data }: { data: ReportData }) {
       </p>
 
       <h4 className="mt-5 text-body font-medium">What was examined</h4>
-      <p className="mt-1 text-body text-[var(--color-ink-muted)]">
-        {data.coverage.totalFiles} changed file(s) and {data.coverage.totalHunks} hunk(s) were read,
-        and each hunk was either given a finding or cleared with a reason.{" "}
-        {data.coverage.totalSweepHits} mechanical sweep hit(s) were each dispositioned.{" "}
-        {data.chainFilesRead} file(s) outside the change set were opened to follow what it calls
-        into.
-      </p>
+      <p className="mt-1 text-body text-[var(--color-ink-muted)]">{completeness(data)}</p>
 
       {data.intent ? (
         <>

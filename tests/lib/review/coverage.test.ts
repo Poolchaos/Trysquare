@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   StageDidNotAccountError,
   assertReconciled,
+  citesHunk,
+  citesLine,
   isReconciled,
   reconcileAdversarial,
 } from "@/lib/review/coverage";
@@ -105,5 +107,37 @@ describe("reconciling the adversarial stage", () => {
     expect(() => assertReconciled(result)).toThrow(/hunk\(s\) were neither given a finding/);
     expect(() => assertReconciled(result)).toThrow(/undispositioned/);
     expect(() => assertReconciled(result)).toThrow(/not in the change set/);
+  });
+});
+
+describe("which hunk or line a finding is about", () => {
+  // A hunk at lines 10 to 14 after the change.
+  const HUNK = { newStart: 10, newLines: 5 };
+
+  it("counts a finding inside the hunk, or reaching into it from either side", () => {
+    expect(citesHunk({ lineStart: 12, lineEnd: 12 }, HUNK)).toBe(true);
+    expect(citesHunk({ lineStart: 4, lineEnd: 10 }, HUNK)).toBe(true);
+    expect(citesHunk({ lineStart: 14, lineEnd: 30 }, HUNK)).toBe(true);
+  });
+
+  it("does not count a finding that stops short of the hunk or starts after it", () => {
+    expect(citesHunk({ lineStart: 4, lineEnd: 9 }, HUNK)).toBe(false);
+    expect(citesHunk({ lineStart: 15, lineEnd: 15 }, HUNK)).toBe(false);
+  });
+
+  it("reads a range written end first the same as one written start first", () => {
+    expect(citesHunk({ lineStart: 11, lineEnd: 3 }, HUNK)).toBe(true);
+    expect(citesLine({ lineStart: 9, lineEnd: 5 }, 7)).toBe(true);
+  });
+
+  it("gives a hunk that adds no lines its start line, and only that", () => {
+    const removal = { newStart: 20, newLines: 0 };
+    expect(citesHunk({ lineStart: 20, lineEnd: 20 }, removal)).toBe(true);
+    expect(citesHunk({ lineStart: 21, lineEnd: 21 }, removal)).toBe(false);
+  });
+
+  it("counts a sweep hit only on a line the finding cites", () => {
+    expect(citesLine({ lineStart: 5, lineEnd: 7 }, 7)).toBe(true);
+    expect(citesLine({ lineStart: 5, lineEnd: 7 }, 8)).toBe(false);
   });
 });
