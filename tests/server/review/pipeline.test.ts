@@ -1941,7 +1941,7 @@ describe("verifying a finding in a file the change deleted (D-106)", () => {
     expect(result.verified).toBe(1);
     expect(statusOf(listFindings(db, reviewId)[0]!)).toBe("verified");
     // And the verifier was handed what it quoted from.
-    expect(prompts[0]).toContain("contentsBeforeDeletion");
+    expect(prompts[0]).toContain("deletedFiles");
     expect(prompts[0]).toContain("     2    if (value < 0) throw new Error('negative');");
   });
 

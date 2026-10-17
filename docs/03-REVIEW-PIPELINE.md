@@ -143,8 +143,8 @@ claim). No S2/S3 reasoning is passed. Instruction per finding:
 
 1. Open the actual file at the cited lines in the worktree; quote the code.
    A file the change deleted is not there: its contents before deletion
-   come with the candidate, and the quotation is checked against them
-   (D-106).
+   come with the prompt, once per file however many candidates cite it,
+   and the quotation is checked against them (D-106, D-110).
 2. Confirm quoted code, line numbers, and mechanism match exactly. Line
    numbers must come from the checked-out file, never the diff.
 3. Hunt neutralizing context: guards, defaults, narrowing, upstream

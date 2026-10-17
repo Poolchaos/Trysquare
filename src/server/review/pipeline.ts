@@ -616,12 +616,15 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         severity: finding.severity,
         issue: finding.issue,
         mechanism: finding.mechanism,
-        // The verifier reads only the worktree, which a deleted file has left
-        // (D-106).
-        ...(input.baseContents?.has(finding.filePath)
-          ? { contentsBeforeDeletion: numberedLines(input.baseContents.get(finding.filePath)!) }
-          : {}),
       })),
+      // The verifier reads only the worktree, which a deleted file has left
+      // (D-106), so each one cited comes with it, once.
+      Object.fromEntries(
+        [...new Set(candidates.map((finding) => finding.filePath))].flatMap((path) => {
+          const before = input.baseContents?.get(path);
+          return before === undefined ? [] : [[path, numberedLines(before)]];
+        }),
+      ),
     ),
   });
   const verification = rejecting("s5_verification", () =>

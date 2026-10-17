@@ -317,24 +317,21 @@ describe("the verification prompt", () => {
     },
   ];
 
-  it("hands over a deleted file's contents, since the worktree no longer has it", () => {
-    const prompt = renderVerificationPrompt([
+  it("hands over a deleted file's contents once, however many candidates cite it", () => {
+    // Once per candidate, a 2,000-line deleted file cited five times made a
+    // 725,290-character prompt (D-110).
+    const inDeleted = { ...candidates[0]!, path: "app/legacy.ts", lineStart: 2, lineEnd: 2 };
+    const prompt = renderVerificationPrompt(
+      [inDeleted, { ...inDeleted, ref: "f2", lineStart: 1, lineEnd: 1 }],
       {
-        ...candidates[0]!,
-        path: "app/legacy.ts",
-        lineStart: 2,
-        lineEnd: 2,
-        contentsBeforeDeletion: [
-          "     1  export const guard = true;",
-          "     2  export const other = 1;",
-        ],
+        "app/legacy.ts": ["     1  export const guard = true;", "     2  export const other = 1;"],
       },
-    ]);
-    expect(prompt).toContain('"contentsBeforeDeletion"');
-    expect(prompt).toContain("     2  export const other = 1;");
+    );
+    expect(prompt).toContain('"deletedFiles"');
+    expect(prompt.split("     2  export const other = 1;")).toHaveLength(2);
     expect(prompt.replace(/\s+/g, " ")).toContain("quote from those lines");
     // Said only when a candidate is in a deleted file.
-    expect(renderVerificationPrompt(candidates)).not.toContain("contentsBeforeDeletion");
+    expect(renderVerificationPrompt(candidates)).not.toContain("deletedFiles");
   });
 
   it("asks the stage to refute rather than to agree", () => {

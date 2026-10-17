@@ -40,8 +40,6 @@ export interface CandidateEntry {
   severity: string;
   issue: string;
   mechanism: string;
-  /** A deleted file's lines before deletion, numbered; absent otherwise. */
-  contentsBeforeDeletion?: readonly string[];
 }
 
 export interface StageContentInput {
@@ -394,7 +392,17 @@ function fenceFor(text: string): string {
   return "`".repeat(Math.max(3, longest + 1));
 }
 
-export function renderVerificationPrompt(candidates: readonly CandidateEntry[]): string {
+/**
+ * @param deletedFiles Each deleted file a candidate cites, by path, with its
+ *   lines before deletion numbered. Given once per file, not once per
+ *   candidate, so the prompt grows with the files and not with the findings
+ *   (D-110).
+ */
+export function renderVerificationPrompt(
+  candidates: readonly CandidateEntry[],
+  deletedFiles: Readonly<Record<string, readonly string[]>> = {},
+): string {
+  const hasDeleted = Object.keys(deletedFiles).length > 0;
   if (candidates.length === 0) {
     return "There are no candidate findings to verify. Return an empty verdict list.";
   }
@@ -410,16 +418,17 @@ export function renderVerificationPrompt(candidates: readonly CandidateEntry[]):
     "the ones given: a quotation from elsewhere in the file is about other code.",
     "The quotation is compared against the file: if it does not match, or the",
     "lines do not overlap, the finding is discarded.",
-    ...(candidates.some((candidate) => candidate.contentsBeforeDeletion)
+    ...(hasDeleted
       ? [
           "",
-          "A candidate with contentsBeforeDeletion is in a file the change deleted, so",
-          "the worktree no longer has it: quote from those lines, without their numbers.",
+          "A candidate whose path is a key of deletedFiles is in a file the change",
+          "deleted, so the worktree no longer has it: quote from those lines, without",
+          "their numbers.",
         ]
       : []),
     "",
     "```json",
-    JSON.stringify({ candidates }, null, 2),
+    JSON.stringify(hasDeleted ? { candidates, deletedFiles } : { candidates }, null, 2),
     "```",
   ].join("\n");
 }
