@@ -2540,3 +2540,25 @@ verified evidence, in writing, here.
   before D-118 leaves, whose server does not see the new lock; the demo
   fixture and the e2e setup resolved branch names as commits. Fixed
   f892e08.
+- 2026-10-17 D-120 DECIDED (maintainer's choice; revisits the reason, not
+  the rule, of the CLAUDECODE scrub): a review's CLI loses only what a
+  Claude Code session, or the editor or SDK hosting it, sets for the
+  processes it starts, named: CLAUDECODE, CLAUDE_CODE_CHILD_SESSION,
+  CLAUDE_CODE_SESSION_ID, CLAUDE_CODE_SESSION_ATTENDED, CLAUDE_PID, AI_AGENT,
+  CLAUDE_EFFORT, CLAUDE_CODE_ENTRYPOINT, CLAUDE_AGENT_SDK_VERSION,
+  CLAUDE_CODE_MESSAGING_SOCKET, CLAUDE_CODE_MESSAGING_TOKEN,
+  CLAUDE_CODE_EXECPATH and CLAUDE_CODE_SSE_PORT. Every other variable,
+  CLAUDE_CODE_OAUTH_TOKEN and CLAUDE_CODE_GIT_BASH_PATH included, passes
+  through. Evidence, all on the bundled 2.1.301 and spending nothing (an
+  empty config directory, so no credentials, and a dead API base URL): no
+  variable makes it refuse to run nested, measured in 17 runs, with none,
+  each of 15 alone and all together, every one reaching "Not logged in";
+  the refusal text is not in the binary. The binary does read CLAUDECODE
+  and CLAUDE_CODE_CHILD_SESSION as meaning it is a session's child, and
+  then looks for credentials elsewhere, and it sets the first five names
+  above on every process it starts. Rejected: stripping every
+  CLAUDE_CODE_ variable, which dropped a headless subscription sign-in and
+  a Git Bash path (E8); keeping that with an allowlist of settings, which
+  drops any setting not yet listed. Accepted risk: a marker a later CLI
+  adds passes until it is named. TRACEPARENT, which the CLI also sets when
+  tracing, is generic and passes.

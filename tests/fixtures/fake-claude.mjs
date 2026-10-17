@@ -95,10 +95,11 @@ if (recordPath) {
         prompt: PROMPT,
         systemPrompt: SYSTEM_PROMPT,
         cwd: process.cwd(),
-        // Recorded so a test can prove the session markers were removed.
-        sawSessionMarker: Object.keys(process.env).some(
-          (k) => k === "CLAUDECODE" || k.startsWith("CLAUDE_CODE_"),
-        ),
+        // Names only, so a test can see which session markers were removed
+        // and which of a person's settings arrived (D-120).
+        claudeVariables: Object.keys(process.env)
+          .filter((name) => /^(CLAUDE|AI_AGENT)/.test(name))
+          .sort(),
         env: {
           CLAUDECODE: process.env.CLAUDECODE ?? null,
           LC_ALL: process.env.LC_ALL ?? null,

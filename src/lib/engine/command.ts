@@ -115,20 +115,37 @@ export function buildProbeArgs(model: string): string[] {
 }
 
 /**
- * Session variables that tell the CLI it is already running inside a Claude
- * Code session.
+ * What a Claude Code session, or the editor or SDK hosting one, sets for the
+ * processes it starts (D-120).
  *
- * The CLI refuses to start nested, which is right for an interactive session
- * and wrong for this app: a review is an independent process that merely
- * happens to have been launched from a terminal that may itself be a session.
- * Without scrubbing these, the app fails for anyone who starts it that way.
+ * A review is an independent run that may have been started from a terminal
+ * inside a session, and must not run as that session's child: the 2.1.301
+ * binary reads CLAUDECODE and CLAUDE_CODE_CHILD_SESSION as meaning it is one
+ * and changes where it looks for credentials, and a messaging socket would tie
+ * the review to whatever session launched the server. Named, not matched by
+ * prefix: the same prefix carries a person's own settings, such as
+ * CLAUDE_CODE_OAUTH_TOKEN for a headless sign-in, and those reach the CLI.
  */
-const SESSION_MARKER_PREFIXES = ["CLAUDECODE", "CLAUDE_CODE_"];
+const SESSION_MARKERS: ReadonlySet<string> = new Set([
+  // Set by the CLI on every process it starts.
+  "CLAUDECODE",
+  "CLAUDE_CODE_CHILD_SESSION",
+  "CLAUDE_CODE_SESSION_ID",
+  "CLAUDE_CODE_SESSION_ATTENDED",
+  "CLAUDE_PID",
+  "AI_AGENT",
+  "CLAUDE_EFFORT",
+  // Set by the editor or SDK that hosts a session.
+  "CLAUDE_CODE_ENTRYPOINT",
+  "CLAUDE_AGENT_SDK_VERSION",
+  "CLAUDE_CODE_MESSAGING_SOCKET",
+  "CLAUDE_CODE_MESSAGING_TOKEN",
+  "CLAUDE_CODE_EXECPATH",
+  "CLAUDE_CODE_SSE_PORT",
+]);
 
 export function isSessionMarker(name: string): boolean {
-  return SESSION_MARKER_PREFIXES.some(
-    (prefix) => name === prefix || name.startsWith(prefix) || name === "CLAUDE_CODE",
-  );
+  return SESSION_MARKERS.has(name);
 }
 
 /**

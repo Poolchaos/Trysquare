@@ -28,15 +28,15 @@ that runs may bill per token. The app never reads, copies, or logs the
 credentials themselves.
 
 **A spawned `claude` process must not inherit the parent shell's Claude Code
-session variables.** The CLI detects an existing session through the
-environment and declines to start a nested one, which is correct behaviour
-for an interactive session but wrong for this app: the review process is an
-independent program that happens to have been launched from a terminal which
-may itself be a Claude Code session. The engine therefore builds a clean
-child environment, removing `CLAUDECODE` and other `CLAUDE_CODE_*` session
-markers, exactly as it sets an explicit working directory rather than
-inheriting one. Without this the app fails for any user who starts it from a
-Claude Code terminal.
+session variables.** A review is an independent program that may have been
+launched from a terminal which is itself a Claude Code session, and must not
+run as that session's child: the CLI reads `CLAUDECODE` and
+`CLAUDE_CODE_CHILD_SESSION` as meaning it is one and looks for credentials
+elsewhere. The engine therefore removes the variables a session and its host
+set for the processes they start, by name, exactly as it sets an explicit
+working directory rather than inheriting one. A person's own settings, such
+as `CLAUDE_CODE_OAUTH_TOKEN`, pass through (D-120). Older CLIs refused to
+start at all under `CLAUDECODE`; 2.1.301 does not.
 
 Model discovery is done by probing, and the results below are an example of
 what one account returned on one day. They are recorded to show the shape of

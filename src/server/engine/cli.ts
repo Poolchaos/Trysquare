@@ -106,8 +106,8 @@ export function runCliAttached(args: readonly string[], configured: string | und
   const cli = resolveCli(configured);
   const result = spawnSync(cli.command, [...cli.prefixArgs, ...args], {
     stdio: "inherit",
-    // Without this the CLI refuses to run when started from inside a Claude
-    // Code session, the same reason every review scrubs it.
+    // Without this a sign-in started from inside a Claude Code session would
+    // run as that session's child, which a review never does (D-120).
     env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
   });
   if (result.error) {

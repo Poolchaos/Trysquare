@@ -129,13 +129,38 @@ describe("a prompt too large for a command line", () => {
 });
 
 describe("the child environment", () => {
-  it("recognises the markers that make the CLI refuse to run nested", () => {
-    expect(isSessionMarker("CLAUDECODE")).toBe(true);
-    expect(isSessionMarker("CLAUDE_CODE_ENTRYPOINT")).toBe(true);
-    expect(isSessionMarker("CLAUDE_CODE_SSE_PORT")).toBe(true);
+  it("recognises what a session sets for the processes it starts (D-120)", () => {
+    // The CLI's own five, as the 2.1.301 binary sets them for a child, and
+    // what an editor hosting a session adds.
+    for (const name of [
+      "CLAUDECODE",
+      "CLAUDE_CODE_CHILD_SESSION",
+      "CLAUDE_CODE_SESSION_ID",
+      "CLAUDE_CODE_SESSION_ATTENDED",
+      "CLAUDE_PID",
+      "CLAUDE_CODE_ENTRYPOINT",
+      "CLAUDE_CODE_MESSAGING_SOCKET",
+      "CLAUDE_CODE_SSE_PORT",
+    ]) {
+      expect(isSessionMarker(name), name).toBe(true);
+    }
     expect(isSessionMarker("PATH")).toBe(false);
     expect(isSessionMarker("HOME")).toBe(false);
     expect(isSessionMarker("ANTHROPIC_API_KEY")).toBe(false);
+  });
+
+  it("passes a person's own Claude Code settings through (D-120)", () => {
+    // Every CLAUDE_CODE_ variable used to be stripped, so a headless
+    // subscription sign-in or a Git Bash at a custom path never reached the
+    // review's CLI.
+    for (const name of [
+      "CLAUDE_CODE_OAUTH_TOKEN",
+      "CLAUDE_CODE_GIT_BASH_PATH",
+      "CLAUDE_CODE_USE_BEDROCK",
+      "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+    ]) {
+      expect(isSessionMarker(name), name).toBe(false);
+    }
   });
 
   it("strips every session marker while keeping the rest of the environment", () => {
@@ -144,11 +169,13 @@ describe("the child environment", () => {
       HOME: "/home/someone",
       CLAUDECODE: "1",
       CLAUDE_CODE_ENTRYPOINT: "cli",
+      CLAUDE_CODE_OAUTH_TOKEN: "a-token",
       SSH_AUTH_SOCK: "/run/agent",
     });
 
     expect(child.CLAUDECODE).toBeUndefined();
     expect(child.CLAUDE_CODE_ENTRYPOINT).toBeUndefined();
+    expect(child.CLAUDE_CODE_OAUTH_TOKEN).toBe("a-token");
     expect(child.PATH).toBe("/usr/bin");
     // Kept deliberately: cloning over SSH needs the agent.
     expect(child.SSH_AUTH_SOCK).toBe("/run/agent");

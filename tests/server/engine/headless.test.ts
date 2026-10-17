@@ -389,19 +389,34 @@ describe("the read-only guarantee", () => {
 });
 
 describe("what the engine actually invokes", () => {
-  it("removes inherited session markers, or the CLI refuses to run nested", async () => {
+  it("removes inherited session markers and keeps a person's own settings (D-120)", async () => {
+    // A stage run from inside a Claude Code session would otherwise run as
+    // that session's child.
     const recordPath = join(workDir, "record.json");
     process.env.FAKE_CLAUDE_RECORD = recordPath;
-    process.env.CLAUDECODE = "1";
-    process.env.CLAUDE_CODE_ENTRYPOINT = "cli";
+    const set = {
+      CLAUDECODE: "1",
+      CLAUDE_CODE_ENTRYPOINT: "cli",
+      CLAUDE_PID: "1",
+      CLAUDE_CODE_OAUTH_TOKEN: "a-token",
+    };
+    // Put back as found: a run started from inside a session has some of
+    // these already.
+    const previous = Object.fromEntries(Object.keys(set).map((name) => [name, process.env[name]]));
+    Object.assign(process.env, set);
     try {
       await run("success");
       const record = JSON.parse(readFileSync(recordPath, "utf8"));
-      expect(record.sawSessionMarker).toBe(false);
+      expect(record.claudeVariables).not.toContain("CLAUDECODE");
+      expect(record.claudeVariables).not.toContain("CLAUDE_CODE_ENTRYPOINT");
+      expect(record.claudeVariables).not.toContain("CLAUDE_PID");
+      expect(record.claudeVariables).toContain("CLAUDE_CODE_OAUTH_TOKEN");
       expect(record.env.CLAUDECODE).toBeNull();
     } finally {
-      delete process.env.CLAUDECODE;
-      delete process.env.CLAUDE_CODE_ENTRYPOINT;
+      for (const [name, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
     }
   });
 
