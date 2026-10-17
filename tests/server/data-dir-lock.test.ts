@@ -29,9 +29,14 @@ function liveProcess(): { pid: number; stop: () => void } {
   return { pid: child.pid!, stop: () => child.kill() };
 }
 
-/** The pid of a process that has already exited. */
+/**
+ * A pid no process can have: odd, so never a Windows pid, and above the pid
+ * limit on Linux and macOS. The pid of a process that had exited was handed
+ * to another while the whole suite ran, and one trial of the race then found
+ * the stale lock's holder alive and both racers rightly refused (D-117).
+ */
 function deadPid(): number {
-  return spawnSync(process.execPath, ["-e", "0"]).pid!;
+  return 2_147_483_647;
 }
 
 describe("the data directory lock", () => {
