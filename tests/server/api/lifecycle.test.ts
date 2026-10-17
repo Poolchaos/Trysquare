@@ -223,4 +223,21 @@ describe("the settings that govern a run", () => {
     };
     expect(after.settings.stageTimeoutMinutes).toBe(30);
   });
+
+  it("writes none of a change when any part of it is refused (D-119 review)", async () => {
+    // Keys were checked and written one at a time, so the ones before a bad
+    // value were stored by a request that answered 400.
+    const response = await routes.settings.PUT(
+      new Request("http://localhost/x", {
+        method: "PUT",
+        body: JSON.stringify({ stageMaxBudgetUsd: 9, stageTimeoutMinutes: -5 }),
+      }),
+    );
+    expect(response.status).toBe(400);
+
+    const after = (await (await routes.settings.GET()).json()) as {
+      settings: Record<string, number>;
+    };
+    expect(after.settings.stageMaxBudgetUsd).toBe(5);
+  });
 });

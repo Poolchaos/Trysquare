@@ -30,6 +30,15 @@ export function writeSetting(db: Db, key: string, value: unknown): void {
     .run();
 }
 
+/** All of them or none, so a write that fails part way leaves no half a change. */
+export function writeSettings(db: Db, entries: readonly (readonly [string, unknown])[]): void {
+  // better-sqlite3 runs a transaction on its one connection, so the writes
+  // made through `db` are inside it.
+  db.transaction(() => {
+    for (const [key, value] of entries) writeSetting(db, key, value);
+  });
+}
+
 export const SETTING_KEYS = {
   maxConcurrentReviews: "maxConcurrentReviews",
   stageTimeoutMinutes: "stageTimeoutMinutes",

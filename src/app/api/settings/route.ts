@@ -8,7 +8,7 @@
  */
 
 import { z } from "zod";
-import { SETTING_KEYS, readSettingOr, writeSetting } from "@/server/db/repositories/settings";
+import { SETTING_KEYS, readSettingOr, writeSettings } from "@/server/db/repositories/settings";
 import { handler, ok, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -41,6 +41,9 @@ export function PUT(request: Request): Promise<Response> {
     const { db, manager } = runtime();
     const body = await readJson(request, z.record(z.string(), z.unknown()));
 
+    // Every key is judged before any is written: one at a time, a refused
+    // value left the keys before it stored by a request that answered 400.
+    const accepted: [string, unknown][] = [];
     for (const [key, value] of Object.entries(body)) {
       const entry = CATALOGUE[key as Key];
       if (!entry) {
@@ -59,8 +62,9 @@ export function PUT(request: Request): Promise<Response> {
           { status: 400 },
         );
       }
-      writeSetting(db, key, parsed.data);
+      accepted.push([key, parsed.data]);
     }
+    writeSettings(db, accepted);
     // A raised limit is room for a waiting review now, not when a run ends.
     if (SETTING_KEYS.maxConcurrentReviews in body) manager.startQueued();
 
