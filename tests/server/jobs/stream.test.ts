@@ -156,6 +156,32 @@ describe("closing the stream", () => {
     expect(bus.listenerCount(reviewId)).toBe(0);
   });
 
+  it("lets go of a reader that has stopped reading, rather than queueing for it (4.23)", async () => {
+    // Everything for a stalled tab used to queue for as long as the review
+    // ran. Letting go loses nothing: the browser reconnects, and a new
+    // stream opens with the whole picture.
+    const response = open();
+    const reader = response.body!.getReader();
+    await reader.read(); // the snapshot, then nothing more is read
+    for (let i = 0; i < 300; i += 1) bus.emit(reviewId, { kind: "status", status: "running" });
+
+    expect(bus.listenerCount(reviewId)).toBe(0);
+    void reader.cancel();
+  });
+
+  it("keeps a reader that keeps up, however much happens", async () => {
+    const response = open();
+    const reader = response.body!.getReader();
+    await reader.read();
+    for (let i = 0; i < 300; i += 1) {
+      bus.emit(reviewId, { kind: "status", status: "running" });
+      await reader.read();
+    }
+
+    expect(bus.listenerCount(reviewId)).toBe(1);
+    void reader.cancel();
+  });
+
   it("unsubscribes when the reader cancels", async () => {
     const response = open();
     const reader = response.body!.getReader();

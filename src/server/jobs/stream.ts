@@ -27,6 +27,14 @@ export interface ReviewWatcher {
 /** Proxies and browsers close a stream that says nothing for long enough. */
 const HEARTBEAT_MS = 15_000;
 
+/**
+ * How far a reader may fall behind before the stream lets it go. Everything
+ * for a tab that stopped reading used to queue for as long as the review ran
+ * (4.23). Letting go loses nothing: the browser reconnects, and a new stream
+ * opens with the whole picture.
+ */
+const MAX_FRAMES_BEHIND = 256;
+
 export interface StreamOptions {
   heartbeatMs?: number;
 }
@@ -56,10 +64,12 @@ export function reviewEventStream(
           // The client went away between the check and the write. Nothing to
           // report: a closed browser tab is not a fault of the review.
           open = false;
+          return;
         }
+        if ((controller.desiredSize ?? 0) < -MAX_FRAMES_BEHIND) close();
       };
 
-      const close = (): void => {
+      function close(): void {
         if (!open) return;
         open = false;
         unsubscribe?.();
@@ -69,7 +79,7 @@ export function reviewEventStream(
         } catch {
           // Already closed by the runtime.
         }
-      };
+      }
 
       send(frame("snapshot", manager.snapshot(reviewId)));
 
