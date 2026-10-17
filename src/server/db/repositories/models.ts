@@ -10,31 +10,21 @@
 import { asc, eq } from "drizzle-orm";
 import { nowIso } from "@/lib/ids";
 import type { ReviewProfile } from "@/lib/domain/enums";
+import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
 import type { Db } from "../client";
 import { models } from "../schema";
 
 export type ModelRow = typeof models.$inferSelect;
 
-/**
- * A bare family name with no version is an alias. The CLI resolves those to
- * whatever it considers current for the family, which has already been
- * observed to be a previous generation, so they are never stored or passed.
- */
-const ALIAS_PATTERN = /^(opus|sonnet|haiku|fable|mythos)$/i;
-
 export class ModelAliasRejectedError extends Error {
   constructor(readonly id: string) {
-    super(
-      `"${id}" is a model alias, not a model id. Aliases resolve to whatever the CLI ` +
-        `considers current for that family, which can be a previous generation. ` +
-        `Use a full id such as "claude-fable-5[1m]".`,
-    );
+    super(aliasRefusal(id));
     this.name = "ModelAliasRejectedError";
   }
 }
 
 export function assertNotAlias(id: string): void {
-  if (ALIAS_PATTERN.test(id.trim())) throw new ModelAliasRejectedError(id);
+  if (!isFullModelId(id)) throw new ModelAliasRejectedError(id);
 }
 
 export interface RegisterModelInput {

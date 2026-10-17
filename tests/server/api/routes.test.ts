@@ -244,6 +244,23 @@ describe("creating a review", () => {
     expect(body).toContain("downgraded from full-context");
   }, 120_000);
 
+  it("refuses a review whose model is an alias, saying why", async () => {
+    // The full-id law used to be checked only when a model was registered, so
+    // a review could be created for "opus" and send --model opus to the CLI.
+    const response = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "opus",
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { error: string }).error).toMatch(
+      /"opus" does not name a single model/,
+    );
+  });
+
   it("records both facts when an unregistered model also carries a downgrade", async () => {
     // These notes were branches of one if, so this combination wrote a note
     // claiming the review assumed full-context while the row said decomposed.

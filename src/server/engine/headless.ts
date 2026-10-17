@@ -14,6 +14,7 @@ import { basename, dirname, join } from "node:path";
 import type { StageErrorClass } from "@/lib/domain/enums";
 import { buildChildEnv, buildStageArgs, type StageCommandOptions } from "@/lib/engine/command";
 import type { EngineEvent, ResultEvent } from "@/lib/engine/events";
+import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
 import { checkCliVersion, resolveCli, type CliCommand } from "./cli";
 import { StreamDecoder } from "./stream";
 
@@ -86,6 +87,14 @@ export function classifyFailure(stderr: string, exitCode: number | null): StageE
 }
 
 export async function runStage(options: StageRunOptions): Promise<StageOutcome> {
+  // Checked at launch as well as at creation: a review stored before the
+  // check existed, or written some other way, still never sends an alias.
+  if (!isFullModelId(options.model)) {
+    throw new StageFailedError(
+      "spawn",
+      `Refused to start the stage: ${aliasRefusal(options.model)}`,
+    );
+  }
   // Beside the transcript, one file per call, so the run directory keeps the
   // exact instructions each call was given now that they are not in argv.
   const systemPromptFile = join(

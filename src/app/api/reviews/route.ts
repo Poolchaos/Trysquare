@@ -22,6 +22,7 @@ import {
 } from "@/server/db/repositories/projects";
 import { appendRunNote, createReview, listActiveReviews } from "@/server/db/repositories/reviews";
 import { getModel } from "@/server/db/repositories/models";
+import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
 import { resolveProfile } from "@/lib/review/profiles";
 import { fetchAll, mergeBase, resolveCommit } from "@/server/gitops/repo";
 import { created, handler, ok, readJson } from "@/server/api/respond";
@@ -37,7 +38,12 @@ const body = z.object({
   projectId: z.string().min(1),
   fromBranch: z.string().min(1),
   intoBranch: z.string().min(1),
-  model: z.string().min(1),
+  model: z
+    .string()
+    .min(1)
+    .superRefine((model, context) => {
+      if (!isFullModelId(model)) context.addIssue({ code: "custom", message: aliasRefusal(model) });
+    }),
   // No default: absent means "whatever the model is registered for", which is
   // not the same request as explicitly asking for full-context.
   profileId: reviewProfileSchema.optional(),

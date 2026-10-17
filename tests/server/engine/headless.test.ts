@@ -309,12 +309,24 @@ describe("stopping a stage", () => {
   });
 });
 
+describe("a model alias at launch", () => {
+  it("is refused before anything starts, whatever stored it", async () => {
+    const recordPath = join(workDir, "record-alias.json");
+    process.env.FAKE_CLAUDE_RECORD = recordPath;
+    const error = await run("success", { model: "opus" }).catch((thrown: unknown) => thrown);
+    expect((error as StageFailedError).errorClass).toBe("spawn");
+    expect((error as Error).message).toMatch(/"opus" does not name a single model/);
+    expect(existsSync(recordPath)).toBe(false);
+  });
+});
+
 describe("a launch the operating system refuses", () => {
   it("fails the stage as a spawn failure instead of escaping as a plain error", async () => {
     // A command line over every platform's limit: 32,767 characters for the
     // whole line on Windows, 128KB for one argument on Linux, about 1MB for
     // all of them together on macOS, which ran a 300KB one (CI, 2026-10-16).
-    const error = await run("success", { model: "m".repeat(2_000_000) }).catch(
+    // A full id in form, so the alias check passes it and the OS is what refuses.
+    const error = await run("success", { model: `claude-fable-5-${"m".repeat(2_000_000)}` }).catch(
       (thrown: unknown) => thrown,
     );
     expect(error).toBeInstanceOf(StageFailedError);
