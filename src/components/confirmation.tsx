@@ -108,6 +108,13 @@ export function ConfirmationQueue({
   // The first half of a `g g`. Held in a ref because a pending key is not
   // something the screen renders.
   const pendingG = useRef(false);
+  // Counts every move a person makes through the queue, so a decision whose
+  // reply lands later can tell whether they went somewhere in the meantime.
+  const moves = useRef(0);
+  const moveTo = useCallback((next: number | ((index: number) => number)) => {
+    moves.current += 1;
+    setSelected(next);
+  }, []);
 
   const current = queue[Math.min(selected, Math.max(queue.length - 1, 0))];
   const currentRule = rules.find((rule) => rule.code === current?.ruleCode);
@@ -136,6 +143,7 @@ export function ConfirmationQueue({
     async (finding: Finding, action: "confirm" | "dismiss", detail?: string) => {
       setError("");
       setBusy(true);
+      const movesWhenSent = moves.current;
       try {
         const response = await fetch(`/api/findings/${finding.id}/${action}`, {
           method: "POST",
@@ -161,7 +169,12 @@ export function ConfirmationQueue({
         });
         await onChanged();
         // Moves to the next undecided finding rather than the next row, which
-        // is what someone working down the queue actually wants.
+        // is what someone working down the queue actually wants. Only if they
+        // have not moved since the decision was sent: one who went elsewhere
+        // while it was in flight keeps where they went, rather than being
+        // taken away when the reply lands (seen on CI, run 39005536267, where
+        // `g g` back to the same row was overridden).
+        if (moves.current !== movesWhenSent) return;
         setSelected((index) => {
           const next = queue.findIndex(
             (row, position) => position > index && UNDECIDED.has(row.status),
@@ -215,11 +228,11 @@ export function ConfirmationQueue({
       pendingG.current = false;
 
       if (event.key === "g") {
-        if (wasPendingG) setSelected(0);
+        if (wasPendingG) moveTo(0);
         else pendingG.current = true;
-      } else if (event.key === "j") setSelected((index) => Math.min(index + 1, queue.length - 1));
-      else if (event.key === "k") setSelected((index) => Math.max(index - 1, 0));
-      else if (event.key === "G") setSelected(queue.length - 1);
+      } else if (event.key === "j") moveTo((index) => Math.min(index + 1, queue.length - 1));
+      else if (event.key === "k") moveTo((index) => Math.max(index - 1, 0));
+      else if (event.key === "G") moveTo(queue.length - 1);
       else if (event.key === "c" && UNDECIDED.has(current.status)) {
         if (!busy) void act(current, "confirm", drafts[current.id]);
       } else if (event.key === "d" && UNDECIDED.has(current.status)) {
@@ -237,7 +250,7 @@ export function ConfirmationQueue({
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [act, busy, current, drafts, queue.length]);
+  }, [act, busy, current, drafts, moveTo, queue.length]);
 
   async function complete() {
     setError("");
@@ -321,7 +334,7 @@ export function ConfirmationQueue({
                     <li key={finding.id}>
                       <button
                         type="button"
-                        onClick={() => setSelected(index)}
+                        onClick={() => moveTo(index)}
                         aria-current={index === selected ? "true" : undefined}
                         className={`flex w-full items-stretch gap-2 overflow-hidden rounded-md border pr-2.5 text-left text-xs transition-colors ${
                           index === selected

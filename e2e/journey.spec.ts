@@ -251,13 +251,23 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page
       .getByLabel("Why is this not a problem?")
       .fill("Deliberate: the caller already guards this.");
+    // The reply is held back so `g g` lands while the decision is in flight,
+    // which is what a quick hand does and what macOS CI hit by chance (run
+    // 39005536267): the queue used to move the selection when the reply came,
+    // taking the person away from where they had just gone.
+    await page.route("**/api/findings/*/dismiss", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      await route.continue();
+    });
+    const replied = page.waitForResponse("**/api/findings/*/dismiss");
     await page.getByRole("button", { name: "Dismiss" }).click();
 
-    // The pane moves on to the next undecided finding, but the decision is a
-    // record, not a transient: g g returns to the top of the queue, where the
-    // dismissed finding still sits with its reason.
+    // The decision is a record, not a transient: g g returns to the top of the
+    // queue, where the dismissed finding still sits with its reason.
     await page.locator("body").press("g");
     await page.locator("body").press("g");
+    await replied;
+    await page.unroute("**/api/findings/*/dismiss");
     await expect(page.getByText("Deliberate: the caller already guards this.")).toBeVisible();
   });
 
