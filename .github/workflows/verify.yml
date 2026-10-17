@@ -44,6 +44,16 @@ jobs:
       # The free end-to-end demo, which the README tells people to run first.
       - run: npm run demo:fixture -- --fake
 
+      # Windows once refused a loopback connect with WSAENOBUFS, Chromium's
+      # ERR_NO_BUFFER_SPACE (D-100), while the suite's own peak was 267
+      # sockets. The TCP table goes into the evidence, so a recurrence says
+      # whether the runner had run out of ports.
+      - if: failure() && runner.os == 'Windows'
+        run: |
+          mkdir -p test-results
+          netstat -ano -p tcp > test-results/tcp-table.txt
+          awk '$1 == "TCP" { print $4 }' test-results/tcp-table.txt | sort | uniq -c | tee test-results/tcp-summary.txt
+
       # The evidence a failure is diagnosed from, and the screenshots the
       # design review reads. Uploaded on failure and on success both: a green
       # run's screenshots are the record of what the app actually looked like

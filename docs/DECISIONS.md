@@ -2199,3 +2199,15 @@ verified evidence, in writing, here.
   Rejected: sending such a verdict to the person as an open question, since
   the spec kills on a mechanical mismatch regardless of the AI verdict,
   and since D-97 a killed finding is listed with its reason.
+- 2026-10-17 D-100 UNEXPLAINED (CI run 39022106093, at 19bc554): the
+  Windows job failed one browser test, "reviews renders and photographs",
+  when Chromium's connect to the app server failed with
+  net::ERR_NO_BUFFER_SPACE (Winsock WSAENOBUFS) 5 ms after the navigation
+  began; the other 40 browser tests, and the macOS and Linux jobs, passed.
+  Not caused by the suite's own connections, by measurement: the whole
+  browser suite run here peaks at 267 sockets on the server port (254 in
+  TIME_WAIT, 266 distinct client ports, sampled every 300 ms) against a
+  dynamic port range of 16,384. Searches found no report of this error
+  under Playwright or GitHub Actions, and it did not reproduce locally. It
+  is not retried away: a Windows job that fails now saves the runner's TCP
+  table to its evidence, so a recurrence shows whether ports ran out.
