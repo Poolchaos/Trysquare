@@ -11,10 +11,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { RepoRole } from "@/lib/domain/enums";
-import { parseUnifiedDiff, summariseDiff, type ParsedFile } from "@/lib/git/diff";
+import { summariseDiff, type ParsedFile } from "@/lib/git/diff";
 import { changedExportedSymbols, type ChangedSymbol } from "@/lib/git/symbols";
 import { insideRoot } from "@/lib/paths";
-import { diffText, fileAtCommit } from "./repo";
+import { fileAtCommit, readChangeSet } from "./repo";
 
 export interface RepoSpec {
   role: RepoRole;
@@ -100,11 +100,14 @@ export async function buildBundle(options: {
   const perRepoStats: Record<string, unknown> = {};
 
   for (const spec of repos) {
-    const patch = await diffText(spec.repoDir, spec.mergeBaseCommit, spec.headCommit);
+    const { patch, files } = await readChangeSet(
+      spec.repoDir,
+      spec.mergeBaseCommit,
+      spec.headCommit,
+    );
     const patchName = spec.role === "primary" ? "diff.patch" : "diff-linked.patch";
     await writeFile(join(bundleDir, patchName), patch, "utf8");
 
-    const files = parseUnifiedDiff(patch);
     parsedByRepo.set(spec.role, files);
 
     for (const file of files) {

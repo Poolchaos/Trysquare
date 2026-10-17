@@ -2321,3 +2321,17 @@ verified evidence, in writing, here.
   the review. A worktree found at the right commit with no baseline, from
   an interrupted run or one from before this change, is checked out again
   rather than trusted. The run notes say when a checkout started changed.
+- 2026-10-17 D-108 DECIDED (WP 4.15): the diff a review is built from is
+  taken with --no-ext-diff, --no-textconv and explicit a/ and b/ prefixes,
+  and is refused unless the files it names are exactly those
+  `git diff --name-only -z` lists. Evidence, reproduced with a global
+  config: diff.external replaced the whole diff with the tool's output, so
+  the parser found nothing and the review covered nothing; diff.noprefix
+  wrote `diff --git a.txt a.txt`. Explicit prefixes rather than
+  --default-prefix, which is recent: the Linux machine on record runs git
+  2.43. diff.suppressBlankEmpty and core.quotePath were tried as well and
+  the parser already reads both. The cross-check is stronger than the row
+  asked, a diff that parses empty while the commits differ: it also
+  refuses a diff that lost some files and kept others. The name list is
+  untouched by formatting settings, so whatever else a config might
+  reshape fails here rather than becoming a review of less than the change.

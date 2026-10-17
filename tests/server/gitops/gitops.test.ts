@@ -11,6 +11,8 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parseUnifiedDiff } from "@/lib/git/diff";
 import {
+  ChangeSetMismatchError,
+  checkChangeSet,
   cloneBare,
   detectDefaultBranch,
   diffText,
@@ -19,6 +21,7 @@ import {
   isAncestor,
   listBranches,
   mergeBase,
+  readChangeSet,
   resolveCommit,
 } from "@/server/gitops/repo";
 import {
@@ -141,6 +144,63 @@ describe("comparing branches", () => {
     expect(await fileAtCommit(cloneDir, base, "app.ts")).toBe("export const version = 1;\n");
     // A file that did not exist yet is absent, not an error.
     expect(await fileAtCommit(cloneDir, base, "new-file.ts")).toBeNull();
+  });
+});
+
+describe("a diff the user's own git config would reshape (D-108)", () => {
+  // The app's git reads the user's global config. An external diff tool
+  // replaced the whole diff with its own output, so the parser found nothing
+  // and the review covered nothing; noprefix stripped the a/ and b/ the
+  // parser reads paths by.
+  let previous: string | undefined;
+
+  beforeAll(() => {
+    const config = join(root, "hostile-global.gitconfig");
+    writeFileSync(
+      config,
+      "[diff]\n\texternal = echo EXTERNAL-TOOL-OUTPUT\n\tnoprefix = true\n\tmnemonicPrefix = true\n",
+    );
+    previous = process.env.GIT_CONFIG_GLOBAL;
+    process.env.GIT_CONFIG_GLOBAL = config;
+  });
+
+  afterAll(() => {
+    if (previous === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+    else process.env.GIT_CONFIG_GLOBAL = previous;
+  });
+
+  it("is still git's own unified diff, with the prefixes the parser reads", async () => {
+    const base = await mergeBase(cloneDir, "main", "feature/totals");
+    const head = await resolveCommit(cloneDir, "feature/totals");
+    const patch = await diffText(cloneDir, base, head);
+    expect(patch).not.toContain("EXTERNAL-TOOL-OUTPUT");
+    expect(patch).toContain("diff --git a/app.ts b/app.ts");
+  });
+
+  it("yields every changed file, checked against git's own list", async () => {
+    const base = await mergeBase(cloneDir, "main", "feature/totals");
+    const head = await resolveCommit(cloneDir, "feature/totals");
+    const { files } = await readChangeSet(cloneDir, base, head);
+    expect(files.map((file) => file.path).sort()).toEqual(["app.ts", "new-file.ts"]);
+  });
+});
+
+describe("a parsed diff that disagrees with git's list of changed files (D-108)", () => {
+  const parsed = (...paths: string[]) => paths.map((path) => ({ path }));
+
+  it("is accepted when the two name the same files", () => {
+    expect(() => checkChangeSet(parsed("a.ts", "b.ts"), ["b.ts", "a.ts"])).not.toThrow();
+  });
+
+  it("is refused when the diff lost a file, naming it", () => {
+    // What a reshaped diff looks like from here: fewer files than changed,
+    // and a review that would have read as complete.
+    expect(() => checkChangeSet(parsed("a.ts"), ["a.ts", "b.ts"])).toThrow(ChangeSetMismatchError);
+    expect(() => checkChangeSet(parsed(), ["a.ts", "b.ts"])).toThrow(/b\.ts/);
+  });
+
+  it("is refused when the diff names a file git did not list", () => {
+    expect(() => checkChangeSet(parsed("a.ts", "x.ts"), ["a.ts"])).toThrow(/x\.ts/);
   });
 });
 

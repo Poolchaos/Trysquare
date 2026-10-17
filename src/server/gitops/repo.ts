@@ -7,6 +7,7 @@
  */
 
 import { rm } from "node:fs/promises";
+import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
 import { validateGitUrl } from "@/lib/git/url";
 import { git, gitSucceeds, toLines } from "./run";
 
@@ -138,10 +139,77 @@ export async function diffText(repoDir: string, base: string, head: string): Pro
       // Full context is not needed; the app reads whole files from the worktree.
       "--unified=3",
       "--no-color",
+      // Git's own text whatever the user's config says (D-108): an external
+      // diff tool replaced the whole diff with its output, a textconv driver
+      // rewrites a file's lines, and noprefix or mnemonicPrefix change the
+      // a/ and b/ the parser reads paths by.
+      "--no-ext-diff",
+      "--no-textconv",
+      "--src-prefix=a/",
+      "--dst-prefix=b/",
       `${base}..${head}`,
     ],
     { cwd: repoDir },
   );
+}
+
+export class ChangeSetMismatchError extends Error {
+  constructor(
+    readonly missing: readonly string[],
+    readonly unexpected: readonly string[],
+  ) {
+    const parts = [
+      ...(missing.length > 0
+        ? [`git lists ${missing.join(", ")} as changed, the diff does not`]
+        : []),
+      ...(unexpected.length > 0
+        ? [`the diff names ${unexpected.join(", ")}, which git does not list`]
+        : []),
+    ];
+    super(
+      `The diff and git's own list of changed files disagree: ${parts.join("; ")}. ` +
+        "A review of that diff would read as complete over files it never saw, so it is refused.",
+    );
+    this.name = "ChangeSetMismatchError";
+  }
+}
+
+/**
+ * Refuses a parsed diff that does not name exactly the files git lists as
+ * changed. The list comes from `--name-only`, which no diff formatting
+ * setting touches, so a diff some setting reshaped fails here rather than
+ * becoming a review of less than the change (D-108).
+ */
+export function checkChangeSet(
+  parsed: readonly { path: string }[],
+  listed: readonly string[],
+): void {
+  const parsedPaths = new Set(parsed.map((file) => file.path));
+  const listedPaths = new Set(listed);
+  const missing = [...listedPaths].filter((path) => !parsedPaths.has(path));
+  const unexpected = [...parsedPaths].filter((path) => !listedPaths.has(path));
+  if (missing.length > 0 || unexpected.length > 0) {
+    throw new ChangeSetMismatchError(missing, unexpected);
+  }
+}
+
+/** The diff between two commits, parsed and checked against git's own list. */
+export async function readChangeSet(
+  repoDir: string,
+  base: string,
+  head: string,
+): Promise<{ patch: string; files: ParsedFile[] }> {
+  const patch = await diffText(repoDir, base, head);
+  const files = parseUnifiedDiff(patch);
+  const listed = await git(
+    ["diff", "--name-only", "-z", "-M", "-C", "--no-ext-diff", `${base}..${head}`],
+    { cwd: repoDir },
+  );
+  checkChangeSet(
+    files,
+    listed.split("\0").filter((path) => path !== ""),
+  );
+  return { patch, files };
 }
 
 /** The contents of a file at a commit, used to build the pre-change copies. */

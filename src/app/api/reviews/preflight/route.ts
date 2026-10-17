@@ -13,7 +13,7 @@
 
 import { z } from "zod";
 import { REVIEW_PROFILES, reviewProfileSchema } from "@/lib/domain/enums";
-import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
+import type { ParsedFile } from "@/lib/git/diff";
 import { changedExportedSymbols } from "@/lib/git/symbols";
 import { repoSlug } from "@/lib/git/url";
 import { estimateTokens, budgetFor } from "@/lib/review/budget";
@@ -25,7 +25,7 @@ import { availabilityOf } from "@/lib/models/availability";
 import { getModel } from "@/server/db/repositories/models";
 import { recordFetch, requireProject } from "@/server/db/repositories/projects";
 import { loadRuleset } from "@/server/db/repositories/rulesets";
-import { diffText, fetchAll, mergeBase, resolveCommit } from "@/server/gitops/repo";
+import { fetchAll, mergeBase, readChangeSet, resolveCommit } from "@/server/gitops/repo";
 import { git } from "@/server/gitops/run";
 import { renderAdversarialPrompt, type ChangedFileEntry } from "@/server/review/content";
 import { failed, handler, ok, readJson } from "@/server/api/respond";
@@ -200,7 +200,7 @@ async function inspect(
   const fromCommit = await resolveCommit(repoDir, branches.fromBranch);
   const intoCommit = await resolveCommit(repoDir, branches.intoBranch);
   const mergeBaseCommit = await mergeBase(repoDir, branches.intoBranch, branches.fromBranch);
-  const files = parseUnifiedDiff(await diffText(repoDir, mergeBaseCommit, fromCommit));
+  const { files } = await readChangeSet(repoDir, mergeBaseCommit, fromCommit);
 
   return {
     slug,
