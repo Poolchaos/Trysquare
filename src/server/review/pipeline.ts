@@ -76,8 +76,7 @@ import {
   listSweepHits,
   markFileReviewed,
   markHunkHasFindings,
-  recordChangedFiles,
-  recordSweepHits,
+  seedLedger,
   setChainFilesRead,
   setFileRiskTags,
   type CoverageReport,
@@ -200,34 +199,6 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
 
   // S0: everything deterministic, before any model is involved.
   //
-  // Seeded once per review, not once per run. The inventory is derived from
-  // commits that cannot move, so a resumed run would insert a second identical
-  // set of rows, and every count the coverage report makes would then be
-  // double what the change set actually contains. Existing rows are the same
-  // rows this would have written, and the dispositions already recorded
-  // against them are the ones being resumed.
-  const alreadySeeded = listLedgerFiles(db, reviewId).length > 0;
-
-  const ledgerFiles = alreadySeeded
-    ? listLedgerFiles(db, reviewId)
-    : recordChangedFiles(
-        db,
-        reviewId,
-        input.files.map((entry) => ({
-          repo: entry.repo,
-          path: qualified(entry.slug, entry.file.path),
-          changeType: entry.file.changeType,
-          oldPath: entry.file.oldPath ?? null,
-          hunks: entry.file.hunks.map((hunk) => ({
-            hunkIndex: hunk.hunkIndex,
-            oldStart: hunk.oldStart,
-            oldLines: hunk.oldLines,
-            newStart: hunk.newStart,
-            newLines: hunk.newLines,
-          })),
-        })),
-      );
-
   // Symbols were the one path family the model saw unqualified. It reads the
   // worktree, where the file lives under the repository's slug, and a real
   // model reports the path it actually opened: the first live run answered
@@ -255,6 +226,55 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   // Run on every entry, resumed or not: it is the check on the sweep itself,
   // and skipping it would let a resumed run proceed on an unverified sweep.
   assertSweepComplete(sweepOutcome);
+  const sweepHitRows = sweepOutcome.hits.map((hit) => {
+    const entry = input.files.find((f) => f.file.path === hit.path && f.repo === hit.repo);
+    return { ...hit, path: qualified(entry?.slug ?? "", hit.path) };
+  });
+
+  // Seeded once per review, not once per run. The inventory is derived from
+  // commits that cannot move, so a resumed run would insert a second identical
+  // set of rows, and every count the coverage report makes would then be
+  // double what the change set actually contains. Existing rows are the same
+  // rows this would have written, and the dispositions already recorded
+  // against them are the ones being resumed. The files, hunks and hits go in
+  // together (4.16): a seed that stopped part way would otherwise stand.
+  const alreadySeeded = listLedgerFiles(db, reviewId).length > 0;
+
+  const ledgerFiles = alreadySeeded
+    ? listLedgerFiles(db, reviewId)
+    : seedLedger(
+        db,
+        reviewId,
+        input.files.map((entry) => ({
+          repo: entry.repo,
+          path: qualified(entry.slug, entry.file.path),
+          changeType: entry.file.changeType,
+          oldPath: entry.file.oldPath ?? null,
+          hunks: entry.file.hunks.map((hunk) => ({
+            hunkIndex: hunk.hunkIndex,
+            oldStart: hunk.oldStart,
+            oldLines: hunk.oldLines,
+            newStart: hunk.newStart,
+            newLines: hunk.newLines,
+          })),
+        })),
+        sweepHitRows,
+      );
+
+  // The sweep is deterministic over frozen commits and a frozen ruleset, so a
+  // resumed ledger holding a different number of hits was seeded in part,
+  // before seeding was one transaction. Its missing hits would never be
+  // dispositioned, and the review would read as a clean sweep.
+  if (alreadySeeded) {
+    const stored = listSweepHits(db, reviewId).length;
+    if (stored !== sweepHitRows.length) {
+      throw new Error(
+        `This review's ledger holds ${stored} sweep hit(s) where the sweep finds ` +
+          `${sweepHitRows.length}, so it was seeded only in part. Start the review again ` +
+          `rather than resume it.`,
+      );
+    }
+  }
 
   if (!alreadySeeded && sweepOutcome.ranAsLiteral.length > 0) {
     appendRunNote(db, reviewId, {
@@ -267,17 +287,6 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
           .join(", ") +
         `.`,
     });
-  }
-
-  if (!alreadySeeded) {
-    recordSweepHits(
-      db,
-      reviewId,
-      sweepOutcome.hits.map((hit) => {
-        const entry = input.files.find((f) => f.file.path === hit.path && f.repo === hit.repo);
-        return { ...hit, path: qualified(entry?.slug ?? "", hit.path) };
-      }),
-    );
   }
 
   const content: StageContentInput = {

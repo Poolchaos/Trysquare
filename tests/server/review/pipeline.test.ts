@@ -20,6 +20,7 @@ import {
   listHunks,
   listLedgerFiles,
   listSweepHits,
+  recordChangedFiles,
 } from "@/server/db/repositories/ledger";
 import {
   SweepDispositionUnmatchedError,
@@ -1948,5 +1949,30 @@ describe("verifying a finding in a file the change deleted (D-106)", () => {
     const { result } = await verifyDeleted("  if (value <= 0) throw new Error('negative');");
     expect(result.killedByQuoteCheck).toBe(1);
     expect(listFindings(db, reviewId)[0]?.verificationNote).toContain("did not match the file");
+  });
+});
+
+describe("resuming over a ledger seeded only in part (4.16)", () => {
+  it("stops rather than reading the missing sweep hits as a clean sweep", async () => {
+    // What seeding left behind when it stopped between the files and the
+    // hits, before it was one transaction. A resume skips seeding once any
+    // file exists, so the hit at line 2 would never be dispositioned.
+    recordChangedFiles(db, reviewId, [
+      {
+        repo: "primary",
+        path: "app/orders.ts",
+        changeType: "modified",
+        hunks: FILES[0]!.file.hunks.map((hunk) => ({
+          hunkIndex: hunk.hunkIndex,
+          oldStart: hunk.oldStart,
+          oldLines: hunk.oldLines,
+          newStart: hunk.newStart,
+          newLines: hunk.newLines,
+        })),
+      },
+    ]);
+    await expect(run({ ...BASE_ANSWERS, s5_verification: { verdicts: [] } })).rejects.toThrow(
+      /holds 0 sweep hit\(s\) where the sweep finds 1/,
+    );
   });
 });

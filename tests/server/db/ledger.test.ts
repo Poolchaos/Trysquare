@@ -16,6 +16,7 @@ import {
   markHunkHasFindings,
   recordChangedFiles,
   recordSweepHits,
+  seedLedger,
   setChainFilesRead,
   setFileRiskTags,
 } from "@/server/db/repositories/ledger";
@@ -266,5 +267,39 @@ describe("cascade", () => {
 
     expect(coverageReport(db, reviewId).totalFiles).toBe(0);
     expect(listHunks(db, file.id)).toHaveLength(0);
+  });
+});
+
+describe("seeding a review's ledger (4.16)", () => {
+  const FILE = {
+    repo: "primary" as const,
+    path: "src/orders/total.ts",
+    changeType: "modified" as const,
+    hunks: [{ hunkIndex: 0, oldStart: 10, oldLines: 3, newStart: 10, newLines: 5 }],
+  };
+  const HIT = {
+    ruleCode: "6",
+    pattern: "\\bas\\b",
+    repo: "primary" as const,
+    path: "src/orders/total.ts",
+    line: 12,
+    excerpt: "const x = value as Total;",
+  };
+
+  it("writes the files, hunks and sweep hits together", () => {
+    seedLedger(db, reviewId, [FILE], [HIT]);
+    expect(listLedgerFiles(db, reviewId)).toHaveLength(1);
+    expect(listSweepHits(db, reviewId)).toHaveLength(1);
+  });
+
+  it("writes nothing when a sweep hit cannot be written", () => {
+    // A resume skips seeding once any file exists, so files written without
+    // their hits would stand for good, read later as a sweep that found
+    // nothing.
+    const broken = { ...HIT, line: null as unknown as number };
+    // The database's own refusal, so the test fails for any other reason.
+    expect(() => seedLedger(db, reviewId, [FILE], [HIT, broken])).toThrow(/NOT NULL/);
+    expect(listLedgerFiles(db, reviewId)).toHaveLength(0);
+    expect(listSweepHits(db, reviewId)).toHaveLength(0);
   });
 });

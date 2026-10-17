@@ -197,6 +197,27 @@ export function recordSweepHits(
   return created;
 }
 
+/**
+ * Seeds a review's ledger, its changed files and hunks and the sweep's hits,
+ * in one transaction. A resume skips seeding once any file exists, so seeding
+ * that stopped between the two left a ledger with no hits, read from then on
+ * as a sweep that found nothing.
+ */
+export function seedLedger(
+  db: Db,
+  reviewId: string,
+  files: readonly LedgerFileInput[],
+  hits: readonly SweepHitInput[],
+): LedgerFile[] {
+  // better-sqlite3 runs a transaction on its one connection, so the writes
+  // these helpers make through `db` are inside it.
+  return db.transaction(() => {
+    const created = recordChangedFiles(db, reviewId, files);
+    recordSweepHits(db, reviewId, hits);
+    return created;
+  });
+}
+
 export function listSweepHits(db: Db, reviewId: string): SweepHit[] {
   return db.select().from(sweepHits).where(eq(sweepHits.reviewId, reviewId)).all();
 }

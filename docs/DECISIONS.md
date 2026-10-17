@@ -2335,3 +2335,14 @@ verified evidence, in writing, here.
   refuses a diff that lost some files and kept others. The name list is
   untouched by formatting settings, so whatever else a config might
   reshape fails here rather than becoming a review of less than the change.
+- 2026-10-17 D-109 DECIDED (WP 4.16): a review's ledger is seeded in one
+  transaction, files, hunks and sweep hits together, so a crash leaves all
+  of it or none, and a resume either seeds it whole or finds it whole. A
+  resume over a ledger whose stored sweep hits differ in number from what
+  the sweep finds now stops and says to start the review again. The sweep
+  is deterministic over frozen commits and a frozen ruleset, so a
+  difference can only be a seed that stopped part way, before this change;
+  repairing it in place was rejected, because which rows are missing
+  cannot be known from a count. Tests: a hit the database refuses leaves no
+  file and no hit behind, and fails if the transaction is removed; a
+  ledger holding the files but not the hit stops the run by name.
