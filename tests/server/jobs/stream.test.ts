@@ -166,7 +166,17 @@ describe("closing the stream", () => {
     for (let i = 0; i < 300; i += 1) bus.emit(reviewId, { kind: "status", status: "running" });
 
     expect(bus.listenerCount(reviewId)).toBe(0);
-    void reader.cancel();
+
+    // What it had queued is still delivered, and the last thing it reads tells
+    // it to open a new stream rather than fall back to polling.
+    const decoder = new TextDecoder();
+    let text = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+    }
+    expect(text.trimEnd().endsWith("event: reconnect\ndata: {}")).toBe(true);
   });
 
   it("keeps a reader that keeps up, however much happens", async () => {

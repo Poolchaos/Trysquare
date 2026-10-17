@@ -440,6 +440,14 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       if (parsed.kind === "status" || parsed.kind === "done") void reload();
     });
 
+    // The server let this stream go because the page fell behind, and says so
+    // last. A new stream opens with the whole picture; polling would lose the
+    // live stage for the rest of the run.
+    source.addEventListener("reconnect", () => {
+      source.close();
+      watchAgain();
+    });
+
     // D-15's fallback. Polls every two seconds only while a live run has no
     // stream to speak for it, and stops itself once nothing is running or
     // waiting, because from then on the page only changes when the user acts

@@ -30,8 +30,9 @@ const HEARTBEAT_MS = 15_000;
 /**
  * How far a reader may fall behind before the stream lets it go. Everything
  * for a tab that stopped reading used to queue for as long as the review ran
- * (4.23). Letting go loses nothing: the browser reconnects, and a new stream
- * opens with the whole picture.
+ * (4.23). The last frame tells the page to reconnect, and a new stream opens
+ * with the whole picture; only the live tail of engine lines in between is
+ * not replayed.
  */
 const MAX_FRAMES_BEHIND = 256;
 
@@ -66,7 +67,17 @@ export function reviewEventStream(
           open = false;
           return;
         }
-        if ((controller.desiredSize ?? 0) < -MAX_FRAMES_BEHIND) close();
+        if ((controller.desiredSize ?? 0) < -MAX_FRAMES_BEHIND) {
+          // Read after everything already queued, and tells the page to open
+          // a new stream; a stream that simply ended reads as an error, and
+          // the page would fall back to polling.
+          try {
+            controller.enqueue(encoder.encode(frame("reconnect", {})));
+          } catch {
+            // The reader went away as well; there is no one left to tell.
+          }
+          close();
+        }
       };
 
       function close(): void {
