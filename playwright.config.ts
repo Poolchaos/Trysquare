@@ -71,6 +71,9 @@ export default defineConfig({
       dependencies: ["failure-paths"],
       use: { colorScheme: "dark" },
     },
+    // Servers of its own, on data directories of their own, so it depends on
+    // nothing the others leave and stopping them disturbs none of it.
+    { name: "shutdown", testMatch: /shutdown\.spec\.ts/ },
   ],
   webServer: {
     command: `npm run start -- --port ${PORT}`,
