@@ -39,7 +39,9 @@ is named.
    `runs/<id>/worktree/<primary>/` and `runs/<id>/worktree/<linked>/`;
    AI stages get cwd = `runs/<id>/worktree/` so both trees are readable,
    and every path in inventory, ledger, and findings is qualified as
-   `<slug>/<repo-relative-path>`.
+   `<slug>/<repo-relative-path>`. What each checkout reports changed when
+   it is made, and those files' content, is kept in
+   `runs/<id>/worktree-baseline/<slug>.json` for the end check (D-107).
 3. Build the **bundle** under `runs/<id>/bundle/`:
    - `diff.patch` (and `diff-linked.patch`): full text per repo
    - `inventory.json`: every changed file and hunk across both repos

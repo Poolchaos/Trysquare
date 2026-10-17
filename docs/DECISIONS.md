@@ -2307,3 +2307,17 @@ verified evidence, in writing, here.
   checking quotes against the base copy, would still have failed: S5 can
   read only the worktree, and S4 had no line numbers to cite. A file with
   no base copy, a binary or a missing one, is still killed as unreadable.
+- 2026-10-17 D-107 DECIDED (WP 4.14): the end-of-review worktree check
+  compares against what the checkout reported when it was made, and the
+  content of each file it named, kept beside the worktrees in
+  runs/<id>/worktree-baseline/<slug>.json. Evidence, reproduced against
+  real git: a file committed with CRLF under `* text eol=lf` reads
+  ` M crlf.txt` in a fresh checkout, and a review of such a repository
+  failed at its last step with nothing written. `* text=auto` does not do
+  this, since git leaves a file committed with CRLF alone under it. The
+  status line of a file already reported changed does not move when it is
+  written to again, so its content is hashed at checkout and compared at
+  the end; a new file, a line that disappears, and a rewrite all still fail
+  the review. A worktree found at the right commit with no baseline, from
+  an interrupted run or one from before this change, is checked out again
+  rather than trusted. The run notes say when a checkout started changed.

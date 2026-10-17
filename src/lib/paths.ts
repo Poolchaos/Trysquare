@@ -55,6 +55,14 @@ export function worktreeRepoDir(dataDir: string, reviewId: string, repoSlug: str
   return join(worktreeRootDir(dataDir, reviewId), repoSlug);
 }
 
+/**
+ * What a repository's checkout reported changed when it was made (D-107).
+ * Beside the worktrees rather than in them, which the app never writes into.
+ */
+export function worktreeBaselinePath(dataDir: string, reviewId: string, repoSlug: string): string {
+  return join(runDir(dataDir, reviewId), "worktree-baseline", `${repoSlug}.json`);
+}
+
 export function bundleDir(dataDir: string, reviewId: string): string {
   return join(runDir(dataDir, reviewId), "bundle");
 }

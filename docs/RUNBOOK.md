@@ -214,7 +214,7 @@ against a fake CLI committed to the repository.
 | --- | --- |
 | `$TRYSQUARE_DATA/db.sqlite` | Projects, reviews, findings, rulesets, settings. |
 | `$TRYSQUARE_DATA/projects/` | Bare clones. Never written to by a review. |
-| `$TRYSQUARE_DATA/runs/<id>/` | One review's worktree, prompt bundle and stage logs. |
+| `$TRYSQUARE_DATA/runs/<id>/` | One review's worktree, its checkout baseline, prompt bundle and stage logs. |
 | `$TRYSQUARE_DATA/exports/` | Exported reports. Survive deleting the review. |
 | `review/<date>-*/` | Gate evidence on this machine only. Gitignored. |
 

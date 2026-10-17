@@ -22,9 +22,9 @@
  */
 
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { z } from "zod";
 import type { EngineEvent } from "@/lib/engine/events";
 import { SHUTDOWN } from "@/lib/domain/shutdown";
@@ -47,6 +47,7 @@ import {
   logsDir as logsDirFor,
   resolveDataDir,
   runDir as runDirFor,
+  worktreeBaselinePath,
   worktreeRepoDir,
   worktreeRootDir,
 } from "@/lib/paths";
@@ -82,7 +83,10 @@ import {
   addWorktree,
   assertWorktreeClean,
   removeWorktree,
+  worktreeBaseline,
+  worktreeBaselineSchema,
   worktreeCommit,
+  type WorktreeBaseline,
 } from "../gitops/worktree";
 import { createCheckpointingRunner, type CheckpointingRunner } from "./checkpointing-runner";
 import type { ChangedFileEntry } from "./content";
@@ -187,6 +191,8 @@ interface RepoSide {
   slug: string;
   clonePath: string;
   worktreeDir: string;
+  /** What the checkout reported changed when it was made (D-107). */
+  baselinePath: string;
   headCommit: string;
   mergeBaseCommit: string;
   role: "primary" | "linked";
@@ -278,7 +284,19 @@ export async function prepareAndRun(
     recordFetch(db, project.id);
     if (linkedProject) recordFetch(db, linkedProject.id);
 
-    for (const side of sides) await ensureWorktree(side);
+    for (const side of sides) {
+      const baseline = await ensureWorktree(side);
+      if (baseline && baseline.changes.length > 0) {
+        appendRunNote(db, reviewId, {
+          kind: "note",
+          message:
+            `The checkout of ${side.projectName} already reported ${baseline.changes.length} ` +
+            `changed file(s), as its .gitattributes normalises them: ` +
+            `${baseline.changes.slice(0, 5).join(", ")}. The end check holds them to their ` +
+            `content at checkout.`,
+        });
+      }
+    }
 
     const packageName = linkedProject
       ? (listDependencyLinks(db, project.id).find(
@@ -369,7 +387,9 @@ export async function prepareAndRun(
     // The app never writes inside a checked-out review, so this is not a
     // formality: a dirty worktree means something did, and every quotation
     // checked against it is suspect.
-    for (const side of sides) await assertWorktreeClean(side.worktreeDir);
+    for (const side of sides) {
+      await assertWorktreeClean(side.worktreeDir, await readBaseline(side.baselinePath));
+    }
 
     appendRunNote(db, reviewId, {
       kind: "note",
@@ -405,6 +425,7 @@ function sidesOf(
       slug: primarySlug,
       clonePath: project.clonePath,
       worktreeDir: worktreeRepoDir(dataDir, reviewId, primarySlug),
+      baselinePath: worktreeBaselinePath(dataDir, reviewId, primarySlug),
       headCommit: review.fromCommit,
       mergeBaseCommit: review.mergeBaseCommit,
       role: "primary",
@@ -428,6 +449,7 @@ function sidesOf(
       slug,
       clonePath: linkedProject.clonePath,
       worktreeDir: worktreeRepoDir(dataDir, reviewId, slug),
+      baselinePath: worktreeBaselinePath(dataDir, reviewId, slug),
       headCommit: review.linkedFromCommit,
       mergeBaseCommit: review.linkedMergeBaseCommit,
       role: "linked",
@@ -455,13 +477,24 @@ async function assertPinnedCommitsExist(side: RepoSide, reviewId: string): Promi
  * wrong commit is replaced rather than trusted. That case is not hypothetical:
  * a resumed review finds whatever the interrupted one left behind.
  */
-async function ensureWorktree(side: RepoSide): Promise<void> {
+async function ensureWorktree(side: RepoSide): Promise<WorktreeBaseline | null> {
   if (existsSync(join(side.worktreeDir, ".git"))) {
     const present = await worktreeCommit(side.worktreeDir).catch(() => null);
-    if (present === side.headCommit) return;
+    // Without its baseline the end check cannot tell a checkout that was
+    // already changed from one something wrote to, so it is made again.
+    if (present === side.headCommit && existsSync(side.baselinePath)) return null;
     await removeWorktree(side.clonePath, side.worktreeDir);
   }
   await addWorktree(side.clonePath, side.worktreeDir, side.headCommit);
+  const baseline = await worktreeBaseline(side.worktreeDir);
+  await mkdir(dirname(side.baselinePath), { recursive: true });
+  await writeFile(side.baselinePath, JSON.stringify(baseline), "utf8");
+  return baseline;
+}
+
+async function readBaseline(path: string): Promise<WorktreeBaseline | undefined> {
+  if (!existsSync(path)) return undefined;
+  return worktreeBaselineSchema.parse(JSON.parse(await readFile(path, "utf8")));
 }
 
 function buildRunner(

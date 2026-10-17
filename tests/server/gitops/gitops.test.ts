@@ -26,6 +26,7 @@ import {
   addWorktree,
   assertWorktreeClean,
   removeWorktree,
+  worktreeBaseline,
   worktreeChanges,
   worktreeCommit,
 } from "@/server/gitops/worktree";
@@ -224,6 +225,66 @@ describe("review worktrees", () => {
 
     await removeWorktree(cloneDir, appDir);
     await removeWorktree(cloneDir, coreDir);
+  });
+
+  describe("a checkout git reports changed before anything touched it (D-107)", () => {
+    // A file committed with CRLF, then `* text eol=lf`: git normalises it on
+    // checkout, so a fresh worktree already reads ` M`. The end-of-review
+    // check failed every such review, after every stage was paid for.
+    let normalisingClone: string;
+
+    beforeAll(async () => {
+      const origin = join(root, "normalising-origin");
+      execFileSync("git", ["init", "-q", "-b", "main", origin]);
+      git(["config", "core.autocrlf", "false"], origin);
+      writeFileSync(join(origin, "crlf.txt"), "line one\r\nline two\r\n");
+      git(["add", "crlf.txt"], origin);
+      git(["commit", "-qm", "a file with CRLF"], origin);
+      writeFileSync(join(origin, ".gitattributes"), "* text eol=lf\n");
+      git(["add", ".gitattributes"], origin);
+      git(["commit", "-qm", "normalise line endings"], origin);
+      normalisingClone = join(root, "normalising.git");
+      await cloneBare(origin, normalisingClone);
+    }, 60_000);
+
+    async function freshCheckout(name: string): Promise<string> {
+      const dir = join(root, name);
+      await addWorktree(normalisingClone, dir, await resolveCommit(normalisingClone, "main"));
+      return dir;
+    }
+
+    it("is reported changed straight after checkout, which the strict check refuses", async () => {
+      const dir = await freshCheckout("wt-normalising-strict");
+      expect(await worktreeChanges(dir)).toEqual([" M crlf.txt"]);
+      await expect(assertWorktreeClean(dir)).rejects.toThrow(WorktreeModifiedError);
+      await removeWorktree(normalisingClone, dir);
+    });
+
+    it("passes against what it reported at checkout, when nothing has touched it", async () => {
+      const dir = await freshCheckout("wt-normalising-baseline");
+      const baseline = await worktreeBaseline(dir);
+      expect(baseline.changes).toEqual([" M crlf.txt"]);
+      await expect(assertWorktreeClean(dir, baseline)).resolves.toBeUndefined();
+      await removeWorktree(normalisingClone, dir);
+    });
+
+    it("still catches a write to the file that was already reported changed", async () => {
+      // The status line is the same before and after, so only the content
+      // recorded at checkout can tell.
+      const dir = await freshCheckout("wt-normalising-written");
+      const baseline = await worktreeBaseline(dir);
+      writeFileSync(join(dir, "crlf.txt"), "line one\nline two\nline three\n");
+      await expect(assertWorktreeClean(dir, baseline)).rejects.toThrow(/crlf\.txt/);
+      await removeWorktree(normalisingClone, dir);
+    });
+
+    it("still catches a new file", async () => {
+      const dir = await freshCheckout("wt-normalising-added");
+      const baseline = await worktreeBaseline(dir);
+      writeFileSync(join(dir, "notes.md"), "scratch\n");
+      await expect(assertWorktreeClean(dir, baseline)).rejects.toThrow(/notes\.md/);
+      await removeWorktree(normalisingClone, dir);
+    });
   });
 
   it("leaves no worktree registered after removal", async () => {

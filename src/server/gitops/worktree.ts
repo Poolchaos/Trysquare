@@ -10,7 +10,10 @@
  * that this held, and it is run after a pipeline rather than assumed.
  */
 
-import { mkdir, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, rm } from "node:fs/promises";
+import { z } from "zod";
+import { insideRoot } from "@/lib/paths";
 import { git, toLines } from "./run";
 
 export class WorktreeModifiedError extends Error {
@@ -70,15 +73,80 @@ export async function worktreeChanges(worktreeDir: string): Promise<string[]> {
 }
 
 /**
+ * What a checkout reports changed the moment it is made, and the content of
+ * each file it names. A repository whose `.gitattributes` normalises files
+ * committed otherwise reads ` M` before anything has touched it (D-107).
+ */
+export const worktreeBaselineSchema = z.object({
+  changes: z.array(z.string()),
+  /** sha256 of each named file's bytes, or null for one not on disk. */
+  contents: z.record(z.string(), z.string().nullable()),
+});
+export type WorktreeBaseline = z.infer<typeof worktreeBaselineSchema>;
+
+export async function worktreeBaseline(worktreeDir: string): Promise<WorktreeBaseline> {
+  return {
+    changes: await worktreeChanges(worktreeDir),
+    contents: await contentsOfChanged(worktreeDir),
+  };
+}
+
+/**
+ * Hashes every file status names, read with `-z` because the plain form
+ * quotes an unusual name and the quoted text is not a path on disk.
+ */
+async function contentsOfChanged(worktreeDir: string): Promise<Record<string, string | null>> {
+  const output = await git(["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
+    cwd: worktreeDir,
+  });
+  const entries = output.split("\0").filter((entry) => entry !== "");
+  const contents: Record<string, string | null> = {};
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index]!;
+    const path = entry.slice(3);
+    // A rename or copy is followed by its source path, which is not a file
+    // in this checkout.
+    if (entry[0] === "R" || entry[0] === "C") index += 1;
+    try {
+      const bytes = await readFile(insideRoot(worktreeDir, path));
+      contents[path] = createHash("sha256").update(bytes).digest("hex");
+    } catch {
+      contents[path] = null;
+    }
+  }
+  return contents;
+}
+
+/**
  * Fails if anything in the worktree changed.
  *
  * This is the executable form of "the app never writes into reviewed code".
  * It runs after a review rather than being trusted, because the guarantee is
- * only worth what the check is worth.
+ * only worth what the check is worth. Given the baseline taken at checkout,
+ * what git reported then is expected, but only with the same content: the
+ * status line of a file already reported changed does not move when it is
+ * written to again.
  */
-export async function assertWorktreeClean(worktreeDir: string): Promise<void> {
+export async function assertWorktreeClean(
+  worktreeDir: string,
+  baseline?: WorktreeBaseline,
+): Promise<void> {
   const changes = await worktreeChanges(worktreeDir);
-  if (changes.length > 0) throw new WorktreeModifiedError(worktreeDir, changes);
+  if (!baseline) {
+    if (changes.length > 0) throw new WorktreeModifiedError(worktreeDir, changes);
+    return;
+  }
+  const now = await contentsOfChanged(worktreeDir);
+  const problems = [
+    ...changes.filter((change) => !baseline.changes.includes(change)),
+    ...baseline.changes
+      .filter((change) => !changes.includes(change))
+      .map((change) => `${change} (reported at checkout, not now)`),
+    ...Object.entries(baseline.contents)
+      .filter(([path, hash]) => now[path] !== hash)
+      .map(([path]) => `${path} (rewritten since checkout)`),
+  ];
+  if (problems.length > 0) throw new WorktreeModifiedError(worktreeDir, problems);
 }
 
 /** The commit a worktree is pinned to, read back rather than remembered. */

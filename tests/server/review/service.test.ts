@@ -640,6 +640,122 @@ describe("the commits a review is pinned to", () => {
   }, 120_000);
 });
 
+describe("a repository whose checkout git reports changed from the start (D-107)", () => {
+  // A file committed with CRLF, then `* text eol=lf`: a fresh checkout reads
+  // ` M crlf.txt` before anything touches it, and the end check failed every
+  // review of such a repository after all its stages were paid for.
+  let normClone: string;
+  let normBase: string;
+  let normHead: string;
+
+  beforeAll(async () => {
+    const origin = join(fixtureRoot, "norm-origin");
+    const git = (args: string[]) =>
+      execFileSync("git", args, {
+        cwd: origin,
+        env: {
+          ...process.env,
+          GIT_AUTHOR_NAME: "Test",
+          GIT_AUTHOR_EMAIL: "test@example.invalid",
+          GIT_COMMITTER_NAME: "Test",
+          GIT_COMMITTER_EMAIL: "test@example.invalid",
+        },
+      });
+    execFileSync("git", ["init", "-q", "-b", "main", origin]);
+    git(["config", "core.autocrlf", "false"]);
+    writeFileSync(join(origin, "crlf.txt"), "line one\r\nline two\r\n");
+    git(["add", "crlf.txt"]);
+    git(["commit", "-qm", "a file with CRLF"]);
+    // Only now: present when the file was added, it would have normalised
+    // the file on the way in and there would be nothing to see.
+    writeFileSync(join(origin, ".gitattributes"), "* text eol=lf\n");
+    git(["add", ".gitattributes"]);
+    git(["commit", "-qm", "normalise line endings"]);
+    git(["checkout", "-qb", "feature/change"]);
+    writeFileSync(join(origin, "change.ts"), "export const changed = 1;\n");
+    git(["add", "change.ts"]);
+    git(["commit", "-qm", "a change to review"]);
+
+    normClone = join(fixtureRoot, "norm.git");
+    await cloneBare(origin, normClone);
+    normBase = await mergeBase(normClone, "main", "feature/change");
+    normHead = await resolveCommit(normClone, "feature/change");
+  }, 120_000);
+
+  function seedNormReview(): string {
+    const project = createProject(db, {
+      name: "norm",
+      gitUrl: "git@example.com:acme/norm.git",
+      defaultBranch: "main",
+      clonePath: normClone,
+    });
+    return createReview(db, {
+      projectId: project.id,
+      fromBranch: "feature/change",
+      fromCommit: normHead,
+      intoBranch: "main",
+      intoCommit: normBase,
+      mergeBaseCommit: normBase,
+      model: "claude-fable-5[1m]",
+      profileId: "full-context",
+      engineMode: "headless",
+    }).id;
+  }
+
+  function writeNormAnswers(): void {
+    writeAnswersDir(answersDir, [
+      { files: [{ path: "norm/change.ts", riskTags: [], reason: "a constant" }] },
+      { files: [] },
+      {
+        findings: [],
+        clearedHunks: [{ path: "norm/change.ts", hunkIndex: 0, reason: "a new constant" }],
+        sweepDispositions: [],
+      },
+      { findings: [], reviewedDeletions: [] },
+      { verdicts: [] },
+    ]);
+  }
+
+  it("completes, and says the checkout was already changed", async () => {
+    const reviewId = seedNormReview();
+    writeNormAnswers();
+
+    const outcome = await run(reviewId);
+    expect(outcome.kind === "failed" ? outcome.reason : outcome.kind).toBe("completed");
+    // The case is real: git still reports the file changed at the end.
+    expect(
+      execFileSync("git", ["status", "--porcelain"], {
+        cwd: worktreeRepoDir(dataDir, reviewId, "norm"),
+        encoding: "utf8",
+        env: { ...process.env, GIT_CONFIG_NOSYSTEM: "1" },
+      }),
+    ).toContain("crlf.txt");
+    expect(readRunNotes(requireReview(db, reviewId)).map((note) => note.message)).toContainEqual(
+      expect.stringContaining("already reported 1 changed file(s)"),
+    );
+  }, 120_000);
+
+  it("still fails when something writes to the file that was already changed", async () => {
+    const reviewId = seedNormReview();
+    writeNormAnswers();
+
+    const outcome = await run(reviewId, {
+      onStageLifecycle: (event: { stage: string }) => {
+        if (event.stage === "s5_verification") {
+          writeFileSync(
+            join(worktreeRepoDir(dataDir, reviewId, "norm"), "crlf.txt"),
+            "rewritten\n",
+          );
+        }
+      },
+    });
+    expect(outcome.kind).toBe("failed");
+    expect(outcome.kind === "failed" && outcome.reason).toMatch(
+      /crlf\.txt \(rewritten since checkout\)/,
+    );
+  }, 120_000);
+});
+
 describe("what a review is judged against", () => {
   it("refuses to start with no ruleset to freeze", async () => {
     const reviewId = seedReview();

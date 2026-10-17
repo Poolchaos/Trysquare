@@ -100,7 +100,10 @@ Laws:
   a commit hash, pruned when the review is deleted.
 - **The app never writes inside a worktree.** Enforced by code review, by the
   engine's read-only tool allowlist, and by a unit test asserting the
-  worktree is byte-identical (git status clean) after a pipeline run.
+  worktree is byte-identical (git status clean) after a pipeline run. A
+  checkout git already reports changed, because its `.gitattributes`
+  normalises files committed otherwise, is held to what it reported at
+  checkout and to those files' content then (D-107).
 - Everything the AI must read that is not in the worktree (base-branch
   copies, diff, inventory) is materialised into `bundle/` by app code.
 
