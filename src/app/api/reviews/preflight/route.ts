@@ -25,7 +25,7 @@ import { availabilityOf } from "@/lib/models/availability";
 import { getModel } from "@/server/db/repositories/models";
 import { recordFetch, requireProject } from "@/server/db/repositories/projects";
 import { loadRuleset } from "@/server/db/repositories/rulesets";
-import { fetchAll, mergeBase, readChangeSet, resolveCommit } from "@/server/gitops/repo";
+import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
 import { git } from "@/server/gitops/run";
 import { renderAdversarialPrompt, type ChangedFileEntry } from "@/server/review/content";
 import { failed, handler, ok, readJson } from "@/server/api/respond";
@@ -198,8 +198,8 @@ async function inspect(
   branches: { fromBranch: string; intoBranch: string },
 ): Promise<Side> {
   await fetchAll(repoDir);
-  const fromCommit = await resolveCommit(repoDir, branches.fromBranch);
-  const intoCommit = await resolveCommit(repoDir, branches.intoBranch);
+  const fromCommit = await resolveBranch(repoDir, branches.fromBranch);
+  const intoCommit = await resolveBranch(repoDir, branches.intoBranch);
   const mergeBaseCommit = await mergeBase(repoDir, branches.intoBranch, branches.fromBranch);
   const { files } = await readChangeSet(repoDir, mergeBaseCommit, fromCommit);
 

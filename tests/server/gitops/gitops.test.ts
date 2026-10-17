@@ -22,6 +22,7 @@ import {
   listBranches,
   mergeBase,
   readChangeSet,
+  resolveBranch,
   resolveCommit,
 } from "@/server/gitops/repo";
 import {
@@ -319,6 +320,39 @@ describe("a parsed diff that disagrees with git's list of changed files (D-108)"
 
   it("is refused when the diff names a file git did not list", () => {
     expect(() => checkChangeSet(parsed("a.ts", "x.ts"), ["a.ts"])).toThrow(/x\.ts/);
+  });
+});
+
+describe("a tag with a branch's name (4.22)", () => {
+  // git resolves a bare name as a tag before a branch, so a tag called main
+  // pointing at the feature's tip made the feature look merged into main.
+  let tagged: string;
+  let mainTip: string;
+  let featureTip: string;
+
+  beforeAll(async () => {
+    tagged = join(root, "tagged.git");
+    await cloneBare(originDir, tagged);
+    mainTip = git(["rev-parse", "refs/heads/main"], tagged).trim();
+    featureTip = git(["rev-parse", "refs/heads/feature/totals"], tagged).trim();
+    git(["tag", "main", featureTip], tagged);
+  }, 60_000);
+
+  it("resolves the branch, not the tag", async () => {
+    expect(await resolveBranch(tagged, "main")).toBe(mainTip);
+  });
+
+  it("does not call a branch merged because a tag of that name holds it", async () => {
+    expect(await isAncestor(tagged, featureTip, "main")).toBe(false);
+  });
+
+  it("finds the merge base and the distance between the branches themselves", async () => {
+    const realBase = git(
+      ["merge-base", "refs/heads/main", "refs/heads/feature/totals"],
+      tagged,
+    ).trim();
+    expect(await mergeBase(tagged, "main", "feature/totals")).toBe(realBase);
+    expect(await divergence(tagged, "feature/totals", "main")).toEqual({ ahead: 1, behind: 1 });
   });
 });
 

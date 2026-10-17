@@ -92,6 +92,20 @@ export async function listBranches(repoDir: string): Promise<BranchInfo[]> {
   });
 }
 
+/**
+ * A branch name as git must read it. A bare name is looked up as a tag before
+ * a branch, so a tag called main stood in for the branch main, and a feature
+ * whose tip it pointed at looked merged (4.22).
+ */
+function branchRef(branch: string): string {
+  return `refs/heads/${branch}`;
+}
+
+/** The commit a branch points at, never a tag of the same name. */
+export async function resolveBranch(repoDir: string, branch: string): Promise<string> {
+  return resolveCommit(repoDir, branchRef(branch));
+}
+
 export async function resolveCommit(repoDir: string, ref: string): Promise<string> {
   const output = await git(["rev-parse", "--verify", `${ref}^{commit}`], { cwd: repoDir });
   return output.trim();
@@ -103,7 +117,7 @@ export async function resolveCommit(repoDir: string, ref: string): Promise<strin
  * target while a review runs do not appear as changes in this branch.
  */
 export async function mergeBase(repoDir: string, a: string, b: string): Promise<string> {
-  const output = await git(["merge-base", a, b], { cwd: repoDir });
+  const output = await git(["merge-base", branchRef(a), branchRef(b)], { cwd: repoDir });
   return output.trim();
 }
 
@@ -117,7 +131,8 @@ export async function divergence(
   branch: string,
   compareTo: string,
 ): Promise<DivergenceCounts> {
-  const output = await git(["rev-list", "--left-right", "--count", `${compareTo}...${branch}`], {
+  const range = `${branchRef(compareTo)}...${branchRef(branch)}`;
+  const output = await git(["rev-list", "--left-right", "--count", range], {
     cwd: repoDir,
   });
   const [behindRaw = "0", aheadRaw = "0"] = output.trim().split(/\s+/);
@@ -125,8 +140,14 @@ export async function divergence(
 }
 
 /** True once the target branch contains the reviewed commit, i.e. it merged. */
-export async function isAncestor(repoDir: string, commit: string, of: string): Promise<boolean> {
-  return gitSucceeds(["merge-base", "--is-ancestor", commit, of], { cwd: repoDir });
+export async function isAncestor(
+  repoDir: string,
+  commit: string,
+  ofBranch: string,
+): Promise<boolean> {
+  return gitSucceeds(["merge-base", "--is-ancestor", commit, branchRef(ofBranch)], {
+    cwd: repoDir,
+  });
 }
 
 export async function diffText(repoDir: string, base: string, head: string): Promise<string> {

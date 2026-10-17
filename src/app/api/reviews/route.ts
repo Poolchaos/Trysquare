@@ -24,7 +24,7 @@ import { appendRunNote, createReview, listActiveReviews } from "@/server/db/repo
 import { getModel } from "@/server/db/repositories/models";
 import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
 import { resolveProfile } from "@/lib/review/profiles";
-import { fetchAll, mergeBase, resolveCommit } from "@/server/gitops/repo";
+import { fetchAll, mergeBase, resolveBranch } from "@/server/gitops/repo";
 import { created, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
 import { findingTallies } from "@/server/db/repositories/findings";
@@ -206,8 +206,8 @@ export function POST(request: Request): Promise<Response> {
 
 async function pin(repoDir: string, fromBranch: string, intoBranch: string) {
   return {
-    fromCommit: await resolveCommit(repoDir, fromBranch),
-    intoCommit: await resolveCommit(repoDir, intoBranch),
+    fromCommit: await resolveBranch(repoDir, fromBranch),
+    intoCommit: await resolveBranch(repoDir, intoBranch),
     mergeBaseCommit: await mergeBase(repoDir, intoBranch, fromBranch),
   };
 }
