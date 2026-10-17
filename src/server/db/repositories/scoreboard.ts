@@ -10,8 +10,8 @@
  * a person confirmed out of what they decided, which measures whether the
  * findings are worth reading. Invention is what the quotation check killed out
  * of everything ever raised, which measures how often the engine makes things
- * up. Killed findings are hidden on every other screen, deliberately, and this
- * is the one place they are the point.
+ * up. Elsewhere killed findings are only listed, under a review's run detail
+ * (D-97); this is the one place they are counted.
  */
 
 import { desc, eq } from "drizzle-orm";

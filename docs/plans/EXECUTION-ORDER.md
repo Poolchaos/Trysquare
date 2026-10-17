@@ -37,8 +37,8 @@ Known gaps inside the built code, found by self-review and carried here so
 they are fixed deliberately rather than rediscovered:
 
 - G-1: FIXED (T3). Sweep hits now match the finding containing their line,
-  nearest by line otherwise, and a `finding` disposition with no candidate
-  in that file stops the run.
+  and a `finding` disposition with no such finding stops the run. The
+  nearest-line fallback T3 first allowed was removed by D-96.
 - G-2: FIXED (T2). One repair round in the engine runner, in the same
   session, naming the exact validation errors; a second failure is final.
 - G-3: FIXED (T1). `content.ts` inlines the change set into each stage's

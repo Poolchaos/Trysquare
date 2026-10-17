@@ -183,7 +183,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByText(/Files.*\d+ of \d+ accounted for/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Refuted in verification" })).toBeVisible();
     await expect(page.getByText(REFUTED_ISSUE)).toBeVisible();
-    await expect(page.getByText(`Refuted: ${REFUTED_NOTE}`)).toBeVisible();
+    await expect(page.getByText(REFUTED_NOTE)).toBeVisible();
 
     // The deterministic ends of the pipeline. They write no stage row, so
     // they are the rows most easily lost, and they are the parts of a review

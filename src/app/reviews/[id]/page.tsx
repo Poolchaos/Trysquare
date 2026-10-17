@@ -1126,8 +1126,8 @@ function RunDetail({
           {/* Every one, not only those a hunk rested on (D-97): a list
               titled refuted that left some out would be its own silence. */}
           <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
-            Raised by the review and refuted when checked against the file. None of these reach the
-            report.
+            Raised by the review, then refuted by verification or discarded by the quotation check,
+            each with its reason. None of these reach the report.
           </p>
           <ul className="grid gap-3">
             {refuted.map((finding) => (
@@ -1140,7 +1140,7 @@ function RunDetail({
                 </div>
                 <p className="mt-1">{finding.issue}</p>
                 <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-                  Refuted: {finding.verificationNote ?? "no reason was recorded."}
+                  {finding.verificationNote ?? "No reason was recorded."}
                 </p>
               </li>
             ))}

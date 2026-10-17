@@ -331,13 +331,6 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
 }
 
 /**
- * Waits for the answer file, and gives up rather than waiting forever.
- *
- * A hang is a failure, not a wait (01 section 6). The timeout is the same
- * stage timeout Mode A uses, which is generous for a person but finite, and
- * cancelling the review stops the wait immediately rather than after it.
- */
-/**
  * Writes a file under a temporary name and renames it into place, so whoever
  * is watching for it never opens it half written. A prompt read while it was
  * still being written lost the candidate labels its answer must quote back
@@ -349,6 +342,13 @@ async function writeWhole(path: string, text: string): Promise<void> {
   await rename(partial, path);
 }
 
+/**
+ * Waits for the answer file, and gives up rather than waiting forever.
+ *
+ * A hang is a failure, not a wait (01 section 6). The timeout is the same
+ * stage timeout Mode A uses, which is generous for a person but finite, and
+ * cancelling the review stops the wait immediately rather than after it.
+ */
 async function waitForAnswer(
   path: string,
   options: { timeoutMs: number; pollMs: number; stage: ReviewStage; signal?: AbortSignal },

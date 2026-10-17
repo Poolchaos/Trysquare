@@ -376,8 +376,8 @@ export async function prepareAndRun(
       message:
         `Reviewed ${files.length} changed file(s): ${result.candidatesRaised} candidate(s) ` +
         `raised, ${result.verified} verified, ${result.killed} refuted, ` +
-        `${result.openQuestions} left open, ${result.killedByQuoteCheck} discarded for ` +
-        "quoting code that was not there.",
+        `${result.openQuestions} left open, ${result.killedByQuoteCheck} discarded by the ` +
+        "quotation check.",
     });
 
     // Checked once more before the review is called finished. A cancel that

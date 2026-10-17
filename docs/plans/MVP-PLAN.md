@@ -134,6 +134,7 @@ engine fixes in phase 4 have landed.
 | 4.21 | LOW. The quote check kills some valid quotes: a BOM file quoted across lines, NFD text quoted in NFC, tab against space indentation when nested (`quote-match.ts:25-45, 61`). None lets a wrong quote pass. | - | TODO |
 | 4.22 | LOW. A tag with a branch's name wins in `rev-parse` and `merge-base` (`repo.ts:94-107`), which can fake the merged signal. Branch names are resolved as `refs/heads/`. | - | TODO |
 | 4.23 | LOW. Smaller gaps: confirm and dismiss do not check the review's status; SSE ignores backpressure; the symbol-verdict backing check accepts loose path matches (`pipeline.ts:895-898`); raising `maxConcurrentReviews` starts nothing until a run ends; LFS content and submodule pointers are passed over unrecorded. Each fixed or recorded as accepted. | - | TODO |
+| 4.24 | LOW-MEDIUM. Found while fixing the D-103 review: the scoreboard's invention rate and the demo's "discarded quotes" count every killed finding, including those verification refuted on judgment, while both are labelled as kills by the quotation check (`scoreboard.ts:127-172`, `page.tsx:275-281`, `demo-fixture.ts:329`). Count only mechanical kills, which needs the kind of kill recorded on the finding. | - | TODO |
 
 ### Phase 5: spend safety and error handling
 

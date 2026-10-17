@@ -156,7 +156,11 @@ export interface PipelineResult {
   verified: number;
   killed: number;
   openQuestions: number;
-  /** Findings killed because their quotation did not match the file. */
+  /**
+   * Findings a mechanical check killed after verification said verified: the
+   * file could not be read, the quotation did not match it, or the quoted
+   * lines missed the candidate's (D-99).
+   */
   killedByQuoteCheck: number;
   /** How many requests the adversarial stage was divided into. */
   adversarialRequests: number;
