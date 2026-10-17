@@ -154,17 +154,6 @@ export function markOpenQuestion(db: Db, findingId: string, whatWouldResolveIt: 
   });
 }
 
-/**
- * Human decision. The only route into a report.
- *
- * A replacement comment is optional and kept beside the engine's, never over
- * it. The report reads the person's words because they are the ones written
- * for whoever fixes the code; the engine's stay because how well it explained
- * itself is the only measurement of whether the prompts are working, and
- * overwriting them would erase the evidence every edit is a data point in.
- * An empty or unchanged replacement records nothing, so "edited" keeps
- * meaning edited.
- */
 export class ReviewNotDecidingError extends Error {
   constructor(
     readonly reviewId: string,
@@ -191,6 +180,17 @@ function assertDeciding(db: Db, findingId: string): void {
   if (status !== "awaiting_confirmation") throw new ReviewNotDecidingError(reviewId, status);
 }
 
+/**
+ * Human decision. The only route into a report.
+ *
+ * A replacement comment is optional and kept beside the engine's, never over
+ * it. The report reads the person's words because they are the ones written
+ * for whoever fixes the code; the engine's stay because how well it explained
+ * itself is the only measurement of whether the prompts are working, and
+ * overwriting them would erase the evidence every edit is a data point in.
+ * An empty or unchanged replacement records nothing, so "edited" keeps
+ * meaning edited.
+ */
 export function confirmFinding(
   db: Db,
   findingId: string,

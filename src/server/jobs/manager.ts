@@ -367,7 +367,8 @@ export class JobManager {
   }
 
   /**
-   * Starts whatever is next in line, and survives what it finds there.
+   * Starts waiting reviews while there is room for them, and survives what it
+   * finds there.
    *
    * This runs from the `finally` of the run that just ended, where nothing is
    * awaiting it and nothing would catch a throw. A queued review whose row was
@@ -376,10 +377,8 @@ export class JobManager {
    * it in a queue nothing would ever drain again. A gone review is now simply
    * dropped, and any other fault is reported to the watchers of the review it
    * belongs to rather than taking the scheduler down with it.
-   */
-  /**
-   * Starts waiting reviews while there is room for them. Run when a review
-   * ends, and when the limit is raised: waiting for a run to end left a
+   *
+   * Also run when the limit is raised: waiting for a run to end left a
    * review queued behind room the person had just made (4.23).
    */
   startQueued(): void {

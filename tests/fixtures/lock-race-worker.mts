@@ -22,7 +22,7 @@ for (let trial = 0; trial < count; trial += 1) {
   let result: string;
   try {
     // A short wait: the two start microseconds apart, and a second's wait on
-    // every refused start would make a hundred trials take minutes.
+    // every refused start would add a second to every trial.
     acquireDataDirLock(join(base!, `dir-${trial}`), 100);
     result = "held";
   } catch (error) {
