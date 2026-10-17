@@ -2587,3 +2587,17 @@ verified evidence, in writing, here.
   lib/models/effort-support.ts. High stays the default. Rejected: offering
   it on every model, which records xhigh for a high run on two of the four
   families, and not offering it.
+- 2026-10-17 D-123 DECIDED (maintainer's choice; corrects D-122, which rested
+  on a misreading found by the review of 4.5 to 4.7): xhigh is offered on
+  every model the CLI runs it on, which is every model but the fixed list
+  the 2.1.301 binary checks: claude-3 models, Opus 4.0 to 4.6, Sonnet 4.0 to
+  4.6 and Haiku 4.5. D-122 said the CLI's table did not mark claude-sonnet-5;
+  its row is marked, and the earlier extraction missed it. Measured against
+  a local stand-in for the API, spending nothing: Fable, Opus and Sonnet 5,
+  each also at [1m], and Haiku 5.5 send xhigh; Opus 4.6 sends high; Sonnet
+  4.5, Sonnet 4 and Sonnet 3.7 send no effort at any level. So among the
+  candidates xhigh is offered for fable-5, opus-5 and sonnet-5, and the CLI's
+  own cost index puts it at 2.41 times high on sonnet-5. D-122's rejected
+  alternative, offering it everywhere, would not have mislabelled any
+  candidate that can run a review. Found on the way, not acted on here: the
+  CLI swapped claude-opus-4-1-20250805 for claude-opus-5-5 without a word.

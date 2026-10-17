@@ -321,32 +321,35 @@ describe("creating a review", () => {
     expect(((await response.json()) as { review: { effort: string } }).review.effort).toBe("low");
   }, 120_000);
 
-  it("takes xhigh only on a model that runs it (4.7, D-122)", async () => {
-    // The CLI runs xhigh as high, without a word, on a model it does not mark
-    // as supporting it, and the review would have recorded xhigh.
+  it("takes xhigh only on a model that runs it (4.7, D-122, D-123)", async () => {
+    // The CLI sends xhigh as high, or as no effort, without a word, on a fixed
+    // list of older models, and the review would have recorded xhigh.
     const refused = await routes.reviews.POST(
       post("http://localhost/api/reviews", {
         projectId,
         fromBranch: "feature/rename-prefs",
         intoBranch: "main",
-        model: "claude-sonnet-5",
+        model: "claude-opus-4-6",
         effort: "xhigh",
       }),
     );
     expect(refused.status).toBe(400);
     expect(((await refused.json()) as { code: string }).code).toBe("EffortNotSupported");
 
-    const taken = await routes.reviews.POST(
-      post("http://localhost/api/reviews", {
-        projectId,
-        fromBranch: "feature/rename-prefs",
-        intoBranch: "main",
-        model: "claude-fable-5[1m]",
-        effort: "xhigh",
-      }),
-    );
-    expect(taken.status).toBe(201);
-    expect(((await taken.json()) as { review: { effort: string } }).review.effort).toBe("xhigh");
+    // Sonnet 5 was refused until D-123, on a misread of the CLI.
+    for (const model of ["claude-fable-5[1m]", "claude-sonnet-5"]) {
+      const taken = await routes.reviews.POST(
+        post("http://localhost/api/reviews", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          model,
+          effort: "xhigh",
+        }),
+      );
+      expect(taken.status, model).toBe(201);
+      expect(((await taken.json()) as { review: { effort: string } }).review.effort).toBe("xhigh");
+    }
   }, 120_000);
 
   it("refuses a model that is registered for mechanical work only", async () => {

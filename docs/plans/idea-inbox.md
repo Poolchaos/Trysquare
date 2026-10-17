@@ -42,3 +42,6 @@ the line entirely would lose the trail.
 - 2026-10-17: the probe's candidate models (fable-5, opus-5, sonnet-5,
   haiku-4-5) trail the bundled CLI 2.1.301's own model table, which lists
   fable-5-1, opus-5-5, sonnet-5-5 and haiku-5-5 (found during 4.7, D-122).
+- 2026-10-17: the CLI 2.1.301 swapped claude-opus-4-1-20250805 for
+  claude-opus-5-5 without a word (D-123), so a review on a retired model id
+  would record a model it did not run.

@@ -147,9 +147,9 @@ export function POST(request: Request): Promise<Response> {
       throw Response.json(
         {
           error:
-            `${input.model} runs ${input.effort} as high, without saying so, so a review ` +
-            `there would record an effort it never had. Choose high, or a model that runs ` +
-            `${input.effort}.`,
+            `The CLI runs ${input.model} at high or at no effort when asked for ` +
+            `${input.effort}, without saying so, so a review there would record an effort it ` +
+            `never had. Choose high, or a newer model.`,
           code: "EffortNotSupported",
         },
         { status: 400 },

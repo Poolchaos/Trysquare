@@ -144,18 +144,18 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(effort.locator("option", { hasText: "Max" })).toHaveCount(0);
     await expect(effort).toHaveValue("high");
 
-    // Extra high chosen, then a model that would run it as high: the picker
+    // Extra high chosen, then a model the CLI runs without it: the picker
     // shows and sends high instead, rather than an effort the run would not
-    // get. Back on Fable the choice is high again for the rest of the journey.
+    // get. Haiku 4.5, since every current model does run it (D-123); it can
+    // be picked here though the server refuses it a review. Back on Fable,
+    // high is chosen for the rest of the journey.
     const picker = page.getByTestId("model-picker");
     await effort.selectOption("xhigh");
     await page.getByRole("button", { name: /model\(s\) that need probing/ }).click();
-    const sonnet = picker
-      .locator("li")
-      .filter({ has: page.getByText("Sonnet 5", { exact: true }) });
-    await sonnet.getByRole("button", { name: "Probe" }).click();
-    await expect(sonnet.getByText(/probed just now/)).toBeVisible({ timeout: 30_000 });
-    await sonnet.locator("label").click();
+    const haiku = picker.locator("li").filter({ hasText: "Haiku 4.5" });
+    await haiku.getByRole("button", { name: "Probe" }).click();
+    await expect(haiku.getByText(/probed just now/)).toBeVisible({ timeout: 30_000 });
+    await haiku.locator("label").click();
     await expect(effort.locator("option")).toHaveCount(3);
     await expect(effort).toHaveValue("high");
     await picker.locator("li").filter({ hasText: "Fable 5 (1M context)" }).locator("label").click();
