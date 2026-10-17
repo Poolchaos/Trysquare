@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { defineConfig } from "@playwright/test";
 import {
   ANSWERS_DIR,
@@ -10,6 +11,18 @@ import {
 
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+
+/**
+ * Chromium's own network log, on Windows CI only. Windows CI has refused a
+ * loopback connect with ERR_NO_BUFFER_SPACE, and nothing else on record names
+ * the socket call that failed or its OS error (D-104, D-105). One file per
+ * worker process: a failure restarts the worker, and a fixed name would be
+ * overwritten by the next browser.
+ */
+const NET_LOG_ARGS =
+  process.platform === "win32" && process.env.CI === "true"
+    ? [`--log-net-log=${resolve("test-results", `chromium-netlog-${process.pid}.json`)}`]
+    : [];
 
 export default defineConfig({
   testDir: "./e2e",
@@ -27,6 +40,7 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    launchOptions: { args: NET_LOG_ARGS },
   },
   projects: [
     // The journey mutates the app: it adds a project, imports rules, and runs

@@ -2281,3 +2281,17 @@ verified evidence, in writing, here.
   none on macOS or Linux, and none locally on Windows 11. Searches found
   nothing tying the error to Windows Server 2025 or to Chromium on
   loopback. The cause stays unknown.
+- 2026-10-17 D-105 DECIDED by the maintainer (D-100, D-104): Windows CI
+  writes Chromium's network log into its evidence, one file per Playwright
+  worker, so the next ERR_NO_BUFFER_SPACE names the socket call that failed
+  and its OS error. Checked here with CI set: the journey wrote a 2.3 MB
+  log holding every connect attempt with its result. Until the cause is
+  known, a Windows job whose only failure is net::ERR_NO_BUFFER_SPACE is
+  re-run once, and each occurrence is recorded here with its run id, so
+  the rate is measured, never hidden. Any other failure, or this error
+  twice in a row on one commit, still stops the line. This is an exception
+  to "a test that only passes on retry is failing", for this error only:
+  the connection is refused before the app answers, so no test of the app
+  ran. Occurrences: 39022106093 (19bc554; 4180bd0, the same code plus the
+  TCP table step, then passed) and 39024193784 (77be1e4, re-run under this
+  rule).
