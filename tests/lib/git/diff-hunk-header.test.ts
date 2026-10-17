@@ -33,8 +33,8 @@ afterAll(() => rmSync(repo, { recursive: true, force: true }));
 
 describe("a hunk header carrying an unusual scope line", () => {
   it.each([
-    ["LINE SEPARATOR", " "],
-    ["PARAGRAPH SEPARATOR", " "],
+    ["LINE SEPARATOR", "\u2028"],
+    ["PARAGRAPH SEPARATOR", "\u2029"],
   ])("keeps every line of the hunk when the scope holds a %s", (_, character) => {
     const body = Array.from({ length: 12 }, (_unused, i) => `  let v${i} = ${i};`);
     const before = [`function run(input) { // note${character}here`, ...body, "}", ""].join("\n");
