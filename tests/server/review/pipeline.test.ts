@@ -1241,6 +1241,47 @@ describe("cross-repo contract changes", () => {
     expect(result.coverage.pendingHunks).toBe(0);
   });
 
+  it("does not count a finding in another file that merely ends the same way (4.23)", async () => {
+    // A contract change to the dependency's orders.ts, said to produce a
+    // finding, and the only finding is in the primary's own app/orders.ts.
+    // A string suffix match took that for backing.
+    await expect(
+      runReviewPipeline({
+        db,
+        reviewId,
+        worktreeRoot,
+        files: FILES,
+        rules: RULES,
+        profile: "full-context",
+        changedSymbols: [
+          {
+            name: "Total",
+            path: "orders.ts",
+            kind: "interface" as const,
+            change: "modified" as const,
+          },
+        ],
+        systemPromptFor: (stage) => `prompt for ${stage}`,
+        run: scripted({
+          ...BASE_ANSWERS,
+          s3_adversarial: {
+            ...COMPLETE_ADVERSARIAL,
+            symbolDispositions: [
+              {
+                symbol: "Total",
+                path: "orders.ts",
+                consumersChecked: [],
+                verdict: "finding",
+                reason: "the total changed shape",
+              },
+            ],
+          },
+          s5_verification: { verdicts: [] },
+        }),
+      }),
+    ).rejects.toThrow(/Total was reported as producing a finding, but no finding cites orders\.ts/);
+  });
+
   it("refuses a finding verdict with no finding behind it", async () => {
     await expect(
       linkedRun({

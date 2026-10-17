@@ -951,11 +951,12 @@ function assertSymbolVerdictsAreBacked(output: AdversarialStageOutput): void {
 
     // The finding must cite real code, either in the dependency where the
     // contract changed or in a consumer that now disagrees with it. It then
-    // faces the quotation check like any other finding.
+    // faces the quotation check like any other finding. Paths match exactly:
+    // a symbol's path is qualified like every other, and matching on how a
+    // path ends let the primary's own orders.ts back a change to the
+    // dependency's (4.23).
     const cited = new Set([disposition.path, ...disposition.consumersChecked]);
-    const backed = output.findings.some(
-      (finding) => cited.has(finding.path) || finding.path.endsWith(disposition.path),
-    );
+    const backed = output.findings.some((finding) => cited.has(finding.path));
     if (!backed) {
       problems.push(
         `${disposition.symbol} was reported as producing a finding, but no finding cites ` +
