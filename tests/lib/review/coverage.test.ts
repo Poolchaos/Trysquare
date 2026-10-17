@@ -5,6 +5,7 @@ import {
   citesHunk,
   citesLine,
   isReconciled,
+  rangesOverlap,
   reconcileAdversarial,
 } from "@/lib/review/coverage";
 
@@ -139,5 +140,20 @@ describe("which hunk or line a finding is about", () => {
   it("counts a sweep hit only on a line the finding cites", () => {
     expect(citesLine({ lineStart: 5, lineEnd: 7 }, 7)).toBe(true);
     expect(citesLine({ lineStart: 5, lineEnd: 7 }, 8)).toBe(false);
+  });
+});
+
+describe("whether two cited ranges share a line", () => {
+  it("is true for ranges that touch or nest, and false for ranges apart", () => {
+    expect(rangesOverlap({ lineStart: 2, lineEnd: 4 }, { lineStart: 4, lineEnd: 9 })).toBe(true);
+    expect(rangesOverlap({ lineStart: 1, lineEnd: 9 }, { lineStart: 3, lineEnd: 3 })).toBe(true);
+    expect(rangesOverlap({ lineStart: 500, lineEnd: 500 }, { lineStart: 1, lineEnd: 1 })).toBe(
+      false,
+    );
+    expect(rangesOverlap({ lineStart: 2, lineEnd: 4 }, { lineStart: 5, lineEnd: 6 })).toBe(false);
+  });
+
+  it("reads a range written end first the same as one written start first", () => {
+    expect(rangesOverlap({ lineStart: 9, lineEnd: 5 }, { lineStart: 6, lineEnd: 6 })).toBe(true);
   });
 });

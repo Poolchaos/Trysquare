@@ -293,6 +293,14 @@ describe("the verification prompt", () => {
     expect(renderVerificationPrompt(candidates)).toContain("not the ones given below");
   });
 
+  it("says the lines quoted must overlap the lines given", () => {
+    // The pipeline discards a quotation of other code (D-99), so the stage is
+    // told before it answers.
+    expect(renderVerificationPrompt(candidates).replace(/\s+/g, " ")).toContain(
+      "Those lines must overlap the ones given",
+    );
+  });
+
   it("handles having nothing to verify", () => {
     expect(renderVerificationPrompt([])).toContain("no candidate findings");
   });

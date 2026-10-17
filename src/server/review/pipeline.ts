@@ -26,6 +26,7 @@ import {
   assertReconciled,
   citesHunk,
   citesLine,
+  rangesOverlap,
   reconcileAdversarial,
   reconcileDeletions,
   type HunkRef,
@@ -624,6 +625,21 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       continue;
     }
 
+    // The verifier may correct where the code sits, but not move the finding
+    // onto other code: a true quotation of lines the finding is not about
+    // verified it, and the finding then moved to them (D-99).
+    if (!rangesOverlap(finding, verdict)) {
+      markKilled(
+        db,
+        finding.id,
+        `Verification quoted ${spanOf(verdict)}, which does not overlap the cited ` +
+          `${spanOf(finding)}.`,
+      );
+      killed += 1;
+      killedByQuoteCheck += 1;
+      continue;
+    }
+
     // The verifier says it confirmed the finding. The program now checks that
     // claim against the file, because a citation that does not match the code
     // is not evidence, however confident the wording.
@@ -978,6 +994,12 @@ function findingAt(
   line: number,
 ): { id: string } | undefined {
   return candidates.find((finding) => finding.filePath === path && citesLine(finding, line));
+}
+
+function spanOf(range: { lineStart: number; lineEnd: number }): string {
+  return range.lineStart === range.lineEnd
+    ? `line ${range.lineStart}`
+    : `lines ${range.lineStart} to ${range.lineEnd}`;
 }
 
 function repoOf(path: string, input: PipelineInput): "primary" | "linked" {

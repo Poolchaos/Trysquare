@@ -144,8 +144,9 @@ claim). No S2/S3 reasoning is passed. Instruction per finding:
 4. Confirm severity against the ruleset's severity definitions.
    Verdict per finding: verified (with quotedCode + confirmed lines), killed
    (with reason), or open_question (with what would resolve it). App code then
-   re-checks mechanically: the cited lines exist in the file, and quotedCode
-   matches the worktree file at those lines once both sides are normalised.
+   re-checks mechanically: the verdict's lines overlap the candidate's (D-99),
+   the cited lines exist in the file, and quotedCode matches the worktree
+   file at those lines once both sides are normalised.
    Normalisation forgives only what carries no meaning: CRLF, trailing
    whitespace, a trailing newline, and lost common indentation. Anything
    looser would let a paraphrase pass as a quotation. A mechanical mismatch

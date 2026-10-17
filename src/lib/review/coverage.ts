@@ -65,6 +65,14 @@ export function citesHunk(
   return first < hunk.newStart + Math.max(hunk.newLines, 1) && last >= hunk.newStart;
 }
 
+/** Whether two cited ranges share a line. */
+export function rangesOverlap(a: CitedLines, b: CitedLines): boolean {
+  return (
+    Math.min(a.lineStart, a.lineEnd) <= Math.max(b.lineStart, b.lineEnd) &&
+    Math.min(b.lineStart, b.lineEnd) <= Math.max(a.lineStart, a.lineEnd)
+  );
+}
+
 /** Whether a finding's cited lines include a sweep hit's line (D-96). */
 export function citesLine(finding: CitedLines, line: number): boolean {
   return (

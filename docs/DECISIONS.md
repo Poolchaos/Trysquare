@@ -2185,3 +2185,17 @@ verified evidence, in writing, here.
   so verification spends nothing on it. The repositories are the ones the
   service checked out, passed in, since a linked repository that changed
   nothing has no changed file to name it.
+- 2026-10-17 D-99 DECIDED (WP 4.12): a verified verdict whose lines do not
+  overlap its candidate's is killed, counted with the quotation-check kills,
+  and the finding keeps the lines it was raised at. The verdict may still
+  correct a range it overlaps, since S5 is told to report where it found
+  the code. Evidence, from the 4.1 audit and reproduced by a test that
+  fails on the old code: a finding about line 2 was verified by an exact
+  quotation of line 1 and moved there, so a true quotation of unrelated
+  code stood as proof of the claim. Overlap rather than a distance, because
+  the pipeline spec already asks S5 to confirm the line numbers match, the
+  prompts number every line (T1), and no real run on record measures how
+  far a correct verdict moves; a number picked here would be invented.
+  Rejected: sending such a verdict to the person as an open question, since
+  the spec kills on a mechanical mismatch regardless of the AI verdict,
+  and since D-97 a killed finding is listed with its reason.

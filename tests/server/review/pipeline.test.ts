@@ -673,6 +673,35 @@ describe("the quotation check", () => {
     expect(finding.verificationNote).toContain("could not be read");
   });
 
+  it("kills a finding verified by quoting code it does not cite", async () => {
+    // Line 1 is quoted exactly, but the finding is about line 2. The verdict
+    // used to move the finding to line 1, so a true quotation of unrelated
+    // code verified it (4.1 audit: a candidate at 500 verified by line 1).
+    const { result } = await verifyWith("export function total(items: Item[]) {", 1, 1);
+    expect(result.verified).toBe(0);
+    expect(result.killedByQuoteCheck).toBe(1);
+
+    const finding = listFindings(db, reviewId)[0]!;
+    expect(statusOf(finding)).toBe("killed");
+    expect(finding.lineStart).toBe(2);
+    expect(finding.verificationNote).toBe(
+      "Verification quoted line 1, which does not overlap the cited line 2.",
+    );
+  });
+
+  it("verifies a quotation that corrects the range while still overlapping it", async () => {
+    const { result } = await verifyWith(
+      [
+        "  const user = payload as User;",
+        "  return items.reduce((sum, item) => sum + item.price, 0);",
+      ].join("\n"),
+      2,
+      3,
+    );
+    expect(result.verified).toBe(1);
+    expect(listFindings(db, reviewId)[0]?.lineEnd).toBe(3);
+  });
+
   it("still passes the audit after a finding is killed", async () => {
     // A killed finding is resolved, not outstanding.
     const { result } = await verifyWith("wrong code", 2, 2);
