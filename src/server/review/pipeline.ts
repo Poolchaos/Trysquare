@@ -365,10 +365,9 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     ruleCode: hit.ruleCode,
   }));
 
-  const findingHunks: HunkRef[] = adversarial.findings.map((finding) => ({
-    path: finding.path,
-    hunkIndex: hunkIndexFor(finding.path, finding.lineStart, ledgerFiles, db),
-  }));
+  const findingHunks: HunkRef[] = adversarial.findings.flatMap((finding) =>
+    hunksCoveredBy(finding, ledgerFiles, db),
+  );
 
   const expectedSymbols: SymbolRef[] = (qualifiedSymbols ?? []).map((symbol) => ({
     symbol: symbol.name,
@@ -443,7 +442,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     // it. Attaching an empty id here would leave a hit that reads as handled
     // and points at nothing, which is worse than an open one: it looks
     // resolved in the ledger and cannot be traced back to anything.
-    const match = nearestFindingTo(candidates, disposition.path, disposition.line);
+    const match = findingAt(candidates, disposition.path, disposition.line);
     if (!match) {
       const unmatched = new SweepDispositionUnmatchedError(
         disposition.path,
@@ -915,38 +914,31 @@ export class SweepDispositionUnmatchedError extends Error {
   ) {
     super(
       `The adversarial stage said the sweep hit at ${path}:${line} (rule ${ruleCode}) became a ` +
-        `finding, but raised no finding in that file. A hit recorded against no finding reads ` +
-        `as handled and points at nothing, so the run stops rather than storing it.`,
+        `finding, but raised no finding whose lines include it. A hit recorded against a ` +
+        `finding about other code reads as handled when nothing looked at it, ` +
+        `so the run stops rather than storing it.`,
     );
     this.name = "SweepDispositionUnmatchedError";
   }
 }
 
 /**
- * The finding a sweep hit belongs to.
+ * The finding a sweep hit belongs to: the first whose line range contains it.
  *
- * A file can carry several findings, so the hit is matched to the one whose
- * line range contains it, and otherwise to the closest by line. Matching on
- * path alone would attach a hit to whichever finding happened to be first.
- * Ties break towards the earlier line, so the choice is deterministic.
+ * Only containment counts (D-96). The nearest finding by line used to do, so
+ * a finding about other code marked a hit handled that nothing had examined.
  */
-function nearestFindingTo(
+function findingAt(
   candidates: readonly { id: string; filePath: string; lineStart: number; lineEnd: number }[],
   path: string,
   line: number,
 ): { id: string } | undefined {
-  const inFile = candidates.filter((finding) => finding.filePath === path);
-  if (inFile.length === 0) return undefined;
-
-  const containing = inFile.find((finding) => line >= finding.lineStart && line <= finding.lineEnd);
-  if (containing) return containing;
-
-  return [...inFile].sort((a, b) => {
-    const byDistance =
-      Math.min(Math.abs(a.lineStart - line), Math.abs(a.lineEnd - line)) -
-      Math.min(Math.abs(b.lineStart - line), Math.abs(b.lineEnd - line));
-    return byDistance !== 0 ? byDistance : a.lineStart - b.lineStart;
-  })[0];
+  return candidates.find(
+    (finding) =>
+      finding.filePath === path &&
+      line >= Math.min(finding.lineStart, finding.lineEnd) &&
+      line <= Math.max(finding.lineStart, finding.lineEnd),
+  );
 }
 
 function repoOf(path: string, input: PipelineInput): "primary" | "linked" {
@@ -954,20 +946,27 @@ function repoOf(path: string, input: PipelineInput): "primary" | "linked" {
   return input.files.find((entry) => entry.slug === slug)?.repo ?? "primary";
 }
 
-/** The hunk a finding's line falls inside, or the first hunk of the file. */
-function hunkIndexFor(
-  path: string,
-  line: number,
+/**
+ * The hunks a finding accounts for: those its line range overlaps (D-96).
+ *
+ * A finding elsewhere in a changed file is kept, since unchanged code can
+ * break with the change, but it accounts for no hunk. It used to stand in for
+ * the file's first hunk, so a stage could account for code it never looked at.
+ */
+function hunksCoveredBy(
+  finding: { path: string; lineStart: number; lineEnd: number },
   ledgerFiles: readonly { id: string; path: string }[],
   db: Db,
-): number {
-  const ledgerFile = ledgerFiles.find((file) => file.path === path);
-  if (!ledgerFile) return 0;
-  const hunks = listHunks(db, ledgerFile.id);
-  const containing = hunks.find(
-    (hunk) => line >= hunk.newStart && line < hunk.newStart + Math.max(hunk.newLines, 1),
-  );
-  return containing?.hunkIndex ?? hunks[0]?.hunkIndex ?? 0;
+): HunkRef[] {
+  const ledgerFile = ledgerFiles.find((file) => file.path === finding.path);
+  // Reported against a hunk that does not exist, so reconciliation refuses
+  // the answer as describing a file outside the change set.
+  if (!ledgerFile) return [{ path: finding.path, hunkIndex: 0 }];
+  const first = Math.min(finding.lineStart, finding.lineEnd);
+  const last = Math.max(finding.lineStart, finding.lineEnd);
+  return listHunks(db, ledgerFile.id)
+    .filter((hunk) => first < hunk.newStart + Math.max(hunk.newLines, 1) && last >= hunk.newStart)
+    .map((hunk) => ({ path: finding.path, hunkIndex: hunk.hunkIndex }));
 }
 
 async function readFileIfPossible(root: string, qualifiedPath: string): Promise<string | null> {

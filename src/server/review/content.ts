@@ -185,7 +185,8 @@ export function renderSweepHits(hits: readonly SweepHitEntry[]): string {
   if (hits.length === 0) return "The mechanical sweep found no hits.";
   return [
     `The mechanical sweep found ${hits.length} hit(s). Every one must be`,
-    "dispositioned: either it becomes a finding, or it is cleared with a reason.",
+    "dispositioned: either it becomes a finding whose lines include the hit's",
+    "line, or it is cleared with a reason.",
     "",
     ...hits.map(
       (hit) =>
@@ -249,7 +250,9 @@ export function renderAdversarialPrompt(
     "",
     "Cite line numbers exactly as shown in the left column above: those are the",
     "line numbers in the file as it stands after the change. A hunk you do not",
-    "mention is treated as unreviewed and fails the run.",
+    "mention is treated as unreviewed and fails the run. A finding accounts",
+    "only for the hunks its lines fall in: one elsewhere in a changed file is",
+    "kept, but every hunk still needs a finding inside it or a clear.",
     "",
     "For each finding: the issue is one sentence naming the problem, and the",
     "comment explains what is wrong and what it breaks in plain language that",

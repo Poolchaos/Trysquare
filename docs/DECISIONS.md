@@ -2141,3 +2141,20 @@ verified evidence, in writing, here.
   unknown. The original wording said such a probe leaves availability
   unknown; its reason, that one slow call must not grey out a working model,
   is what the code holds.
+- 2026-10-17 D-96 DECIDED (WP 4.10, supersedes T3's nearest-line fallback):
+  a finding accounts for the hunks its line range overlaps and for no other.
+  One elsewhere in a changed file is kept as a candidate, since unchanged
+  code can break with the change, but it accounts for no hunk. A sweep hit
+  dispositioned as a finding must be matched by a finding whose line range
+  contains the hit's line, or the stage is refused. New evidence, from the
+  4.1 audit and reproduced by tests that fail on the old code: a finding at
+  line 11 of a file whose only hunk is lines 3 to 9 stood in for that hunk,
+  and a hit at line 2 was attached to a finding at line 3 and read as
+  handled. Overlap rather than the start line, because a finding that starts
+  above a hunk and ends inside it is about the change. A deleted file has no
+  lines after the change, so S3 accounts for its hunk only by clearing it;
+  removed code is S4's to raise findings on. Rejected: keeping the
+  fallbacks, since coverage then says nothing about the hunk or hit; and
+  refusing a finding outside every hunk, since verification is what judges
+  it. Cost: a stage that cites loosely now fails the run where it used to
+  pass, so the S3 prompt states both rules.

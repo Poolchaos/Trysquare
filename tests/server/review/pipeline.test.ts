@@ -435,6 +435,90 @@ describe("refusing to accept an incomplete stage", () => {
     ).rejects.toThrow(/not in the change set/);
   });
 
+  describe("a finding that sits outside every hunk", () => {
+    // Eleven lines, one inserted at line 6, so lines 1, 2, 10 and 11 are in
+    // the file but outside the only hunk (lines 3 to 9 with context).
+    const LONG_SOURCE = ["l1", "l2", "l3", "l4", "l5", "added", "l6", "l7", "l8", "l9", "l10", ""];
+    const LONG_FILES = parseUnifiedDiff(
+      [
+        "diff --git a/long.ts b/long.ts",
+        "--- a/long.ts",
+        "+++ b/long.ts",
+        "@@ -3,6 +3,7 @@",
+        " l3",
+        " l4",
+        " l5",
+        "+added",
+        " l6",
+        " l7",
+        " l8",
+        "",
+      ].join("\n"),
+    ).map((file) => ({ repo: "primary" as const, slug: "app", file }));
+
+    const finding = (lineStart: number, lineEnd: number) => ({
+      ...COMPLETE_ADVERSARIAL.findings[0]!,
+      path: "app/long.ts",
+      lineStart,
+      lineEnd,
+    });
+
+    function runLong(adversarial: Record<string, unknown>) {
+      writeFileSync(join(worktreeRoot, "app", "long.ts"), LONG_SOURCE.join("\n"));
+      return run(
+        {
+          s1_risk: { files: [] },
+          s2_comprehension: { files: [] },
+          s3_adversarial: { clearedHunks: [], sweepDispositions: [], ...adversarial },
+          s4_deletions: { findings: [], reviewedDeletions: [] },
+          s5_verification: { verdicts: [] },
+        },
+        { files: LONG_FILES },
+      );
+    }
+
+    it("does not account for the hunk, which is still owed a finding or a clear", async () => {
+      // Line 11 exists and was never changed. A finding there used to stand in
+      // for the file's first hunk, so a stage could account for code it never
+      // looked at by citing code nobody asked it about.
+      await expect(runLong({ findings: [finding(11, 11)] })).rejects.toThrow(
+        /neither given a finding nor cleared \(for example app\/long\.ts hunk 0\)/,
+      );
+    });
+
+    it("is kept once the hunk is accounted for, and left to verification", async () => {
+      const result = await runLong({
+        findings: [finding(11, 11)],
+        clearedHunks: [{ path: "app/long.ts", hunkIndex: 0, reason: "only an insertion" }],
+      });
+      expect(result.candidatesRaised).toBe(1);
+      expect(listFindings(db, reviewId)[0]?.lineStart).toBe(11);
+    });
+
+    it("accounts for a hunk its line range reaches into from above", async () => {
+      // Lines 1 to 6 start outside the hunk and end on the inserted line, so
+      // the finding is about what changed.
+      const result = await runLong({ findings: [finding(1, 6)] });
+      expect(result.coverage.pendingHunks).toBe(0);
+    });
+  });
+
+  it("fails when a finding cites a file that is not in the change set", async () => {
+    await expect(
+      run({
+        ...BASE_ANSWERS,
+        s3_adversarial: {
+          ...COMPLETE_ADVERSARIAL,
+          findings: [
+            ...COMPLETE_ADVERSARIAL.findings,
+            { ...COMPLETE_ADVERSARIAL.findings[0]!, path: "app/imaginary.ts" },
+          ],
+        },
+        s5_verification: { verdicts: [] },
+      }),
+    ).rejects.toThrow(/not in the change set/);
+  });
+
   it("rejects a malformed stage answer rather than working around it", async () => {
     await expect(run({ ...BASE_ANSWERS, s1_risk: { wrong: "shape" } })).rejects.toThrow();
   });
@@ -656,6 +740,29 @@ describe("attaching a sweep hit to the finding it produced", () => {
               ruleCode: "3",
               disposition: "finding",
               reason: "claimed to be a finding",
+            },
+          ],
+        },
+        s5_verification: { verdicts: [] },
+      }),
+    ).rejects.toThrow(SweepDispositionUnmatchedError);
+  });
+
+  it("stops the run when the only finding in the file is on another line", async () => {
+    // The hit is at line 2 and the finding at line 3. Attaching it to the
+    // nearest finding marked the hit handled by a finding about something
+    // else, so the cast at line 2 was never accounted for.
+    await expect(
+      run({
+        ...BASE_ANSWERS,
+        s3_adversarial: {
+          ...COMPLETE_ADVERSARIAL,
+          findings: [
+            {
+              ...COMPLETE_ADVERSARIAL.findings[0]!,
+              lineStart: 3,
+              lineEnd: 3,
+              issue: "Float money sum",
             },
           ],
         },

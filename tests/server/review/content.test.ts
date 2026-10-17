@@ -113,6 +113,14 @@ describe("the adversarial prompt", () => {
     expect(renderAdversarialPrompt(INPUT)).toContain("treated as unreviewed and fails the run");
   });
 
+  it("states that a finding accounts only for the hunks its lines fall in", () => {
+    // The pipeline refuses an answer whose only finding for a hunk sits
+    // outside it, so the stage is told before it answers, not after.
+    expect(renderAdversarialPrompt(INPUT)).toContain(
+      "every hunk still needs a finding inside it or a clear",
+    );
+  });
+
   it("tells the stage which line numbers to cite", () => {
     expect(renderAdversarialPrompt(INPUT)).toContain("after the change");
   });
@@ -133,6 +141,7 @@ describe("the adversarial prompt", () => {
     const prompt = renderAdversarialPrompt(withHits);
     expect(prompt).toContain("found 1 hit(s)");
     expect(prompt).toContain("app/orders.ts:11 rule 3");
+    expect(prompt.replace(/\s+/g, " ")).toContain("a finding whose lines include the hit's line");
   });
 
   it("says so plainly when the sweep found nothing", () => {
