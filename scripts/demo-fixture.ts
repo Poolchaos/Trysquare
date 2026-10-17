@@ -29,7 +29,7 @@ import { listFindings, statusOf } from "@/server/db/repositories/findings";
 import { recordProbeSuccess, registerCandidate } from "@/server/db/repositories/models";
 import { createProject, linkDependency } from "@/server/db/repositories/projects";
 import { createReview, requireReview } from "@/server/db/repositories/reviews";
-import { cloneBare, diffText, mergeBase, resolveCommit } from "@/server/gitops/repo";
+import { cloneBare, diffText, mergeBase, resolveBranch } from "@/server/gitops/repo";
 import { probeModel } from "@/server/engine/probe";
 import { JobManager } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
@@ -172,9 +172,9 @@ async function main(): Promise<number> {
   const reviewId = createReview(db, {
     projectId: app.id,
     fromBranch: "feature/rename-prefs",
-    fromCommit: await resolveCommit(appClone, "feature/rename-prefs"),
+    fromCommit: await resolveBranch(appClone, "feature/rename-prefs"),
     intoBranch: "main",
-    intoCommit: await resolveCommit(appClone, "main"),
+    intoCommit: await resolveBranch(appClone, "main"),
     mergeBaseCommit: await mergeBase(appClone, "main", "feature/rename-prefs"),
     model: options.model,
     profileId: "full-context",
@@ -185,9 +185,9 @@ async function main(): Promise<number> {
     linked: {
       projectId: core.id,
       fromBranch: "feature/rename-prefs",
-      fromCommit: await resolveCommit(coreClone, "feature/rename-prefs"),
+      fromCommit: await resolveBranch(coreClone, "feature/rename-prefs"),
       intoBranch: "main",
-      intoCommit: await resolveCommit(coreClone, "main"),
+      intoCommit: await resolveBranch(coreClone, "main"),
       mergeBaseCommit: await mergeBase(coreClone, "main", "feature/rename-prefs"),
     },
   }).id;
@@ -390,8 +390,8 @@ async function writeFakeAnswers(
   };
 
   const reference = join(dataDir, "reference");
-  const appHead = await resolveCommit(appClone, "feature/rename-prefs");
-  const coreHead = await resolveCommit(coreClone, "feature/rename-prefs");
+  const appHead = await resolveBranch(appClone, "feature/rename-prefs");
+  const coreHead = await resolveBranch(coreClone, "feature/rename-prefs");
   const { addWorktree } = await import("@/server/gitops/worktree");
   await addWorktree(appClone, join(reference, "app"), appHead);
   await addWorktree(coreClone, join(reference, "shared-core"), coreHead);

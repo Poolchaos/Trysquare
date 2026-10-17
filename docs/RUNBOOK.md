@@ -230,6 +230,8 @@ against a fake CLI committed to the repository.
 | `$TRYSQUARE_DATA/db.sqlite` | Projects, reviews, findings, rulesets, settings. |
 | `$TRYSQUARE_DATA/server-lock.sqlite` | The lock the one server using this directory holds. |
 | `$TRYSQUARE_DATA/server-lock.pid` | That server's process id, named when another is refused. |
+| `$TRYSQUARE_DATA/server-lock.sqlite-journal` | SQLite's, beside the lock while it is held. One a crash left behind is harmless: the next server takes the lock over it. |
+| `$TRYSQUARE_DATA/server.lock` | Only on a directory a build before D-118 used. Nothing reads it now; delete it. A server from such a build does not see this one's lock, nor this one its, so stop it before starting this one. |
 | `$TRYSQUARE_DATA/projects/` | Bare clones. Never written to by a review. |
 | `$TRYSQUARE_DATA/runs/<id>/` | One review's worktree, its checkout baseline, prompt bundle and stage logs. |
 | `$TRYSQUARE_DATA/exports/` | Exported reports. Survive deleting the review. |

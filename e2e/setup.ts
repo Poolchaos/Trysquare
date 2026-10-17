@@ -121,11 +121,11 @@ export default async function globalSetup(): Promise<void> {
 
   const { parseUnifiedDiff } = await import("@/lib/git/diff");
   const { importProtocol } = await import("@/lib/rulesets/import");
-  const { diffText, mergeBase, resolveCommit } = await import("@/server/gitops/repo");
+  const { diffText, mergeBase, resolveBranch } = await import("@/server/gitops/repo");
   const helpers = await import("../tests/helpers/ideal-answers");
 
   const base = await mergeBase(referenceClone, "main", "feature/rename-prefs");
-  const head = await resolveCommit(referenceClone, "feature/rename-prefs");
+  const head = await resolveBranch(referenceClone, "feature/rename-prefs");
   const files = parseUnifiedDiff(await diffText(referenceClone, base, head));
 
   const outputs = helpers.buildIdealStageOutputs({

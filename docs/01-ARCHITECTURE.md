@@ -88,6 +88,7 @@ Layering laws:
 db.sqlite
 server-lock.sqlite                  held by the one server using this directory (D-118)
 server-lock.pid                     that server's process id, for a refused one to name
+server-lock.sqlite-journal          SQLite's, while the lock is held; a crash may leave it
 projects/<projectId>/repo.git       bare clone (no working tree to damage)
 runs/<reviewId>/worktree/<slug>/    detached read-only checkout of fromCommit
 runs/<reviewId>/worktree/           parent, and the cwd AI stages are given
