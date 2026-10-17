@@ -2444,3 +2444,16 @@ verified evidence, in writing, here.
   JavaScript though one character after NFC, so a quote could misstate the
   very character a finding is about. The byte-order mark is dropped from the
   start of the file only, as D-114 said and the code did not.
+- 2026-10-17 D-116 DECIDED (review of 4.17 to 4.21, finding 2; refines
+  D-113): the data directory lock is created whole, written aside and
+  linked into place, so no reader sees it half written, and a stale lock is
+  taken over only by the process that creates a takeover token, and only if
+  it still holds the stale content that process read. Removing a stale lock
+  unguarded let two servers starting together each remove the other's fresh
+  lock: the reviewer's probe found both holding it in 23 of 300 starts, and
+  20 of 200 here. The same probe on the new lock: 0 in 300 with a stale lock
+  and 0 in 300 without, every start ending with one holder and one refusal
+  by name. A test now races two processes over 100 locks and failed on the
+  old lock at its first. Windows' EPERM for a name being deleted is retried,
+  and every lock failure, not only a live holder, makes the server print why
+  and exit.

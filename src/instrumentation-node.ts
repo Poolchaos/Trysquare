@@ -10,7 +10,7 @@
  */
 
 import { SHUTDOWN } from "@/lib/domain/shutdown";
-import { DataDirInUseError } from "@/server/data-dir-lock";
+import { DataDirLockError } from "@/server/data-dir-lock";
 import { runtime } from "@/server/runtime";
 
 /**
@@ -21,7 +21,7 @@ function start(): ReturnType<typeof runtime> {
   try {
     return runtime();
   } catch (error) {
-    if (!(error instanceof DataDirInUseError)) throw error;
+    if (!(error instanceof DataDirLockError)) throw error;
     console.error(error.message);
     process.exit(1);
   }
