@@ -12,9 +12,11 @@ import {
   markKilled,
   markOpenQuestion,
   markVerified,
+  ReviewNotDecidingError,
   requireFinding,
   statusOf,
 } from "@/server/db/repositories/findings";
+import { transitionReview } from "@/server/db/repositories/reviews";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
 
 let ctx: TestDb;
@@ -25,6 +27,10 @@ beforeEach(() => {
   ctx = makeTestDb();
   db = ctx.db;
   reviewId = seedReview(db, seedProject(db).id).id;
+  // Findings are decided only while their review waits on a person.
+  for (const to of ["running", "verifying", "awaiting_confirmation"] as const) {
+    transitionReview(db, reviewId, to);
+  }
 });
 
 afterEach(() => ctx.cleanup());
@@ -51,6 +57,24 @@ describe("finding verification", () => {
     expect(statusOf(finding)).toBe("candidate");
     expect(listFindingsByStatus(db, reviewId, ["confirmed"])).toHaveLength(0);
     expect(listUnresolvedCandidates(db, reviewId)).toHaveLength(1);
+  });
+
+  it("cannot be decided once its review is complete or cancelled (4.23)", () => {
+    // A cancelled review's undecided findings could still be confirmed,
+    // deciding a review nobody was finishing.
+    const finding = candidate();
+    markVerified(db, finding.id, {
+      quotedCode: "total += item.price;",
+      lineStart: 42,
+      lineEnd: 42,
+      note: "checked",
+    });
+    transitionReview(db, reviewId, "cancelled");
+    expect(() => confirmFinding(db, finding.id)).toThrow(ReviewNotDecidingError);
+    expect(() => dismissFinding(db, finding.id, "Not a problem.")).toThrow(
+      /is cancelled: its findings are decided only while it awaits confirmation/,
+    );
+    expect(statusOf(requireFinding(db, finding.id))).toBe("verified");
   });
 
   it("cannot be confirmed without passing verification first", () => {

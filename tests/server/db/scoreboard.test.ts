@@ -33,6 +33,13 @@ beforeEach(() => {
 
 afterEach(() => ctx.cleanup());
 
+/** Findings are decided only while their review waits on a person (4.23). */
+function waitOnAPerson(): void {
+  for (const to of ["running", "verifying", "awaiting_confirmation"] as const) {
+    transitionReview(db, reviewId, to);
+  }
+}
+
 function candidate(overrides: Partial<Parameters<typeof createCandidate>[1]> = {}) {
   return createCandidate(db, {
     reviewId,
@@ -71,6 +78,7 @@ describe("the two rates the product is about", () => {
     const dropped = candidate({ issue: "Second" });
     const undecided = candidate({ issue: "Third" });
     for (const finding of [kept, dropped, undecided]) markVerified(db, finding.id, evidence);
+    waitOnAPerson();
     confirmFinding(db, kept.id);
     dismissFinding(db, dropped.id, "Guarded upstream.");
 
@@ -82,6 +90,7 @@ describe("the two rates the product is about", () => {
     // the point: they are how often the engine cited code that was not there.
     const real = candidate();
     markVerified(db, real.id, evidence);
+    waitOnAPerson();
     confirmFinding(db, real.id);
     markKilled(db, candidate({ issue: "Invented" }).id, "Quoted code that was not there.");
 
@@ -95,6 +104,7 @@ describe("which rules earn their keep", () => {
     const dropped = candidate({ ruleCode: "8", issue: "Second" });
     const other = candidate({ ruleCode: "2", issue: "Third" });
     for (const finding of [kept, dropped, other]) markVerified(db, finding.id, evidence);
+    waitOnAPerson();
     confirmFinding(db, kept.id);
     dismissFinding(db, dropped.id, "Not a problem here.");
     confirmFinding(db, other.id);
@@ -167,13 +177,10 @@ describe("what the dashboard widgets need", () => {
     const dropped = candidate({ issue: "Second" });
     const untouched = candidate({ issue: "Third" });
     for (const finding of [kept, dropped, untouched]) markVerified(db, finding.id, evidence);
+    markKilled(db, candidate({ issue: "Invented" }).id, "Quoted code that was not there.");
+    waitOnAPerson();
     confirmFinding(db, kept.id);
     dismissFinding(db, dropped.id, "Guarded upstream.");
-    markKilled(db, candidate({ issue: "Invented" }).id, "Quoted code that was not there.");
-
-    transitionReview(db, reviewId, "running");
-    transitionReview(db, reviewId, "verifying");
-    transitionReview(db, reviewId, "awaiting_confirmation");
 
     const row = readScoreboard(db).awaitingReviews[0];
     expect(row?.decided).toBe(2);

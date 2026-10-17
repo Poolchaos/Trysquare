@@ -404,6 +404,23 @@ describe("the report a completed review produces", () => {
     expect(markdown).not.toContain(engineWording);
   }, 120_000);
 
+  it("refuses to change a decision once the review is complete (4.23)", async () => {
+    // Refused with the reason, where the state machine used to answer with
+    // an internal error.
+    const confirmed = (await snapshot()).findings.find((finding) => finding.status === "confirmed");
+    expect(confirmed).toBeDefined();
+    const response = await routes.dismiss.POST(
+      post({ reason: "Changed my mind after the report went out." }),
+      params(confirmed!.id),
+    );
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { code: string; error: string };
+    expect(body.code).toBe("ReviewNotDecidingError");
+    expect(body.error).toMatch(/is complete: its findings are decided only while it awaits/);
+    const after = (await snapshot()).findings.find((finding) => finding.id === confirmed!.id);
+    expect(after?.status).toBe("confirmed");
+  }, 120_000);
+
   it("writes an export that outlives the review's working files", async () => {
     // Deleting a review removes its worktrees, bundle and logs. The report is
     // the thing the review was for, so it lives outside all of that.

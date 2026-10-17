@@ -16,7 +16,7 @@ import {
   findingStatusSchema,
 } from "@/lib/domain/state-machines";
 import type { Db } from "../client";
-import { findings } from "../schema";
+import { findings, reviews } from "../schema";
 
 export class FindingNotFoundError extends Error {
   constructor(readonly findingId: string) {
@@ -165,11 +165,38 @@ export function markOpenQuestion(db: Db, findingId: string, whatWouldResolveIt: 
  * An empty or unchanged replacement records nothing, so "edited" keeps
  * meaning edited.
  */
+export class ReviewNotDecidingError extends Error {
+  constructor(
+    readonly reviewId: string,
+    readonly status: string,
+  ) {
+    super(
+      `Review "${reviewId}" is ${status.replace(/_/g, " ")}: its findings are decided only while ` +
+        "it awaits confirmation.",
+    );
+    this.name = "ReviewNotDecidingError";
+  }
+}
+
+/**
+ * A person decides findings only while their review waits on one (4.23): a
+ * cancelled review's undecided findings could still be confirmed, deciding a
+ * review nobody was finishing.
+ */
+function assertDeciding(db: Db, findingId: string): void {
+  const { reviewId } = requireFinding(db, findingId);
+  const status =
+    db.select({ status: reviews.status }).from(reviews).where(eq(reviews.id, reviewId)).get()
+      ?.status ?? "missing";
+  if (status !== "awaiting_confirmation") throw new ReviewNotDecidingError(reviewId, status);
+}
+
 export function confirmFinding(
   db: Db,
   findingId: string,
   options: { comment?: string | undefined } = {},
 ): Finding {
+  assertDeciding(db, findingId);
   const replacement = options.comment?.trim() ?? "";
   const original = requireFinding(db, findingId).comment;
   const edited = replacement === "" || replacement === original.trim() ? null : replacement;
@@ -181,6 +208,7 @@ export function dismissFinding(db: Db, findingId: string, reason: string): Findi
   if (reason.trim() === "") {
     throw new Error("A dismissal needs a reason: it is the record of why this was not a problem.");
   }
+  assertDeciding(db, findingId);
   return transitionFinding(db, findingId, "dismissed", { dismissReason: reason });
 }
 

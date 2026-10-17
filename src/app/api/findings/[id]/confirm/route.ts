@@ -11,8 +11,8 @@
  */
 
 import { z } from "zod";
-import { confirmFinding } from "@/server/db/repositories/findings";
-import { handler, ok } from "@/server/api/respond";
+import { ReviewNotDecidingError, confirmFinding } from "@/server/db/repositories/findings";
+import { failed, handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +29,11 @@ export async function POST(
     // what a keyboard confirm sends.
     const parsed = body.safeParse(await request.json().catch(() => ({})));
     const comment = parsed.success ? parsed.data.comment : undefined;
-    return ok({ finding: confirmFinding(runtime().db, id, { comment }) });
+    try {
+      return ok({ finding: confirmFinding(runtime().db, id, { comment }) });
+    } catch (error) {
+      if (error instanceof ReviewNotDecidingError) return failed(error, 409);
+      throw error;
+    }
   });
 }

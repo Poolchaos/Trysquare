@@ -7,8 +7,8 @@
  */
 
 import { z } from "zod";
-import { dismissFinding } from "@/server/db/repositories/findings";
-import { handler, ok, readJson } from "@/server/api/respond";
+import { ReviewNotDecidingError, dismissFinding } from "@/server/db/repositories/findings";
+import { failed, handler, ok, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +24,11 @@ export async function POST(
   return handler(async () => {
     const { id } = await context.params;
     const { reason } = await readJson(request, body);
-    return ok({ finding: dismissFinding(runtime().db, id, reason) });
+    try {
+      return ok({ finding: dismissFinding(runtime().db, id, reason) });
+    } catch (error) {
+      if (error instanceof ReviewNotDecidingError) return failed(error, 409);
+      throw error;
+    }
   });
 }
