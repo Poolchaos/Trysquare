@@ -10,7 +10,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { runDir } from "@/lib/paths";
 import { buildFixture, type SeededFixture } from "../../helpers/seeded-fixture";
 
@@ -167,6 +167,33 @@ describe("the settings that govern a run", () => {
     const body = (await response.json()) as { settings: Record<string, number> };
     expect(body.settings.stageMaxBudgetUsd).toBe(5);
     expect(body.settings.stageTimeoutMinutes).toBe(30);
+  });
+
+  it("starts waiting reviews when the limit is raised, and only then (4.23)", async () => {
+    // The manager's own test shows a waiting review starting; this is the
+    // route asking it to, where the limit is changed.
+    const { jobManager } = await import("@/server/jobs/manager");
+    const startQueued = vi.spyOn(jobManager(), "startQueued");
+    try {
+      const raised = await routes.settings.PUT(
+        new Request("http://localhost/x", {
+          method: "PUT",
+          body: JSON.stringify({ maxConcurrentReviews: 2 }),
+        }),
+      );
+      expect(raised.status).toBe(200);
+      expect(startQueued).toHaveBeenCalledTimes(1);
+
+      await routes.settings.PUT(
+        new Request("http://localhost/x", {
+          method: "PUT",
+          body: JSON.stringify({ stageTimeoutMinutes: 30 }),
+        }),
+      );
+      expect(startQueued).toHaveBeenCalledTimes(1);
+    } finally {
+      startQueued.mockRestore();
+    }
   });
 
   it("refuses a key that is not a setting, rather than storing a typo", async () => {

@@ -25,6 +25,7 @@ import {
   requireReview,
   transitionReview,
 } from "@/server/db/repositories/reviews";
+import { SETTING_KEYS, writeSetting } from "@/server/db/repositories/settings";
 import { models, projects } from "@/server/db/schema";
 import { JobManager, ReviewNotStartableError } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
@@ -138,6 +139,23 @@ describe("deciding what runs now", () => {
 
     expect(requireReview(db, first).status).toBe("awaiting_confirmation");
     expect(requireReview(db, second).status).toBe("awaiting_confirmation");
+  }, 240_000);
+
+  it("starts a waiting review as soon as the limit is raised (4.23)", async () => {
+    // It used to wait for the running review to finish, however long that
+    // took, though the person had just made room for it.
+    const first = seedReview();
+    const second = seedReview();
+    expect(start(first)).toBe("running");
+    expect(start(second)).toBe("queued");
+
+    writeSetting(db, SETTING_KEYS.maxConcurrentReviews, 2);
+    manager.startQueued();
+
+    expect(manager.isRunning(second)).toBe(true);
+    expect(manager.queueDepth()).toBe(0);
+    await manager.settled(first);
+    await manager.settled(second);
   }, 240_000);
 
   it("does not start the same review twice", async () => {

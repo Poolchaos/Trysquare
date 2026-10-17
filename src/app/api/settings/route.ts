@@ -38,7 +38,7 @@ export function GET(): Promise<Response> {
 
 export function PUT(request: Request): Promise<Response> {
   return handler(async () => {
-    const { db } = runtime();
+    const { db, manager } = runtime();
     const body = await readJson(request, z.record(z.string(), z.unknown()));
 
     for (const [key, value] of Object.entries(body)) {
@@ -61,6 +61,8 @@ export function PUT(request: Request): Promise<Response> {
       }
       writeSetting(db, key, parsed.data);
     }
+    // A raised limit is room for a waiting review now, not when a run ends.
+    if (SETTING_KEYS.maxConcurrentReviews in body) manager.startQueued();
 
     return (await GET()) as Response;
   });

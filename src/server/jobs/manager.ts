@@ -337,7 +337,7 @@ export class JobManager {
       })
       .finally(() => {
         this.active.delete(reviewId);
-        this.startNextQueued();
+        this.startQueued();
       });
 
     this.active.set(reviewId, { controller, settled });
@@ -377,7 +377,12 @@ export class JobManager {
    * dropped, and any other fault is reported to the watchers of the review it
    * belongs to rather than taking the scheduler down with it.
    */
-  private startNextQueued(): void {
+  /**
+   * Starts waiting reviews while there is room for them. Run when a review
+   * ends, and when the limit is raised: waiting for a run to end left a
+   * review queued behind room the person had just made (4.23).
+   */
+  startQueued(): void {
     while (this.active.size < this.maxConcurrent()) {
       const next = this.queue.shift();
       if (!next) return;
