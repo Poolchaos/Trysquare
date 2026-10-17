@@ -2242,3 +2242,42 @@ verified evidence, in writing, here.
   the reviewer's benchmark at 2,000 files, 20,000 hunks and 2,000
   findings, a call takes 9.4 ms with nothing killed (5.5 ms before 4.10,
   193.4 ms at fc96c7a) and 43.0 ms with every finding killed.
+- 2026-10-17 D-103 REVIEW (MVP 4.10 to 4.12, dd38aa6..19bc554, by a
+  separate read-only reviewer; each finding re-run here before it was
+  fixed). Ten findings, all dispositioned before new work:
+  1. HIGH: one finding with an unbounded line range accounted for every
+  hunk in its file. Fixed 8a1e9ab (D-101).
+  2. MEDIUM: the refuted-only counts used the lines verification had
+  corrected, naming refutations that never happened and hiding one that
+  did. 3. A resume stated refutations for findings it had only removed.
+  5. A hunk one batch cleared was said to rest only on another batch's
+  refuted finding. 6. coverageReport went from 5.9 to 193.4 ms at 20,000
+  hunks in the reviewer's run. 2, 3, 5 and 6 fixed d3f7e73 (D-102).
+  4. The S3 prompt never said a deleted file's hunk can only be cleared.
+  Fixed 8a1e9ab.
+  7. A deletion finding in a linked repository that changed nothing was
+  stored as primary. Fixed 77be1e4.
+  8. Stale records: the ideal answers' hunk and hit mapping (8a1e9ab);
+  the G-1 note, the quotation-check count's description and run note,
+  Mode B's misplaced comment and the scoreboard's comment (770ced0).
+  D-97's caveat is superseded by D-102.
+  9. 11daa0f's changes had no test the old code fails, and a refused
+  decision whose body was not JSON went unsaid. Fixed d70e423. The
+  prompt's write-then-rename has no test: a reader catching a half-written
+  prompt cannot be staged deterministically.
+  10. The refuted list labelled quotation-check discards as refutations.
+  Fixed 770ced0.
+  Found on the way, outside the reviewed range: the invention rate counts
+  every killed finding as a quotation-check kill. Plan row 4.24.
+- 2026-10-17 D-104 UNEXPLAINED, continuing D-100: Windows failed again at
+  77be1e4 (run 39024193784) with the same net::ERR_NO_BUFFER_SPACE, this
+  time loading a script chunk of /reviews, so the page never hydrated and
+  a test waited 30 s for its list. The TCP table D-100 added was saved at
+  the failure: 266 TIME_WAIT, 9 established, 24 listening, so the runner
+  had not run out of ports, and port exhaustion is ruled out. Both
+  failures and the six Windows passes today ran the same image,
+  windows-2025-vs2026 20261007.264.1, across six Azure regions, with
+  westus3 among both. Two of the last eight Windows runs failed this way;
+  none on macOS or Linux, and none locally on Windows 11. Searches found
+  nothing tying the error to Windows Server 2025 or to Chromium on
+  loopback. The cause stays unknown.
