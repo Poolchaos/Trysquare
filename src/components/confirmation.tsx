@@ -662,7 +662,9 @@ export function ConfirmationQueue({
                         : contextError
                           ? "Not read."
                           : shownContext.deleted
-                            ? "This file is not in the review's checkout: the change deleted it, and the change above is all there is of it."
+                            ? shownContext.hunk
+                              ? "This file is not in the review's checkout: the change deleted it, and the change above is all there is of it."
+                              : "This file is not in the review's checkout: the change deleted it."
                             : shownContext.lines.length === 0
                               ? "No lines of this file to show here."
                               : shownContext.lines.map((line) => (

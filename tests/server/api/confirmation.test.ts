@@ -7,7 +7,7 @@
  * with hand-written findings would prove nothing about the real one.
  */
 
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -344,9 +344,58 @@ describe("reading the code a finding is about", () => {
       const deleted = await ask();
       expect(deleted.deleted).toBe(true);
       expect(deleted.readError).toBeUndefined();
+
+      // Deleted with no hunk to show, as a binary file is: still deleted.
+      writeFileSync(
+        patchPath,
+        [
+          `diff --git a/${withoutSlug} b/${withoutSlug}`,
+          "deleted file mode 100644",
+          "index 1111111..0000000",
+          `Binary files a/${withoutSlug} and /dev/null differ`,
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const deletedBinary = await ask();
+      expect(deletedBinary.deleted).toBe(true);
+      expect(deletedBinary.hunk).toBeNull();
     } finally {
       writeFileSync(checkoutCopy, contents, "utf8");
       writeFileSync(patchPath, patch, "utf8");
+    }
+  });
+
+  it("says a file with no hunk that cannot be read was not read, not that it is missing", async () => {
+    // Busy, refused, or a directory, a file the change never touched was
+    // answered 404, not found, though it was there (D-141). The caller of
+    // the deleted module is such a file: outside the diff, with no hunk.
+    const finding = (await snapshot()).findings.find((entry) => entry.filePath === callerPath());
+    expect(finding).toBeDefined();
+    const ask = () =>
+      routes.fileContext.GET(
+        new Request(
+          `http://localhost/x?path=${encodeURIComponent(finding!.filePath)}&line=${finding!.lineStart}`,
+        ),
+        params(reviewId),
+      );
+    const checkoutCopy = join(worktreeRootDir(dataDir, reviewId), finding!.filePath);
+    const contents = readFileSync(checkoutCopy, "utf8");
+    try {
+      rmSync(checkoutCopy);
+      mkdirSync(checkoutCopy);
+      const unread = await ask();
+      expect(unread.status).toBe(200);
+      const body = (await unread.json()) as { hunk: unknown; readError?: string };
+      expect(body.hunk).toBeNull();
+      expect(body.readError).toMatch(/EISDIR/);
+
+      // Not there at all, and never in the change: that one is not found.
+      rmSync(checkoutCopy, { recursive: true });
+      expect((await ask()).status).toBe(404);
+    } finally {
+      rmSync(checkoutCopy, { recursive: true, force: true });
+      writeFileSync(checkoutCopy, contents, "utf8");
     }
   });
 

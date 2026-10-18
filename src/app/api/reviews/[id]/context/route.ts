@@ -71,19 +71,31 @@ export async function GET(
 
     const { hunk, deleted } = await hunkFor(bundleDir(dataDir, id), cited.repo, path, line);
 
+    // Contained like every other path a model named: an S4 finding path is
+    // not reconciled against the change set, so it could point anywhere. One
+    // that climbs out is refused before any read: not found, never "could
+    // not be read".
+    let target: string;
+    try {
+      target = insideRoot(worktreeRootDir(dataDir, id), path);
+    } catch {
+      return notFound(`${path} in the review's checkout`);
+    }
+
     let contents: string;
     try {
-      // Contained like every other path a model named: an S4 finding path is
-      // not reconciled against the change set, so it could point anywhere.
-      contents = await readFile(insideRoot(worktreeRootDir(dataDir, id), path), "utf8");
+      contents = await readFile(target, "utf8");
     } catch (error) {
       // A file the change deleted has no copy in the checkout, and its hunk is
       // the only view of it there is. Any other file that could not be read
-      // is said as that, with its hunk: every failed read used to be answered
-      // as a deletion (D-140).
+      // is said as that, with its hunk if it has one: every failed read used
+      // to be answered as a deletion (D-140), and one with no hunk, busy or
+      // refused, as a file not found (D-141). Not found is kept for a file
+      // that is not there and is not in the change.
       const empty = { path, start: 0, end: 0, total: 0, lines: [], hunk };
       if (deleted) return ok({ ...empty, deleted: true });
-      if (hunk) {
+      const code = error instanceof Error && "code" in error ? error.code : undefined;
+      if (hunk || (code !== "ENOENT" && code !== "ENOTDIR")) {
         return ok({ ...empty, readError: error instanceof Error ? error.message : String(error) });
       }
       return notFound(`${path} in the review's checkout`);

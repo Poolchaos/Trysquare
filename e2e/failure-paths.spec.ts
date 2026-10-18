@@ -995,27 +995,31 @@ test("every route answers an id that names nothing with a 404 naming it", async 
 });
 
 test("a file the change deleted is said to be deleted, not the checkout gone", async ({ page }) => {
-  // The context route answers a file the change deleted with its hunk and no
-  // lines, and the pane read that as "The checkout is no longer available
-  // for this review": the checkout is there, without that file (D-139). The
-  // answer is the route's own shape for a deleted file.
-  const stopAnswering = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
-    route.fulfill({
-      status: 200,
-      json: {
-        lines: [],
-        hunk: { header: "@@ -1,2 +0,0 @@", lines: ["-gone", "-also gone"] },
-        deleted: true,
-      },
-    }),
-  );
-  await page.goto("/reviews?status=awaiting");
-  await page.getByRole("main").locator("ul > li").first().getByRole("link").click();
-  await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible({ timeout: 30_000 });
-  await page.locator("body").press("Enter");
-  await expect(page.getByText(/the change deleted it/)).toBeVisible();
-  await expect(page.getByText(/no longer available for this review/)).toHaveCount(0);
-  await stopAnswering();
+  // The context route answers a file the change deleted with no lines, and
+  // the pane read that as "The checkout is no longer available for this
+  // review": the checkout is there, without that file (D-139). With no hunk,
+  // a deleted binary say, it pointed at a change above that was not there
+  // (D-141). Each answer is the route's own shape for a deleted file.
+  const answers = [
+    {
+      hunk: { header: "@@ -1,2 +0,0 @@", lines: ["-gone", "-also gone"] },
+      said: "the change deleted it, and the change above is all there is of it.",
+    },
+    { hunk: null, said: "This file is not in the review's checkout: the change deleted it." },
+  ];
+  for (const { hunk, said } of answers) {
+    const stopAnswering = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
+      route.fulfill({ status: 200, json: { lines: [], hunk, deleted: true } }),
+    );
+    await page.goto("/reviews?status=awaiting");
+    await page.getByRole("main").locator("ul > li").first().getByRole("link").click();
+    await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible({ timeout: 30_000 });
+    await page.locator("body").press("Enter");
+    const file = page.getByRole("group", { name: "The file around this finding" });
+    await expect(file).toHaveText(new RegExp(`${said.replace(/[.]/g, "\\.")}$`));
+    await expect(page.getByText(/no longer available for this review/)).toHaveCount(0);
+    await stopAnswering();
+  }
 });
 
 test("a file the checkout could not give up is said as that, not as deleted", async ({ page }) => {
@@ -1042,7 +1046,16 @@ test("a file the checkout could not give up is said as that, not as deleted", as
   await expect(page.getByText("+after")).toBeVisible();
   await expect(page.getByText(/the change deleted it/)).toHaveCount(0);
   await stopAnswering();
+  // Read again, not only cleared: the message went the moment it was
+  // pressed, so its going proved nothing about a second read (D-141).
+  const readAgain = page.waitForResponse(
+    (response) => new URL(response.url()).pathname.endsWith("/context") && response.ok(),
+  );
   await page.getByRole("button", { name: "Try again" }).click();
+  await readAgain;
+  await expect(page.getByRole("group", { name: "The file around this finding" })).not.toHaveText(
+    /Reading the file|Not read/,
+  );
   await expect(page.getByText(/could not be read from the review's checkout/)).toHaveCount(0);
 });
 
