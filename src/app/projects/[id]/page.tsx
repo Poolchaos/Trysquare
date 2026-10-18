@@ -65,12 +65,26 @@ interface Branches {
 const underWay = (cloneStatus: string | undefined) =>
   cloneStatus === "pending" || cloneStatus === "cloning";
 
-/** The project and its branches, read side by side. Never throws. */
-function readPage(id: string): Promise<[Sent<Detail>, Sent<Branches>]> {
-  return Promise.all([
+/**
+ * The project and its branches, read side by side. Never throws.
+ *
+ * Side by side, the two reads can straddle the clone finishing: the project
+ * ready, its branches refused as not ready, and no poll left to correct the
+ * card. The branches are asked again then (review of the D-133 fixes).
+ */
+async function readPage(id: string): Promise<[Sent<Detail>, Sent<Branches>]> {
+  const readBranches = () =>
+    send<Branches>(`/api/projects/${id}/branches`, {}, "The branches could not be listed");
+  const [detail, branches] = await Promise.all([
     send<Detail>(`/api/projects/${id}`, {}, "This project could not be read"),
-    send<Branches>(`/api/projects/${id}/branches`, {}, "The branches could not be listed"),
+    readBranches(),
   ]);
+  const straddled =
+    detail.ok &&
+    detail.body.project.cloneStatus === "ready" &&
+    !branches.ok &&
+    branches.body.code === "CloneNotReadyError";
+  return [detail, straddled ? await readBranches() : branches];
 }
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -84,6 +98,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [branches, setBranches] = useState<Sent<Branches> | null>(null);
   const [filter, setFilter] = useState("");
   const [error, setError] = useState("");
+  // A read of the project that failed while a clone was being followed.
+  const [followProblem, setFollowProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // Set when the delete was refused over review history: the count from the
@@ -152,6 +168,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     const poll = async () => {
       const sent = await send<Detail>(`/api/projects/${id}`, {}, "This project could not be read");
       if (stopped) return;
+      // Deleted while its clone ran, from another tab, say: said, and no
+      // longer asked after. It used to be asked after once a second for as
+      // long as the page stayed open (review of the D-133 fixes).
+      if (!sent.ok && sent.status === 404) {
+        setDetail(null);
+        setLoadError(sent.error);
+        return;
+      }
+      // Any other failure is said too, and the following goes on: a server
+      // that went away may come back.
+      setFollowProblem(sent.ok ? "" : sent.error);
       if (sent.ok && underWay(sent.body.project.cloneStatus)) setDetail(sent.body);
       else if (sent.ok) await load();
       if (!stopped) timer = setTimeout(() => void poll(), 1000);
@@ -227,6 +254,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         {error ? (
           <div className="mb-4">
             <Problem>{error}</Problem>
+          </div>
+        ) : null}
+        {followProblem ? (
+          <div className="mb-4">
+            <Problem>{followProblem}</Problem>
           </div>
         ) : null}
         {project.cloneError ? (

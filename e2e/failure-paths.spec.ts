@@ -339,21 +339,33 @@ test("a failed clone can be opened, tried again and deleted; a known address is 
   // While the clone runs only the project is asked after: the whole page,
   // branches and all, once a second ran git fetch inside the clone still
   // being written (review of 5.5 to 5.7). A clone of nothing fails too fast
-  // to watch, so the page is told "cloning" for its first three answers.
+  // to watch, so each read of the project answers the next of `script`:
+  // "cloning", a dropped connection, or the project gone. Then the real one.
   const projectApi = new URL(page.url()).pathname.replace(/^\/projects\//, "/api/projects/");
-  let cloningAnswers = 3;
+  const script: ("cloning" | "drop" | "gone")[] = [];
   await page.route(`**${projectApi}`, async (route) => {
-    if (route.request().method() !== "GET" || cloningAnswers === 0) return route.fallback();
-    cloningAnswers -= 1;
+    const next = route.request().method() === "GET" ? script.shift() : undefined;
+    if (next === undefined) return route.fallback();
+    if (next === "drop") return route.abort();
+    if (next === "gone") {
+      return route.fulfill({
+        status: 404,
+        json: { error: 'No project with id "gone".', code: "ProjectNotFoundError" },
+      });
+    }
     const response = await route.fetch();
     const body = (await response.json()) as { project: { cloneStatus: string } };
     body.project.cloneStatus = "cloning";
     return route.fulfill({ response, json: body });
   });
-  let branchReads = 0;
-  page.on("request", (request) => {
-    if (new URL(request.url()).pathname === `${projectApi}/branches`) branchReads += 1;
-  });
+  const reads = { branches: 0, project: 0 };
+  const countReads = (request: import("@playwright/test").Request) => {
+    const path = new URL(request.url()).pathname;
+    if (path === `${projectApi}/branches`) reads.branches += 1;
+    if (path === projectApi && request.method() === "GET") reads.project += 1;
+  };
+  page.on("request", countReads);
+  script.push("cloning", "cloning", "drop", "drop", "cloning");
 
   // Waited on by its answer, not by the button going: the clone itself can
   // fail again before anything is drawn.
@@ -364,16 +376,60 @@ test("a failed clone can be opened, tried again and deleted; a known address is 
   await retry.click();
   expect((await retried).status()).toBe(200);
   await expect(page.getByText("cloning", { exact: true })).toBeVisible();
+  // A read that fails is said, and the page goes on following: it used to go
+  // on in silence (review of the D-133 fixes).
+  await expect(page.getByText(/This project could not be read/)).toBeVisible();
   await expect(retry).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText(/This project could not be read/)).toHaveCount(0);
   // Once when the retry was accepted and once when it settled; the polls
-  // between read the project alone.
-  await expect.poll(() => branchReads).toBe(2);
+  // between read the project alone. Counted after more than a poll's
+  // interval, or a poll that kept going would add its read too late to see.
+  await page.waitForTimeout(1_500);
+  expect(reads.branches).toBe(2);
+
+  // A project deleted from another tab while its clone ran was followed for
+  // as long as the page stayed open; now the page says it is gone, and stops.
+  script.push("cloning", "gone");
+  await retry.click();
+  await expect(page.getByText('No project with id "gone".')).toBeVisible({ timeout: 30_000 });
+  const readsWhenGone = reads.project;
+  await page.waitForTimeout(2_500);
+  expect(reads.project).toBe(readsWhenGone);
+  page.off("request", countReads);
   await page.unroute(`**${projectApi}`);
+  await page.reload();
+  await expect(retry).toBeVisible({ timeout: 60_000 });
 
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await page.getByRole("button", { name: /^Yes, delete nowhere/ }).click();
   await expect(page).toHaveURL(/\/projects$/);
   await expect(page.getByRole("main").locator("li").filter({ hasText: "nowhere" })).toHaveCount(0);
+});
+
+test("a project read just as its clone finished still lists its branches", async ({ page }) => {
+  // The project and its branches are read side by side, so the two can
+  // straddle the clone finishing: the project ready, its branches refused as
+  // not ready, and no poll left to correct the card (review of the D-133
+  // fixes). The journey's project is ready; its first branch read is refused.
+  const stopRefusing = await answerOnce(page, "**/api/projects/*/branches", (route) =>
+    route.fulfill({
+      status: 409,
+      json: {
+        error:
+          "This project is still being cloned. Its branches can be listed once the clone is ready.",
+        code: "CloneNotReadyError",
+      },
+    }),
+  );
+  await page.goto("/projects");
+  await page.getByRole("main").getByRole("link", { name: "app", exact: true }).click();
+  // A branch row's own link, exact: the header's "New review" matches "Review" too,
+  // and is there before the branches are.
+  await expect(page.getByRole("link", { name: "Review", exact: true }).first()).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByText(/still being cloned/)).toHaveCount(0);
+  await stopRefusing();
 });
 
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {
