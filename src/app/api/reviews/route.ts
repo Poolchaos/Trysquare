@@ -94,37 +94,45 @@ export function POST(request: Request): Promise<Response> {
     // (review of the D-133 fixes).
     const project = requireClonedProject(db, input.projectId);
 
+    // Read before anything is fetched, so a dependency that names nothing, is
+    // not cloned yet or is not linked is refused without a fetch from the
+    // network first (review of the D-134 fixes).
+    const dependency =
+      input.linked === undefined ? undefined : requireClonedProject(db, input.linked.projectId);
+    if (
+      dependency &&
+      !listDependencyLinks(db, project.id).some(
+        (link) => link.dependencyProjectId === dependency.id,
+      )
+    ) {
+      throw Response.json(
+        {
+          error: `${dependency.name} is not a dependency of ${project.name}.`,
+          code: "NotLinked",
+        },
+        { status: 400 },
+      );
+    }
+
     // Fetched immediately before pinning, so the commits recorded are the tips
-    // the remote has now rather than whatever the last clone left behind.
+    // the remotes have now rather than whatever the last clone left behind.
+    // Both sides are fetched before either is pinned, so the pair describes
+    // one moment rather than two.
     await fetchAll(project.clonePath);
     recordFetch(db, project.id);
-    const pins = await pin(project.clonePath, input.fromBranch, input.intoBranch);
-
-    let linked;
-    if (input.linked) {
-      const dependency = requireClonedProject(db, input.linked.projectId);
-      const isLinked = listDependencyLinks(db, project.id).some(
-        (link) => link.dependencyProjectId === dependency.id,
-      );
-      if (!isLinked) {
-        throw Response.json(
-          {
-            error: `${dependency.name} is not a dependency of ${project.name}.`,
-            code: "NotLinked",
-          },
-          { status: 400 },
-        );
-      }
-      // Both sides fetched before either is pinned, so the pair describes one
-      // moment rather than two.
+    if (dependency) {
       await fetchAll(dependency.clonePath);
       recordFetch(db, dependency.id);
-      linked = {
-        ...input.linked,
-        projectId: dependency.id,
-        ...(await pin(dependency.clonePath, input.linked.fromBranch, input.linked.intoBranch)),
-      };
     }
+    const pins = await pin(project.clonePath, input.fromBranch, input.intoBranch);
+    const linked =
+      dependency && input.linked
+        ? {
+            ...input.linked,
+            projectId: dependency.id,
+            ...(await pin(dependency.clonePath, input.linked.fromBranch, input.linked.intoBranch)),
+          }
+        : undefined;
 
     // How the work is divided follows from the model, not from a default. The
     // registry knows what each model can absorb; asking for more than that is

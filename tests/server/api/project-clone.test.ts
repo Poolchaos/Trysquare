@@ -194,3 +194,66 @@ describe("deleting a project", () => {
     rmSync(outside, { recursive: true, force: true });
   });
 });
+
+describe("a review with a linked dependency that cannot be used", () => {
+  // Refused before any fetch: creating a review fetched the primary from the
+  // network, and recorded that fetch, before it read the dependency, and no
+  // test covered a dependency that was not cloned yet (review of the D-134
+  // fixes). The primary is ready, with no clone on disk, so a fetch would fail.
+  it("is refused for what is wrong with the dependency, before any fetch", async () => {
+    const { db } = (await import("@/server/runtime")).runtime();
+    const { createProject, linkDependency, requireProject, setCloneStatus } =
+      await import("@/server/db/repositories/projects");
+    const make = (name: string, ready: boolean) => {
+      const made = createProject(db, {
+        name,
+        gitUrl: `git@example.com:acme/${name}.git`,
+        defaultBranch: "main",
+        clonePath: join(root, `${name}.git`),
+      });
+      if (ready) {
+        setCloneStatus(db, made.id, "cloning");
+        setCloneStatus(db, made.id, "ready");
+      }
+      return made;
+    };
+    const primary = make("consumer", true);
+    const queued = make("queued-core", false);
+    const unlinked = make("unlinked-core", true);
+    linkDependency(db, {
+      projectId: primary.id,
+      dependencyProjectId: queued.id,
+      packageName: "@acme/queued-core",
+    });
+
+    const branches = { fromBranch: "feature/x", intoBranch: "main" };
+    const create = (dependencyId: string) =>
+      routes.reviews.POST(
+        post({
+          projectId: primary.id,
+          ...branches,
+          model: "claude-fable-5[1m]",
+          linked: { projectId: dependencyId, ...branches },
+        }),
+      );
+    const preview = (dependencyId: string) =>
+      routes.preflight.POST(
+        post({
+          projectId: primary.id,
+          ...branches,
+          rulesetId: "R",
+          model: "claude-fable-5[1m]",
+          linked: { projectId: dependencyId, ...branches },
+        }),
+      );
+    const codeOf = async (response: Response) =>
+      [response.status, ((await response.json()) as { code: string }).code] as const;
+
+    expect(await codeOf(await create(queued.id))).toEqual([409, "CloneNotReadyError"]);
+    expect(await codeOf(await preview(queued.id))).toEqual([409, "CloneNotReadyError"]);
+    expect(await codeOf(await create("NOPE"))).toEqual([404, "ProjectNotFoundError"]);
+    expect(await codeOf(await create(unlinked.id))).toEqual([400, "NotLinked"]);
+    // Nothing was fetched on the primary's behalf for any of them.
+    expect(requireProject(db, primary.id).lastFetchedAt).toBeNull();
+  });
+});
