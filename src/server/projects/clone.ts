@@ -38,7 +38,7 @@ export async function cloneProjectInBackground(
       // clone may have finished writing after the delete route removed the
       // directory, and a project that no longer exists must not keep a repo
       // on disk.
-      await removeRepo(dirname(clonePath)).catch(() => undefined);
+      await removeDeletedProjectDir(clonePath);
       return;
     }
 
@@ -54,7 +54,7 @@ export async function cloneProjectInBackground(
       );
     } catch (writeError) {
       if (writeError instanceof ProjectNotFoundError) {
-        await removeRepo(dirname(clonePath)).catch(() => undefined);
+        await removeDeletedProjectDir(clonePath);
         return;
       }
       // The failure could not even be recorded. Stderr is the last resort for
@@ -79,4 +79,19 @@ export async function removeProjectFiles(dataDir: string, project: Project): Pro
   } catch (error) {
     if (project.cloneStatus !== "pending" && project.cloneStatus !== "cloning") throw error;
   }
+}
+
+/**
+ * The directory of a project deleted while its clone ran. Deleting it
+ * answered success and left this to remove the directory (4845d0d), so a
+ * failure here is said on stderr, the last resort for a task nothing
+ * awaits; swallowed, it left a directory behind unseen (D-137).
+ */
+async function removeDeletedProjectDir(clonePath: string): Promise<void> {
+  await removeRepo(dirname(clonePath)).catch((error: unknown) => {
+    console.error(
+      `A deleted project's directory could not be removed: ${dirname(clonePath)}`,
+      error,
+    );
+  });
 }

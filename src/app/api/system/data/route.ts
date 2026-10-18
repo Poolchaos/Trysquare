@@ -12,7 +12,7 @@
  */
 
 import { exportsDir } from "@/lib/paths";
-import { deleteProject, listProjects } from "@/server/db/repositories/projects";
+import { deleteProject, getProject, listProjects } from "@/server/db/repositories/projects";
 import { listActiveReviews, listReviewsForProject } from "@/server/db/repositories/reviews";
 import { deleteRuleset, listRulesets } from "@/server/db/repositories/rulesets";
 import { deleteReviewEntirely } from "@/server/review/service";
@@ -50,7 +50,12 @@ export async function DELETE(): Promise<Response> {
         reviews += 1;
       }
     }
-    for (const project of projects) {
+    for (const listed of projects) {
+      // Read again just before: the deletions above awaited, and a clone may
+      // have finished or been tried again since the list was read, which
+      // decides whether a failed removal is the clone's to finish (D-137).
+      const project = getProject(db, listed.id);
+      if (!project) continue;
       deleteProject(db, project.id);
       await removeProjectFiles(dataDir, project);
     }
