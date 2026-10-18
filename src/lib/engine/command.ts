@@ -117,8 +117,9 @@ export function buildProbeArgs(model: string): string[] {
 
 /**
  * What a review's CLI does not inherit: what a Claude Code session, or the
- * editor or SDK hosting one, sets for the processes it starts (D-120), and a
- * setting that would override a flag every stage pins (D-121).
+ * editor or SDK hosting one, sets for the processes it starts (D-120), what
+ * the CLI itself removes when it starts a fresh session, and a setting that
+ * would override a flag every stage pins (D-121, D-124).
  *
  * A review is an independent run that may have been started from a terminal
  * inside a session, and must not run as that session's child: the 2.1.301
@@ -127,6 +128,8 @@ export function buildProbeArgs(model: string): string[] {
  * the review to whatever session launched the server. Named, not matched by
  * prefix: the same prefix carries a person's own settings, such as
  * CLAUDE_CODE_OAUTH_TOKEN for a headless sign-in, and those reach the CLI.
+ * Upper case, and matched so: Windows names are case-insensitive, and the CLI
+ * matches some of these by their upper-cased form.
  */
 const STRIPPED: ReadonlySet<string> = new Set([
   // Set by the CLI on every process it starts.
@@ -135,6 +138,7 @@ const STRIPPED: ReadonlySet<string> = new Set([
   "CLAUDE_CODE_SESSION_ID",
   "CLAUDE_CODE_SESSION_ATTENDED",
   "CLAUDE_PID",
+  // Set by it on some: an agent's, and one started at a set effort.
   "AI_AGENT",
   "CLAUDE_EFFORT",
   // Set by the editor or SDK that hosts a session.
@@ -144,6 +148,23 @@ const STRIPPED: ReadonlySet<string> = new Set([
   "CLAUDE_CODE_MESSAGING_TOKEN",
   "CLAUDE_CODE_EXECPATH",
   "CLAUDE_CODE_SSE_PORT",
+  // What the 2.1.301 binary deletes by name when it starts a fresh session.
+  // A token file descriptor's number means nothing in another process.
+  "CLAUDE_CODE_CHROME_MCP_ORG_DENIED",
+  "CLAUDE_CODE_EVAL_INTERVIEW_SESSION",
+  "CLAUDE_CODE_BRIDGE_SESSION_ID",
+  "CLAUDE_CODE_HOST_WORKTREE",
+  "CLAUDE_CODE_HOST_WORKTREE_FENCE",
+  "CLAUDE_CODE_PLUGIN_DIRS",
+  "CLAUDE_BG_SESSION_PERMISSION_RULES",
+  "CLAUDE_BG_MEMORY_TOGGLED_OFF",
+  "CLAUDE_BG_AUTO_MEMORY_OFF",
+  "CLAUDE_BG_AUTH_SNAPSHOT_PATH",
+  "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
+  "CLAUDE_CODE_GATEWAY_TOKEN_FILE_DESCRIPTOR",
+  "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR",
+  "CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR",
+  "CCR_AGENT_PROXY_TOKEN_FILE_DESCRIPTOR",
   // A person's settings, but 2.1.301 ranks each above --effort, so a review
   // created at high ran at whatever they said and still recorded high
   // (D-121, D-124).
@@ -152,7 +173,7 @@ const STRIPPED: ReadonlySet<string> = new Set([
 ]);
 
 export function isStrippedFromChild(name: string): boolean {
-  return STRIPPED.has(name);
+  return STRIPPED.has(name.toUpperCase());
 }
 
 /**

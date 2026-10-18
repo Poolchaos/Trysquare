@@ -164,10 +164,42 @@ describe("the child environment", () => {
     }
   });
 
-  it("strips the one setting that outranks a flag every stage pins (D-121)", () => {
-    // 2.1.301 takes CLAUDE_CODE_EFFORT_LEVEL ahead of --effort, so a review
-    // created at high ran at whatever it said and still recorded high.
+  it("strips the settings that outrank a flag every stage pins (D-121, D-124)", () => {
+    // 2.1.301 takes each ahead of --effort, so a review created at high ran
+    // at whatever it said and still recorded high.
     expect(isStrippedFromChild("CLAUDE_CODE_EFFORT_LEVEL")).toBe(true);
+    expect(isStrippedFromChild("CLAUDE_CODE_EXTRA_BODY")).toBe(true);
+  });
+
+  it("strips what the CLI itself removes when it starts a fresh session (review of 4.5 to 4.7)", () => {
+    // Passed through after D-120 until named. A token file descriptor's
+    // number means nothing in another process.
+    for (const name of [
+      "CLAUDE_CODE_CHROME_MCP_ORG_DENIED",
+      "CLAUDE_CODE_EVAL_INTERVIEW_SESSION",
+      "CLAUDE_CODE_BRIDGE_SESSION_ID",
+      "CLAUDE_CODE_HOST_WORKTREE",
+      "CLAUDE_CODE_HOST_WORKTREE_FENCE",
+      "CLAUDE_CODE_PLUGIN_DIRS",
+      "CLAUDE_BG_SESSION_PERMISSION_RULES",
+      "CLAUDE_BG_MEMORY_TOGGLED_OFF",
+      "CLAUDE_BG_AUTO_MEMORY_OFF",
+      "CLAUDE_BG_AUTH_SNAPSHOT_PATH",
+      "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
+      "CLAUDE_CODE_GATEWAY_TOKEN_FILE_DESCRIPTOR",
+      "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR",
+      "CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR",
+      "CCR_AGENT_PROXY_TOKEN_FILE_DESCRIPTOR",
+    ]) {
+      expect(isStrippedFromChild(name), name).toBe(true);
+    }
+  });
+
+  it("matches a name whatever its case, as Windows reads it", () => {
+    // Windows environment names are case-insensitive, and the CLI matches
+    // some of these by their upper-cased form.
+    expect(isStrippedFromChild("ClaudeCode")).toBe(true);
+    expect(isStrippedFromChild("claude_code_plugin_dirs")).toBe(true);
   });
 
   it("strips every session marker while keeping the rest of the environment", () => {

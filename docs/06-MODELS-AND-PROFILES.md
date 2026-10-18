@@ -33,7 +33,8 @@ launched from a terminal which is itself a Claude Code session, and must not
 run as that session's child: the CLI reads `CLAUDECODE` and
 `CLAUDE_CODE_CHILD_SESSION` as meaning it is one and looks for credentials
 elsewhere. The engine therefore removes the variables a session and its host
-set for the processes they start, by name, exactly as it sets an explicit
+set for the processes they start, and those the CLI itself removes when it
+starts a fresh session, by name and whatever their case, exactly as it sets an explicit
 working directory rather than inheriting one. A person's own settings, such
 as `CLAUDE_CODE_OAUTH_TOKEN`, pass through (D-120), except
 `CLAUDE_CODE_EFFORT_LEVEL` and `CLAUDE_CODE_EXTRA_BODY`, which the CLI ranks
