@@ -7,8 +7,9 @@
  * directory that is not empty fails.
  */
 
+import { projectRepoDir } from "@/lib/paths";
 import { handler, ok } from "@/server/api/respond";
-import { requireProject, setCloneStatus } from "@/server/db/repositories/projects";
+import { requireProject, setClonePath, setCloneStatus } from "@/server/db/repositories/projects";
 import { removeRepo } from "@/server/gitops/repo";
 import { cloneProjectInBackground } from "@/server/projects/clone";
 import { runtime } from "@/server/runtime";
@@ -20,7 +21,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   return handler(async () => {
-    const { db } = runtime();
+    const { db, dataDir } = runtime();
     const { id } = await context.params;
     const project = requireProject(db, id);
     // Only a failed clone: one queued or under way would get a second clone
@@ -34,9 +35,29 @@ export async function POST(
         { status: 409 },
       );
     }
+    // Before the first await, so a second retry sent alongside this one finds
+    // it pending and is refused instead of cloning into the same directory.
     setCloneStatus(db, id, "pending");
-    await removeRepo(project.clonePath);
-    void cloneProjectInBackground(db, id, project.gitUrl, project.clonePath);
+
+    // Derived, not read from the row: a recursive removal goes only where this
+    // data directory keeps the project's clone, whatever the row says
+    // (review of 5.5 to 5.7).
+    const clonePath = projectRepoDir(dataDir, id);
+    try {
+      await removeRepo(clonePath);
+    } catch (error) {
+      // Left pending, the project read as cloning with nothing cloning it.
+      const reason = error instanceof Error ? error.message : String(error);
+      setCloneStatus(
+        db,
+        id,
+        "failed",
+        `What the last clone left could not be removed, so it was not tried again: ${reason}`,
+      );
+      throw error;
+    }
+    setClonePath(db, id, clonePath);
+    void cloneProjectInBackground(db, id, project.gitUrl, clonePath);
     return ok({ project: requireProject(db, id) });
   });
 }
