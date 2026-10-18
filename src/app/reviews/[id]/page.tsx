@@ -346,6 +346,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   // stale: whether there is still a run to follow, and how many tries since
   // the last stream that opened.
   const runLive = useRef<boolean | null>(null);
+  // The last reading of the review answered 404: it does not exist.
+  const missing = useRef(false);
   const reconnects = useRef(0);
   const [streaming, setStreaming] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -390,7 +392,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     // No such review is no run to follow: its stream is not opened again and
     // the poll stops, where both went on for as long as the tab stayed open
     // (D-137).
-    if (response?.status === 404) runLive.current = false;
+    missing.current = response?.status === 404;
+    if (missing.current) runLive.current = false;
     return response?.ok ? ((await response.json()) as Snapshot) : null;
   }
 
@@ -532,21 +535,24 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     // on it. Without the stop, every finished review kept polling forever.
     source.onerror = () => {
       source.close();
-      // A run that ended closes its stream on purpose. Marked down first, the
-      // theater said "being opened again" at the end of every run until the
-      // last reading landed (D-137).
-      if (runEnded) return;
-      setStreaming(false);
-      // Opened again too, after a wait that doubles from one second to thirty,
-      // and only while the run is still live by then: the poll keeps the
-      // status moving, but the feed and the request line are fed by the
-      // stream alone, and stopped with it (5.12, U8).
-      const wait = Math.min(1000 * 2 ** reconnects.current, 30_000);
-      reconnects.current += 1;
-      reopen = setTimeout(() => {
-        // Unknown, before the first snapshot arrives, counts as live.
-        if (!cancelled && runLive.current !== false) setWatchEpoch((epoch) => epoch + 1);
-      }, wait);
+      // A run that ended closes its stream on purpose: no notice and no
+      // reopening. Marked down first, the theater said "being opened again" at
+      // the end of every run (D-137). The poll below still runs, and stops at
+      // its first reading with nothing running: when the reading after the
+      // end failed, nothing else would correct the page (D-138).
+      if (!runEnded) {
+        setStreaming(false);
+        // Opened again too, after a wait that doubles from one second to thirty,
+        // and only while the run is still live by then: the poll keeps the
+        // status moving, but the feed and the request line are fed by the
+        // stream alone, and stopped with it (5.12, U8).
+        const wait = Math.min(1000 * 2 ** reconnects.current, 30_000);
+        reconnects.current += 1;
+        reopen = setTimeout(() => {
+          // Unknown, before the first snapshot arrives, counts as live.
+          if (!cancelled && runLive.current !== false) setWatchEpoch((epoch) => epoch + 1);
+        }, wait);
+      }
       if (poll !== undefined) return;
       poll = setInterval(() => {
         if (cancelled) return;
@@ -554,7 +560,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           const fresh = await fetchSnapshot();
           if (cancelled) return;
           if (!fresh) {
-            if (runLive.current === false && poll !== undefined) {
+            // On a 404 alone: a stale "not live" from before a Start or a
+            // Resume stopped a poll that a dropped reading should keep going.
+            if (missing.current && poll !== undefined) {
               clearInterval(poll);
               poll = undefined;
             }

@@ -711,6 +711,25 @@ test("a review left as a draft can be started from its own screen", async ({ pag
   ).toBe(false);
 });
 
+test("a run whose last reading fails still shows how it ended", async ({ page }) => {
+  // The server closes the stream when a run ends, and the page read the
+  // review once more. When that reading failed, nothing was left to correct
+  // it: no notice, no stream and no poll, so the page sat on the run as
+  // though it were still going (D-138). Every reading of the review is
+  // dropped across the end of a run held in a stage, then let through.
+  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 6_000 }), "utf8");
+  await startAReview(page);
+  const reviewApi = `**/api${new URL(page.url()).pathname}`;
+  await expect(page.getByText("Risk started")).toBeVisible({ timeout: 60_000 });
+  const dropReads = (route: import("@playwright/test").Route) =>
+    route.request().method() === "GET" ? route.abort() : route.fallback();
+  await page.route(reviewApi, dropReads);
+  // The held stage gives up after six seconds, and the run ends with it.
+  await page.waitForTimeout(9_000);
+  await page.unroute(reviewApi, dropReads);
+  await expect(page.getByRole("button", { name: "Resume" })).toBeVisible({ timeout: 15_000 });
+});
+
 test("a review that does not exist is not asked after again and again", async ({ page }) => {
   // Its stream answers 404, which the page took for a dropped connection: it
   // reopened the stream with backoff and polled every two seconds, for as
