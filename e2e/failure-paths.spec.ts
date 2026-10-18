@@ -432,6 +432,41 @@ test("a project read just as its clone finished still lists its branches", async
   await stopRefusing();
 });
 
+test("removing a link that is already gone says so and shows the links as they are", async ({
+  page,
+  request,
+}) => {
+  // Removed in another tab, or with the project it named, a link answered
+  // its removal with a 404 in ids, and its row stayed until a reload (review
+  // of 5.8 to 5.10, D-136).
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app");
+  expect(app).toBeDefined();
+  const created = await request.post("/api/projects", {
+    data: { gitUrl: `file://${join(E2E_ROOT, "linked-elsewhere.git")}`, name: "linked-elsewhere" },
+  });
+  expect(created.status()).toBe(201);
+  const { project: other } = (await created.json()) as { project: { id: string } };
+  const linked = await request.post(`/api/projects/${app!.id}/links`, {
+    data: { dependencyProjectId: other.id, packageName: "@acme/elsewhere" },
+  });
+  expect(linked.status()).toBe(201);
+  const { link } = (await linked.json()) as { link: { id: string } };
+
+  await page.goto(`/projects/${app!.id}`);
+  const row = page.getByRole("listitem").filter({ hasText: "@acme/elsewhere" });
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  // Another tab removes it first.
+  expect((await request.delete(`/api/projects/${app!.id}/links/${link.id}`)).status()).toBe(200);
+  await row.getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByText(/no such dependency link/)).toBeVisible();
+  await expect(row).toHaveCount(0);
+
+  expect((await request.delete(`/api/projects/${other.id}`)).status()).toBe(200);
+});
+
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {
   // The one state that wants something from someone used to be visible only
   // by opening the reviews list and reading the chips, so a review that

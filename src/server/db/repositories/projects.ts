@@ -263,7 +263,11 @@ export class LinkNotFoundError extends Error {
     readonly projectId: string,
     readonly linkId: string,
   ) {
-    super(`Project "${projectId}" has no dependency link "${linkId}".`);
+    // Words, not ids: the person reads this when a link went in another
+    // tab, or with the project it named (D-136).
+    super(
+      "This project has no such dependency link: it was removed already, or the project it named was deleted.",
+    );
     this.name = "LinkNotFoundError";
   }
 }

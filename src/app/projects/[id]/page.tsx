@@ -144,6 +144,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       const sent = await send(path, init, "That did not work");
       if (!sent.ok) {
         setError(sent.error);
+        // Gone already, from another tab say: the page shows what is there
+        // now rather than a row that no longer exists (D-136).
+        if (sent.status === 404) await load();
         return false;
       }
       onDone?.();
