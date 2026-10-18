@@ -41,7 +41,12 @@ Versions are pinned at WP-A and recorded in `PROJECT-STATE.md` once installed.
 - **Job manager:** a server-side singleton (initialised from
   `instrumentation.ts`) that owns review jobs. One review = one job. Jobs run
   in-process (async orchestration), spawning subprocesses per stage. Max one
-  running review at a time by default (configurable); others queue.
+  running review at a time by default (configurable); others queue. It lives
+  on `globalThis`, built by the instrumentation bundle's copy of its module,
+  and each route bundle has a copy of its own: a route knows the manager's
+  errors by name (`isStartRefusal`), never by `instanceof`, and looks a
+  review up itself before asking the manager about it (D-139;
+  `scripts/check-style.mjs` refuses a manager error class in a route).
 - **Progress:** job manager persists every state change to SQLite
   immediately; UI subscribes via one SSE endpoint per review
   (`/api/reviews/[id]/events`). A dropped stream falls back to polling

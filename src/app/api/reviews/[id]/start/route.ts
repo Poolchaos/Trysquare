@@ -10,7 +10,7 @@ import { rulesetTierSchema } from "@/lib/domain/enums";
 import { hasReviewSnapshot, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
 import { requireReview } from "@/server/db/repositories/reviews";
 import { failed, handler, ok, readOptionalJson } from "@/server/api/respond";
-import { ReviewAlreadyStartedError, ReviewNotStartableError } from "@/server/jobs/manager";
+import { isStartRefusal } from "@/server/jobs/manager";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -66,9 +66,7 @@ export async function POST(
       const state = manager.start(id, ...(ruleset ? [{ ruleset }] : []));
       return ok({ state, snapshot: manager.snapshot(id) });
     } catch (error) {
-      if (error instanceof ReviewNotStartableError || error instanceof ReviewAlreadyStartedError) {
-        return failed(error, 409);
-      }
+      if (isStartRefusal(error)) return failed(error, 409);
       throw error;
     }
   });

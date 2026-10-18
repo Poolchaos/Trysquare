@@ -144,6 +144,32 @@ function repositoryLawLines(path, text) {
   return lines;
 }
 
+/**
+ * The job manager on globalThis was built by the instrumentation bundle's
+ * copy of src/server/jobs/manager.ts, and every route bundle has a copy of its
+ * own, so an error the manager throws is never `instanceof` a class a route
+ * imported: both start refusals went out as 500s (D-139). A route or the
+ * response helpers importing one of its error classes can only be about to
+ * make that mistake again.
+ */
+const MANAGER_ERRORS_LAW =
+  "Recognise the job manager's errors by name (isStartRefusal), not by a class imported from it";
+const MANAGER_MODULE = /(?:^|\/)jobs\/manager(?:\.ts)?$/;
+
+function managerErrorLines(path, text) {
+  if (!path.startsWith("src/app/") && !path.startsWith("src/server/api/")) return [];
+  const lineOf = (index) => text.slice(0, index).split("\n").length;
+  const lines = [];
+  for (const match of text.matchAll(
+    /\bimport\s+(type\s+)?\{([^}]*)\}\s*from\s+["']([^"']+)["']/g,
+  )) {
+    if (match[1] || !MANAGER_MODULE.test(match[3])) continue;
+    const values = match[2].split(",").filter((name) => !/^\s*type\s/.test(name));
+    if (values.some((name) => /\w+Error\b/.test(name))) lines.push(lineOf(match.index));
+  }
+  return lines;
+}
+
 function collectFiles(entryPath, acc) {
   let stats;
   try {
@@ -216,6 +242,9 @@ for (const file of files) {
   });
   for (const line of repositoryLawLines(path, text)) {
     violations.push(`${path}:${line}: ${REPOSITORY_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
+  }
+  for (const line of managerErrorLines(path, text)) {
+    violations.push(`${path}:${line}: ${MANAGER_ERRORS_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
   }
 }
 

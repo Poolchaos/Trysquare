@@ -795,14 +795,45 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Start review" })).toHaveCount(0);
   await expect(page.getByLabel("Ruleset to start with")).toHaveCount(0);
 
+  // And the API refuses what the screen no longer offers: a ruleset sent to a
+  // review waiting in line was answered 200 and dropped (D-138), and then,
+  // in the built app, 500 (D-139).
+  const queuedId = new URL(page.url()).pathname.split("/").pop();
+  const listed = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string }[];
+  };
+  const startWithRuleset = () =>
+    page.request.post(`/api/reviews/${queuedId}/start`, {
+      data: { rulesetId: listed.rulesets[0]!.id },
+    });
+  const alreadyStarted = await startWithRuleset();
+  expect(alreadyStarted.status()).toBe(409);
+  expect(((await alreadyStarted.json()) as { code: string }).code).toBe(
+    "ReviewAlreadyStartedError",
+  );
+
   // Both cancelled, the waiting one first, so neither runs on into the suites after.
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
   await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 30_000 });
+  // The manager's other refusal, from the same route: a cancelled review
+  // cannot be started.
+  const notStartable = await startWithRuleset();
+  expect(notStartable.status()).toBe(409);
+  expect(((await notStartable.json()) as { code: string }).code).toBe("ReviewNotStartableError");
   await page.goto(running);
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
   await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
+});
+
+test("a cancel of a review that does not exist is answered 404", async ({ page }) => {
+  // The manager looked the review up and threw its own bundle's not-found
+  // error, which the route's handler could not place, so it answered 500
+  // (D-139).
+  const answer = await page.request.post("/api/reviews/NOPE123/cancel");
+  expect(answer.status()).toBe(404);
+  expect(((await answer.json()) as { code: string }).code).toBe("ReviewNotFoundError");
 });
 
 test("a file the change deleted is said to be deleted, not the checkout gone", async ({ page }) => {
