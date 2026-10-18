@@ -3009,3 +3009,43 @@ verified evidence, in writing, here.
   here. And D-137 left its finding 11 unstated: the 5.11 browser test
   ended with its review still running into the theme screenshots, which
   92635a8 fixed in full by waiting for the run to end.
+- 2026-10-18 D-139 REVIEW (the D-138 fixes, 66b5ea7..979ea26, by a separate
+  read-only reviewer; each finding re-run here before it was fixed). Seven
+  findings, one MEDIUM and six LOW, all dispositioned before new work; the
+  test one of them asked for found an eighth:
+  1. MEDIUM: the file pane said "The checkout is no longer available" for
+  a file the change deleted, the one case where the context route answers
+  200 with no lines, and the checkout is there. Fixed 7323cf7.
+  2. LOW: a run just started or resumed kept the "not live" from before
+  until a reading landed, so a stream that dropped in that moment was
+  never opened again, and the poll had lost its stop for a finished
+  review. 4. LOW: the browser test for a run whose last reading fails
+  waited a fixed nine seconds for the run's end and never checked that it
+  came. 2 and 4 fixed d69ede7; the first half of 2 is by reading.
+  3. LOW: the queued review's 409 was proven in the manager alone, and the
+  retries' "Reading..." states by no test. The held reads went in d85d52f.
+  The API check found the eighth, a MEDIUM: the 409 never reached a
+  client. In the built app the job manager on globalThis is the
+  instrumentation bundle's copy of its module, so its errors were never
+  instanceof a route's classes, and the start route answered both of its
+  refusals with 500, ReviewNotStartableError since 4.19. A cancel of an
+  unknown review was a 500 the same way. D-138's item 1 and row 5.11
+  stated the 409 as done; it held in unit tests, which load one module
+  graph. Fixed e05cfed: the start route knows the refusals by name
+  (isStartRefusal), the cancel route looks the review up itself, and
+  check-style refuses a manager error class imported into a route.
+  Asking every id route on the built server about an id that names
+  nothing found one more 500, the rules route, which never looked the
+  review up. Fixed b28542b, with that sweep kept as a browser test.
+  5. LOW: Try again and Refresh on the new review screen left the cached
+  refs' lines up with no refs under them. 6. LOW: the same screen offered
+  Try again for a project that does not exist, with no way back. 5 and 6
+  fixed cee8e95.
+  7. LOW: a disabled guard on the draft's ruleset picker could never
+  apply. Removed d85d52f.
+  CI run 39145501965 at 979ea26, a docs-only commit, failed on Windows:
+  the quality gate's last test ran its synchronous database setup or
+  teardown past vitest's 10 s hook limit. The runner was slow throughout
+  that run: the unit run took 154.67 s against 81.73 s at the next green
+  run, and two tests in other files took 19.8 s and 9.6 s against 0.7 s
+  and 0.9 s. Hooks now get the thirty seconds tests have (4d94db5).

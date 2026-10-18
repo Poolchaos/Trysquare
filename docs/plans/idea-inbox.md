@@ -53,3 +53,7 @@ the line entirely would lose the trail.
   and do nothing, and a g arrives as G and jumps to the bottom (found while
   fixing Shift+C under Caps Lock, review of 5.5 to 5.7); decide whether the
   letter keys should ignore case.
+- 2026-10-18: the file context route refuses a bad query with code "Error",
+  where every other route's refusal of its input says "Invalid", and a
+  missing path reads "expected string, received null" rather than its own
+  "path is required" (found by the D-139 sweep of the id routes).
