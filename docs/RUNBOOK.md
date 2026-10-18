@@ -104,9 +104,10 @@ Every step below is free until you press Start review.
    document that yields no rules is refused outright, because a review judged
    against nothing comes back clean and looks exactly like a review that found
    nothing wrong. `tests/fixtures/example-protocol.md` is a working sample.
-   Importing under a name already in use asks first, because it replaces
-   that ruleset's rules and undoes any rule switched off or re-graded since:
-   Replace goes ahead, Keep it leaves the ruleset as it was.
+   Importing a different document under a name already in use asks first,
+   because it replaces that ruleset's rules and undoes any rule switched off
+   or re-graded since: Replace goes ahead, Keep it leaves the ruleset as it
+   was. The same document again changes nothing and is not asked about.
 3. **Set up the review.** Open the project, pick a branch, and press Review on
    its row, or go to New review. Choose the branch to compare against, the
    ruleset, the model, and the effort. The CLI's top effort tier is

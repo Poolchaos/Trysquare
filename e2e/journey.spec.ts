@@ -77,20 +77,37 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // of the importer's own counts rather than reassurance.
     await expect(page.getByText(/All \d+ lines of the document are accounted for/)).toBeVisible();
 
-    // The same name again is asked about, not replaced in silence: an import
-    // replaces every rule, and undoes every rule switched off or re-graded
-    // since (5.9, audit A5). Kept first, then replaced.
+    // A different document under the same name is asked about, not
+    // imported in silence: it replaces every rule, and undoes every rule
+    // switched off or re-graded since (5.9, audit A5). Kept, then replaced,
+    // then replaced back, so the steps below review the sample as written.
+    const original = readFileSync(PROTOCOL_PATH, "utf8");
+    const edited = original.replace(
+      "### 1. Unawaited Promise",
+      "### 1. Unawaited Promise Anywhere",
+    );
     const document = page.getByPlaceholder("Paste the markdown protocol here");
-    await document.fill(readFileSync(PROTOCOL_PATH, "utf8"));
+    const question = page.getByText(/"Example protocol" already exists/);
+    await document.fill(edited);
     await page.getByRole("button", { name: "Import" }).click();
-    await expect(page.getByText(/"Example protocol" already exists/)).toBeVisible();
+    await expect(question).toBeVisible();
+    // Editing the form drops the question, so Replace never sends a name or a
+    // document it was not asked about (D-136).
+    const nameField = page.getByRole("textbox", { name: "Name", exact: true });
+    await nameField.fill("Example protocol 2");
+    await expect(question).toHaveCount(0);
+    await nameField.fill("Example protocol");
+    await page.getByRole("button", { name: "Import" }).click();
+    await expect(question).toBeVisible();
     await page.getByRole("button", { name: "Keep it" }).click();
-    await expect(page.getByText(/"Example protocol" already exists/)).toHaveCount(0);
+    await expect(question).toHaveCount(0);
     await page.getByRole("button", { name: "Import" }).click();
     await page.getByRole("button", { name: "Replace Example protocol" }).click();
-    await expect(page.getByText(/unchanged from what was already stored/)).toBeVisible({
-      timeout: 30_000,
-    });
+    await expect(page.getByText(/as version 2\./)).toBeVisible({ timeout: 30_000 });
+    await document.fill(original);
+    await page.getByRole("button", { name: "Import" }).click();
+    await page.getByRole("button", { name: "Replace Example protocol" }).click();
+    await expect(page.getByText(/as version 3\./)).toBeVisible({ timeout: 30_000 });
   });
 
   await test.step("the project page lists its branches with how far they have moved", async () => {

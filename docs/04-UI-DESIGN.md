@@ -210,10 +210,10 @@ listed per project with merged badges; delete per 02 rules.
   toggle), process directives, edit in place with markdown preview;
   versioning bumps on edit (snapshots keep old reviews stable).
 - Import: from markdown (REVIEW_PROTOCOL.md shape); shows the fidelity
-  report (mapped headings, unmapped lines = import blocked). A name
-  already in use is asked about (Replace / Keep it), since the import
-  replaces its rules and undoes its edits. Export to markdown (round-trip
-  clean).
+  report (mapped headings, unmapped lines = import blocked). A different
+  document under a name already in use is asked about (Replace / Keep it),
+  since the import replaces its rules and undoes its edits; the same
+  document is not. Export to markdown (round-trip clean).
 - Duplicate-to-tier action (e.g. copy a project rule into global).
 
 ### Settings

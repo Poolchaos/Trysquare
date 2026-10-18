@@ -98,19 +98,9 @@ export function saveImportedRuleset(
   input: SaveRulesetInput,
 ): { rulesetId: string; version: number; changed: boolean } {
   const now = nowIso();
-  const existing = db.select().from(rulesets).where(eq(rulesets.name, input.name)).get();
-
-  const incoming = serialiseJsonColumn(
-    toSnapshot(input.name, existing?.version ?? 1, input.imported),
-  );
-
-  if (existing) {
-    const current = serialiseJsonColumn(
-      toSnapshot(existing.name, existing.version, loadRuleset(db, existing.id)),
-    );
-    if (current === incoming) {
-      return { rulesetId: existing.id, version: existing.version, changed: false };
-    }
+  const existing = findRulesetByName(db, input.name);
+  if (existing && !differsFromStored(db, existing, input.imported)) {
+    return { rulesetId: existing.id, version: existing.version, changed: false };
   }
 
   const rulesetId = existing?.id ?? newId();
@@ -288,6 +278,27 @@ export class RulesetNameTakenError extends Error {
  */
 export function deleteRuleset(db: Db, rulesetId: string): void {
   db.delete(rulesets).where(eq(rulesets.id, rulesetId)).run();
+}
+
+/**
+ * The stored ruleset an import of this document would replace: undefined for
+ * a new name, and for a document that matches what is stored, which an import
+ * leaves as it is. The import route asks before replacing, and asking about a
+ * document that changes nothing warned of a loss that did not happen (D-136).
+ */
+export function rulesetAnImportWouldReplace(
+  db: Db,
+  name: string,
+  imported: ImportedRuleset,
+): RulesetRow | undefined {
+  const existing = findRulesetByName(db, name);
+  return existing && differsFromStored(db, existing, imported) ? existing : undefined;
+}
+
+function differsFromStored(db: Db, existing: RulesetRow, imported: ImportedRuleset): boolean {
+  const stored = toSnapshot(existing.name, existing.version, loadRuleset(db, existing.id));
+  const incoming = toSnapshot(existing.name, existing.version, imported);
+  return serialiseJsonColumn(stored) !== serialiseJsonColumn(incoming);
 }
 
 /** The ruleset already stored under this name, if one is. */

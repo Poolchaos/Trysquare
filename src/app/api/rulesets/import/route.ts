@@ -9,7 +9,10 @@
 import { z } from "zod";
 import { importProtocol } from "@/lib/rulesets/import";
 import { rulesetTierSchema } from "@/lib/domain/enums";
-import { findRulesetByName, saveImportedRuleset } from "@/server/db/repositories/rulesets";
+import {
+  rulesetAnImportWouldReplace,
+  saveImportedRuleset,
+} from "@/server/db/repositories/rulesets";
 import { created, handler, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -60,18 +63,19 @@ export function POST(request: Request): Promise<Response> {
       );
     }
 
-    // Asked, not done in silence: an import over a name already taken
-    // replaces every rule, and undoes every rule switched off or re-graded
-    // since (5.9, A5). After the document is judged, so the question is never
-    // asked about a document that would be refused anyway.
-    const existing = findRulesetByName(db, input.name);
+    // Asked, not done in silence: a different document under a name already
+    // taken replaces every rule, and undoes every rule switched off or
+    // re-graded since (5.9, A5). The same document changes nothing and is not
+    // asked about (D-136). After the document is judged, so the question is
+    // never asked about a document that would be refused anyway.
+    const existing = rulesetAnImportWouldReplace(db, input.name, imported);
     if (existing && input.replace !== true) {
       throw Response.json(
         {
           error:
-            `A ruleset called "${existing.name}" already exists, at version ${existing.version}. ` +
-            "Importing this document replaces its rules with the document's, and undoes any " +
-            "rule switched off or re-graded since.",
+            `A ruleset called "${existing.name}" already exists, at version ${existing.version}, ` +
+            "and this document differs from it. Importing replaces its rules with the " +
+            "document's, and undoes any rule switched off or re-graded since.",
           code: "RulesetExists",
           rulesetId: existing.id,
         },

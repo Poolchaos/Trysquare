@@ -409,34 +409,52 @@ describe("importing a ruleset", () => {
     expect(body.fidelity.mappedLines).toBe(body.fidelity.totalLines);
   });
 
-  it("asks before importing over a ruleset of the same name", async () => {
+  it("asks before an import would replace a ruleset of the same name", async () => {
     // An import under a name already taken replaced that ruleset's rules,
     // and undid every rule switched off or re-graded since, without a word
-    // (5.9, audit A5).
+    // (5.9, audit A5). Its own name, so it passes run alone (D-136).
     const markdown = await (
       await import("node:fs/promises")
     ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
-    const again = (extra: Record<string, unknown> = {}) =>
-      routes.rulesets.POST(
+    const edited = markdown.replace(
+      "### 1. Unawaited Promise",
+      "### 1. Unawaited Promise Anywhere",
+    );
+    expect(edited).not.toBe(markdown);
+    const importAs = async (document: string, extra: Record<string, unknown> = {}) => {
+      const response = await routes.rulesets.POST(
         post("http://localhost/api/rulesets/import", {
-          name: "Example protocol",
+          name: "Replaced protocol",
           tier: "global",
-          markdown,
+          markdown: document,
           ...extra,
         }),
       );
+      return {
+        status: response.status,
+        body: (await response.json()) as {
+          code?: string;
+          error?: string;
+          changed?: boolean;
+          version?: number;
+        },
+      };
+    };
 
-    const refused = await again();
+    const first = await importAs(markdown);
+    expect(first.status).toBe(201);
+    // The same document again changes nothing, so nothing is asked.
+    const same = await importAs(markdown);
+    expect([same.status, same.body.changed]).toEqual([201, false]);
+
+    const refused = await importAs(edited);
     expect(refused.status).toBe(409);
-    const body = (await refused.json()) as { code: string; error: string; rulesetId: string };
-    expect(body.code).toBe("RulesetExists");
-    expect(body.error).toContain('"Example protocol" already exists');
-    expect(body.rulesetId).toMatch(/\w+/);
+    expect(refused.body.code).toBe("RulesetExists");
+    expect(refused.body.error).toContain('"Replaced protocol" already exists, at version 1');
 
-    // Said, it goes ahead: the same document, so nothing changes.
-    const replaced = await again({ replace: true });
+    const replaced = await importAs(edited, { replace: true });
     expect(replaced.status).toBe(201);
-    expect(((await replaced.json()) as { changed: boolean }).changed).toBe(false);
+    expect([replaced.body.changed, replaced.body.version]).toEqual([true, 2]);
   });
 
   it("refuses a document that produced no rules", async () => {

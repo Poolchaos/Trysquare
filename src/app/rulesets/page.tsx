@@ -33,8 +33,9 @@ export default function RulesetsPage() {
   const [markdown, setMarkdown] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
-  // The server's question when the name is taken: an import over it replaces
-  // every rule and undoes every edit since, so it is asked, not done (5.9, A5).
+  // The server's question when a different document would replace a stored
+  // ruleset: it is asked, not done (5.9, A5). Dropped when the form changes,
+  // so Replace never sends a name or document the question was not about.
   const [replacing, setReplacing] = useState("");
 
   const load = useCallback(async () => {
@@ -122,10 +123,22 @@ export default function RulesetsPage() {
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Name">
-                  <Input value={name} onChange={(event) => setName(event.target.value)} />
+                  <Input
+                    value={name}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      setReplacing("");
+                    }}
+                  />
                 </Field>
                 <Field label="Tier">
-                  <Select value={tier} onChange={(event) => setTier(event.target.value)}>
+                  <Select
+                    value={tier}
+                    onChange={(event) => {
+                      setTier(event.target.value);
+                      setReplacing("");
+                    }}
+                  >
                     <option value="global">Global</option>
                     <option value="tech">Technology</option>
                     <option value="project">Project</option>
@@ -139,7 +152,10 @@ export default function RulesetsPage() {
                 <Textarea
                   rows={12}
                   value={markdown}
-                  onChange={(event) => setMarkdown(event.target.value)}
+                  onChange={(event) => {
+                    setMarkdown(event.target.value);
+                    setReplacing("");
+                  }}
                   placeholder="Paste the markdown protocol here"
                   className="font-[family-name:var(--font-mono)] text-xs"
                 />
