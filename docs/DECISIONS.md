@@ -2982,3 +2982,30 @@ verified evidence, in writing, here.
   Fixed 018939b.
   12, second half: row 5.13 gave no counts at 4845d0d. They were 1040 unit
   and 51 browser tests; the row now says so.
+- 2026-10-18 D-138 REVIEW (the D-137 fixes, e28d856..66b5ea7, by a separate
+  read-only reviewer; each finding re-run here before it was fixed). Seven
+  findings, one MEDIUM and six LOW, all dispositioned before new work:
+  1. MEDIUM: 92635a8 hid the draft's Start on a queued or running review,
+  but the start API still answered 200 and dropped a ruleset sent to one,
+  which a second tab could reach. Fixed 0e9bf6e: the job manager refuses a
+  ruleset for a review queued or running, and the start route one for a
+  review frozen with its own, both as 409s.
+  2. LOW: an ended run skipped the poll with the notice, so a failed
+  reading after the end left the page on the run for good, and the poll
+  stopped on a stale "not live". Fixed ffd16ab.
+  3. LOW: the confirmation panel's file read took a failure for a checkout
+  that was gone. Fixed 7f46f96.
+  4. LOW: the review screen replaced the server's words with a fixed
+  sentence and offered a futile Try again for a review that does not
+  exist, as the project and ruleset screens did; the scoreboard said a
+  fixed sentence with no Try again. Fixed b911a87: the server's words,
+  and a link back for a missing subject.
+  5. LOW: retries kept the old message until the answer came, and the new
+  review screen had two Try again buttons that disagreed. 6. LOW: failed
+  reads were keyed and told apart by their text alone. 5 and 6 fixed
+  4fb787b.
+  7. LOW: row 5.11 listed "the start sends the ruleset the picker shows"
+  among checks failing on the build before, which it passed; corrected
+  here. And D-137 left its finding 11 unstated: the 5.11 browser test
+  ended with its review still running into the theme screenshots, which
+  92635a8 fixed in full by waiting for the run to end.
