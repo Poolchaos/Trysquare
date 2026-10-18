@@ -26,6 +26,26 @@ const NEXT_BIN = join(REPO_ROOT, "node_modules", "next", "dist", "bin", "next");
 
 test.skip(process.platform === "win32", "a killed server takes its children with it on Windows");
 
+/**
+ * Everything a test started, registered the moment it exists. A setup that
+ * failed part way used to leave its server holding the port, so the next run
+ * met it instead of its own (review of 4.5 to 4.7).
+ */
+const launched: { servers: ChildProcess[]; clis: number[] } = { servers: [], clis: [] };
+
+test.afterEach(async () => {
+  for (const pid of launched.clis.splice(0)) if (isAlive(pid)) process.kill(pid, "SIGKILL");
+  for (const server of launched.servers.splice(0)) {
+    if (server.exitCode === null && server.signalCode === null) {
+      server.kill("SIGKILL");
+      await exited(server);
+    }
+  }
+});
+
+/** How long after the server exits the CLI's fate is read. */
+const AFTER_EXIT_MS = 2_000;
+
 function isAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -90,6 +110,14 @@ async function serverMidStage(port: number): Promise<{ server: ChildProcess; cli
   const dataDir = mkdtempSync(join(E2E_ROOT, "shutdown-"));
   const { reviewId, rulesetId } = await seed(dataDir);
   const pidFile = join(dataDir, "cli.pid");
+  const base = `http://127.0.0.1:${port}`;
+
+  // Something already answering here would pass for this server.
+  const occupied = await fetch(`${base}/api/settings`).then(
+    () => true,
+    () => false,
+  );
+  expect(occupied, `port ${port} is already in use`).toBe(false);
 
   // `next start` itself, not through npm, so the signal reaches the server
   // and not a shell or npm's own process in front of it.
@@ -104,8 +132,8 @@ async function serverMidStage(port: number): Promise<{ server: ChildProcess; cli
     },
     stdio: "ignore",
   });
+  launched.servers.push(server);
 
-  const base = `http://127.0.0.1:${port}`;
   await expect
     .poll(
       async () => {
@@ -127,6 +155,7 @@ async function serverMidStage(port: number): Promise<{ server: ChildProcess; cli
 
   await expect.poll(() => existsSync(pidFile), { timeout: 60_000 }).toBe(true);
   const cliPid = Number(readFileSync(pidFile, "utf8"));
+  launched.clis.push(cliPid);
   expect(isAlive(cliPid)).toBe(true);
   return { server, cliPid };
 }
@@ -141,24 +170,17 @@ test("a server killed outright leaves its stage's CLI running, which is what SIG
   // this server, the test can see an orphan, and the SIGTERM test below
   // passing means the handler stopped it rather than the platform.
   const { server, cliPid } = await serverMidStage(3101);
-  try {
-    server.kill("SIGKILL");
-    await exited(server);
-    await new Promise((resolve) => setTimeout(resolve, 2_000));
-    expect(isAlive(cliPid)).toBe(true);
-  } finally {
-    if (isAlive(cliPid)) process.kill(cliPid, "SIGKILL");
-  }
+  server.kill("SIGKILL");
+  await exited(server);
+  await new Promise((resolve) => setTimeout(resolve, AFTER_EXIT_MS));
+  expect(isAlive(cliPid)).toBe(true);
 });
 
-test("a server told to stop stops its stage's CLI before it exits", async () => {
+test("a server told to stop takes its stage's CLI down with it", async () => {
+  // The same window as the control, so the two differ only in the signal: it
+  // used to allow fifteen seconds here against the control's two.
   const { server, cliPid } = await serverMidStage(3102);
-  try {
-    server.kill("SIGTERM");
-    await exited(server);
-    await expect.poll(() => isAlive(cliPid), { timeout: 15_000 }).toBe(false);
-  } finally {
-    if (isAlive(cliPid)) process.kill(cliPid, "SIGKILL");
-    if (server.exitCode === null && server.signalCode === null) server.kill("SIGKILL");
-  }
+  server.kill("SIGTERM");
+  await exited(server);
+  await expect.poll(() => isAlive(cliPid), { timeout: AFTER_EXIT_MS }).toBe(false);
 });
