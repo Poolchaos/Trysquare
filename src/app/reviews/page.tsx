@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { PageBody, PageHeader } from "@/components/page";
+import { Loading, PageBody, PageHeader } from "@/components/page";
 import {
   Badge,
   Button,
@@ -73,21 +73,41 @@ function ReviewsList() {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
+  // Why the list could not be read, said where it would be (5.13, U9): a
+  // failed read used to leave "Loading..." there for good.
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
   const load = useCallback(async () => {
-    const body = (await (await fetch("/api/reviews")).json()) as { reviews: Row[] };
-    setReviews(body.reviews);
+    const sent = await send<{ reviews: Row[] }>(
+      "/api/reviews",
+      {},
+      "The reviews could not be read",
+    );
+    if (!sent.ok) {
+      setLoadError(sent.error);
+      return;
+    }
+    setLoadError("");
+    setReviews(sent.body.reviews);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const body = (await (await fetch("/api/reviews")).json()) as { reviews: Row[] };
-      if (!cancelled) setReviews(body.reviews);
+      const sent = await send<{ reviews: Row[] }>(
+        "/api/reviews",
+        {},
+        "The reviews could not be read",
+      );
+      if (cancelled) return;
+      if (sent.ok) setReviews(sent.body.reviews);
+      else setLoadError(sent.error);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   async function remove(id: string) {
     setError("");
@@ -175,8 +195,19 @@ function ReviewsList() {
           </div>
         ) : null}
 
+        {reviews !== null && loadError ? (
+          <div className="mb-4">
+            <Problem>{loadError}</Problem>
+          </div>
+        ) : null}
         {reviews === null ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">Loading...</p>
+          <Loading
+            {...(loadError === "" ? {} : { error: loadError })}
+            onRetry={() => {
+              setLoadError("");
+              setLoadAttempt((attempt) => attempt + 1);
+            }}
+          />
         ) : reviews.length === 0 ? (
           <Empty title="No reviews yet">Open a project and choose a branch to review.</Empty>
         ) : shown.length === 0 ? (

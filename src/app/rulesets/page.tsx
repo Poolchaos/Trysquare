@@ -10,8 +10,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { PageBody, PageHeader } from "@/components/page";
+import { Loading, PageBody, PageHeader } from "@/components/page";
 import { Button, Card, Empty, Field, Input, Problem, Select, Textarea } from "@/components/ui";
+import { send } from "@/components/request";
 
 interface Ruleset {
   id: string;
@@ -38,23 +39,41 @@ export default function RulesetsPage() {
   // so Replace never sends a name or document the question was not about.
   const [replacing, setReplacing] = useState("");
 
+  // Why the list could not be read, said where it would be (5.13, U9): a
+  // failed read used to leave the list empty for good, with no word.
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
   const load = useCallback(async () => {
-    const response = await fetch("/api/rulesets");
-    const body = (await response.json()) as { rulesets: Ruleset[] };
-    setRulesets(body.rulesets);
+    const sent = await send<{ rulesets: Ruleset[] }>(
+      "/api/rulesets",
+      {},
+      "The rulesets could not be read",
+    );
+    if (!sent.ok) {
+      setLoadError(sent.error);
+      return;
+    }
+    setLoadError("");
+    setRulesets(sent.body.rulesets);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const response = await fetch("/api/rulesets");
-      const body = (await response.json()) as { rulesets: Ruleset[] };
-      if (!cancelled) setRulesets(body.rulesets);
+      const sent = await send<{ rulesets: Ruleset[] }>(
+        "/api/rulesets",
+        {},
+        "The rulesets could not be read",
+      );
+      if (cancelled) return;
+      if (sent.ok) setRulesets(sent.body.rulesets);
+      else setLoadError(sent.error);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   async function importRuleset(replace: boolean) {
     setError("");
@@ -192,7 +211,20 @@ export default function RulesetsPage() {
           </Card>
 
           <div>
-            {rulesets === null ? null : rulesets.length === 0 ? (
+            {rulesets !== null && loadError ? (
+              <div className="mb-4">
+                <Problem>{loadError}</Problem>
+              </div>
+            ) : null}
+            {rulesets === null ? (
+              <Loading
+                {...(loadError === "" ? {} : { error: loadError })}
+                onRetry={() => {
+                  setLoadError("");
+                  setLoadAttempt((attempt) => attempt + 1);
+                }}
+              />
+            ) : rulesets.length === 0 ? (
               <Empty title="No rulesets yet">
                 Paste a protocol document to the left. Every review needs one.
               </Empty>

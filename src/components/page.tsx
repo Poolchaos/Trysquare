@@ -50,23 +50,33 @@ export function PageLoading({
     <>
       <PageHeader title={title} />
       <PageBody>
-        {error ? (
-          <div className="grid max-w-xl gap-3">
-            <p className="text-sm text-[var(--color-critical)]">{error}</p>
-            {onRetry ? (
-              <button
-                type="button"
-                onClick={onRetry}
-                className="w-fit rounded-md border border-[var(--color-border-strong)] px-3 py-2 text-sm hover:bg-[var(--color-surface-sunken)]"
-              >
-                Try again
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          <p className="text-sm text-[var(--color-ink-muted)]">Loading...</p>
-        )}
+        <Loading {...(error === undefined ? {} : { error })} {...(onRetry ? { onRetry } : {})} />
       </PageBody>
     </>
+  );
+}
+
+/**
+ * What stands where content will be: "Loading..." until it arrives, or why it
+ * could not be read, with a way to try again. A whole page waiting for its
+ * subject uses it, and so does a list inside a page, which used to stay on
+ * "Loading..." when its read failed (5.13, U9).
+ */
+export function Loading({ error, onRetry }: { error?: string; onRetry?: () => void }) {
+  return error ? (
+    <div className="grid max-w-xl gap-3">
+      <p className="text-sm text-[var(--color-critical)]">{error}</p>
+      {onRetry ? (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="w-fit rounded-md border border-[var(--color-border-strong)] px-3 py-2 text-sm hover:bg-[var(--color-surface-sunken)]"
+        >
+          Try again
+        </button>
+      ) : null}
+    </div>
+  ) : (
+    <p className="text-sm text-[var(--color-ink-muted)]">Loading...</p>
   );
 }

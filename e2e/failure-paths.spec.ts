@@ -250,6 +250,28 @@ test("a screen whose data cannot be read says so instead of loading forever", as
   }
 });
 
+test("a list whose data cannot be read says so, and reads again on Try again", async ({ page }) => {
+  // The projects, reviews and rulesets lists read with a bare fetch. A server
+  // error left "Loading..." for good, or for rulesets an empty column, and a
+  // failure that looks like slowness is waited out (5.13, audit U9).
+  for (const [screen, api] of [
+    ["/projects", "**/api/projects"],
+    ["/reviews", "**/api/reviews"],
+    ["/rulesets", "**/api/rulesets"],
+  ] as const) {
+    const refusal = `Refused for this test: ${screen}.`;
+    const stopRefusing = await answerOnce(page, api, (route) =>
+      route.fulfill({ status: 500, json: { error: refusal, code: "Test" } }),
+    );
+    await page.goto(screen);
+    await expect(page.getByText(refusal)).toBeVisible({ timeout: 30_000 });
+    await stopRefusing();
+    await page.getByRole("button", { name: "Try again" }).click();
+    await expect(page.getByText(refusal)).toHaveCount(0);
+    await expect(page.getByText("Loading...")).toHaveCount(0);
+  }
+});
+
 test("a page the server let go of opens a new stream rather than polling", async ({ page }) => {
   // The server lets a stream go when its page falls 256 frames behind, and
   // says so last. The page used to read any end as a dropped connection and

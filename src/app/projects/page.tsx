@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { PageBody, PageHeader } from "@/components/page";
+import { Loading, PageBody, PageHeader } from "@/components/page";
 import { Badge, Button, Card, Empty, Field, Input, Mono, Problem } from "@/components/ui";
 import { send } from "@/components/request";
 
@@ -53,11 +53,24 @@ export default function ProjectsPage() {
   /** The project an address already is, when adding it again was refused. */
   const [duplicateOf, setDuplicateOf] = useState("");
 
+  // Why the list could not be read, said where it would be (5.13, U9): a
+  // failed read used to leave "Loading..." there for good.
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
   const load = useCallback(async () => {
-    const response = await fetch("/api/projects");
-    const body = (await response.json()) as { projects: Project[] };
-    setProjects(body.projects);
-    return body.projects;
+    const sent = await send<{ projects: Project[] }>(
+      "/api/projects",
+      {},
+      "The projects could not be read",
+    );
+    if (!sent.ok) {
+      setLoadError(sent.error);
+      return null;
+    }
+    setLoadError("");
+    setProjects(sent.body.projects);
+    return sent.body.projects;
   }, []);
 
   // Guarded against unmount rather than fired and forgotten: navigating away
@@ -65,14 +78,19 @@ export default function ProjectsPage() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const response = await fetch("/api/projects");
-      const body = (await response.json()) as { projects: Project[] };
-      if (!cancelled) setProjects(body.projects);
+      const sent = await send<{ projects: Project[] }>(
+        "/api/projects",
+        {},
+        "The projects could not be read",
+      );
+      if (cancelled) return;
+      if (sent.ok) setProjects(sent.body.projects);
+      else setLoadError(sent.error);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   // Polls only while something is actually cloning, so an idle screen is idle.
   // Both unfinished states, not just pending. Polling on pending alone worked
@@ -151,8 +169,19 @@ export default function ProjectsPage() {
           ) : null}
         </Card>
 
+        {projects !== null && loadError ? (
+          <div className="mb-4">
+            <Problem>{loadError}</Problem>
+          </div>
+        ) : null}
         {projects === null ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">Loading...</p>
+          <Loading
+            {...(loadError === "" ? {} : { error: loadError })}
+            onRetry={() => {
+              setLoadError("");
+              setLoadAttempt((attempt) => attempt + 1);
+            }}
+          />
         ) : projects.length === 0 ? (
           <Empty title="No projects yet">
             Add a repository above. Trysquare clones it read-only, then you pick two branches and
