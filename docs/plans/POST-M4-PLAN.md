@@ -25,8 +25,8 @@ Standing rails that bind every WP here:
 
 - Prompt changes go through the fake quality gate first, the real model
   after (T18's rule). A paid run is never the first test of anything.
-- AI review stages keep read-only tools. The ultracode effort tier stays
-  withheld at picker and API.
+- AI review stages keep read-only tools. The max effort tier stays withheld
+  at picker and API (on cost since D-125).
 - `docs/DECISIONS.md` is append-only and dated. `review/` stays gitignored.
 - Real-engine spend only on the maintainer's explicit go, and only on
   subscription auth (check `readAuthStatus` first: `usesSubscription` true).

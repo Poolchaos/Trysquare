@@ -135,9 +135,8 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
       .getByLabel(/What was this change meant to do/)
       .fill("Rename the prefs field and migrate every consumer.");
 
-    // The CLI's top effort tier is never offered: it lets the session spawn
-    // its own workflows, and a review already fans out across five stages
-    // unattended. The tier below it is, since this model runs it (D-122).
+    // The CLI's top effort tier is never offered, on cost (D-125); the tier
+    // below it is, since this model runs it (D-122).
     const effort = page.getByLabel("Effort");
     await expect(effort.locator("option")).toHaveCount(4);
     await expect(effort.locator("option", { hasText: "Extra high" })).toHaveCount(1);

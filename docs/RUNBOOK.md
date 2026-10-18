@@ -103,11 +103,10 @@ Every step below is free until you press Start review.
 3. **Set up the review.** Open the project, pick a branch, and press Review on
    its row, or go to New review. Choose the branch to compare against, the
    ruleset, the model, and the effort. The CLI's top effort tier is
-   deliberately not offered and is refused by the server: it is the ultracode
-   setting, extra-high reasoning plus the ability to spawn its own workflows,
-   and a review already fans out across five stages unattended, so that tier
-   would make one review an unbounded amount of usage. Extra high is offered
-   only for a model that runs it, and costs more than high (D-122). A model can only be
+   deliberately not offered and is refused by the server, on cost: the CLI
+   prices it at up to 5.59 times high for every call, and a review makes many,
+   unattended (D-125). Extra high is offered only for a model that runs it,
+   and costs more than high (D-122, D-123). A model can only be
    chosen while a
    probe from the last day vouches for it; anything unprobed or stale shows a
    Probe button instead, and one press (a real but tiny paid call) unlocks it

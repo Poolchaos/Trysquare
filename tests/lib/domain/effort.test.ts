@@ -15,9 +15,9 @@ import {
 } from "@/lib/domain/enums";
 
 describe("the effort a review runs at", () => {
-  it("does not offer the ultracode tier", () => {
-    // It lets the session spawn its own workflows, which turns one unattended
-    // review into an unbounded amount of someone else's usage.
+  it("does not offer the top tier", () => {
+    // On cost: up to 5.59 times high per call by the CLI's own index, across
+    // every stage of an unattended review (D-125).
     expect(SELECTABLE_REVIEW_EFFORTS).not.toContain("max");
     expect(isSelectableEffort("max")).toBe(false);
   });

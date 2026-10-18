@@ -82,9 +82,9 @@ export function buildStageArgs(options: StageCommandOptions): string[] {
   // stream-json only emits events in print mode when verbose is set.
   if (options.outputFormat === "stream-json") args.push("--verbose");
 
-  // Verified against the CLI on 2026-07-31: it accepts low, medium, high and
-  // max, and rejects anything else at argument parsing. Its --help text lists
-  // only the first three, so max is undocumented rather than unsupported.
+  // 2.1.301 accepts low, medium, high, xhigh and max, and its help lists all
+  // five. An unknown value is not refused: it warns on stderr and runs at the
+  // default effort, so only a value reviewEffortSchema accepts is sent.
   if (options.effort !== undefined) args.push("--effort", options.effort);
 
   if (options.resumeSessionId) args.push("--resume", options.resumeSessionId);

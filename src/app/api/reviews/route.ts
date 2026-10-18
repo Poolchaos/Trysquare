@@ -127,17 +127,17 @@ export function POST(request: Request): Promise<Response> {
     // How the work is divided follows from the model, not from a default. The
     // registry knows what each model can absorb; asking for more than that is
     // refused, and asking for less is a deliberate downgrade that is recorded.
-    // Refused for every model, not just the expensive ones: the tier lets the
-    // session spawn its own workflows, and a review already fans out across
-    // five stages unattended. Enforced here as well as in the picker, because
-    // a rule only the screen knows is not a rule.
+    // Refused for every model, on cost: up to 5.59 times high per call by the
+    // CLI's own index, across five stages, unattended (D-125). Enforced here
+    // as well as in the picker, because a rule only the screen knows is not a
+    // rule.
     if (!isSelectableEffort(input.effort)) {
       throw Response.json(
         {
           error:
-            `The ${input.effort} effort tier is not available for reviews. It lets the session ` +
-            `spawn its own workflows, which turns one unattended review into an unbounded ` +
-            `amount of usage. Choose high, which is the recommended tier.`,
+            `The ${input.effort} effort tier is not available for reviews. The CLI prices it ` +
+            `at up to 5.59 times high for every call, and a review makes many, unattended. ` +
+            `Choose high, which is the recommended tier.`,
           code: "EffortNotAvailable",
         },
         { status: 400 },

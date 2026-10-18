@@ -104,10 +104,11 @@ the first four and refuses max (2026-08-04). xhigh is offered only on a model
 that runs it: on a fixed list of older models (claude-3, Opus and Sonnet 4.0
 to 4.6, Haiku 4.5) the CLI sends it as high or as no effort, without saying
 so, and a review there would record an effort it never had (D-122, corrected
-by D-123). max is refused because it is the ultracode
-setting, extra-high reasoning plus the ability to spawn its own workflows and
-sub-agents, and a review already fans out across five stages and as many
-batches as the profile calls for, unattended. It stays in the enum so reviews
+by D-123). max is refused on cost: the CLI's own index prices it at up to
+5.59 times high per call, and a review already fans out across five stages and
+as many batches as the profile calls for, unattended. It was first refused as
+the tier that spawns workflows; in 2.1.301 that is ultracode, a separate
+setting no review reads (D-124, D-125). It stays in the enum so reviews
 created before the rule still parse; it is simply never selectable and is
 refused at the API for every model.
 

@@ -286,11 +286,10 @@ describe("creating a review", () => {
     expect(body).not.toContain("makes one request per batch");
   }, 120_000);
 
-  it("refuses the ultracode effort tier, whatever model is asked for", async () => {
-    // That tier lets the session spawn its own workflows. A review already
-    // fans out across five stages and as many batches as the profile calls
-    // for, unattended, on a subscription this app is a guest on, so one
-    // review would become an unbounded amount of someone else's usage.
+  it("refuses the top effort tier, whatever model is asked for", async () => {
+    // On cost: up to 5.59 times high per call by the CLI's own index, and a
+    // review fans out across five stages and as many batches as the profile
+    // calls for, unattended, on a subscription this app is a guest on (D-125).
     for (const model of ["claude-fable-5[1m]", "claude-sonnet-5"]) {
       const response = await routes.reviews.POST(
         post("http://localhost/api/reviews", {

@@ -73,14 +73,14 @@ export type ReviewEffort = z.infer<typeof reviewEffortSchema>;
 /**
  * What a person may actually pick.
  *
- * `max` is the CLI's ultracode tier: extra-high reasoning that also lets the
- * session spawn its own workflows and sub-agents. A review here already fans
- * out across five stages and as many batches as the profile calls for, so
- * that tier turns one review into an unbounded amount of someone else's
- * usage, spent unattended, on a subscription this app is a guest on. It stays
- * in the enum because reviews created before this rule still name it and
- * their rows must keep parsing; it is simply never offered, and refused on
- * the way in.
+ * Not `max`, on cost (2026-08-04, the reason restated in D-125): the CLI's
+ * own index prices it at up to 5.59 times high per call (sonnet-5), and a
+ * review makes calls across five stages and as many batches as its profile
+ * asks for, unattended, on a subscription this app is a guest on. It was
+ * withheld first as the tier that spawns workflows; in 2.1.301 that is
+ * ultracode, a separate setting no review reads (D-124). It stays in the enum
+ * because reviews created before this rule still name it and their rows must
+ * keep parsing; it is simply never offered, and refused on the way in.
  */
 export const SELECTABLE_REVIEW_EFFORTS = REVIEW_EFFORTS.filter(
   (effort) => effort !== "max",
