@@ -11,7 +11,9 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { z } from "zod";
 import { insideRoot } from "@/lib/paths";
 import { git, gitBytes, toLines } from "./run";
@@ -35,6 +37,13 @@ export class WorktreeModifiedError extends Error {
  * `--detach` avoids creating a branch, and `--force` is deliberately not used:
  * if the path is already a worktree, that is a bug worth surfacing rather than
  * overwriting somebody else's running review.
+ *
+ * No hook runs: hooksPath points at an empty directory made for the call.
+ * git runs post-checkout here, the person's global hooks included, and one
+ * that wrote a file into the checkout broke the promise that nothing does;
+ * a file it wrote where the repository ignores it made the baseline refuse
+ * every review (review of 4.24 to 4.27). Made, not merely named: a path
+ * that did not exist yet could be made by someone else first.
  */
 export async function addWorktree(
   repoDir: string,
@@ -42,10 +51,24 @@ export async function addWorktree(
   commit: string,
 ): Promise<void> {
   await mkdir(worktreeDir, { recursive: true });
-  await git(["worktree", "add", "--detach", "--quiet", worktreeDir, commit], {
-    cwd: repoDir,
-    timeoutMs: 300_000,
-  });
+  const noHooks = await mkdtemp(join(tmpdir(), "trysquare-no-hooks-"));
+  try {
+    await git(
+      [
+        "-c",
+        `core.hooksPath=${noHooks}`,
+        "worktree",
+        "add",
+        "--detach",
+        "--quiet",
+        worktreeDir,
+        commit,
+      ],
+      { cwd: repoDir, timeoutMs: 300_000 },
+    );
+  } finally {
+    await rm(noHooks, { recursive: true, force: true });
+  }
 }
 
 /**

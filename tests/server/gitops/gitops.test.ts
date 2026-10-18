@@ -5,7 +5,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -571,6 +571,43 @@ describe("review worktrees", () => {
     writeFileSync(join(dir, "debug.log"), "written by the review\n");
     await expect(assertWorktreeClean(dir)).rejects.toThrow(/build\/out\.js/);
     await expect(assertWorktreeClean(dir, baseline)).rejects.toThrow(/debug\.log/);
+
+    await removeWorktree(clone, dir);
+  });
+
+  it("runs none of the person's checkout hooks (review of 4.24 to 4.27)", async () => {
+    // git worktree add runs post-checkout hooks, from the person's global
+    // hooksPath among others. One writing a file the repository ignores made
+    // the baseline refuse every review once ignored paths were read (D-128).
+    const origin = join(root, "hooked-origin");
+    execFileSync("git", ["init", "-q", "-b", "main", origin]);
+    git(["config", "core.autocrlf", "false"], origin);
+    writeFileSync(join(origin, ".gitignore"), "tags\n");
+    writeFileSync(join(origin, "app.ts"), "export const a = 1;\n");
+    git(["add", ".gitignore", "app.ts"], origin);
+    git(["commit", "-qm", "init"], origin);
+    const clone = join(root, "hooked.git");
+    await cloneBare(origin, clone);
+
+    const hooks = join(root, "person-hooks");
+    mkdirSync(hooks);
+    writeFileSync(join(hooks, "post-checkout"), "#!/bin/sh\necho generated > tags\n", {
+      mode: 0o755,
+    });
+    const config = join(root, "hooked.gitconfig");
+    writeFileSync(config, `[core]\n\thooksPath = ${hooks.replace(/\\/g, "/")}\n`);
+    const previous = process.env.GIT_CONFIG_GLOBAL;
+    process.env.GIT_CONFIG_GLOBAL = config;
+    const dir = join(root, "wt-hooked");
+    try {
+      await addWorktree(clone, dir, await resolveBranch(clone, "main"));
+    } finally {
+      if (previous === undefined) delete process.env.GIT_CONFIG_GLOBAL;
+      else process.env.GIT_CONFIG_GLOBAL = previous;
+    }
+
+    expect(existsSync(join(dir, "tags"))).toBe(false);
+    await expect(worktreeBaseline(dir)).resolves.toEqual({ changes: [], contents: {} });
 
     await removeWorktree(clone, dir);
   });

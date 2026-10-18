@@ -101,7 +101,9 @@ exports/                            saved reports
 Laws:
 
 - Clones are bare; review checkouts are `git worktree add --detach` pinned to
-  a commit hash, pruned when the review is deleted.
+  a commit hash, made with no hook run (hooksPath set to an empty directory,
+  so a person's post-checkout hook writes nothing into one), pruned when the
+  review is deleted.
 - **The app never writes inside a worktree.** Enforced by code review, by the
   engine's read-only tool allowlist, and by a unit test asserting the
   worktree is byte-identical (git status clean, ignored paths included,
