@@ -898,45 +898,98 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
   await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
 });
 
-test("no route answers an id that names nothing with a server failure", async ({ page }) => {
-  // Every route with an id in its path, read from the routes on disk so a
-  // new one is asked too, and asked of the built app, where the job manager
-  // is another bundle's copy. Two answered 500: the rules route, which never
-  // looked the review up, and a cancel, whose lookup was the manager's
-  // (D-139). A body of {} may be refused before the lookup, which is fine.
+test("every route answers an id that names nothing with a 404 naming it", async ({ page }) => {
+  // Asked of the built app, where the job manager is the instrumentation
+  // bundle's copy of the server modules. Two answered 500: the rules route,
+  // which never looked the review up, and a cancel, whose lookup was the
+  // manager's (D-139). Each route is sent what passes its validation, so the
+  // lookup is what answers: {} was refused first by five of them, which
+  // proved nothing about the id (D-140).
+  const asked: Record<string, { data?: object; query?: string }> = {
+    "POST findings/[id]/confirm": { data: {} },
+    "POST findings/[id]/dismiss": { data: { reason: "Asked by the sweep." } },
+    "POST models/[id]/probe": { data: {} },
+    "GET projects/[id]": {},
+    "DELETE projects/[id]": {},
+    "GET projects/[id]/branches": {},
+    "POST projects/[id]/clone": { data: {} },
+    "POST projects/[id]/fetch": { data: {} },
+    "GET projects/[id]/links": {},
+    // Another id that names nothing: the same one is refused as a self-link
+    // before either is looked up.
+    "POST projects/[id]/links": { data: { dependencyProjectId: "NOPE456", packageName: "swept" } },
+    "DELETE projects/[id]/links/[linkId]": {},
+    "DELETE projects/[id]/reviews": {},
+    "GET reviews/[id]": {},
+    "DELETE reviews/[id]": {},
+    "POST reviews/[id]/cancel": { data: {} },
+    "POST reviews/[id]/complete": { data: {} },
+    "GET reviews/[id]/context": { query: "?path=app/README.md&line=1" },
+    "GET reviews/[id]/events": {},
+    "POST reviews/[id]/export": { data: {} },
+    "GET reviews/[id]/report": {},
+    "GET reviews/[id]/rules": {},
+    "POST reviews/[id]/start": { data: {} },
+    "GET rulesets/[id]": {},
+    "GET rulesets/[id]/export": {},
+    "POST rulesets/[id]/duplicate": { data: { tier: "global", name: "Swept" } },
+    "PATCH rulesets/[id]/rules/[code]": { data: { enabled: true } },
+  };
+
+  // Read from the routes on disk, so a new one with no entry above fails
+  // here rather than going unasked.
   const apiRoot = join(process.cwd(), "src", "app", "api");
-  const routes: { path: string; methods: string[] }[] = [];
+  const walked: string[] = [];
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const full = join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
       else if (entry.name === "route.ts") {
-        const path = relative(apiRoot, dir).split("\\").join("/");
-        if (!path.includes("[")) continue;
-        const source = readFileSync(full, "utf8");
+        const route = relative(apiRoot, dir).split("\\").join("/");
+        if (!route.includes("[")) continue;
         const methods = [
-          ...source.matchAll(/export (?:async )?function (GET|POST|PUT|PATCH|DELETE)\b/g),
-        ];
-        routes.push({ path, methods: methods.map((match) => match[1]!) });
+          ...readFileSync(full, "utf8").matchAll(
+            /export (?:async function|const|function) (GET|POST|PUT|PATCH|DELETE)\b/g,
+          ),
+        ].map((match) => match[1]!);
+        expect(methods, `${route} exports no method the sweep can see`).not.toHaveLength(0);
+        walked.push(...methods.map((method) => `${method} ${route}`));
       }
     }
   };
   walk(apiRoot);
-  // Read from the right place: an empty walk would pass by asking nothing.
-  expect(routes.map((route) => route.path)).toEqual(
-    expect.arrayContaining(["reviews/[id]/cancel", "reviews/[id]/rules", "findings/[id]/confirm"]),
-  );
+  expect(walked.sort()).toEqual(Object.keys(asked).sort());
 
-  for (const { path, methods } of routes) {
-    for (const method of methods) {
-      const url = `/api/${path.replace(/\[[^\]]+\]/g, "NOPE123")}`;
-      const answer = await page.request.fetch(url, {
-        method,
-        ...(method === "GET" || method === "DELETE" ? {} : { data: {} }),
-      });
-      expect
-        .soft([400, 404], `${method} ${url}: ${await answer.text()}`)
-        .toContain(answer.status());
+  // An inner id is asked under a parent that exists too, or only the
+  // parent's lookup would ever answer.
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const rulesets = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string }[];
+  };
+  const parents: Record<string, string> = {
+    projects: projects.projects.find((project) => project.name === "app")!.id,
+    rulesets: rulesets.rulesets[0]!.id,
+  };
+
+  const ask = async (key: string, url: string) => {
+    const { data, query } = asked[key]!;
+    const answer = await page.request.fetch(url + (query ?? ""), {
+      method: key.split(" ")[0]!,
+      ...(data === undefined ? {} : { data }),
+    });
+    const body = await answer.text();
+    expect.soft(answer.status(), `${key} at ${url}: ${body}`).toBe(404);
+    expect.soft(body, `${key} at ${url}`).toMatch(/"code":"\w*NotFound\w*"/);
+  };
+  for (const key of Object.keys(asked)) {
+    const route = key.split(" ")[1]!;
+    await ask(key, `/api/${route.replace(/\[[^\]]+\]/g, "NOPE123")}`);
+    const ids = route.match(/\[[^\]]+\]/g)!;
+    if (ids.length > 1) {
+      const parent = parents[route.split("/")[0]!]!;
+      await ask(key, `/api/${route.replace(ids[0]!, parent).replace(ids[1]!, "NOPE123")}`);
     }
   }
 });
