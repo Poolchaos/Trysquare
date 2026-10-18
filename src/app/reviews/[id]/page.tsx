@@ -846,7 +846,6 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 <Select
                   aria-label="Ruleset to start with"
                   value={draftRuleset}
-                  disabled={draftRulesets === null}
                   onChange={(event) => setDraftRuleset(event.target.value)}
                 >
                   {(draftRulesets ?? []).map((ruleset) => (

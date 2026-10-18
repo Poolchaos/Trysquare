@@ -323,8 +323,21 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByText("Refused for this test: the rules.")).toBeVisible();
     await expect(page.getByText(/not in the ruleset the review was frozen with/)).toHaveCount(0);
     await stopRefusingRules();
+    // The read again is held, so the panel is seen to say it is reading
+    // rather than that the rule is missing (D-138, D-139).
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const stopHolding = await answerOnce(page, "**/api/reviews/*/rules", async (route) => {
+      await held;
+      await route.continue();
+    });
     await page.getByRole("button", { name: "Try again" }).click();
+    await expect(page.getByText("Reading the review's rules...")).toBeVisible();
+    release();
     await expect(page.getByText(/^#{2,3} .*\d/m).first()).toBeVisible();
+    await stopHolding();
 
     // Straight after clicking the Rule button: a click leaves no focus on a
     // queue button, so Enter is the queue's (review of 5.1 to 5.4). The file's

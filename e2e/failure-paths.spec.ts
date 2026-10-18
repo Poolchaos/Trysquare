@@ -673,9 +673,22 @@ test("a review left as a draft can be started from its own screen", async ({ pag
     timeout: 30_000,
   });
   await stopRulesets();
+  // The read again is held, so the screen is seen to say it is reading
+  // rather than keep the old message (D-138, D-139).
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stopHolding = await answerOnce(page, "**/api/rulesets", async (route) => {
+    await held;
+    await route.continue();
+  });
   await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText("Reading the rulesets...")).toBeVisible();
+  release();
   const start = page.getByRole("button", { name: "Start review" });
   await expect(start).toBeVisible({ timeout: 30_000 });
+  await stopHolding();
   const chosen = await page.getByLabel("Ruleset to start with").inputValue();
   expect(chosen).not.toBe("");
   const started = page.waitForResponse(
