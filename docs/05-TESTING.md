@@ -26,13 +26,18 @@ marker list, per-step timeout, VERIFIED/FAILED summary naming what was not
 proven (e.g. "no e2e"). Both failure branches are deliberately exercised
 once at creation to prove the gate fires.
 
-The marker scan reads a here-string, never `printf | grep -q`: under
-`pipefail` the pipe form reported a pass whenever a marker sat early in
-output over about 100KB, because `grep -q` exits at the match and the
-writer dies of SIGPIPE (MVP-PLAN WP 1.1, measured 2026-10-16). Every run
-starts with a self-check that feeds the scan a 300KB output with the
-marker first, then last, then absent, and fails the gate unless all three
-read correctly. The check takes about 0.2s.
+The marker scan reads the output from a temporary file, never through
+`printf | grep -q` and never from a here-string. Under `pipefail` the pipe
+form reported a pass whenever a marker sat early in output over about
+100KB, because `grep -q` exits at the match and the writer dies of SIGPIPE
+(MVP-PLAN WP 1.1, measured 2026-10-16). Git Bash 5.2.37 hangs writing a
+here-string of 65,537 to 65,664 bytes, which held Windows CI run
+39115191562 for 35 minutes (D-134, measured 2026-10-18). A grep status
+other than 1 counts as a marker, so grep failing cannot read as clean.
+Every run starts with a self-check: a 300KB output with the marker first,
+then last, then absent, and a 65,600-byte output with the marker absent,
+then last. The gate fails unless all five read correctly. The check took
+about 0.3s on Windows (three runs, 318 to 321 ms).
 
 ## 2. Unit and integration (vitest)
 
