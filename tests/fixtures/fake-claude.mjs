@@ -12,7 +12,7 @@
  * exact argv and environment the engine used.
  */
 
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -60,8 +60,14 @@ const SYSTEM_PROMPT = readSystemPrompt();
 const scenario = process.env.FAKE_CLAUDE_SCENARIO ?? "success";
 
 // So a test can check the process is really gone once a stage says it stopped.
+// Written beside it and renamed into place, so the file never exists empty: a
+// reader that caught it between creation and write read pid 0, which
+// process.kill takes as its own process group, always running (macOS CI run
+// 39113234471; 6 of 300 tight reads on Windows found it empty).
 if (process.env.FAKE_CLAUDE_PID_FILE) {
-  writeFileSync(process.env.FAKE_CLAUDE_PID_FILE, String(process.pid));
+  const partial = `${process.env.FAKE_CLAUDE_PID_FILE}.partial`;
+  writeFileSync(partial, String(process.pid));
+  renameSync(partial, process.env.FAKE_CLAUDE_PID_FILE);
 }
 const recordPath = process.env.FAKE_CLAUDE_RECORD;
 

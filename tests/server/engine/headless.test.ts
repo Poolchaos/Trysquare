@@ -265,11 +265,16 @@ describe("stopping a stage", () => {
       return false;
     }
   };
+  // Refuses anything but a real pid: pid 0 is this process's own group to
+  // process.kill, so a pid read as 0 would always look running.
   const startedPid = async () => {
     for (let attempt = 0; attempt < 100 && !existsSync(pidFile()); attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
-    return Number(readFileSync(pidFile(), "utf8"));
+    const text = readFileSync(pidFile(), "utf8");
+    const pid = Number(text);
+    if (!Number.isInteger(pid) || pid <= 0) throw new Error(`The pid file held "${text}".`);
+    return pid;
   };
 
   beforeEach(() => {
