@@ -85,17 +85,28 @@ export default function SettingsPage() {
     };
   }, []);
 
-  async function save(key: string, raw: string) {
+  async function save(field: (typeof FIELDS)[number], input: HTMLInputElement) {
     setError("");
     setSaved(false);
-    const value = Number(raw);
+    // An emptied field is a field left alone, not a request for zero:
+    // Number("") is 0, and for the budget zero removes the ceiling, so
+    // clearing it lifted the cap on every model call without a word (5.3).
+    if (input.value.trim() === "") {
+      if (settings !== null) input.value = String(settings[field.key]);
+      setError(
+        `${field.label} was left empty, so it was not changed.` +
+          (field.key === "stageMaxBudgetUsd" ? " To remove the ceiling, enter 0." : ""),
+      );
+      return;
+    }
+    const value = Number(input.value);
     if (!Number.isFinite(value)) {
-      setError(`${key} needs a number.`);
+      setError(`${field.label} needs a number.`);
       return;
     }
     const response = await fetch("/api/settings", {
       method: "PUT",
-      body: JSON.stringify({ [key]: value }),
+      body: JSON.stringify({ [field.key]: value }),
     });
     const body = (await response.json()) as { settings?: Record<string, number>; error?: string };
     if (!response.ok) {
@@ -170,7 +181,7 @@ export default function SettingsPage() {
                     <Input
                       type="number"
                       defaultValue={settings[field.key]}
-                      onBlur={(event) => void save(field.key, event.target.value)}
+                      onBlur={(event) => void save(field, event.currentTarget)}
                     />
                   </Field>
                 ))}

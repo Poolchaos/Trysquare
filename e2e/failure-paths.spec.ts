@@ -206,6 +206,27 @@ test("a page the server let go of opens a new stream rather than polling", async
   await stopAnswering();
 });
 
+test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {
+  // Number("") is 0, and zero removes the ceiling: clearing the field and
+  // leaving it lifted the cap on every model call without a word (5.3).
+  // Removing the ceiling now takes a typed 0.
+  await page.goto("/settings");
+  const budget = page.getByLabel("Budget per call (USD)");
+  await expect(budget).toHaveValue(/^\d/, { timeout: 30_000 });
+  const before = await budget.inputValue();
+
+  await budget.fill("");
+  await budget.blur();
+  await expect(page.getByText(/was left empty, so it was not changed/)).toBeVisible();
+  await expect(page.getByText(/To remove the ceiling, enter 0/)).toBeVisible();
+  // The field shows what is stored, and what is stored did not move.
+  await expect(budget).toHaveValue(before);
+  const stored = (await (await page.request.get("/api/settings")).json()) as {
+    settings: Record<string, number>;
+  };
+  expect(stored.settings.stageMaxBudgetUsd).toBe(Number(before));
+});
+
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {
   // The one state that wants something from someone used to be visible only
   // by opening the reviews list and reading the chips, so a review that
