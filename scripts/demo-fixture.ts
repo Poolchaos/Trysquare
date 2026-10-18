@@ -21,13 +21,18 @@ import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { parseUnifiedDiff } from "@/lib/git/diff";
-import { dbPath } from "@/lib/paths";
+import { dbPath, projectRepoDir } from "@/lib/paths";
 import { importProtocol } from "@/lib/rulesets/import";
 import { createDb } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import { listFindings, statusOf } from "@/server/db/repositories/findings";
 import { recordProbeSuccess, registerCandidate } from "@/server/db/repositories/models";
-import { createProject, linkDependency } from "@/server/db/repositories/projects";
+import {
+  createProject,
+  linkDependency,
+  setClonePath,
+  setCloneStatus,
+} from "@/server/db/repositories/projects";
 import { createReview, requireReview } from "@/server/db/repositories/reviews";
 import { cloneBare, diffText, mergeBase, resolveBranch } from "@/server/gitops/repo";
 import { probeModel } from "@/server/engine/probe";
@@ -112,11 +117,6 @@ async function main(): Promise<number> {
       `${manifest.cleanFiles.length} file(s) that are deliberately fine.`,
   );
 
-  const appClone = join(dataDir, "clones", "app.git");
-  const coreClone = join(dataDir, "clones", "core.git");
-  await cloneBare(built.appDir, appClone);
-  await cloneBare(built.coreDir, coreClone);
-
   const db = createDb(dbPath(dataDir));
   runMigrations(db);
 
@@ -147,18 +147,29 @@ async function main(): Promise<number> {
     log(`Available as ${probe.resolvedId}, ` + `${count(probe.contextWindow)} token window.`);
   }
 
-  const app = createProject(db, {
-    name: "app",
-    gitUrl: `file://${built.appDir}`,
-    defaultBranch: "main",
-    clonePath: appClone,
-  });
-  const core = createProject(db, {
-    name: "shared-core",
-    gitUrl: `file://${built.coreDir}`,
-    defaultBranch: "main",
-    clonePath: coreClone,
-  });
+  // Each cloned where the app keeps a project's own and marked ready, as
+  // adding it in the app leaves it. Cloned into a shared clones directory
+  // and left pending, a data directory kept with --keep opened with both
+  // refused as still cloning, failed at the next start, and a delete removed
+  // nothing of either clone (review of the D-134 fixes).
+  const addProject = async (name: string, source: string) => {
+    const project = createProject(db, {
+      name,
+      gitUrl: `file://${source}`,
+      defaultBranch: "main",
+      clonePath: "",
+    });
+    const clonePath = projectRepoDir(dataDir, project.id);
+    await cloneBare(source, clonePath);
+    setClonePath(db, project.id, clonePath);
+    setCloneStatus(db, project.id, "cloning");
+    setCloneStatus(db, project.id, "ready");
+    return { id: project.id, clonePath };
+  };
+  const app = await addProject("app", built.appDir);
+  const core = await addProject("shared-core", built.coreDir);
+  const appClone = app.clonePath;
+  const coreClone = core.clonePath;
   linkDependency(db, {
     projectId: app.id,
     dependencyProjectId: core.id,
