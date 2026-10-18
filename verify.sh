@@ -94,22 +94,42 @@ run() {
   echo "ok: ${name}"
 }
 
-# A here-string, not `printf | grep -q`: grep -q exits at its first match,
-# printf then dies of SIGPIPE, and under pipefail the pipeline reports that
-# death, so a marker early in a large output read as a pass. Measured
-# 2026-10-16: unflagged from about 100KB up, in 20 runs of 20.
+# Through a file, neither a pipe nor a here-string.
+# - `printf | grep -q`: grep -q exits at its first match, printf then dies of
+#   SIGPIPE, and under pipefail the pipeline reports that death, so a marker
+#   early in a large output read as a pass. Measured 2026-10-16: unflagged
+#   from about 100KB up, in 20 runs of 20.
+# - `grep <<<"$1"`: Git Bash 5.2.37 hangs writing a here-string of 65,537 to
+#   65,664 bytes, every time, and none either side (measured 2026-10-18).
+#   Windows CI run 39115191562 sat 35 minutes here on a unit-test output of
+#   65,624 bytes.
+# Any grep status but 1 (no match) counts as a marker: grep failing, status 2,
+# must not read as a clean output.
 has_error_marker() {
-  grep -Eq "$ERROR_MARKERS" <<<"$1"
+  local file status
+  if ! file=$(mktemp); then
+    echo "note: the error-marker scan had no temporary file, so the step fails"
+    return 0
+  fi
+  printf '%s\n' "$1" >"$file"
+  grep -Eq "$ERROR_MARKERS" "$file"
+  status=$?
+  rm -f "$file"
+  [ "$status" -ne 1 ]
 }
 
-# The scan proves itself on every run, at the size that once broke it: a gate
-# that cannot see an error is silent in exactly the way it exists to prevent.
+# The scan proves itself on every run, at the sizes that once broke it: a
+# gate that cannot see an error is silent in exactly the way it exists to
+# prevent, and one that hangs never answers at all.
 check_scanner() {
-  local filler marker='TypeError: scanner self-check'
+  local filler window marker='TypeError: scanner self-check'
   printf -v filler '%*s' 300000 ''
+  printf -v window '%*s' 65600 ''
   if ! has_error_marker "${marker}"$'\n'"${filler}" ||
     ! has_error_marker "${filler}"$'\n'"${marker}" ||
-    has_error_marker "${filler}"; then
+    has_error_marker "${filler}" ||
+    has_error_marker "${window}" ||
+    ! has_error_marker "${window}"$'\n'"${marker}"; then
     echo "GATE FAILED: the error-marker scan failed its own self-check"
     FAILED+=("marker scan self-check")
   fi

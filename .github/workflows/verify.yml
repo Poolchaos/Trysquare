@@ -15,6 +15,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # A hang is a failure, and without a limit GitHub waits six hours: run
+    # 39115191562 sat 35 minutes until it was cancelled by hand. The eight
+    # green runs from 43bee5f to 60a438d took 6m13s to 10m10s.
+    timeout-minutes: 30
     defaults:
       run:
         # verify.sh is bash; on Windows this is Git Bash, as it is locally.
