@@ -19,7 +19,7 @@ import {
 } from "@/lib/domain/state-machines";
 import { completeness, refutedOnlySentence } from "@/lib/review/report";
 import { ConfirmationQueue, type Finding } from "@/components/confirmation";
-import { PageBody, PageHeader, PageLoading } from "@/components/page";
+import { Loading, PageBody, PageHeader, PageLoading } from "@/components/page";
 import {
   Badge,
   Button,
@@ -1114,6 +1114,11 @@ function ReportPanel({
 }) {
   const [data, setData] = useState<ReportData | null>(null);
   const [error, setError] = useState("");
+  // Why the report could not be read, said where it would be, with Try again:
+  // a dropped connection or an error page that was not JSON threw past the
+  // read, and "Building the report..." stayed for good (D-137).
+  const [readError, setReadError] = useState("");
+  const [readAttempt, setReadAttempt] = useState(0);
   // A copy that says nothing is a copy someone presses twice to be sure.
   const [copied, setCopied] = useState(false);
 
@@ -1121,22 +1126,22 @@ function ReportPanel({
     if (report !== null) return;
     let cancelled = false;
     void (async () => {
-      const response = await fetch(`/api/reviews/${reviewId}/report`);
-      const body = (await response.json()) as {
-        markdown?: string;
-        report?: ReportData;
-        error?: string;
-      };
+      const sent = await send<{ markdown?: string; report?: ReportData }>(
+        `/api/reviews/${reviewId}/report`,
+        {},
+        "The report could not be built",
+      );
       if (cancelled) return;
-      if (response.ok && body.markdown) {
-        onLoaded(body.markdown);
-        if (body.report) setData(body.report);
-      } else setError(body.error ?? "The report could not be built.");
+      if (sent.ok && sent.body.markdown) {
+        setReadError("");
+        onLoaded(sent.body.markdown);
+        if (sent.body.report) setData(sent.body.report);
+      } else setReadError(sent.ok ? "The report could not be built." : sent.error);
     })();
     return () => {
       cancelled = true;
     };
-  }, [reviewId, report, onLoaded]);
+  }, [reviewId, report, onLoaded, readAttempt]);
 
   return (
     <section className="mb-6">
@@ -1178,7 +1183,17 @@ function ReportPanel({
       ) : null}
 
       {report === null ? (
-        <p className="text-body text-[var(--color-ink-muted)]">Building the report...</p>
+        readError ? (
+          <Loading
+            error={readError}
+            onRetry={() => {
+              setReadError("");
+              setReadAttempt((attempt) => attempt + 1);
+            }}
+          />
+        ) : (
+          <p className="text-body text-[var(--color-ink-muted)]">Building the report...</p>
+        )
       ) : data ? (
         <RenderedReport data={data} />
       ) : (

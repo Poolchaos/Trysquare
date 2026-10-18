@@ -329,6 +329,26 @@ test("the new review screen says why a read failed, not that a repository is emp
   await expect(page.getByText("Refused for this test: the rulesets.")).toHaveCount(0);
 });
 
+test("a report that could not be read says so, and is read again on Try again", async ({
+  page,
+}) => {
+  // A dropped connection or an error page that was not JSON threw past the
+  // report's read, and "Building the report..." stayed for good (D-137).
+  const stopFailing = await answerOnce(page, "**/api/reviews/*/report", (route) =>
+    route.fulfill({ status: 500, contentType: "text/html", body: "<html>Server error</html>" }),
+  );
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await row.getByRole("link").click();
+  await expect(page.getByText("The report could not be built.")).toBeVisible({ timeout: 30_000 });
+  await stopFailing();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByRole("heading", { name: "What was examined" })).toBeVisible({
+    timeout: 30_000,
+  });
+});
+
 test("a page the server let go of opens a new stream rather than polling", async ({ page }) => {
   // The server lets a stream go when its page falls 256 frames behind, and
   // says so last. The page used to read any end as a dropped connection and

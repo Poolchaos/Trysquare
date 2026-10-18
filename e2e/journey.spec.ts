@@ -251,7 +251,15 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page).toHaveURL(/\/reviews\/new/);
   });
 
+  // Armed before the queue appears, which reads the frozen rules once.
+  let stopRefusingRules = async () => {};
   await test.step("starting it walks the stages and then stops for a person", async () => {
+    stopRefusingRules = await answerOnce(page, "**/api/reviews/*/rules", (route) =>
+      route.fulfill({
+        status: 500,
+        json: { error: "Refused for this test: the rules.", code: "Test" },
+      }),
+    );
     await page.getByRole("button", { name: "Start review" }).click();
     await expect(page).toHaveURL(/\/reviews\/[A-Z0-9]+$/i, { timeout: 60_000 });
     await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
@@ -310,6 +318,12 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // answers have to be on the screen, from the review's own frozen ruleset
     // and its own diff rather than from today's versions of either.
     await page.getByRole("button", { name: /^Rule / }).click();
+    // Its read refused once: said, with Try again. Dropped, the panel claimed
+    // the rule was not in the ruleset the review was frozen with (D-137).
+    await expect(page.getByText("Refused for this test: the rules.")).toBeVisible();
+    await expect(page.getByText(/not in the ruleset the review was frozen with/)).toHaveCount(0);
+    await stopRefusingRules();
+    await page.getByRole("button", { name: "Try again" }).click();
     await expect(page.getByText(/^#{2,3} .*\d/m).first()).toBeVisible();
 
     // Straight after clicking the Rule button: a click leaves no focus on a

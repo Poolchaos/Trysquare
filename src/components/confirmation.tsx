@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, Button, Card, Input, Mono, Problem, Textarea, severityTone } from "@/components/ui";
+import { send } from "@/components/request";
 
 export interface Finding {
   id: string;
@@ -103,6 +104,11 @@ export function ConfirmationQueue({
   const [contextFor, setContextFor] = useState<string | null>(null);
   const [context, setContext] = useState<{ forId: string; data: FileContext } | null>(null);
   const [rules, setRules] = useState<SnapshotRule[]>([]);
+  // Why the frozen rules could not be read. Dropped, the panel said a cited
+  // rule "is not in the ruleset the review was frozen with", which was
+  // untrue, on the screen where findings are decided (D-137).
+  const [rulesProblem, setRulesProblem] = useState("");
+  const [rulesAttempt, setRulesAttempt] = useState(0);
   const [ruleOpenFor, setRuleOpenFor] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -149,15 +155,19 @@ export function ConfirmationQueue({
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const response = await fetch(`/api/reviews/${reviewId}/rules`);
-      if (!response.ok || cancelled) return;
-      const body = (await response.json()) as { rules: SnapshotRule[] };
-      if (!cancelled) setRules(body.rules);
+      const sent = await send<{ rules: SnapshotRule[] }>(
+        `/api/reviews/${reviewId}/rules`,
+        {},
+        "The review's rules could not be read",
+      );
+      if (cancelled) return;
+      setRulesProblem(sent.ok ? "" : sent.error);
+      if (sent.ok) setRules(sent.body.rules);
     })();
     return () => {
       cancelled = true;
     };
-  }, [reviewId]);
+  }, [reviewId, rulesAttempt]);
 
   const act = useCallback(
     async (finding: Finding, action: "confirm" | "dismiss", detail?: string) => {
@@ -500,7 +510,16 @@ export function ConfirmationQueue({
                   Rule {current.ruleCode}
                   {currentRule ? `: ${currentRule.title}` : ""}
                 </button>
-                {ruleOpen ? (
+                {ruleOpen && rulesProblem ? (
+                  <div className="mt-2 grid gap-2">
+                    <Problem>{rulesProblem}</Problem>
+                    <div>
+                      <Button onClick={() => setRulesAttempt((attempt) => attempt + 1)}>
+                        Try again
+                      </Button>
+                    </div>
+                  </div>
+                ) : ruleOpen ? (
                   <pre
                     tabIndex={0}
                     role="group"
