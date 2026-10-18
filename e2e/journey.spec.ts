@@ -327,8 +327,20 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByText(/^#{2,3} .*\d/m).first()).toBeVisible();
 
     // Straight after clicking the Rule button: a click leaves no focus on a
-    // queue button, so Enter is the queue's (review of 5.1 to 5.4).
+    // queue button, so Enter is the queue's (review of 5.1 to 5.4). The file's
+    // read refused once first: said, with Try again, not taken for a checkout
+    // that is gone (D-138).
+    const stopRefusingContext = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
+      route.fulfill({
+        status: 500,
+        json: { error: "Refused for this test: the file.", code: "Test" },
+      }),
+    );
     await page.locator("body").press("Enter");
+    await expect(page.getByText("Refused for this test: the file.")).toBeVisible();
+    await expect(page.getByText(/no longer available for this review/)).toHaveCount(0);
+    await stopRefusingContext();
+    await page.getByRole("button", { name: "Try again" }).click();
     await expect(page.getByRole("heading", { name: "What the change did here" })).toBeVisible();
     await expect(page.getByText(/^@@ -\d+,\d+ \+\d+,\d+ @@/m)).toBeVisible();
     await expect(page.getByRole("heading", { name: "The file as it stands" })).toBeVisible();

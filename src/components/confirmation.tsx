@@ -102,7 +102,14 @@ export function ConfirmationQueue({
   // effect to reset it behind the cursor.
   const [editingFor, setEditingFor] = useState<string | null>(null);
   const [contextFor, setContextFor] = useState<string | null>(null);
-  const [context, setContext] = useState<{ forId: string; data: FileContext } | null>(null);
+  // The error rides with the read it came from: a failed read was taken
+  // for an empty file, and the pane said "The checkout is no longer
+  // available for this review", untrue for a 500 or a refused path (D-138).
+  const [context, setContext] = useState<{
+    forId: string;
+    data: FileContext;
+    error?: string;
+  } | null>(null);
   const [rules, setRules] = useState<SnapshotRule[]>([]);
   // Why the frozen rules could not be read. Dropped, the panel said a cited
   // rule "is not in the ruleset the review was frozen with", which was
@@ -148,6 +155,7 @@ export function ConfirmationQueue({
   const ruleOpen = current !== undefined && ruleOpenFor === current.id;
   const showContext = current !== undefined && contextFor === current.id;
   const shownContext = current && context?.forId === current.id ? context.data : null;
+  const contextError = current && context?.forId === current.id ? context.error : undefined;
   const reason = current ? (reasons[current.id] ?? "") : "";
 
   // Fetched once per review rather than with each snapshot poll: the frozen
@@ -237,13 +245,17 @@ export function ConfirmationQueue({
     const { id, filePath, lineStart } = current;
     let cancelled = false;
     void (async () => {
-      const response = await fetch(
+      const sent = await send<FileContext>(
         `/api/reviews/${reviewId}/context?path=${encodeURIComponent(filePath)}&line=${lineStart}`,
+        {},
+        "The file could not be read",
       );
-      const data = response.ok
-        ? ((await response.json()) as FileContext)
-        : { lines: [], hunk: null };
-      if (!cancelled) setContext({ forId: id, data });
+      if (cancelled) return;
+      setContext(
+        sent.ok
+          ? { forId: id, data: sent.body }
+          : { forId: id, data: { lines: [], hunk: null }, error: sent.error },
+      );
     })();
     return () => {
       cancelled = true;
@@ -607,6 +619,15 @@ export function ConfirmationQueue({
                   </div>
                 ) : null}
 
+                {contextError ? (
+                  <div className="grid gap-2">
+                    <Problem>{contextError}</Problem>
+                    <div>
+                      <Button onClick={() => setContext(null)}>Try again</Button>
+                    </div>
+                  </div>
+                ) : null}
+
                 <div>
                   <h4 className="mb-1 text-xs font-medium">The file as it stands</h4>
                   <pre
@@ -618,23 +639,26 @@ export function ConfirmationQueue({
                     <code className="font-[family-name:var(--font-mono)]">
                       {shownContext === null
                         ? "Reading the file..."
-                        : shownContext.lines.length === 0
-                          ? "The checkout is no longer available for this review."
-                          : shownContext.lines.map((line) => (
-                              <span
-                                key={line.number}
-                                className={`block ${
-                                  line.number >= current.lineStart && line.number <= current.lineEnd
-                                    ? "bg-[var(--color-accent-soft)]"
-                                    : ""
-                                }`}
-                              >
-                                <span className="mr-3 inline-block w-10 text-right text-[var(--color-ink-faint)]">
-                                  {line.number}
+                        : contextError
+                          ? "Not read."
+                          : shownContext.lines.length === 0
+                            ? "The checkout is no longer available for this review."
+                            : shownContext.lines.map((line) => (
+                                <span
+                                  key={line.number}
+                                  className={`block ${
+                                    line.number >= current.lineStart &&
+                                    line.number <= current.lineEnd
+                                      ? "bg-[var(--color-accent-soft)]"
+                                      : ""
+                                  }`}
+                                >
+                                  <span className="mr-3 inline-block w-10 text-right text-[var(--color-ink-faint)]">
+                                    {line.number}
+                                  </span>
+                                  {line.text}
                                 </span>
-                                {line.text}
-                              </span>
-                            ))}
+                              ))}
                     </code>
                   </pre>
                 </div>
