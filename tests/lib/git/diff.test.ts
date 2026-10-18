@@ -282,10 +282,56 @@ describe("a typechange (4.25)", () => {
   });
 
   it("leaves a deletion and an addition at different paths alone", () => {
-    const twoFiles = LINK_TO_FILE.replace(/b\/link\nnew file/, "b/other\nnew file")
-      .replace("diff --git a/link b/link\nnew", "diff --git a/other b/other\nnew")
-      .replace("+++ b/link", "+++ b/other");
-    expect(parseUnifiedDiff(twoFiles).map((file) => file.changeType)).toEqual(["deleted", "added"]);
+    // Written out whole: it was derived from the typechange by replacements,
+    // one of which never matched (review of 4.24 to 4.27).
+    const twoFiles = [
+      "diff --git a/link b/link",
+      "deleted file mode 120000",
+      "index 4cbb553..0000000",
+      "--- a/link",
+      "+++ /dev/null",
+      "@@ -1 +0,0 @@",
+      "-target.txt",
+      "\\ No newline at end of file",
+      "diff --git a/other b/other",
+      "new file mode 100644",
+      "index 0000000..e5c5c55",
+      "--- /dev/null",
+      "+++ b/other",
+      "@@ -0,0 +1,2 @@",
+      "+line one",
+      "+line two",
+      "",
+    ].join("\n");
+    expect(parseUnifiedDiff(twoFiles).map((file) => [file.path, file.changeType])).toEqual([
+      ["link", "deleted"],
+      ["other", "added"],
+    ]);
+  });
+
+  it("is not binary because one half was, so the other half's lines are still read", () => {
+    // A binary file becoming a symlink, as git prints it. Marked binary, the
+    // merged file broke "binary files have no hunks" and the sweep skipped
+    // the link target it added (review of 4.24 to 4.27).
+    const binaryToLink = [
+      "diff --git a/link b/link",
+      "deleted file mode 100644",
+      "index 7989678..0000000",
+      "Binary files a/link and /dev/null differ",
+      "diff --git a/link b/link",
+      "new file mode 120000",
+      "index 0000000..4cbb553",
+      "--- /dev/null",
+      "+++ b/link",
+      "@@ -0,0 +1 @@",
+      "+target.txt",
+      "\\ No newline at end of file",
+      "",
+    ].join("\n");
+    const [file] = parseUnifiedDiff(binaryToLink);
+    expect(file?.changeType).toBe("modified");
+    expect(file?.isBinary).toBe(false);
+    expect(file?.hunks).toHaveLength(1);
   });
 });
 

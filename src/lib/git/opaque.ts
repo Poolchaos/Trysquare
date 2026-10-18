@@ -43,14 +43,20 @@ export function isLfsPointer(text: string): boolean {
 }
 
 /**
- * One side of a file, as far as its first hunk shows it, or null when that
- * hunk does not start at the side's first line. Diffs carry three lines of
- * context, so a pointer's hunk holds all of it, whichever lines changed.
- * Taken to the count the header declares: the parser reads the blank line
- * that ends a diff as one more line of context.
+ * One side of a file, as far as the hunk that starts it shows it, or null when
+ * no hunk starts at that side's first line. Diffs carry three lines of
+ * context, so a pointer's hunk holds all of it, whichever lines changed. The
+ * hunk is looked for rather than taken first: a typechange holds the old
+ * side's hunk and then the new side's (D-127), and reading only the first
+ * missed a pointer that replaced a symlink (review of 4.24 to 4.27). Taken to
+ * the count the header declares: the parser reads the blank line that ends a
+ * diff as one more line of context.
  */
-function sideFromFirstHunk(hunk: ParsedHunk | undefined, side: "old" | "new"): string | null {
-  if (!hunk || (side === "old" ? hunk.oldStart : hunk.newStart) !== 1) return null;
+function sideFromItsHunk(hunks: readonly ParsedHunk[], side: "old" | "new"): string | null {
+  const hunk = hunks.find(
+    (candidate) => (side === "old" ? candidate.oldStart : candidate.newStart) === 1,
+  );
+  if (!hunk) return null;
   const dropped = side === "old" ? "+" : "-";
   return hunk.lines
     .filter((line) => !line.startsWith(dropped) && !line.startsWith("\\"))
@@ -74,9 +80,8 @@ export function opaqueChanges(files: readonly ParsedFile[]): OpaqueChanges {
     }
     // Either side: a file moved into LFS, or out of it, still has content on
     // one side that the diff does not hold.
-    const first = file.hunks[0];
     const isPointer = (["old", "new"] as const).some((side) => {
-      const text = sideFromFirstHunk(first, side);
+      const text = sideFromItsHunk(file.hunks, side);
       return text !== null && isLfsPointer(text);
     });
     if (isPointer) lfsPointers.push(file.path);

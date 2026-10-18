@@ -112,6 +112,34 @@ describe("changes whose content the review cannot read (4.23)", () => {
     expect(opaqueChanges(parseUnifiedDiff(LFS_DELETED)).lfsPointers).toEqual(["assets/model.bin"]);
   });
 
+  it("finds a Git LFS file that replaced a symlink (review of 4.24 to 4.27)", () => {
+    // Merged as one file since 4.25, the symlink's deletion became its first
+    // hunk, and only the first hunk was read for either side.
+    const linkToPointer = [
+      "diff --git a/assets/model.bin b/assets/model.bin",
+      "deleted file mode 120000",
+      "index 4cbb553..0000000",
+      "--- a/assets/model.bin",
+      "+++ /dev/null",
+      "@@ -1 +0,0 @@",
+      "-target.bin",
+      "\\ No newline at end of file",
+      "diff --git a/assets/model.bin b/assets/model.bin",
+      "new file mode 100644",
+      "index 0000000..4444444",
+      "--- /dev/null",
+      "+++ b/assets/model.bin",
+      "@@ -0,0 +1,3 @@",
+      `+${SPEC}`,
+      `+oid sha256:${OID_A}`,
+      "+size 12345",
+      "",
+    ].join("\n");
+    expect(opaqueChanges(parseUnifiedDiff(linkToPointer)).lfsPointers).toEqual([
+      "assets/model.bin",
+    ]);
+  });
+
   it("does not take a document quoting a pointer for one", () => {
     // Named as an LFS file the review had not read until the D-119 review,
     // though the review read every line of it.

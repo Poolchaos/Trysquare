@@ -375,8 +375,9 @@ export function parseUnifiedDiff(patch: string): ParsedFile[] {
 }
 
 /**
- * Git prints a typechange, a symlink becoming a file or the reverse, as a
- * deletion followed by an addition at the same path, and nothing else does.
+ * Git prints a typechange, a file, a symlink or a submodule becoming one of
+ * the others, as a deletion followed by an addition at the same path, and
+ * nothing else does.
  * Read as two files, the ledger held two rows the pipeline could only ever
  * find the first of, and the deleted half's base copy stood in for the new
  * file in the quote check (4.25). Merged into one modified file holding both
@@ -395,7 +396,9 @@ function mergeTypechanges(files: ParsedFile[]): ParsedFile[] {
       merged[merged.length - 1] = {
         ...previous,
         changeType: "modified",
-        isBinary: previous.isBinary || file.isBinary,
+        // Binary only if both halves are: a binary half has no hunks, and
+        // one binary half used to mark the other's hunks unread.
+        isBinary: previous.isBinary && file.isBinary,
         isModeChangeOnly: false,
         ...(file.newMode === undefined ? {} : { newMode: file.newMode }),
         hunks: [
