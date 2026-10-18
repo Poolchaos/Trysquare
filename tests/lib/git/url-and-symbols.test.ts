@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseUnifiedDiff } from "@/lib/git/diff";
 import { changedExportedSymbols, declarationsInLine, isTypeScriptPath } from "@/lib/git/symbols";
-import { InvalidGitUrlError, repoSlug, validateGitUrl } from "@/lib/git/url";
+import { InvalidGitUrlError, repoSlug, repositoryKey, validateGitUrl } from "@/lib/git/url";
 
 describe("git URL validation", () => {
   it("accepts the forms a hosting provider hands out", () => {
@@ -93,6 +93,36 @@ describe("git URL validation", () => {
       expect(slug.includes("/"), name).toBe(false);
       expect(slug.includes("\\"), name).toBe(false);
       expect(slug).not.toBe("..");
+    }
+  });
+});
+
+describe("one repository, however its address is spelled", () => {
+  // Adding a repository again was refused only when the address matched to
+  // the character (review of 5.5 to 5.7).
+  it("folds what cannot name another repository", () => {
+    const same: [string, string][] = [
+      ["https://github.com/acme/app.git", "https://github.com/acme/app"],
+      ["https://github.com/acme/app", "https://github.com/acme/app/"],
+      ["HTTPS://GitHub.com/acme/app.git", "https://github.com/acme/app.git"],
+      ["git@GitHub.com:acme/app.git", "git@github.com:acme/app"],
+      ["C:\\repos\\app", "c:/repos/app/"],
+      ["file:///C:/repos/app", "file:///c:/repos/app/"],
+      ["/srv/repos/app/", "/srv/repos/app"],
+    ];
+    for (const [a, b] of same) expect(repositoryKey(a), `${a} and ${b}`).toBe(repositoryKey(b));
+  });
+
+  it("keeps what can", () => {
+    const different: [string, string][] = [
+      ["https://github.com/acme/App", "https://github.com/acme/app"],
+      ["/srv/repos/app", "/srv/repos/app.git"],
+      ["file:///srv/repos/app", "file:///srv/repos/app.git"],
+      ["https://Alice@example.com/app", "https://alice@example.com/app"],
+      ["git@github.com:acme/app", "https://github.com/acme/app"],
+    ];
+    for (const [a, b] of different) {
+      expect(repositoryKey(a), `${a} and ${b}`).not.toBe(repositoryKey(b));
     }
   });
 });

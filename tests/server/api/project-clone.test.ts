@@ -73,6 +73,10 @@ describe("an address added twice", () => {
     expect(body.code).toBe("DuplicateProject");
     expect(body.projectId).toBe(project.id);
     expect(body.error).toContain("twice");
+
+    // Another spelling of the same address is the same repository.
+    const respelled = await routes.projects.POST(post({ gitUrl: `${url}/` }));
+    expect(respelled.status).toBe(409);
   });
 });
 

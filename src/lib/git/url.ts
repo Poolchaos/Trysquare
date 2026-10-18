@@ -92,6 +92,54 @@ export function validateGitUrl(rawUrl: string): string {
 }
 
 /**
+ * What two spellings of one repository's address share, so a repository
+ * already added is known however it is typed again (review of 5.5 to 5.7).
+ * Only what cannot tell two repositories apart is folded: a trailing slash,
+ * the host's case, a local path's slash direction and drive letter case, and
+ * a hosted address's trailing `.git`. A path's own case is kept, because most
+ * servers and file systems hold `App` and `app` as two repositories, and so
+ * is a local `.git`, because `repo` and `repo.git` can sit side by side.
+ */
+export function repositoryKey(url: string): string {
+  const trimmed = url.trim();
+  const withScheme = /^([A-Za-z][A-Za-z0-9+.-]*:\/\/)([^/\\]*)(.*)$/.exec(trimmed);
+  let key: string;
+  let hosted: boolean;
+  if (withScheme) {
+    const [, scheme = "", authority = "", path = ""] = withScheme;
+    // The user before the @ is not folded: only a host name ignores case.
+    const at = authority.lastIndexOf("@");
+    hosted = scheme.toLowerCase() !== "file://";
+    key =
+      scheme.toLowerCase() +
+      authority.slice(0, at + 1) +
+      authority.slice(at + 1).toLowerCase() +
+      (hosted ? path : localPath(path));
+  } else if (SCP_LIKE.test(trimmed)) {
+    const at = trimmed.indexOf("@");
+    const colon = trimmed.indexOf(":", at);
+    hosted = true;
+    key =
+      trimmed.slice(0, at + 1) + trimmed.slice(at + 1, colon).toLowerCase() + trimmed.slice(colon);
+  } else {
+    hosted = false;
+    key = localPath(trimmed);
+  }
+  key = key.replace(/\/+$/, "");
+  return hosted ? key.replace(/\.git$/, "").replace(/\/+$/, "") : key;
+}
+
+/** Windows reads either slash, and a drive letter in either case. */
+function localPath(path: string): string {
+  return path
+    .replace(/\\/g, "/")
+    .replace(
+      /^(\/?)([A-Za-z]):/,
+      (_match, slash: string, drive: string) => `${slash}${drive.toLowerCase()}:`,
+    );
+}
+
+/**
  * A filesystem-safe slug for the worktree directory of a linked review, where
  * two repositories are checked out side by side and their names become path
  * segments the model reads.

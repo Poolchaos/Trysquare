@@ -3,6 +3,7 @@
  */
 
 import { and, asc, eq, inArray, or } from "drizzle-orm";
+import { repositoryKey } from "@/lib/git/url";
 import { newId, nowIso } from "@/lib/ids";
 import { cloneStatusSchema, type CloneStatus } from "@/lib/domain/enums";
 import { assertCloneTransition } from "@/lib/domain/state-machines";
@@ -94,9 +95,10 @@ export function requireClonedProject(db: Db, projectId: string): Project {
   return project;
 }
 
-/** The project already made from this address, if one was. */
+/** The project already made from this repository, however its address was spelled. */
 export function findProjectByUrl(db: Db, gitUrl: string): Project | undefined {
-  return db.select().from(projects).where(eq(projects.gitUrl, gitUrl)).get();
+  const key = repositoryKey(gitUrl);
+  return listProjects(db).find((project) => repositoryKey(project.gitUrl) === key);
 }
 
 export function listProjects(db: Db): Project[] {
