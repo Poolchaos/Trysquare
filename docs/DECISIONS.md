@@ -2751,3 +2751,34 @@ verified evidence, in writing, here.
   the overlap pattern, so D-126's "word for word" overstated it. Fixed
   82ff9d3 with case-sensitive GLOB held to the pipeline's wording; no real
   database had applied 0011 (this machine's holds 0000 to 0010).
+- 2026-10-18 D-131 REVIEW (MVP 5.1 to 5.4, 70433b3..6015c6f, by a separate
+  read-only reviewer; each finding re-run here before it was fixed). Ten
+  findings, three MEDIUM, one LOW-MEDIUM, six LOW, all dispositioned before
+  new work:
+  1. MEDIUM: Enter on a focused branch or model radio, or the dependency
+  checkbox, still submitted the start form and started a paid review; 5.2
+  had guarded only the filter. Fixed fcdcaad: the form swallows Enter on
+  everything but a button and a text area.
+  2. MEDIUM: with Enter left to focused buttons (5.4), a row clicked with
+  the mouse kept focus, so Enter after j re-clicked it and the selection
+  jumped back; the journey had blurred around it, which the charter counts
+  as a test changed to pass. 10. LOW: the guard's Space half did nothing,
+  and it skipped clearing a pending g. Fixed 21c7f04: a mouse click leaves
+  no focus on a queue button, the workaround is gone, the guard takes Enter
+  only and clears the pending g.
+  3. MEDIUM: the theater's cancel said nothing when the server had gone,
+  because the reading after it threw. 4. LOW-MEDIUM: the toolbar's "Yes,
+  cancel" outlived the status it was asked under, leaving a finished review
+  one click from cancelled, and Cancel and Delete could be armed at once.
+  5. LOW: only the theater's Cancel was driven in a browser. 6. LOW: the
+  confirmations gave no sign of a cancel in flight. 3 to 6 fixed 837a89e,
+  with browser tests for the toolbar and the dropped request.
+  7. LOW: settings told what is not yet a number that it had been left
+  empty, and a failed save threw past its message. 8. LOW: the review and
+  project deletes, the list's delete and the export threw past their
+  messages on a dropped request or a non-JSON error page. 7 and 8 fixed
+  bbcb509 through one request helper that always returns words to show.
+  The dependency link's one-click Remove stays as it is: it is undone by
+  adding the link again, and nothing is lost by it.
+  9. LOW: rows 5.1 to 5.4 lacked their commits and gate results. Fixed
+  with this record.
