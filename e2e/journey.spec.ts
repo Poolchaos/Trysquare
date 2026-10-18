@@ -191,10 +191,12 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.getByText("Advanced", { exact: true }).click();
   });
 
-  await test.step("Enter in the branch filter filters, and starts nothing", async () => {
-    // The filter sits inside the start form, so Enter there submitted it and
-    // started a paid review from a keystroke meant for a search box (5.2).
-    // Pressed once the form is ready, which is when it used to submit.
+  await test.step("Enter in the form starts nothing; only Start review does", async () => {
+    // Every control here sits inside the start form, and Enter on a text box,
+    // a radio or a checkbox submits a form: a keystroke meant for the branch
+    // filter, or to pick a branch or a model, started a paid review (5.2; the
+    // radios and the checkbox in the review of 5.1 to 5.4). Pressed once the
+    // form is ready, which is when it used to submit.
     await expect(page.getByRole("button", { name: "Start review" })).toBeEnabled();
     let creates = 0;
     page.on("request", (request) => {
@@ -205,10 +207,16 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     const filter = page.getByPlaceholder("Filter branches");
     await filter.fill("rename");
     await filter.press("Enter");
+    await filter.fill("");
+    const branch = page.getByRole("radio", { name: /feature\/rename-prefs/ }).first();
+    await branch.focus();
+    await page.keyboard.press("Enter");
+    const model = page.getByRole("radio", { name: /Fable 5 \(1M context\)/ });
+    await model.focus();
+    await page.keyboard.press("Enter");
     await page.waitForTimeout(500);
     expect(creates).toBe(0);
     await expect(page).toHaveURL(/\/reviews\/new/);
-    await filter.fill("");
   });
 
   await test.step("starting it walks the stages and then stops for a person", async () => {

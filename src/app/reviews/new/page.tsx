@@ -393,7 +393,25 @@ function NewReview() {
         subtitle="The branch you want reviewed, and what to compare it against."
       />
       <PageBody>
-        <form onSubmit={start} className="grid max-w-3xl gap-5">
+        <form
+          onSubmit={start}
+          // Enter on a text box, a radio or a checkbox submits its form, and
+          // this one starts a paid review: a keystroke meant for the branch
+          // filter, or to pick a branch or a model, started one (5.2; the
+          // review of 5.1 to 5.4). Only Start review submits; a text area
+          // keeps its newline.
+          onKeyDown={(event) => {
+            const target = event.target as HTMLElement;
+            if (
+              event.key === "Enter" &&
+              target.tagName !== "BUTTON" &&
+              target.tagName !== "TEXTAREA"
+            ) {
+              event.preventDefault();
+            }
+          }}
+          className="grid max-w-3xl gap-5"
+        >
           {stale ? (
             <Problem>
               The branch list could not be refreshed, so these are the refs from last time: {stale}
@@ -406,12 +424,6 @@ function NewReview() {
               <Input
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
-                // Inside the start form, so Enter here submitted it and
-                // started a review from a keystroke meant for a search box
-                // (5.2). It filters as you type; Enter has nothing to do.
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") event.preventDefault();
-                }}
                 placeholder="Filter branches"
                 aria-label="Filter branches"
                 className="max-w-56"
