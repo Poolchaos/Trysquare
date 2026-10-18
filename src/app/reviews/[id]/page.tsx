@@ -387,6 +387,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     // escaped the theater's cancel, which then said nothing at all when the
     // server had gone away (review of 5.1 to 5.4).
     const response = await fetch(`/api/reviews/${id}`).catch(() => null);
+    // No such review is no run to follow: its stream is not opened again and
+    // the poll stops, where both went on for as long as the tab stayed open
+    // (D-137).
+    if (response?.status === 404) runLive.current = false;
     return response?.ok ? ((await response.json()) as Snapshot) : null;
   }
 
@@ -528,8 +532,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     // on it. Without the stop, every finished review kept polling forever.
     source.onerror = () => {
       source.close();
-      setStreaming(false);
+      // A run that ended closes its stream on purpose. Marked down first, the
+      // theater said "being opened again" at the end of every run until the
+      // last reading landed (D-137).
       if (runEnded) return;
+      setStreaming(false);
       // Opened again too, after a wait that doubles from one second to thirty,
       // and only while the run is still live by then: the poll keeps the
       // status moving, but the feed and the request line are fed by the
@@ -545,7 +552,14 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         if (cancelled) return;
         void (async () => {
           const fresh = await fetchSnapshot();
-          if (cancelled || !fresh) return;
+          if (cancelled) return;
+          if (!fresh) {
+            if (runLive.current === false && poll !== undefined) {
+              clearInterval(poll);
+              poll = undefined;
+            }
+            return;
+          }
           setSnapshot(fresh);
           if (!fresh.running && !fresh.queued && poll !== undefined) {
             clearInterval(poll);

@@ -577,10 +577,10 @@ test("a dropped stream is said in the theater and opened again, and the feed goe
   const stopDropping = await answerOnce(page, "**/api/reviews/*/events", (route) => route.abort());
   await startAReview(page);
 
-  await expect(page.getByText(/live stream dropped/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/being opened again/)).toBeVisible({ timeout: 30_000 });
   await expect.poll(() => streams, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
   await stopDropping();
-  await expect(page.getByText(/live stream dropped/)).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.getByText(/being opened again/)).toHaveCount(0, { timeout: 15_000 });
   // The stalled stage ends with a note on the stream. The Activity log is
   // the feed itself, not the notes the poll reads back, so only a stream
   // opened again can put it there.
@@ -634,6 +634,16 @@ test("a review left as a draft can be started from its own screen", async ({ pag
       new URL(response.url()).pathname === `/api/reviews/${review.id}/start` &&
       response.request().method() === "POST",
   );
+  // Watched for the whole run: the server closes the stream when a run ends,
+  // and the theater read that as a drop, "being opened again", until the last
+  // reading landed (D-137).
+  await page.evaluate(() => {
+    const seen = { notice: false };
+    (window as unknown as { streamNotice: typeof seen }).streamNotice = seen;
+    new MutationObserver(() => {
+      if (document.body.innerText.includes("being opened again")) seen.notice = true;
+    }).observe(document.body, { subtree: true, childList: true, characterData: true });
+  });
   await start.click();
   const answer = await started;
   expect(answer.status()).toBe(200);
@@ -652,6 +662,31 @@ test("a review left as a draft can be started from its own screen", async ({ pag
       { timeout: 60_000 },
     )
     .not.toMatch(/^(draft|running|verifying)$/);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { streamNotice: { notice: boolean } }).streamNotice.notice,
+    ),
+  ).toBe(false);
+});
+
+test("a review that does not exist is not asked after again and again", async ({ page }) => {
+  // Its stream answers 404, which the page took for a dropped connection: it
+  // reopened the stream with backoff and polled every two seconds, for as
+  // long as the tab stayed open (D-137).
+  const asked = { streams: 0, reads: 0 };
+  const count = (request: import("@playwright/test").Request) => {
+    const path = new URL(request.url()).pathname;
+    if (path === "/api/reviews/NOPE123/events") asked.streams += 1;
+    if (path === "/api/reviews/NOPE123" && request.method() === "GET") asked.reads += 1;
+  };
+  page.on("request", count);
+  await page.goto("/reviews/NOPE123");
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible({ timeout: 30_000 });
+  // Past the first reopen (one second) and the first poll (two).
+  await page.waitForTimeout(5_000);
+  page.off("request", count);
+  expect(asked.streams).toBe(1);
+  expect(asked.reads).toBeLessThanOrEqual(2);
 });
 
 test("a review waiting its turn offers no Start of its own", async ({ page }) => {
