@@ -904,7 +904,30 @@ test("every route answers an id that names nothing with a 404 naming it", async 
   // which never looked the review up, and a cancel, whose lookup was the
   // manager's (D-139). Each route is sent what passes its validation, so the
   // lookup is what answers: {} was refused first by five of them, which
-  // proved nothing about the id (D-140).
+  // proved nothing about the id (D-140). The answer must name the thing
+  // the asked id was for: any not-found code passed, and a guard before the
+  // lookup answering a generic one would have passed too (D-141).
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const rulesets = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string }[];
+  };
+  const parents: Record<string, string> = {
+    projects: projects.projects.find((project) => project.name === "app")!.id,
+    rulesets: rulesets.rulesets[0]!.id,
+  };
+  // The class whose 404 each segment's id must get.
+  const notFound: Record<string, string> = {
+    findings: "FindingNotFoundError",
+    models: "ModelNotFoundError",
+    projects: "ProjectNotFoundError",
+    links: "LinkNotFoundError",
+    reviews: "ReviewNotFoundError",
+    rulesets: "RulesetNotFoundError",
+    rules: "RuleNotFoundError",
+  };
+
   const asked: Record<string, { data?: object; query?: string }> = {
     "POST findings/[id]/confirm": { data: {} },
     "POST findings/[id]/dismiss": { data: { reason: "Asked by the sweep." } },
@@ -915,9 +938,11 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "POST projects/[id]/clone": { data: {} },
     "POST projects/[id]/fetch": { data: {} },
     "GET projects/[id]/links": {},
-    // Another id that names nothing: the same one is refused as a self-link
-    // before either is looked up.
-    "POST projects/[id]/links": { data: { dependencyProjectId: "NOPE456", packageName: "swept" } },
+    // A dependency that exists, so only the path's id can be the one not
+    // found; the path's own id would be refused as a self-link unlooked.
+    "POST projects/[id]/links": {
+      data: { dependencyProjectId: parents.projects, packageName: "swept" },
+    },
     "DELETE projects/[id]/links/[linkId]": {},
     "DELETE projects/[id]/reviews": {},
     "GET reviews/[id]": {},
@@ -960,20 +985,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
   walk(apiRoot);
   expect(walked.sort()).toEqual(Object.keys(asked).sort());
 
-  // An inner id is asked under a parent that exists too, or only the
-  // parent's lookup would ever answer.
-  const projects = (await (await page.request.get("/api/projects")).json()) as {
-    projects: { id: string; name: string }[];
-  };
-  const rulesets = (await (await page.request.get("/api/rulesets")).json()) as {
-    rulesets: { id: string }[];
-  };
-  const parents: Record<string, string> = {
-    projects: projects.projects.find((project) => project.name === "app")!.id,
-    rulesets: rulesets.rulesets[0]!.id,
-  };
-
-  const ask = async (key: string, url: string) => {
+  const ask = async (key: string, url: string, code: string) => {
     const { data, query } = asked[key]!;
     const answer = await page.request.fetch(url + (query ?? ""), {
       method: key.split(" ")[0]!,
@@ -981,15 +993,22 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     });
     const body = await answer.text();
     expect.soft(answer.status(), `${key} at ${url}: ${body}`).toBe(404);
-    expect.soft(body, `${key} at ${url}`).toMatch(/"code":"\w*NotFound\w*"/);
+    expect.soft(body, `${key} at ${url}`).toContain(`"code":"${code}"`);
   };
   for (const key of Object.keys(asked)) {
     const route = key.split(" ")[1]!;
-    await ask(key, `/api/${route.replace(/\[[^\]]+\]/g, "NOPE123")}`);
+    const segments = route.split("/");
     const ids = route.match(/\[[^\]]+\]/g)!;
+    await ask(key, `/api/${route.replace(/\[[^\]]+\]/g, "NOPE123")}`, notFound[segments[0]!]!);
+    // An inner id is asked under a parent that exists too, or only the
+    // parent's lookup would ever answer.
     if (ids.length > 1) {
-      const parent = parents[route.split("/")[0]!]!;
-      await ask(key, `/api/${route.replace(ids[0]!, parent).replace(ids[1]!, "NOPE123")}`);
+      const inner = segments[segments.indexOf(ids[1]!) - 1]!;
+      await ask(
+        key,
+        `/api/${route.replace(ids[0]!, parents[segments[0]!]!).replace(ids[1]!, "NOPE123")}`,
+        notFound[inner]!,
+      );
     }
   }
 });
