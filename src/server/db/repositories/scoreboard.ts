@@ -11,8 +11,9 @@
  * findings are worth reading. Invention is what the quotation check killed out
  * of everything ever raised, which measures how often the engine makes things
  * up. Only those kills: one the verifier refuted cited real code, and counting
- * it too overstated invention (4.24). Elsewhere killed findings are only listed, under a review's run detail
- * (D-97); this is the one place they are counted.
+ * it too overstated invention (4.24). Elsewhere killed findings are only
+ * listed, under a review's run detail (D-97); this is the one place they are
+ * counted.
  */
 
 import { desc, eq } from "drizzle-orm";

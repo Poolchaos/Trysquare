@@ -169,13 +169,6 @@ export function pathFromDiffHeader(line: string): string | null {
 }
 
 /**
- * Parses `git diff` output into files and hunks.
- *
- * Accepts the output of a plain `git diff`, including `-M` rename detection.
- * Empty input yields an empty list, which is a legitimate result (a branch
- * with no changes) rather than an error.
- */
-/**
  * The path on a `---` or `+++` line. Git ends the line with a tab when the
  * name holds a space, and that tab is all that is removed: trimming the line
  * took a name's own trailing spaces with it, reading `notes ` as `notes`
@@ -185,6 +178,13 @@ function headerLinePath(line: string): string {
   return line.slice(4).replace(/\t$/, "");
 }
 
+/**
+ * Parses `git diff` output into files and hunks.
+ *
+ * Accepts the output of a plain `git diff`, including `-M` rename detection.
+ * Empty input yields an empty list, which is a legitimate result (a branch
+ * with no changes) rather than an error.
+ */
 export function parseUnifiedDiff(patch: string): ParsedFile[] {
   if (patch.trim() === "") return [];
 

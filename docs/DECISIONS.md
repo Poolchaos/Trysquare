@@ -2717,3 +2717,37 @@ verified evidence, in writing, here.
   D-108 the change set was then refused rather than reviewed under the
   wrong name, which was safe but meant such a change could not be reviewed
   at all.
+- 2026-10-18 D-130 REVIEW (MVP 4.24 to 4.27, 3bce10d..d96d37e, by a
+  separate read-only reviewer; each finding re-run here before it was
+  fixed). Ten findings, one MEDIUM and nine LOW, all dispositioned before
+  new work; every new test of the range failed on the old code (13 of 13).
+  1. MEDIUM: git worktree add runs post-checkout hooks, a person's global
+  ones included, and one writing a file the repository ignores made every
+  review's baseline refuse once D-128 read ignored paths. Reproduced with a
+  global hooksPath writing `tags`. Fixed 5e49245: checkouts are made with
+  hooksPath set to an empty directory made for the call, so no hook runs.
+  2. LOW: PROJECT-STATE named migrations 0000 to 0010 and ten of them; there
+  are twelve, to 0011. 3. LOW: rows 4.24 to 4.27 lacked their commits and
+  gate results. 9. LOW: the 4.25 row said a merged typechange gets no base
+  copy (one is written, only not read), the 4.27 row said a pure rename
+  depends on the diff --git line (a rename names its paths on its own
+  lines; a mode or binary change does), a test comment placed the old
+  typechange failure at the audit (it was refused at the adversarial
+  stage), and the architecture doc's worktree check overstated what git
+  status sees: a write inside a submodule's empty directory is not
+  reported (idea inbox). 10. LOW: a misplaced doc comment and an unwrapped
+  line. 2, 3, 9 and 10 fixed with this record; the test that never built
+  its intended diff was rewritten in ce7cfd7.
+  4. LOW: the end-of-run note gave every kill as refuted beside the
+  quotation check's count. Fixed f3ac523.
+  5. LOW: a merged typechange was binary when one half was, so the sweep
+  skipped a symlink's added line. 6. LOW: LFS detection read only the
+  first hunk, the old side's after a merge, and missed a pointer that
+  replaced a symlink. 7. LOW: "nothing else does" left out submodules,
+  which git also prints as a deletion and an addition when one becomes a
+  file; D-127's "prints nothing else that way" means typechanges of any
+  of the three kinds. 5, 6 and 7 fixed ce7cfd7.
+  8. LOW: migration 0011 matched notes with LIKE, case-blind and loose in
+  the overlap pattern, so D-126's "word for word" overstated it. Fixed
+  82ff9d3 with case-sensitive GLOB held to the pipeline's wording; no real
+  database had applied 0011 (this machine's holds 0000 to 0010).

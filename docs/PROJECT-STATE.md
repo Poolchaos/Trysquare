@@ -108,7 +108,7 @@ are accepted; anything else is refused by name.
   quotation check, stage schemas, budget arithmetic, ruleset import with a
   fidelity gate, prompt composition, batch planning, the report renderer,
   and the request guard.
-- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0010, and
+- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0011, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings and stage executions.
 - `src/server/gitops/` - the only code that spawns git.
@@ -133,7 +133,7 @@ are accepted; anything else is refused by name.
   cost nothing.
 - `tests/` - unit and integration tests. `e2e/` - the browser journey, the
   theme and screenshot pass, and the axe accessibility pass.
-  `drizzle/` - ten committed migrations.
+  `drizzle/` - twelve committed migrations.
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and

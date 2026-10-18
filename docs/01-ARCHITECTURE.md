@@ -107,7 +107,9 @@ Laws:
 - **The app never writes inside a worktree.** Enforced by code review, by the
   engine's read-only tool allowlist, and by a unit test asserting the
   worktree is byte-identical (git status clean, ignored paths included,
-  D-128) after a pipeline run. A
+  D-128) after a pipeline run; a write inside a submodule's directory, which
+  a checkout leaves empty, is not something git status reports, so there the
+  read-only tools are the only guard (D-130). A
   checkout git already reports changed, because its `.gitattributes`
   normalises files committed otherwise, is held to what it reported at
   checkout and to those files' content then (D-107). A file is accepted

@@ -486,8 +486,8 @@ describe("what the review cannot read (4.23)", () => {
 
   it("reviews a symlink that became a file to the end (4.25)", async () => {
     // Git prints it as a deletion and an addition at one path. Read as two
-    // files, the run failed at the audit after every stage was paid for: the
-    // second file's hunks could never be found to be cleared.
+    // files, the adversarial stage's answer was refused for a hunk not in the
+    // change set, after the stages before it were paid for.
     const typechange = parseUnifiedDiff(
       [
         "diff --git a/link b/link",

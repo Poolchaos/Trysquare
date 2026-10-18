@@ -45,3 +45,7 @@ the line entirely would lose the trail.
 - 2026-10-17: the CLI 2.1.301 swapped claude-opus-4-1-20250805 for
   claude-opus-5-5 without a word (D-123), so a review on a retired model id
   would record a model it did not run.
+- 2026-10-18: a write inside a submodule's directory, which a review's
+  checkout leaves empty, is not reported by git status, so the end-of-review
+  worktree check cannot see it (D-130); list those directories at checkout and
+  require them still empty.
