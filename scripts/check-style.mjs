@@ -100,15 +100,49 @@ const CHECKS = [
     name: "A carriage return may only end a line",
     pattern: /\r(?!$)/,
   },
-  {
-    // CLAUDE.md section 8: all database access goes through repositories. Two
-    // routes queried the tables themselves until 5.10 (audit A6), which no
-    // gate could see.
-    name: "Routes and screens reach the database through repositories, not the schema or drizzle",
-    pattern: /from\s+["'](?:drizzle-orm[^"']*|@\/server\/db\/schema)["']/,
-    appliesTo: (path) => path.startsWith("src/app/") || path.startsWith("src/components/"),
-  },
 ];
+
+/**
+ * CLAUDE.md section 8: all database access goes through repositories. Two
+ * routes queried the tables themselves until 5.10 (audit A6), which no gate
+ * could see, and the first form of this check matched only the two import
+ * spellings they used (D-136). Read per file, not per line, because an
+ * import that prettier wraps spans lines and `import type` is on the first.
+ *
+ * Outside src/server/db/, nothing imports drizzle, better-sqlite3, the schema
+ * or the client for its values, at load or at run time, or calls the
+ * database handle. A type import is allowed: a module that hands `db` to a
+ * repository names its type.
+ */
+const REPOSITORY_LAW =
+  "Database access goes through src/server/db/repositories, not drizzle, the schema, the client or the handle";
+const DB_MODULE = /^(?:drizzle-orm(?:\/.*)?|better-sqlite3)$|\/db\/(?:schema|client)(?:\.ts)?$/;
+const DB_HANDLE_CALL =
+  /\bdb\s*\.\s*(?:select|insert|update|delete|query|run|all|get|values|transaction|\$client)\b/g;
+
+/** Files that own a database handle rather than query one, and why. */
+const DB_OWNERS = new Map([
+  ["src/server/runtime.ts", "creates the app's database and closes it on shutdown"],
+  ["src/server/data-dir-lock.ts", "keeps its own lock database, which is not the app's"],
+]);
+
+function repositoryLawLines(path, text) {
+  if (!path.startsWith("src/") || path.startsWith("src/server/db/") || DB_OWNERS.has(path)) {
+    return [];
+  }
+  const lineOf = (index) => text.slice(0, index).split("\n").length;
+  const lines = [];
+  for (const match of text.matchAll(
+    /\b(?:import|export)\s+(type\s+)?[^;]*?\bfrom\s+["']([^"']+)["']/g,
+  )) {
+    if (!match[1] && DB_MODULE.test(match[2])) lines.push(lineOf(match.index));
+  }
+  for (const match of text.matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g)) {
+    if (DB_MODULE.test(match[1])) lines.push(lineOf(match.index));
+  }
+  for (const match of text.matchAll(DB_HANDLE_CALL)) lines.push(lineOf(match.index));
+  return lines;
+}
 
 function collectFiles(entryPath, acc) {
   let stats;
@@ -171,15 +205,18 @@ const violations = [];
 for (const file of files) {
   // Forward slashes on every platform, so a scoped check matches on Windows.
   const path = relative(ROOT, file).split("\\").join("/");
-  const lines = readFileSync(file, "utf8").split("\n");
+  const text = readFileSync(file, "utf8");
+  const lines = text.split("\n");
   lines.forEach((line, index) => {
     for (const check of CHECKS) {
-      if (check.appliesTo && !check.appliesTo(path)) continue;
       if (check.pattern.test(line)) {
         violations.push(`${relative(ROOT, file)}:${index + 1}: ${check.name}\n    ${line.trim()}`);
       }
     }
   });
+  for (const line of repositoryLawLines(path, text)) {
+    violations.push(`${path}:${line}: ${REPOSITORY_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
+  }
 }
 
 if (violations.length > 0) {

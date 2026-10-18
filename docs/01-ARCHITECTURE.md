@@ -75,8 +75,12 @@ Layering laws:
 
 - `lib/` is pure and fully unit-testable: no I/O, no imports from `server/`.
 - All DB access goes through `server/db/repositories`. No inline queries in
-  routes or components; the house-style gate refuses an import of the schema
-  or drizzle under `src/app` and `src/components` (MVP 5.10).
+  routes or components. The house-style gate holds it: anywhere in `src`
+  outside `src/server/db`, it refuses a value import of drizzle,
+  better-sqlite3, the schema or the client, at load or at run time, and any
+  call on the database handle. A type import is allowed, and the two files
+  that own a handle, `server/runtime.ts` and `server/data-dir-lock.ts`, are
+  named exceptions (MVP 5.10, widened in D-136).
 - Only `server/gitops` spawns git; only `server/engine` spawns claude.
 - UI components never import from `server/`; they consume API payloads typed
   by shared zod schemas in `lib/`.
