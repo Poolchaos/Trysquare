@@ -228,6 +228,15 @@ export function ConfirmationQueue({
         if (event.key === "Escape") target.blur();
         return;
       }
+      // Enter and Space on a button, a link or a select are that element's
+      // own: the queue's Enter, which opens the code pane, used to take them
+      // and cancel them, so Enter on Confirm confirmed nothing (5.4).
+      if (
+        (event.key === "Enter" || event.key === " ") &&
+        target?.closest("button, a[href], select, summary, [role='button']")
+      ) {
+        return;
+      }
       if (!current) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       // A held key must not walk the queue deciding findings nobody read, and

@@ -272,6 +272,9 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.getByRole("button", { name: /^Rule / }).click();
     await expect(page.getByText(/^#{2,3} .*\d/m).first()).toBeVisible();
 
+    // Off the Rule button first: Enter on a focused button is the button's
+    // own since 5.4, and here it is meant for the queue.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.locator("body").press("Enter");
     await expect(page.getByRole("heading", { name: "What the change did here" })).toBeVisible();
     await expect(page.getByText(/^@@ -\d+,\d+ \+\d+,\d+ @@/m)).toBeVisible();
@@ -403,6 +406,17 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // Back onto an open finding, or the confirms below would press c at a
     // decided one and decide nothing.
     await page.locator("body").press("j");
+  });
+
+  await test.step("Enter on a focused button presses the button", async () => {
+    // The queue's own Enter, which opens the code pane, used to take every
+    // Enter on the page and cancel it, so Enter on Confirm opened the pane
+    // and confirmed nothing (5.4).
+    const before = await page.getByText(/\d+ of \d+ decided/).textContent();
+    const decided = Number(/(\d+) of/.exec(before ?? "")?.[1]);
+    await page.getByRole("button", { name: "Confirm", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText(new RegExp(`^${decided + 1} of \\d+ decided`))).toBeVisible();
   });
 
   let decidedTotal = 0;
