@@ -652,7 +652,9 @@ export function ConfirmationQueue({
                         : contextError
                           ? "Not read."
                           : shownContext.lines.length === 0
-                            ? "The checkout is no longer available for this review."
+                            ? // Only a file the change deleted answers with no lines:
+                              // the checkout is there, without it (D-139).
+                              "This file is not in the review's checkout: the change deleted it, and the change above is all there is of it."
                             : shownContext.lines.map((line) => (
                                 <span
                                   key={line.number}

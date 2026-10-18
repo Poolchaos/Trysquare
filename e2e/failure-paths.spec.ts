@@ -784,6 +784,26 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
   await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
 });
 
+test("a file the change deleted is said to be deleted, not the checkout gone", async ({ page }) => {
+  // The context route answers a file the change deleted with its hunk and no
+  // lines, and the pane read that as "The checkout is no longer available
+  // for this review": the checkout is there, without that file (D-139). The
+  // answer is the route's own shape for a deleted file.
+  const stopAnswering = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
+    route.fulfill({
+      status: 200,
+      json: { lines: [], hunk: { header: "@@ -1,2 +0,0 @@", lines: ["-gone", "-also gone"] } },
+    }),
+  );
+  await page.goto("/reviews?status=awaiting");
+  await page.getByRole("main").locator("ul > li").first().getByRole("link").click();
+  await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible({ timeout: 30_000 });
+  await page.locator("body").press("Enter");
+  await expect(page.getByText(/the change deleted it/)).toBeVisible();
+  await expect(page.getByText(/no longer available for this review/)).toHaveCount(0);
+  await stopAnswering();
+});
+
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {
   // The one state that wants something from someone used to be visible only
   // by opening the reviews list and reading the chips, so a review that
