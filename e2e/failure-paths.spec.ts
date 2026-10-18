@@ -30,7 +30,8 @@ test.afterAll(() => {
   rmSync(STALL_TRIGGER, { force: true });
 });
 
-async function startAReview(page: import("@playwright/test").Page): Promise<void> {
+/** The new-review form filled for the journey's pair, up to its Start button. */
+async function fillANewReview(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/projects");
   await page.getByRole("link", { name: "app", exact: true }).click();
   await page.getByRole("link", { name: "New review" }).click();
@@ -49,6 +50,10 @@ async function startAReview(page: import("@playwright/test").Page): Promise<void
   // CLI exiting over an unknown candidate, reading as an engine fault.
   await page.getByLabel("Compare against").selectOption("main");
   await expect(page.getByText("What this review will examine")).toBeVisible({ timeout: 60_000 });
+}
+
+async function startAReview(page: import("@playwright/test").Page): Promise<void> {
+  await fillANewReview(page);
   await page.getByRole("button", { name: "Start review" }).click();
   await expect(page).toHaveURL(/\/reviews\/[A-Z0-9]+$/i, { timeout: 60_000 });
 }
@@ -465,6 +470,43 @@ test("removing a link that is already gone says so and shows the links as they a
   await expect(row).toHaveCount(0);
 
   expect((await request.delete(`/api/projects/${other.id}`)).status()).toBe(200);
+});
+
+test("a review left as a draft can be started from its own screen", async ({ page }) => {
+  // A review is created and then started, two requests. When the start
+  // failed, the review was left a draft whose screen offered no way to start
+  // it: its only control was Resume, which a draft is not (5.11, audit U7).
+  await fillANewReview(page);
+  const stopRefusing = await answerOnce(page, "**/api/reviews/*/start", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Refused for this test.", code: "Test" }),
+    }),
+  );
+  const creation = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/reviews" && response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Start review" }).click();
+  const { review } = (await (await creation).json()) as { review: { id: string } };
+  await expect(page.getByText("Refused for this test.")).toBeVisible();
+  await stopRefusing();
+
+  await page.goto(`/reviews/${review.id}`);
+  const start = page.getByRole("button", { name: "Start review" });
+  await expect(start).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByLabel("Ruleset to start with")).toHaveValue(/.+/);
+  const started = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === `/api/reviews/${review.id}/start` &&
+      response.request().method() === "POST",
+  );
+  await start.click();
+  const answer = await started;
+  expect(answer.status()).toBe(200);
+  expect(answer.request().postDataJSON()).toEqual({ rulesetId: expect.any(String) });
+  await expect(start).toHaveCount(0);
 });
 
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {

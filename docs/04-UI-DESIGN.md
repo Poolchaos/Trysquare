@@ -177,7 +177,8 @@ from the dependency diff.
   tags per file, chain files read.
 - Activity feed: current stage's tool activity (file being read), errors.
 - Usage meter: cumulative tokens and cost-equivalent.
-- Controls: cancel, which asks first and says when it failed (5.1); resume
+- Controls: cancel, which asks first and says when it failed (5.1); start,
+  for a draft, with its ruleset chosen there (5.11); resume
   (paused/interrupted); retry failed stage.
 
 ### Confirmation (S7)

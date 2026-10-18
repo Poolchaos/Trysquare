@@ -26,6 +26,7 @@ import {
   Empty,
   Mono,
   Problem,
+  Select,
   Sha,
   severityTone,
   StatTile,
@@ -364,6 +365,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [confirmingCancelFor, setConfirmingCancelFor] = useState<string | null>(null);
   const [cancellingHere, setCancellingHere] = useState(false);
   const [actionError, setActionError] = useState("");
+  // A draft is a review the new-review screen made and then could not start.
+  // Nothing is frozen onto it yet, so starting it takes a ruleset; its screen
+  // used to offer only Resume, which a draft is not (5.11, U7).
+  const [draftRulesets, setDraftRulesets] = useState<{ id: string; name: string }[] | null>(null);
+  const [draftRuleset, setDraftRuleset] = useState("");
   // Shown once, when completing left the checkout behind; after a reload it
   // is in the run notes, folded under Run detail.
   const [checkoutLeft, setCheckoutLeft] = useState("");
@@ -405,6 +411,30 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   function watchAgain() {
     setStreaming(true);
     setWatchEpoch((epoch) => epoch + 1);
+  }
+
+  /**
+   * Starts a draft with the ruleset chosen for it, or resumes a stopped run,
+   * which sends none: it already carries the ruleset it was frozen with. A
+   * refusal, such as a review another tab already cancelled, is said, and the
+   * page shows where the review really is.
+   */
+  async function start(rulesetId?: string) {
+    setActionError("");
+    const sent = await send(
+      `/api/reviews/${id}/start`,
+      {
+        method: "POST",
+        ...(rulesetId === undefined ? {} : { body: JSON.stringify({ rulesetId }) }),
+      },
+      `The review could not be ${rulesetId === undefined ? "resumed" : "started"}`,
+    );
+    if (!sent.ok) {
+      setActionError(sent.error);
+      await reload();
+      return;
+    }
+    watchAgain();
   }
 
   useEffect(() => {
@@ -513,6 +543,29 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
   }, [snapshot?.running]);
+
+  const isDraft = snapshot?.review.status === "draft";
+  useEffect(() => {
+    if (!isDraft) return;
+    let cancelled = false;
+    void (async () => {
+      const sent = await send<{ rulesets: { id: string; name: string }[] }>(
+        "/api/rulesets",
+        {},
+        "The rulesets could not be read",
+      );
+      if (cancelled) return;
+      if (!sent.ok) {
+        setActionError(sent.error);
+        return;
+      }
+      setDraftRulesets(sent.body.rulesets);
+      setDraftRuleset((current) => current || (sent.body.rulesets[0]?.id ?? ""));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDraft]);
 
   if (!snapshot) {
     return (
@@ -688,32 +741,31 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 </span>
               </span>
             ) : null}
+            {review.status === "draft" ? (
+              <>
+                <Select
+                  aria-label="Ruleset to start with"
+                  value={draftRuleset}
+                  disabled={draftRulesets === null}
+                  onChange={(event) => setDraftRuleset(event.target.value)}
+                >
+                  {(draftRulesets ?? []).map((ruleset) => (
+                    <option key={ruleset.id} value={ruleset.id}>
+                      {ruleset.name}
+                    </option>
+                  ))}
+                </Select>
+                <Button
+                  variant="primary"
+                  disabled={draftRuleset === ""}
+                  onClick={() => void start(draftRuleset)}
+                >
+                  Start review
+                </Button>
+              </>
+            ) : null}
             {isResumableReview(review.status as ReviewStatus) ? (
-              <Button
-                variant="primary"
-                onClick={async () => {
-                  setActionError("");
-                  // No ruleset needed: a resumed review already carries the
-                  // one it was frozen with.
-                  const response = await fetch(`/api/reviews/${id}/start`, {
-                    method: "POST",
-                  }).catch((error: unknown) =>
-                    error instanceof Error ? error : new Error(String(error)),
-                  );
-                  // A refusal, such as a review another tab already cancelled,
-                  // is said, and the page shows where the review really is.
-                  if (response instanceof Error || !response.ok) {
-                    const body =
-                      response instanceof Error
-                        ? { error: `The review could not be resumed: ${response.message}` }
-                        : ((await response.json().catch(() => ({}))) as { error?: string });
-                    setActionError(body.error ?? "The review could not be resumed.");
-                    await reload();
-                    return;
-                  }
-                  watchAgain();
-                }}
-              >
+              <Button variant="primary" onClick={() => void start()}>
                 Resume
               </Button>
             ) : null}
