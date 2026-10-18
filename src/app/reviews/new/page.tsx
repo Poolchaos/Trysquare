@@ -19,7 +19,7 @@ import {
   probeAgeInWords,
   type ModelAvailability,
 } from "@/lib/models/availability";
-import { PageBody, PageHeader } from "@/components/page";
+import { Loading, PageBody, PageHeader } from "@/components/page";
 import {
   Badge,
   Button,
@@ -32,6 +32,7 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
+import { send } from "@/components/request";
 
 interface Branch {
   name: string;
@@ -119,6 +120,12 @@ function NewReview() {
   const [branches, setBranches] = useState<Branch[] | null>(null);
   const [stale, setStale] = useState<string | null>(null);
   const [branchesAsOf, setBranchesAsOf] = useState<Date | null>(null);
+  // Why a read failed, said where it matters (5.13, U9): in the branch card
+  // for the branch list, at the head of the form for the project, rulesets
+  // and models, by the dependency's fields for its branches.
+  const [branchProblem, setBranchProblem] = useState("");
+  const [readProblem, setReadProblem] = useState("");
+  const [linkProblem, setLinkProblem] = useState("");
   // Bumped by the Refresh control, so the branch list re-fetches on demand.
   const [refreshCount, setRefreshCount] = useState(0);
   const [rulesets, setRulesets] = useState<Ruleset[]>([]);
@@ -172,31 +179,53 @@ function NewReview() {
 
     void (async () => {
       const [branchList, rulesetList, modelList, detail] = await Promise.all([
-        fetch(`/api/projects/${projectId}/branches`).then((response) => response.json()),
-        fetch("/api/rulesets").then((response) => response.json()),
-        fetch("/api/models").then((response) => response.json()),
-        fetch(`/api/projects/${projectId}`).then((response) => response.json()),
+        send<{ branches: Branch[]; stale?: string | null; defaultBranch: string }>(
+          `/api/projects/${projectId}/branches`,
+          {},
+          "The branches could not be listed",
+        ),
+        send<{ rulesets: Ruleset[] }>("/api/rulesets", {}, "The rulesets could not be read"),
+        send<{ models: Model[] }>("/api/models", {}, "The models could not be read"),
+        send<{ links?: Link[] }>(
+          `/api/projects/${projectId}`,
+          {},
+          "This project could not be read",
+        ),
       ]);
       if (cancelled) return;
 
-      setLinks(detail.links ?? []);
+      setReadProblem(
+        [detail, rulesetList, modelList].flatMap((sent) => (sent.ok ? [] : [sent.error])).join(" "),
+      );
+      if (detail.ok) setLinks(detail.body.links ?? []);
 
-      setBranches(branchList.branches ?? []);
-      setStale(branchList.stale ?? null);
-      setBranchesAsOf(new Date());
-      if (branchList.error) setError(String(branchList.error));
-      setChosenInto((current) => current || (branchList.defaultBranch ?? ""));
+      // A refused list, for a clone not ready say, is neither a repository
+      // with nothing pushed nor a list fetched a moment ago, which is what an
+      // empty list beside "Fetched from the remote at" said (D-134).
+      if (branchList.ok) {
+        setBranchProblem("");
+        setBranches(branchList.body.branches);
+        setStale(branchList.body.stale ?? null);
+        setBranchesAsOf(new Date());
+        setChosenInto((current) => current || branchList.body.defaultBranch);
+      } else {
+        setBranchProblem(branchList.error);
+      }
 
-      setRulesets(rulesetList.rulesets);
-      setRulesetId((current) => current || (rulesetList.rulesets[0]?.id ?? ""));
+      if (rulesetList.ok) {
+        const listed = rulesetList.body.rulesets;
+        setRulesets(listed);
+        setRulesetId((current) => current || (listed[0]?.id ?? ""));
+      }
 
       // Only a model a probe currently vouches for is picked by default; with
       // none probed, nothing is chosen and the picker says why.
-      setModels(pickerOrder(modelList.models as Model[]));
-      const usable = pickerOrder(modelList.models as Model[]).find((row) =>
-        isSelectable(row.availability),
-      );
-      setModel((current) => current || (usable?.id ?? ""));
+      if (modelList.ok) {
+        const ordered = pickerOrder(modelList.body.models);
+        setModels(ordered);
+        const usable = ordered.find((row) => isSelectable(row.availability));
+        setModel((current) => current || (usable?.id ?? ""));
+      }
     })();
 
     return () => {
@@ -247,9 +276,17 @@ function NewReview() {
     if (includeLink === "") return;
     let cancelled = false;
     void (async () => {
-      const response = await fetch(`/api/projects/${includeLink}/branches`);
-      if (!response.ok || cancelled) return;
-      const body = (await response.json()) as { branches: Branch[]; defaultBranch: string };
+      const sent = await send<{ branches: Branch[]; defaultBranch: string }>(
+        `/api/projects/${includeLink}/branches`,
+        {},
+        "The dependency's branches could not be listed",
+      );
+      if (cancelled) return;
+      // A refusal was dropped, and the dependency's branch fields simply never
+      // appeared (D-134).
+      setLinkProblem(sent.ok ? "" : sent.error);
+      if (!sent.ok) return;
+      const body = sent.body;
       setLinkBranches(body.branches);
       // Suggested, never assumed: a dependency branch with the same name as
       // the one being reviewed is almost always the other half of the change,
@@ -412,6 +449,7 @@ function NewReview() {
           }}
           className="grid max-w-3xl gap-5"
         >
+          {readProblem ? <Problem>{readProblem}</Problem> : null}
           {stale ? (
             <Problem>
               The branch list could not be refreshed, so these are the refs from last time: {stale}
@@ -430,7 +468,7 @@ function NewReview() {
               />
             </div>
 
-            {branchesAsOf ? (
+            {branchesAsOf && !branchProblem ? (
               <p className="mb-2 flex items-center gap-2 text-xs text-[var(--color-ink-muted)]">
                 {stale
                   ? "Cached refs, shown because the remote could not be reached."
@@ -448,7 +486,16 @@ function NewReview() {
               </p>
             ) : null}
 
-            {branches === null ? (
+            {branchProblem ? (
+              <Loading
+                error={branchProblem}
+                onRetry={() => {
+                  setBranchProblem("");
+                  setBranches(null);
+                  setRefreshCount((count) => count + 1);
+                }}
+              />
+            ) : branches === null ? (
               <p className="py-6 text-center text-sm text-[var(--color-ink-muted)]">
                 Fetching the latest branches...
               </p>
@@ -750,6 +797,7 @@ function NewReview() {
                   </label>
                 ))}
 
+                {includeLink !== "" && linkProblem ? <Problem>{linkProblem}</Problem> : null}
                 {includeLink !== "" && linkBranches.length > 0 ? (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field

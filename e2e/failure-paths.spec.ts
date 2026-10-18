@@ -274,6 +274,47 @@ test("a list whose data cannot be read says so, and reads again on Try again", a
   }
 });
 
+test("the new review screen says why a read failed, not that a repository is empty", async ({
+  page,
+  request,
+}) => {
+  // A refused branch list showed "Nothing has been pushed to it yet" beside
+  // "Fetched from the remote at", both untrue then, and a ruleset read that
+  // failed broke the form without a word (5.13, audit U9; D-134).
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app");
+  expect(app).toBeDefined();
+  const stopBranches = await answerOnce(page, "**/api/projects/*/branches", (route) =>
+    route.fulfill({
+      status: 409,
+      json: { error: "Refused for this test: the branches.", code: "CloneNotReadyError" },
+    }),
+  );
+  const stopRulesets = await answerOnce(page, "**/api/rulesets", (route) =>
+    route.fulfill({
+      status: 500,
+      json: { error: "Refused for this test: the rulesets.", code: "Test" },
+    }),
+  );
+  await page.goto(`/reviews/new?projectId=${app!.id}`);
+  await expect(page.getByText("Refused for this test: the branches.")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByText("Refused for this test: the rulesets.")).toBeVisible();
+  await expect(page.getByText(/Nothing has been pushed/)).toHaveCount(0);
+  await expect(page.getByText(/Fetched from the remote at/)).toHaveCount(0);
+  await stopBranches();
+  await stopRulesets();
+
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(
+    page.getByRole("main").locator("label").filter({ hasText: "feature/rename-prefs" }).first(),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Refused for this test: the rulesets.")).toHaveCount(0);
+});
+
 test("a page the server let go of opens a new stream rather than polling", async ({ page }) => {
   // The server lets a stream go when its page falls 256 frames behind, and
   // says so last. The page used to read any end as a dropped connection and
