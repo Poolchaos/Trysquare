@@ -3049,3 +3049,44 @@ verified evidence, in writing, here.
   that run: the unit run took 154.67 s against 81.73 s at the next green
   run, and two tests in other files took 19.8 s and 9.6 s against 0.7 s
   and 0.9 s. Hooks now get the thirty seconds tests have (4d94db5).
+- 2026-10-18 D-140 REVIEW (the D-139 fixes and their record, 979ea26..6555d26,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Seven findings, two MEDIUM and five LOW, all dispositioned before
+  new work:
+  1. MEDIUM: main was red. CI run 39157523156 at 6555d26 failed on
+  Windows, in cee8e95's missing-project test: the page's Turbopack runtime
+  chunk was refused with net::ERR_NO_BUFFER_SPACE as it loaded, the net
+  log holds os_error 10055, and the page never hydrated. A D-105
+  occurrence: its re-run, attempt 2, passed on all three.
+  2. MEDIUM: e05cfed's check-style rule saw only a braced import into
+  src/app or src/server/api, and missed a namespace import, a re-export, a
+  dynamic import and a helper module between. 3. LOW: two routes reach the
+  manager after an await, the review read and the complete, so a review
+  deleted from another tab meanwhile made manager.snapshot throw its copy
+  of ReviewNotFoundError, which the handler answered 500. 4. LOW: the
+  mechanism was misstated in e05cfed, D-139 and the docs: the routes share
+  one copy of the server modules (the thirteen route chunks register the
+  manager as one module id in Turbopack's shared runtime), and the
+  instrumentation bundle has its own. 2, 3 and 4 fixed 5057a5d: the HTTP
+  layer knows every error by the name its class sets, the handler's lists
+  too, and check-style refuses instanceof on an app class there, and the
+  manager's error classes anywhere but its own module.
+  5. LOW: the id-route sweep proved nothing for five of its 26 pairs,
+  which refused {} before any lookup; it accepted any 404, and 400 from
+  the cancel route, and never asked an inner id under a parent that
+  exists; row 5.13's "asks every id route" said more than it did. Fixed
+  12a299f.
+  6. LOW: 7323cf7's premise was untrue: the context route answered any
+  failed read with a hunk as a deleted file. Fixed 2a38f9d.
+  7. LOW, the record: (a) D-139 called the first half of its item 2 by
+  reading; both halves are, and item 4's test is the one that runs. (b)
+  4d94db5 went unrecorded: 1045 unit and 59 browser tests on Windows, CI
+  run 39156652809 passed on all three. (c) D-139's 154.67 s against
+  81.73 s for the whole unit run showed nothing: five green Windows runs
+  since took from 107.40 s to 155.14 s. The slow runner rests on the
+  tests in other files, 19.8 s and 9.6 s against 0.7 s and 0.9 s, and the
+  comment in vitest.config.ts now says only that. (d) d85d52f's message
+  put the dead disabled prop on the Start review button; it was on the
+  ruleset picker, as D-139 says. (e) Row 4.19 said the start route
+  answers 409; in the built app it answered 500 from a6aab9a until
+  e05cfed. The row now says so.
