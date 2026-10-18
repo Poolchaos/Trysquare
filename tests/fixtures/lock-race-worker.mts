@@ -6,7 +6,7 @@
  * process always finds this one running.
  */
 
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { acquireDataDirLock } from "../../src/server/data-dir-lock";
 
@@ -28,6 +28,11 @@ for (let trial = 0; trial < count; trial += 1) {
   } catch (error) {
     result = (error as Error).name;
   }
-  writeFileSync(join(base!, `result-${trial}-${id}`), result);
+  // Written beside it and renamed into place: the test reads a result the
+  // moment it exists, and a file created before its word was written read
+  // as "" (macOS CI run 39127235484, trial 5).
+  const done = join(base!, `result-${trial}-${id}`);
+  writeFileSync(`${done}.partial`, result);
+  renameSync(`${done}.partial`, done);
 }
 setTimeout(() => {}, 60_000);

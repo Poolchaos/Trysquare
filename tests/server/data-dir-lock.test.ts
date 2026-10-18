@@ -153,8 +153,8 @@ describe("two servers starting together (D-118)", () => {
       await waitFor(["a", "b"].map((id) => join(dataDir, `ready-${trial}-${id}`)));
       writeFileSync(join(dataDir, `go-${trial}`), "");
       const results = ["a", "b"].map((id) => join(dataDir, `result-${trial}-${id}`));
+      // Whole once it exists: each worker renames its result into place.
       await waitFor(results);
-      await new Promise((resolve) => setTimeout(resolve, 2));
       const outcomes = results.map((path) => readFileSync(path, "utf8")).sort();
       expect(outcomes, `trial ${trial}`).toEqual(["DataDirInUseError", "held"]);
     }
