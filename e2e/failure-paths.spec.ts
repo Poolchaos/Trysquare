@@ -251,13 +251,15 @@ test("a screen whose data cannot be read says so instead of loading forever", as
 });
 
 test("a list whose data cannot be read says so, and reads again on Try again", async ({ page }) => {
-  // The projects, reviews and rulesets lists read with a bare fetch. A server
-  // error left "Loading..." for good, or for rulesets an empty column, and a
-  // failure that looks like slowness is waited out (5.13, audit U9).
+  // The projects, reviews and rulesets lists, and the settings screen, read
+  // with a bare fetch. A server error left "Loading..." for good, or an empty
+  // column or section, and a failure that looks like slowness is waited out
+  // (5.13, audit U9).
   for (const [screen, api] of [
     ["/projects", "**/api/projects"],
     ["/reviews", "**/api/reviews"],
     ["/rulesets", "**/api/rulesets"],
+    ["/settings", "**/api/settings"],
   ] as const) {
     const refusal = `Refused for this test: ${screen}.`;
     const stopRefusing = await answerOnce(page, api, (route) =>

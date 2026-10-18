@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { PageBody, PageHeader } from "@/components/page";
+import { Loading, PageBody, PageHeader } from "@/components/page";
 import { Badge, Button, Card, Empty, Field, Input, Mono, Problem } from "@/components/ui";
 import { send } from "@/components/request";
 
@@ -68,23 +68,44 @@ export default function SettingsPage() {
   const [wiping, setWiping] = useState(false);
   const [wiped, setWiped] = useState("");
 
+  // Each read answers for its own section: one that fails says why there,
+  // with Try again, while the others draw. A failed read left its section
+  // blank, or "Reading..." for good (5.13, U9).
+  const [readErrors, setReadErrors] = useState<
+    Partial<Record<"models" | "settings" | "system", string>>
+  >({});
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const retryReads = () => {
+    setReadErrors({});
+    setLoadAttempt((attempt) => attempt + 1);
+  };
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const [modelList, settingList, systemInfo] = await Promise.all([
-        fetch("/api/models").then((response) => response.json()),
-        fetch("/api/settings").then((response) => response.json()),
-        fetch("/api/system").then((response) => response.json()),
+        send<{ models: Model[] }>("/api/models", {}, "The models could not be read"),
+        send<{ settings: Record<string, number> }>(
+          "/api/settings",
+          {},
+          "The settings could not be read",
+        ),
+        send<SystemInfo>("/api/system", {}, "Where everything is kept could not be read"),
       ]);
       if (cancelled) return;
-      setModels(modelList.models);
-      setSettings(settingList.settings);
-      setSystem(systemInfo as SystemInfo);
+      const failed: Partial<Record<"models" | "settings" | "system", string>> = {};
+      if (modelList.ok) setModels(modelList.body.models);
+      else failed.models = modelList.error;
+      if (settingList.ok) setSettings(settingList.body.settings);
+      else failed.settings = settingList.error;
+      if (systemInfo.ok) setSystem(systemInfo.body);
+      else failed.system = systemInfo.error;
+      setReadErrors(failed);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
 
   async function save(field: (typeof FIELDS)[number], input: HTMLInputElement) {
     setError("");
@@ -181,7 +202,12 @@ export default function SettingsPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="p-4">
             <h2 className="mb-3 text-heading font-semibold">How a run behaves</h2>
-            {settings === null ? null : (
+            {settings === null ? (
+              <Loading
+                {...(readErrors.settings ? { error: readErrors.settings } : {})}
+                onRetry={retryReads}
+              />
+            ) : (
               <div className="grid gap-4">
                 {FIELDS.map((field) => (
                   <Field key={field.key} label={field.label} hint={field.hint}>
@@ -247,7 +273,10 @@ export default function SettingsPage() {
         <Card className="mt-6 p-4">
           <h2 className="mb-1 text-heading font-semibold">Where everything is kept</h2>
           {system === null ? (
-            <p className="text-xs text-[var(--color-ink-muted)]">Reading...</p>
+            <Loading
+              {...(readErrors.system ? { error: readErrors.system } : {})}
+              onRetry={retryReads}
+            />
           ) : (
             <>
               <p className="mb-2 text-xs text-[var(--color-ink-muted)]">
@@ -281,7 +310,12 @@ export default function SettingsPage() {
           </Button>
         </div>
 
-        {models === null ? null : models.length === 0 ? (
+        {models === null ? (
+          <Loading
+            {...(readErrors.models ? { error: readErrors.models } : {})}
+            onRetry={retryReads}
+          />
+        ) : models.length === 0 ? (
           <Empty title="No models registered yet">
             They are registered when the server starts.
           </Empty>
