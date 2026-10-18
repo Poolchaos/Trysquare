@@ -51,6 +51,7 @@ import {
   worktreeRepoDir,
   worktreeRootDir,
 } from "@/lib/paths";
+import { runSummary } from "@/lib/review/run-summary";
 import { outputContractFor, stageSchemaFor } from "@/lib/review/stage-schemas";
 import { composeSystemPrompt } from "@/lib/rulesets/compose";
 import type { ImportedRuleset } from "@/lib/rulesets/model";
@@ -391,14 +392,7 @@ export async function prepareAndRun(
       await assertWorktreeClean(side.worktreeDir, await readBaseline(side.baselinePath));
     }
 
-    appendRunNote(db, reviewId, {
-      kind: "note",
-      message:
-        `Reviewed ${files.length} changed file(s): ${result.candidatesRaised} candidate(s) ` +
-        `raised, ${result.verified} verified, ${result.killed} refuted, ` +
-        `${result.openQuestions} left open, ${result.killedByQuoteCheck} discarded by the ` +
-        "quotation check.",
-    });
+    appendRunNote(db, reviewId, { kind: "note", message: runSummary(files.length, result) });
 
     // Checked once more before the review is called finished. A cancel that
     // landed during the last stage's bookkeeping has no other boundary left.
