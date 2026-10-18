@@ -62,6 +62,18 @@ export class ReviewNotStartableError extends Error {
   }
 }
 
+export class ReviewAlreadyStartedError extends Error {
+  constructor(
+    readonly reviewId: string,
+    readonly state: "running" | "queued",
+  ) {
+    super(
+      `Review "${reviewId}" is already ${state} with the ruleset it was started with, so the one sent now would not be used.`,
+    );
+    this.name = "ReviewAlreadyStartedError";
+  }
+}
+
 export interface ReviewSnapshot {
   review: ReturnType<typeof requireReview>;
   stages: ReturnType<typeof listForReview>;
@@ -138,8 +150,17 @@ export class JobManager {
     // nobody is awaiting.
     const review = requireReview(db, reviewId);
 
-    if (this.active.has(reviewId)) return "already-running";
-    if (this.queue.some((entry) => entry.reviewId === reviewId)) return "queued";
+    const started = this.active.has(reviewId)
+      ? "running"
+      : this.queue.some((entry) => entry.reviewId === reviewId)
+        ? "queued"
+        : null;
+    if (started !== null) {
+      // A ruleset sent now would be dropped while the answer said all was
+      // well, and the run would use the one it was started with (D-138).
+      if (options.ruleset) throw new ReviewAlreadyStartedError(reviewId, started);
+      return started === "running" ? "already-running" : "queued";
+    }
 
     // Judged before the claim (4.19): a review that cannot run used to be
     // answered "running" and then fail inside a run nobody was told about.

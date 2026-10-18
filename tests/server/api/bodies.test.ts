@@ -134,3 +134,52 @@ describe("a confirm or a start whose body is there but wrong", () => {
     expect(requireFinding(db, finding.id).status).toBe("confirmed");
   });
 });
+
+describe("a start that names a ruleset for a review already frozen with one", () => {
+  it("is refused, not answered with the ruleset ignored", async () => {
+    // A review carries the ruleset frozen onto it, and one sent with its
+    // start was dropped without a word (D-138). A completed review, so
+    // nothing could start even on the code before.
+    const { db } = (await import("@/server/runtime")).runtime();
+    const { createProject } = await import("@/server/db/repositories/projects");
+    const { createReview, transitionReview } = await import("@/server/db/repositories/reviews");
+    const { saveImportedRuleset, writeReviewSnapshot } =
+      await import("@/server/db/repositories/rulesets");
+    const { importProtocol } = await import("@/lib/rulesets/import");
+    const { readFileSync } = await import("node:fs");
+    const { rulesetId } = saveImportedRuleset(db, {
+      name: "Frozen protocol",
+      tier: "global",
+      imported: importProtocol(
+        readFileSync(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8"),
+      ).ruleset,
+    });
+    const project = createProject(db, {
+      name: "frozen",
+      gitUrl: "git@example.com:acme/frozen.git",
+      defaultBranch: "main",
+      clonePath: join(dataDir, "frozen.git"),
+    });
+    const review = createReview(db, {
+      projectId: project.id,
+      fromBranch: "feature/x",
+      fromCommit: "a".repeat(40),
+      intoBranch: "main",
+      intoCommit: "b".repeat(40),
+      mergeBaseCommit: "c".repeat(40),
+      model: "claude-fable-5[1m]",
+      profileId: "full-context",
+      engineMode: "headless",
+    });
+    writeReviewSnapshot(db, review.id, rulesetId);
+    for (const status of ["running", "verifying", "awaiting_confirmation", "complete"] as const) {
+      transitionReview(db, review.id, status);
+    }
+
+    const response = await routes.start.POST(
+      post(JSON.stringify({ rulesetId })),
+      params(review.id),
+    );
+    expect(await answer(response)).toEqual([409, "RulesetFrozen"]);
+  });
+});

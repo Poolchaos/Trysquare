@@ -10,7 +10,7 @@ import { rulesetTierSchema } from "@/lib/domain/enums";
 import { hasReviewSnapshot, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
 import { requireReview } from "@/server/db/repositories/reviews";
 import { failed, handler, ok, readOptionalJson } from "@/server/api/respond";
-import { ReviewNotStartableError } from "@/server/jobs/manager";
+import { ReviewAlreadyStartedError, ReviewNotStartableError } from "@/server/jobs/manager";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,20 @@ export async function POST(
     // A resumed review already carries its frozen ruleset and must not be
     // handed a different one.
     let ruleset;
-    if (!hasReviewSnapshot(db, id)) {
+    if (hasReviewSnapshot(db, id)) {
+      // Refused, not ignored: the review keeps the ruleset frozen onto it,
+      // and one sent now was dropped without a word (D-138).
+      if (input.rulesetId !== undefined) {
+        throw Response.json(
+          {
+            error:
+              "This review is already frozen with its ruleset, so it cannot be started with another.",
+            code: "RulesetFrozen",
+          },
+          { status: 409 },
+        );
+      }
+    } else {
       if (!input.rulesetId) {
         throw Response.json(
           { error: "Choose a ruleset before starting this review.", code: "RulesetRequired" },
@@ -53,7 +66,9 @@ export async function POST(
       const state = manager.start(id, ...(ruleset ? [{ ruleset }] : []));
       return ok({ state, snapshot: manager.snapshot(id) });
     } catch (error) {
-      if (error instanceof ReviewNotStartableError) return failed(error, 409);
+      if (error instanceof ReviewNotStartableError || error instanceof ReviewAlreadyStartedError) {
+        return failed(error, 409);
+      }
       throw error;
     }
   });

@@ -27,7 +27,11 @@ import {
 } from "@/server/db/repositories/reviews";
 import { SETTING_KEYS, writeSetting } from "@/server/db/repositories/settings";
 import { models, projects } from "@/server/db/schema";
-import { JobManager, ReviewNotStartableError } from "@/server/jobs/manager";
+import {
+  JobManager,
+  ReviewAlreadyStartedError,
+  ReviewNotStartableError,
+} from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
 import {
   answerSequence,
@@ -161,9 +165,26 @@ describe("deciding what runs now", () => {
   it("does not start the same review twice", async () => {
     const reviewId = seedReview();
     expect(start(reviewId)).toBe("running");
-    expect(start(reviewId)).toBe("already-running");
+    expect(manager.start(reviewId)).toBe("already-running");
     await manager.settled(reviewId);
   }, 120_000);
+
+  it("refuses a ruleset for a review already running or waiting, rather than dropping it", async () => {
+    // Asked again with a ruleset, a review that was running or in line said
+    // so and dropped the ruleset; the start route answered 200, and the run
+    // used the one it was started with (D-138).
+    const first = seedReview();
+    const second = seedReview();
+    expect(start(first)).toBe("running");
+    expect(start(second)).toBe("queued");
+    expect(() => start(first)).toThrow(ReviewAlreadyStartedError);
+    expect(() => start(second)).toThrow(ReviewAlreadyStartedError);
+    // Without one it still says where it stands.
+    expect(manager.start(first)).toBe("already-running");
+    expect(manager.start(second)).toBe("queued");
+    await manager.settled(first);
+    await manager.settled(second);
+  }, 240_000);
 
   it("refuses an id that is not a review at all", () => {
     // Fails here rather than inside a promise nobody is awaiting.
