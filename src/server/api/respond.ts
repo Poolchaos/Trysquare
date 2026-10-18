@@ -93,27 +93,28 @@ function validated<T>(raw: unknown, schema: z.ZodType<T>): T {
   return parsed.data;
 }
 
-/** The repositories' errors for an id that names nothing. */
-const NOT_FOUND = [
-  "ReviewNotFoundError",
-  "ProjectNotFoundError",
-  "LinkNotFoundError",
-  "RulesetNotFoundError",
-  "RuleNotFoundError",
-  "FindingNotFoundError",
-  "ModelNotFoundError",
-] as const;
-
-/** Refusals of a step from the state the thing is in. */
-const CONFLICT = [
-  "IllegalTransitionError",
-  "InvalidCloneTransitionError",
-  "CloneNotReadyError",
+/**
+ * The errors that are the request's fault, by the name each class sets: a
+ * 404 for an id that names nothing, a 409 for a step refused by the state the
+ * thing is in. The names are strings, as everywhere outside a class's module.
+ */
+export const ERROR_STATUSES: readonly (readonly [name: string, status: 404 | 409])[] = [
+  ["ReviewNotFoundError", 404],
+  ["ProjectNotFoundError", 404],
+  ["LinkNotFoundError", 404],
+  ["RulesetNotFoundError", 404],
+  ["RuleNotFoundError", 404],
+  ["FindingNotFoundError", 404],
+  ["ModelNotFoundError", 404],
+  ["IllegalTransitionError", 409],
+  ["InvalidCloneTransitionError", 409],
+  ["CloneNotReadyError", 409],
   // The job manager's: a review that cannot run, and a ruleset for one that
   // is already running or in line.
-  "ReviewNotStartableError",
-  "ReviewAlreadyStartedError",
-] as const;
+  ["ReviewNotStartableError", 409],
+  ["ReviewAlreadyStartedError", 409],
+];
+const STATUS_BY_NAME = new Map(ERROR_STATUSES);
 
 /**
  * Wraps a handler so a thrown Response is returned, an id that names nothing
@@ -125,8 +126,7 @@ const CONFLICT = [
 export function handler(run: () => Promise<Response>): Promise<Response> {
   return run().catch((error: unknown) => {
     if (error instanceof Response) return error;
-    if (isNamed(error, ...NOT_FOUND)) return failed(error, 404);
-    if (isNamed(error, ...CONFLICT)) return failed(error, 409);
-    return failed(error, 500);
+    const status = error instanceof Error ? STATUS_BY_NAME.get(error.name) : undefined;
+    return failed(error, status ?? 500);
   });
 }
