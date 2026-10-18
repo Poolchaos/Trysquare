@@ -108,6 +108,23 @@ export function ConfirmationQueue({
   // The first half of a `g g`. Held in a ref because a pending key is not
   // something the screen renders.
   const pendingG = useRef(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // A mouse click on one of the queue's buttons leaves no focus on it, so the
+  // keyboard drives the queue after the mouse has been used: kept on a
+  // clicked row, Enter re-clicked that row, the selection jumped back to it
+  // and no code opened (review of 5.1 to 5.4). A click from the keyboard
+  // reports no click count and keeps its focus.
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+    function onClick(event: MouseEvent) {
+      if (event.detail === 0) return;
+      (event.target as HTMLElement | null)?.closest("button")?.blur();
+    }
+    section.addEventListener("click", onClick);
+    return () => section.removeEventListener("click", onClick);
+  }, []);
   // Counts every move a person makes through the queue, so a decision whose
   // reply lands later can tell whether they went somewhere in the meantime.
   const moves = useRef(0);
@@ -228,13 +245,16 @@ export function ConfirmationQueue({
         if (event.key === "Escape") target.blur();
         return;
       }
-      // Enter and Space on a button, a link or a select are that element's
-      // own: the queue's Enter, which opens the code pane, used to take them
-      // and cancel them, so Enter on Confirm confirmed nothing (5.4).
+      // Enter on a button, a link or a select is that element's own: the
+      // queue's Enter, which opens the code pane, used to take it and cancel
+      // it, so Enter on a focused Confirm confirmed nothing (5.4). A mouse
+      // click leaves no focus on a queue button (below), so this is the
+      // keyboard's case only.
       if (
-        (event.key === "Enter" || event.key === " ") &&
+        event.key === "Enter" &&
         target?.closest("button, a[href], select, summary, [role='button']")
       ) {
+        pendingG.current = false;
         return;
       }
       if (!current) return;
@@ -293,7 +313,7 @@ export function ConfirmationQueue({
   const draft = current ? (drafts[current.id] ?? current.editedComment ?? current.comment) : "";
 
   return (
-    <section>
+    <section ref={sectionRef}>
       <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
         {/* The decided count and its bar live in the page toolbar; what only
             this header can say is what remains, by severity. */}

@@ -280,14 +280,36 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.getByRole("button", { name: /^Rule / }).click();
     await expect(page.getByText(/^#{2,3} .*\d/m).first()).toBeVisible();
 
-    // Off the Rule button first: Enter on a focused button is the button's
-    // own since 5.4, and here it is meant for the queue.
-    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    // Straight after clicking the Rule button: a click leaves no focus on a
+    // queue button, so Enter is the queue's (review of 5.1 to 5.4).
     await page.locator("body").press("Enter");
     await expect(page.getByRole("heading", { name: "What the change did here" })).toBeVisible();
     await expect(page.getByText(/^@@ -\d+,\d+ \+\d+,\d+ @@/m)).toBeVisible();
     await expect(page.getByRole("heading", { name: "The file as it stands" })).toBeVisible();
     await page.locator("body").press("Enter");
+  });
+
+  await test.step("after a click, the keyboard still drives the queue", async () => {
+    // A clicked row kept focus, and with Enter left to buttons (5.4) Enter
+    // then re-clicked it: the selection jumped back to it and no code opened
+    // for the finding j had moved to (review of 5.1 to 5.4).
+    const nav = page.getByRole("navigation", { name: "Findings" });
+    const current = nav.locator('button[aria-current="true"]');
+    const pane = page.getByRole("heading", { name: "What the change did here" });
+    await nav.getByRole("button").first().click();
+    const clicked = await current.textContent();
+    await page.keyboard.press("j");
+    await expect(current).not.toHaveText(clicked ?? "");
+    const moved = await current.textContent();
+    await page.keyboard.press("Enter");
+    await expect(pane).toBeVisible();
+    await expect(current).toHaveText(moved ?? "");
+    await page.keyboard.press("Enter");
+    await expect(pane).toBeHidden();
+    // Back to the top, where the steps below expect to start.
+    await page.keyboard.press("g");
+    await page.keyboard.press("g");
+    await expect(current).toHaveText(clicked ?? "");
   });
 
   await test.step("a reason typed on one finding does not follow the cursor", async () => {
