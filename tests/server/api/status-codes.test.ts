@@ -7,7 +7,7 @@
  * wrong.
  */
 
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -19,6 +19,9 @@ let routes: {
   project: typeof import("@/app/api/projects/[id]/route");
   ruleset: typeof import("@/app/api/rulesets/[id]/route");
   confirm: typeof import("@/app/api/findings/[id]/confirm/route");
+  start: typeof import("@/app/api/reviews/[id]/start/route");
+  links: typeof import("@/app/api/projects/[id]/links/route");
+  rule: typeof import("@/app/api/rulesets/[id]/rules/[code]/route");
 };
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
@@ -36,6 +39,9 @@ beforeAll(async () => {
     project: await import("@/app/api/projects/[id]/route"),
     ruleset: await import("@/app/api/rulesets/[id]/route"),
     confirm: await import("@/app/api/findings/[id]/confirm/route"),
+    start: await import("@/app/api/reviews/[id]/start/route"),
+    links: await import("@/app/api/projects/[id]/links/route"),
+    rule: await import("@/app/api/rulesets/[id]/rules/[code]/route"),
   };
 });
 
@@ -59,6 +65,45 @@ describe("an id that names nothing", () => {
     ];
     expect(answers.map((response) => response.status)).toEqual([404, 404, 404, 404]);
     expect(await codeOf(answers[0]!)).toBe("ReviewNotFoundError");
+  });
+
+  it("is a 404 from the routes that caught their own errors too", async () => {
+    // Each caught what it did not expect and answered in its own words: a
+    // 409, a 400, or an empty list for a project that does not exist (review
+    // of 5.5 to 5.7).
+    const { runtime } = await import("@/server/runtime");
+    const { saveImportedRuleset } = await import("@/server/db/repositories/rulesets");
+    const { importProtocol } = await import("@/lib/rulesets/import");
+    const source = readFileSync(
+      new URL("../../fixtures/example-protocol.md", import.meta.url),
+      "utf8",
+    );
+    const { rulesetId } = saveImportedRuleset(runtime().db, {
+      name: "Example protocol",
+      tier: "global",
+      imported: importProtocol(source).ruleset,
+    });
+    const patch = () =>
+      new Request("http://localhost/x", {
+        method: "PATCH",
+        body: JSON.stringify({ enabled: false }),
+      });
+    const rule = (id: string, code: string) => ({ params: Promise.resolve({ id, code }) });
+    const link = new Request("http://localhost/x", {
+      method: "POST",
+      body: JSON.stringify({ dependencyProjectId: "ALSO-NOPE", packageName: "@acme/core" }),
+    });
+
+    const answers = [
+      await routes.review.DELETE(get(), params("NOPE")),
+      await routes.start.POST(post(), params("NOPE")),
+      await routes.links.GET(get(), params("NOPE")),
+      await routes.links.POST(link, params("NOPE")),
+      await routes.rule.PATCH(patch(), rule("NOPE", "R1")),
+      await routes.rule.PATCH(patch(), rule(rulesetId, "NO-SUCH-RULE")),
+    ];
+    expect(answers.map((response) => response.status)).toEqual([404, 404, 404, 404, 404, 404]);
+    expect(await codeOf(answers[5]!)).toBe("RuleNotFoundError");
   });
 
   it("is a 404 for a review's event stream too, not a broken stream (4.20)", async () => {

@@ -14,7 +14,7 @@ import { FindingNotFoundError } from "@/server/db/repositories/findings";
 import { ModelNotFoundError } from "@/server/db/repositories/models";
 import { CloneNotReadyError, ProjectNotFoundError } from "@/server/db/repositories/projects";
 import { ReviewNotFoundError } from "@/server/db/repositories/reviews";
-import { RulesetNotFoundError } from "@/server/db/repositories/rulesets";
+import { RuleNotFoundError, RulesetNotFoundError } from "@/server/db/repositories/rulesets";
 
 export interface ApiError {
   error: string;
@@ -75,6 +75,7 @@ const NOT_FOUND = [
   ReviewNotFoundError,
   ProjectNotFoundError,
   RulesetNotFoundError,
+  RuleNotFoundError,
   FindingNotFoundError,
   ModelNotFoundError,
 ];

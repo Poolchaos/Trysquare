@@ -7,7 +7,12 @@
  */
 
 import { z } from "zod";
-import { linkDependency, listDependencyLinks } from "@/server/db/repositories/projects";
+import {
+  InvalidProjectLinkError,
+  linkDependency,
+  listDependencyLinks,
+  requireProject,
+} from "@/server/db/repositories/projects";
 import { created, failed, handler, ok, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -24,8 +29,10 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   return handler(async () => {
+    const { db } = runtime();
     const { id } = await context.params;
-    return ok({ links: listDependencyLinks(runtime().db, id) });
+    requireProject(db, id);
+    return ok({ links: listDependencyLinks(db, id) });
   });
 }
 
@@ -51,7 +58,8 @@ export async function POST(
         }),
       });
     } catch (error) {
-      return failed(error, 400);
+      if (error instanceof InvalidProjectLinkError) return failed(error, 400);
+      throw error;
     }
   });
 }

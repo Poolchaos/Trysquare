@@ -261,6 +261,16 @@ export class RulesetNotFoundError extends Error {
   }
 }
 
+export class RuleNotFoundError extends Error {
+  constructor(
+    readonly rulesetName: string,
+    readonly code: string,
+  ) {
+    super(`Ruleset "${rulesetName}" has no rule ${code}.`);
+    this.name = "RuleNotFoundError";
+  }
+}
+
 export class RulesetNameTakenError extends Error {
   constructor(readonly rulesetName: string) {
     super(
@@ -368,7 +378,7 @@ export function patchRule(
     .from(rules)
     .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, code)))
     .get();
-  if (!rule) throw new Error(`Ruleset "${row.name}" has no rule ${code}.`);
+  if (!rule) throw new RuleNotFoundError(row.name, code);
 
   const change: Partial<typeof rules.$inferInsert> = {};
   if (patch.enabled !== undefined && patch.enabled !== rule.enabled) change.enabled = patch.enabled;

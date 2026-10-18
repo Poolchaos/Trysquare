@@ -10,7 +10,7 @@
 import { z } from "zod";
 import { severitySchema } from "@/lib/domain/enums";
 import { patchRule } from "@/server/db/repositories/rulesets";
-import { failed, handler, ok, readJson } from "@/server/api/respond";
+import { handler, ok, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -29,11 +29,6 @@ export async function PATCH(
     const { db } = runtime();
     const { id, code } = await context.params;
     const patch = await readJson(request, body);
-
-    try {
-      return ok(patchRule(db, id, decodeURIComponent(code), patch));
-    } catch (error) {
-      return failed(error, 400);
-    }
+    return ok(patchRule(db, id, decodeURIComponent(code), patch));
   });
 }

@@ -4,7 +4,7 @@ import { listFindings } from "@/server/db/repositories/findings";
 import { getProject } from "@/server/db/repositories/projects";
 import { stageDurationMedians } from "@/server/db/repositories/stage-executions";
 import { requireReview } from "@/server/db/repositories/reviews";
-import { deleteReviewEntirely } from "@/server/review/service";
+import { deleteReviewEntirely, ReviewStillRunningError } from "@/server/review/service";
 import { detectMerged } from "@/server/review/merged";
 import { failed, handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
@@ -57,7 +57,8 @@ export async function DELETE(
       manager.dequeue(id);
       await deleteReviewEntirely(db, id, dataDir);
     } catch (error) {
-      return failed(error, 409);
+      if (error instanceof ReviewStillRunningError) return failed(error, 409);
+      throw error;
     }
     return ok({ removed: id });
   });

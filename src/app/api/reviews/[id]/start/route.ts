@@ -7,7 +7,8 @@
 
 import { z } from "zod";
 import { rulesetTierSchema } from "@/lib/domain/enums";
-import { loadRuleset, readReviewSnapshot, requireRuleset } from "@/server/db/repositories/rulesets";
+import { hasReviewSnapshot, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
+import { requireReview } from "@/server/db/repositories/reviews";
 import { failed, handler, ok, readJson } from "@/server/api/respond";
 import { ReviewNotStartableError } from "@/server/jobs/manager";
 import { runtime } from "@/server/runtime";
@@ -25,12 +26,12 @@ export async function POST(
     const { id } = await context.params;
     const input = await readJson(request, body).catch(() => ({ rulesetId: undefined }));
 
+    requireReview(db, id);
+
     // A resumed review already carries its frozen ruleset and must not be
     // handed a different one.
     let ruleset;
-    try {
-      readReviewSnapshot(db, id);
-    } catch {
+    if (!hasReviewSnapshot(db, id)) {
       if (!input.rulesetId) {
         throw Response.json(
           { error: "Choose a ruleset before starting this review.", code: "RulesetRequired" },
