@@ -5,7 +5,7 @@
  * full reviews list for it: every review of every project, a merged-branch
  * check across all of them, and now a finding tally too, all to decide
  * whether to draw one chip. This answers the same question with two indexed
- * reads and no joins.
+ * reads, one of them joining the project's name.
  */
 
 import { countAwaitingConfirmation, listInFlightReviews } from "@/server/db/repositories/reviews";

@@ -2914,3 +2914,39 @@ verified evidence, in writing, here.
   so on Linux and macOS `.\app` and `./app` share a key. Left as it is,
   and said in the docstring: it matters only for a directory whose name
   begins with `.\` or a drive letter.
+- 2026-10-18 D-136 REVIEW (MVP 5.8 to 5.10 and the D-135 fixes,
+  c5e64c8..6b3eafc, by a separate read-only reviewer; each finding re-run
+  here before it was fixed). Nine findings, one MEDIUM and eight LOW, all
+  dispositioned before new work:
+  1. MEDIUM: the repository gate bee1780 added matched only the two import
+  spellings the old routes used, under src/app and src/components, so the
+  schema through the client, the query API, a raw prepare, a run-time import
+  or a relative path all passed it, and the architecture doc and row 5.10
+  said more. Fixed a3776a2: read per file, across src outside
+  src/server/db, it refuses value imports of drizzle, better-sqlite3, the
+  schema or the client, at load or run time, and calls on the handle; type
+  imports pass, and runtime.ts and data-dir-lock.ts are named owners. Of
+  eight bypass samples the old gate flagged two, the new one all eight.
+  2. LOW: the rulesets screen kept the import question while the form was
+  edited, so Replace could replace a ruleset nobody was asked about. 3. LOW:
+  the question came for an unchanged document, warning of a loss that does
+  not happen. 4. LOW: the API test passed only after another test, and no
+  test ran a Replace that changed anything. 2 to 4 fixed 3e128a1: asked only
+  when the document differs, dropped when the form changes, tested alone and
+  through a real replacement.
+  5. LOW: the self-check's exports reached every later gate step, marker
+  text and all. Fixed 4cd2cb9: exported in a subshell; 3 variables leaked
+  before, 0 after.
+  6. LOW: a link already removed answered in ids and its row stayed until a
+  reload. Fixed c5b4f95: the message says what happened, and a 404 reloads
+  the page.
+  7. LOW: a "__proto__" setting was dropped by zod and answered 200. Fixed
+  57748c1: the body is read as JSON.parse made it, and the key is refused.
+  8. LOW: four untrue sentences: row 5.9 said every cited CI run passed
+  (39127235484 failed on macOS); row 5.8 and e2ddb74 listed "a bare confirm
+  still confirms" among tests failing on the old code, which it passes; a
+  test title still said "however its address is spelled"; the attention
+  route said "no joins". The rows, the title and the comment are corrected
+  here; e2ddb74's message stays as pushed. 9. LOW: 073336d and 9b15ab8 had
+  no gate result or CI run on record; rows 5.6 and 5.7 now carry them, 1034
+  and 45 at each, CI runs 39120772872 and 39121300647.

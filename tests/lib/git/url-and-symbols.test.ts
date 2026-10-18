@@ -97,7 +97,7 @@ describe("git URL validation", () => {
   });
 });
 
-describe("one repository, however its address is spelled", () => {
+describe("one repository, under the spellings that cannot name another", () => {
   // Adding a repository again was refused only when the address matched to
   // the character (review of 5.5 to 5.7).
   it("folds what cannot name another repository", () => {
