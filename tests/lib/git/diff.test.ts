@@ -191,6 +191,64 @@ describe("line numbering", () => {
   });
 });
 
+describe("a typechange (4.25)", () => {
+  // Git prints a symlink becoming a file, or the reverse, as a deletion and
+  // an addition at one path; this is its output, verbatim. Read as two files,
+  // the ledger held two rows the pipeline could only find the first of, and
+  // the deleted half's base copy stood in for the new file in the quote check.
+  const LINK_TO_FILE = [
+    "diff --git a/link b/link",
+    "deleted file mode 120000",
+    "index 4cbb553..0000000",
+    "--- a/link",
+    "+++ /dev/null",
+    "@@ -1 +0,0 @@",
+    "-target.txt",
+    "\\ No newline at end of file",
+    "diff --git a/link b/link",
+    "new file mode 100644",
+    "index 0000000..e5c5c55",
+    "--- /dev/null",
+    "+++ b/link",
+    "@@ -0,0 +1,2 @@",
+    "+line one",
+    "+line two",
+    "",
+  ].join("\n");
+
+  it("is one modified file holding both halves", () => {
+    const files = parseUnifiedDiff(LINK_TO_FILE);
+    expect(files).toHaveLength(1);
+    const [file] = files;
+    expect(file?.path).toBe("link");
+    expect(file?.changeType).toBe("modified");
+    expect(file?.oldMode).toBe("120000");
+    expect(file?.newMode).toBe("100644");
+    expect(file?.hunks.map((hunk) => hunk.hunkIndex)).toEqual([0, 1]);
+    expect(file?.removedLines).toBe(1);
+    expect(file?.addedLines).toBe(2);
+    expect(addedLineNumbers(file!.hunks[1]!).map((line) => line.line)).toEqual([1, 2]);
+  });
+
+  it("is one file the other way round too, a file becoming a symlink", () => {
+    const fileToLink = LINK_TO_FILE.replace(
+      "deleted file mode 120000",
+      "deleted file mode 100644",
+    ).replace("new file mode 100644", "new file mode 120000");
+    const files = parseUnifiedDiff(fileToLink);
+    expect(files).toHaveLength(1);
+    expect(files[0]?.oldMode).toBe("100644");
+    expect(files[0]?.newMode).toBe("120000");
+  });
+
+  it("leaves a deletion and an addition at different paths alone", () => {
+    const twoFiles = LINK_TO_FILE.replace(/b\/link\nnew file/, "b/other\nnew file")
+      .replace("diff --git a/link b/link\nnew", "diff --git a/other b/other\nnew")
+      .replace("+++ b/link", "+++ b/other");
+    expect(parseUnifiedDiff(twoFiles).map((file) => file.changeType)).toEqual(["deleted", "added"]);
+  });
+});
+
 describe("edge cases", () => {
   it("treats an empty diff as no changes rather than an error", () => {
     expect(parseUnifiedDiff("")).toEqual([]);

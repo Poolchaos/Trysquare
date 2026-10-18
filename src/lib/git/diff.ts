@@ -360,7 +360,48 @@ export function parseUnifiedDiff(patch: string): ParsedFile[] {
     }
   }
 
-  return files;
+  return mergeTypechanges(files);
+}
+
+/**
+ * Git prints a typechange, a symlink becoming a file or the reverse, as a
+ * deletion followed by an addition at the same path, and nothing else does.
+ * Read as two files, the ledger held two rows the pipeline could only ever
+ * find the first of, and the deleted half's base copy stood in for the new
+ * file in the quote check (4.25). Merged into one modified file holding both
+ * halves' hunks, in git's order.
+ */
+function mergeTypechanges(files: ParsedFile[]): ParsedFile[] {
+  const merged: ParsedFile[] = [];
+  for (const file of files) {
+    const previous = merged.at(-1);
+    if (
+      previous !== undefined &&
+      previous.path === file.path &&
+      previous.changeType === "deleted" &&
+      file.changeType === "added"
+    ) {
+      merged[merged.length - 1] = {
+        ...previous,
+        changeType: "modified",
+        isBinary: previous.isBinary || file.isBinary,
+        isModeChangeOnly: false,
+        ...(file.newMode === undefined ? {} : { newMode: file.newMode }),
+        hunks: [
+          ...previous.hunks,
+          ...file.hunks.map((hunk, index) => ({
+            ...hunk,
+            hunkIndex: previous.hunks.length + index,
+          })),
+        ],
+        addedLines: previous.addedLines + file.addedLines,
+        removedLines: previous.removedLines + file.removedLines,
+      };
+      continue;
+    }
+    merged.push(file);
+  }
+  return merged;
 }
 
 /** Only the added lines of a hunk, with the leading marker removed. */

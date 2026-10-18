@@ -2683,3 +2683,17 @@ verified evidence, in writing, here.
   deriving the kind from the note at read time, which would tie a metric
   to the wording of a message. D-97's count of what only a killed finding
   covered still counts every kill; not changed here.
+- 2026-10-18 D-127 DECIDED (MVP 4.25; the driver's recommendation, under
+  the maintainer's instruction of 2026-10-18): a typechange is read as one
+  modified file. Git prints a symlink becoming a file, or the reverse, as a
+  deletion followed by an addition at the same path, and prints nothing
+  else that way, so the parser merges such a pair: both halves' hunks in
+  git's order, renumbered, the old mode from the deletion and the new from
+  the addition. Read as two files, the ledger held two rows with one path,
+  so a review of such a change was refused at the adversarial stage for a
+  hunk "not in the change set", after the stages before it were paid for;
+  and the deletion's base copy, keyed by the same path, would have stood in
+  for the new file in the quote check. Rejected: a new change type, which
+  every reader of the inventory would have to learn, for a change the
+  model reads perfectly well as a modification. Not handled: a finding on
+  a file that became a symlink is quote-checked through the link.

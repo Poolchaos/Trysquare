@@ -483,6 +483,59 @@ describe("what the review cannot read (4.23)", () => {
       expect.stringContaining("1 file(s) are or were Git LFS pointers: app/assets/model.bin."),
     );
   });
+
+  it("reviews a symlink that became a file to the end (4.25)", async () => {
+    // Git prints it as a deletion and an addition at one path. Read as two
+    // files, the run failed at the audit after every stage was paid for: the
+    // second file's hunks could never be found to be cleared.
+    const typechange = parseUnifiedDiff(
+      [
+        "diff --git a/link b/link",
+        "deleted file mode 120000",
+        "index 4cbb553..0000000",
+        "--- a/link",
+        "+++ /dev/null",
+        "@@ -1 +0,0 @@",
+        "-target.txt",
+        "\\ No newline at end of file",
+        "diff --git a/link b/link",
+        "new file mode 100644",
+        "index 0000000..e5c5c55",
+        "--- /dev/null",
+        "+++ b/link",
+        "@@ -0,0 +1,2 @@",
+        "+line one",
+        "+line two",
+        "",
+      ].join("\n"),
+    ).map((file) => ({ repo: "primary" as const, slug: "app", file }));
+    const result = await run(
+      {
+        ...BASE_ANSWERS,
+        s3_adversarial: {
+          ...COMPLETE_ADVERSARIAL,
+          clearedHunks: [
+            { path: "app/link", hunkIndex: 0, reason: "the old link target" },
+            { path: "app/link", hunkIndex: 1, reason: "two plain lines" },
+          ],
+        },
+        s4_deletions: {
+          findings: [],
+          reviewedDeletions: [
+            {
+              path: "app/link",
+              behaviourRemoved: "The symlink.",
+              dependents: [],
+              reason: "Replaced by a regular file at the same path.",
+            },
+          ],
+        },
+        s5_verification: { verdicts: [] },
+      },
+      { files: [...FILES, ...typechange] },
+    );
+    expect(result.coverage.pendingHunks).toBe(0);
+  });
 });
 
 describe("refusing to accept an incomplete stage", () => {

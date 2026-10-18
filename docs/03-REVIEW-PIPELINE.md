@@ -53,7 +53,9 @@ is named.
      as a whole pointer from line 1 (version line first, an oid and a size,
      nothing else), not by a line mentioning the spec (D-119 review)
    - `inventory.json`: every changed file and hunk across both repos
-     (parsed by `lib/git`), repo-tagged, including renames and deletions;
+     (parsed by `lib/git`), repo-tagged, including renames and deletions,
+     and a typechange (a symlink becoming a file, or the reverse) as one
+     modified file rather than git's deletion and addition at one path (D-127);
      this seeds ledger_files/ledger_hunks
    - `base/<slug>/<path>`: pre-change copies of every modified and deleted
      file (from each repo's merge base)

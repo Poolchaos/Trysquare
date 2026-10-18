@@ -339,6 +339,33 @@ describe("a Git LFS pointer as git diffs it (D-119 review)", () => {
   });
 });
 
+describe("a symlink that became a file (4.25)", () => {
+  it("is read as one changed file, as git lists it", async () => {
+    // Git prints a typechange as a deletion and an addition at one path,
+    // which used to become two ledger rows with one path.
+    const origin = join(root, "typechange-origin");
+    execFileSync("git", ["init", "-q", "-b", "main", origin]);
+    git(["config", "core.autocrlf", "false"], origin);
+    const target = git(["hash-object", "-w", "--stdin"], origin, "target.txt").trim();
+    git(["update-index", "--add", "--cacheinfo", `120000,${target},link`], origin);
+    git(["commit", "-qm", "old"], origin);
+    git(["checkout", "-qb", "feature"], origin);
+    const content = git(["hash-object", "-w", "--stdin"], origin, "line one\nline two\n").trim();
+    git(["update-index", "--cacheinfo", `100644,${content},link`], origin);
+    git(["commit", "-qm", "new"], origin);
+    const clone = join(root, "typechange.git");
+    await cloneBare(origin, clone);
+
+    const { files } = await readChangeSet(
+      clone,
+      await mergeBase(clone, "main", "feature"),
+      await resolveBranch(clone, "feature"),
+    );
+    expect(files.map((file) => [file.path, file.changeType])).toEqual([["link", "modified"]]);
+    expect(files[0]?.hunks).toHaveLength(2);
+  });
+});
+
 describe("a parsed diff that disagrees with git's list of changed files (D-108)", () => {
   const parsed = (...paths: string[]) => paths.map((path) => ({ path }));
 
