@@ -258,6 +258,25 @@ export function listDependencyLinks(db: Db, projectId: string): ProjectLink[] {
   return db.select().from(projectLinks).where(eq(projectLinks.projectId, projectId)).all();
 }
 
-export function unlinkDependency(db: Db, linkId: string): void {
-  db.delete(projectLinks).where(eq(projectLinks.id, linkId)).run();
+export class LinkNotFoundError extends Error {
+  constructor(
+    readonly projectId: string,
+    readonly linkId: string,
+  ) {
+    super(`Project "${projectId}" has no dependency link "${linkId}".`);
+    this.name = "LinkNotFoundError";
+  }
+}
+
+/**
+ * Removes one of this project's links. Another project's link is not found
+ * here, as an unknown one is: the project used to be ignored, so any link was
+ * removed under any project's address (5.9, A4).
+ */
+export function unlinkDependency(db: Db, projectId: string, linkId: string): void {
+  const removed = db
+    .delete(projectLinks)
+    .where(and(eq(projectLinks.id, linkId), eq(projectLinks.projectId, projectId)))
+    .run();
+  if (removed.changes === 0) throw new LinkNotFoundError(projectId, linkId);
 }

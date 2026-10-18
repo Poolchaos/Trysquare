@@ -1,6 +1,6 @@
 /** Removing a dependency link. Reviews already run keep their linked history. */
 
-import { unlinkDependency } from "@/server/db/repositories/projects";
+import { requireProject, unlinkDependency } from "@/server/db/repositories/projects";
 import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -11,8 +11,10 @@ export async function DELETE(
   context: { params: Promise<{ id: string; linkId: string }> },
 ): Promise<Response> {
   return handler(async () => {
-    const { linkId } = await context.params;
-    unlinkDependency(runtime().db, linkId);
+    const { db } = runtime();
+    const { id, linkId } = await context.params;
+    requireProject(db, id);
+    unlinkDependency(db, id, linkId);
     return ok({ removed: linkId });
   });
 }

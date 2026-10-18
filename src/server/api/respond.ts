@@ -12,7 +12,11 @@ import { z } from "zod";
 import { IllegalTransitionError, InvalidCloneTransitionError } from "@/lib/domain/state-machines";
 import { FindingNotFoundError } from "@/server/db/repositories/findings";
 import { ModelNotFoundError } from "@/server/db/repositories/models";
-import { CloneNotReadyError, ProjectNotFoundError } from "@/server/db/repositories/projects";
+import {
+  CloneNotReadyError,
+  LinkNotFoundError,
+  ProjectNotFoundError,
+} from "@/server/db/repositories/projects";
 import { ReviewNotFoundError } from "@/server/db/repositories/reviews";
 import { RuleNotFoundError, RulesetNotFoundError } from "@/server/db/repositories/rulesets";
 
@@ -99,6 +103,7 @@ function validated<T>(raw: unknown, schema: z.ZodType<T>): T {
 const NOT_FOUND = [
   ReviewNotFoundError,
   ProjectNotFoundError,
+  LinkNotFoundError,
   RulesetNotFoundError,
   RuleNotFoundError,
   FindingNotFoundError,

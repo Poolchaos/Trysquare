@@ -21,6 +21,7 @@ let routes: {
   confirm: typeof import("@/app/api/findings/[id]/confirm/route");
   start: typeof import("@/app/api/reviews/[id]/start/route");
   links: typeof import("@/app/api/projects/[id]/links/route");
+  link: typeof import("@/app/api/projects/[id]/links/[linkId]/route");
   rule: typeof import("@/app/api/rulesets/[id]/rules/[code]/route");
   preflight: typeof import("@/app/api/reviews/preflight/route");
 };
@@ -42,6 +43,7 @@ beforeAll(async () => {
     confirm: await import("@/app/api/findings/[id]/confirm/route"),
     start: await import("@/app/api/reviews/[id]/start/route"),
     links: await import("@/app/api/projects/[id]/links/route"),
+    link: await import("@/app/api/projects/[id]/links/[linkId]/route"),
     rule: await import("@/app/api/rulesets/[id]/rules/[code]/route"),
     preflight: await import("@/app/api/reviews/preflight/route"),
   };
@@ -201,5 +203,46 @@ describe("a step the state machine does not allow", () => {
     const again = await routes.confirm.POST(post(), params(finding.id));
     expect(again.status).toBe(409);
     expect(await codeOf(again)).toBe("IllegalTransitionError");
+  });
+});
+
+describe("a dependency link removed by its address", () => {
+  it("is removed only under its own project, and an unknown one is a 404", async () => {
+    // The project in the path was never read: any link id was removed under
+    // any project's address, and one that named nothing answered 200 (5.9,
+    // audit A4).
+    const { db } = (await import("@/server/runtime")).runtime();
+    const { createProject, linkDependency, listDependencyLinks } =
+      await import("@/server/db/repositories/projects");
+    const make = (name: string) =>
+      createProject(db, {
+        name,
+        gitUrl: `git@example.com:acme/${name}.git`,
+        defaultBranch: "main",
+        clonePath: join(dataDir, `${name}.git`),
+      });
+    const consumer = make("link-consumer");
+    const core = make("link-core");
+    const stranger = make("link-stranger");
+    const link = linkDependency(db, {
+      projectId: consumer.id,
+      dependencyProjectId: core.id,
+      packageName: "@acme/core",
+    });
+    const remove = (projectId: string, linkId: string) =>
+      routes.link.DELETE(new Request("http://localhost/x", { method: "DELETE" }), {
+        params: Promise.resolve({ id: projectId, linkId }),
+      });
+
+    const elsewhere = await remove(stranger.id, link.id);
+    expect(elsewhere.status).toBe(404);
+    expect(await codeOf(elsewhere)).toBe("LinkNotFoundError");
+    expect(listDependencyLinks(db, consumer.id)).toHaveLength(1);
+    expect((await remove(consumer.id, "NOPE")).status).toBe(404);
+    expect((await remove("NOPE", link.id)).status).toBe(404);
+
+    expect((await remove(consumer.id, link.id)).status).toBe(200);
+    expect(listDependencyLinks(db, consumer.id)).toHaveLength(0);
+    expect((await remove(consumer.id, link.id)).status).toBe(404);
   });
 });
