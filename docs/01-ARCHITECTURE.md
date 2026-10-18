@@ -44,7 +44,9 @@ Versions are pinned at WP-A and recorded in `PROJECT-STATE.md` once installed.
   running review at a time by default (configurable); others queue.
 - **Progress:** job manager persists every state change to SQLite
   immediately; UI subscribes via one SSE endpoint per review
-  (`/api/reviews/[id]/events`) with polling fallback.
+  (`/api/reviews/[id]/events`). A dropped stream falls back to polling
+  every two seconds and is opened again after a wait that doubles from one
+  second to thirty, while the run is live (5.12).
 - **Crash/restart:** on boot, any review in a running state is marked
   `interrupted`. Interrupted reviews are resumable: completed stages are
   never re-run; the interrupted stage restarts (or resumes its CLI session

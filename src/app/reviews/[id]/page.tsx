@@ -341,6 +341,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [live, setLive] = useState<LiveEntry[]>([]);
+  // Read by a stream reopening after a wait, when this render's snapshot is
+  // stale: whether there is still a run to follow, and how many tries since
+  // the last stream that opened.
+  const runLive = useRef<boolean | null>(null);
+  const reconnects = useRef(0);
   const [streaming, setStreaming] = useState(true);
   const [loadError, setLoadError] = useState("");
   // Which request of how many is in flight, for the stage that divides its
@@ -440,6 +445,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   useEffect(() => {
     let cancelled = false;
     let poll: ReturnType<typeof setInterval> | undefined;
+    let reopen: ReturnType<typeof setTimeout> | undefined;
     // The server ends the stream when the run ends, which the browser can
     // only see as an error. This flag is what tells that apart from a
     // genuinely dropped connection, which is the one case worth polling over.
@@ -454,6 +460,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     })();
 
     const source = new EventSource(`/api/reviews/${id}/events`);
+
+    source.onopen = () => {
+      reconnects.current = 0;
+      setStreaming(true);
+    };
 
     source.addEventListener("update", (event) => {
       const parsed = JSON.parse((event as MessageEvent<string>).data) as {
@@ -515,7 +526,18 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     source.onerror = () => {
       source.close();
       setStreaming(false);
-      if (runEnded || poll !== undefined) return;
+      if (runEnded) return;
+      // Opened again too, after a wait that doubles from one second to thirty,
+      // and only while the run is still live by then: the poll keeps the
+      // status moving, but the feed and the request line are fed by the
+      // stream alone, and stopped with it (5.12, U8).
+      const wait = Math.min(1000 * 2 ** reconnects.current, 30_000);
+      reconnects.current += 1;
+      reopen = setTimeout(() => {
+        // Unknown, before the first snapshot arrives, counts as live.
+        if (!cancelled && runLive.current !== false) setWatchEpoch((epoch) => epoch + 1);
+      }, wait);
+      if (poll !== undefined) return;
       poll = setInterval(() => {
         if (cancelled) return;
         void (async () => {
@@ -534,6 +556,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       cancelled = true;
       source.close();
       if (poll !== undefined) clearInterval(poll);
+      clearTimeout(reopen);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, watchEpoch]);
@@ -543,6 +566,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
   }, [snapshot?.running]);
+
+  useEffect(() => {
+    if (snapshot) runLive.current = snapshot.running || snapshot.queued;
+  }, [snapshot]);
 
   const isDraft = snapshot?.review.status === "draft";
   useEffect(() => {
@@ -590,6 +617,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         live={live}
         now={now}
         batch={batch}
+        streaming={streaming}
         onMinimize={() => setMinimizedRun(review.startedAt)}
         onCancel={async () => {
           const problem = await cancelReview();
@@ -975,8 +1003,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {(snapshot.running || snapshot.queued) && !streaming ? (
               <Card className="mb-6 p-4">
                 <p className="text-xs text-[var(--color-ink-muted)]">
-                  The live stream dropped, so this is checking every two seconds instead. The run
-                  itself is unaffected; only this page lost its connection to it.
+                  The live stream dropped, so this checks every two seconds while the stream is
+                  opened again. The run itself is unaffected; only this page lost its connection to
+                  it.
                 </p>
               </Card>
             ) : null}
@@ -1492,6 +1521,7 @@ function ScanTheater({
   live,
   now,
   batch,
+  streaming,
   onMinimize,
   onCancel,
 }: {
@@ -1499,6 +1529,8 @@ function ScanTheater({
   live: LiveEntry[];
   now: number;
   batch: { number: number; count: number } | null;
+  /** False while the event stream is down and being opened again. */
+  streaming: boolean;
   onMinimize: () => void;
   /** Resolves with why the cancel failed, or empty when it took. */
   onCancel: () => Promise<string>;
@@ -1647,6 +1679,13 @@ function ScanTheater({
         </div>
       </div>
 
+      {streaming ? null : (
+        // Here too, where a run is watched: the feed below stops while the
+        // stream is down, and it used to stop without a word (5.12, U8).
+        <p className="mt-5 text-aside text-[var(--color-ink-muted)]">
+          The live stream dropped and is being opened again. The run itself is unaffected.
+        </p>
+      )}
       {/* The work itself, streaming. This is the panel the whole mode exists
           for: files being opened, stages turning over, the run narrating. */}
       <div

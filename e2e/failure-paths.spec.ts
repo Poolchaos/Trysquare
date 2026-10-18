@@ -472,6 +472,36 @@ test("removing a link that is already gone says so and shows the links as they a
   expect((await request.delete(`/api/projects/${other.id}`)).status()).toBe(200);
 });
 
+test("a dropped stream is said in the theater and opened again, and the feed goes on", async ({
+  page,
+}) => {
+  // After a dropped connection the page polled for the status, but the feed
+  // and the "request n of m" line are fed by the stream alone, so they
+  // stopped; and the theater, where a run is watched, never said why (5.12,
+  // audit U8). The first stream is dropped; the stalled stage's end can only
+  // reach the feed through a stream opened again.
+  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 8_000 }), "utf8");
+  let streams = 0;
+  const countStreams = (request: import("@playwright/test").Request) => {
+    if (/\/api\/reviews\/[^/]+\/events$/.test(new URL(request.url()).pathname)) streams += 1;
+  };
+  page.on("request", countStreams);
+  const stopDropping = await answerOnce(page, "**/api/reviews/*/events", (route) => route.abort());
+  await startAReview(page);
+
+  await expect(page.getByText(/live stream dropped/)).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => streams, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+  await stopDropping();
+  await expect(page.getByText(/live stream dropped/)).toHaveCount(0, { timeout: 15_000 });
+  // The stalled stage ends with a note on the stream. The Activity log is
+  // the feed itself, not the notes the poll reads back, so only a stream
+  // opened again can put it there.
+  await expect(
+    page.getByRole("group", { name: "Activity log" }).getByText(/stalled call was never cancelled/),
+  ).toBeVisible({ timeout: 30_000 });
+  page.off("request", countStreams);
+});
+
 test("a review left as a draft can be started from its own screen", async ({ page }) => {
   // A review is created and then started, two requests. When the start
   // failed, the review was left a draft whose screen offered no way to start
