@@ -191,6 +191,26 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.getByText("Advanced", { exact: true }).click();
   });
 
+  await test.step("Enter in the branch filter filters, and starts nothing", async () => {
+    // The filter sits inside the start form, so Enter there submitted it and
+    // started a paid review from a keystroke meant for a search box (5.2).
+    // Pressed once the form is ready, which is when it used to submit.
+    await expect(page.getByRole("button", { name: "Start review" })).toBeEnabled();
+    let creates = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/reviews") {
+        creates += 1;
+      }
+    });
+    const filter = page.getByPlaceholder("Filter branches");
+    await filter.fill("rename");
+    await filter.press("Enter");
+    await page.waitForTimeout(500);
+    expect(creates).toBe(0);
+    await expect(page).toHaveURL(/\/reviews\/new/);
+    await filter.fill("");
+  });
+
   await test.step("starting it walks the stages and then stops for a person", async () => {
     await page.getByRole("button", { name: "Start review" }).click();
     await expect(page).toHaveURL(/\/reviews\/[A-Z0-9]+$/i, { timeout: 60_000 });

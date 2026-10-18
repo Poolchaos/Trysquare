@@ -406,7 +406,14 @@ function NewReview() {
               <Input
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
+                // Inside the start form, so Enter here submitted it and
+                // started a review from a keystroke meant for a search box
+                // (5.2). It filters as you type; Enter has nothing to do.
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") event.preventDefault();
+                }}
                 placeholder="Filter branches"
+                aria-label="Filter branches"
                 className="max-w-56"
               />
             </div>

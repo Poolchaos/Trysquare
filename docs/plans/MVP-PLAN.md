@@ -144,7 +144,7 @@ engine fixes in phase 4 have landed.
 | WP | Scope | Blocked on | Status |
 | --- | --- | --- | --- |
 | 5.1 | U1: Cancel asks first and reports a failed cancel. | - | DONE 2026-10-18: both Cancel buttons, the scan theater's and the review toolbar's, now ask (Yes, cancel / No, keep it) and send nothing until answered; one shared request reports a dropped request, a refusal or a review with nothing left to cancel, in the theater or as the page's problem. Browser test: the first click sends no cancel request, a refused cancel shows "The review could not be cancelled." with the review still running, and the confirmed cancel ends it; on the build before, the first click cancelled at once. |
-| 5.2 | U2: Enter in the branch filter never submits. | - | TODO |
+| 5.2 | U2: Enter in the branch filter never submits. | - | DONE 2026-10-18: the filter swallows Enter, since it filters as you type, and is labelled for assistive tech. Browser test, with the form ready to start: typing in the filter and pressing Enter sends no create request and stays on the form; on the build before, the same keystroke created a review (it failed the 5.1 gate run it leaked into, creates 1 where 0 was expected). |
 | 5.3 | U3: an empty budget field is refused, not saved as 0; removing the ceiling takes an explicit 0. | - | TODO |
 | 5.4 | U4: the queue's keyboard handler leaves Enter and Space alone on interactive elements. | - | TODO |
 | 5.5 | U5 per MG-6. | MG-6 | TODO |
