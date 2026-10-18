@@ -2950,3 +2950,35 @@ verified evidence, in writing, here.
   here; e2ddb74's message stays as pushed. 9. LOW: 073336d and 9b15ab8 had
   no gate result or CI run on record; rows 5.6 and 5.7 now carry them, 1034
   and 45 at each, CI runs 39120772872 and 39121300647.
+- 2026-10-18 D-137 REVIEW (MVP 5.11 to 5.13 and the delete-mid-clone fix,
+  05bf84a..e28d856, by a separate read-only reviewer; each finding re-run
+  here before it was fixed). Twelve findings, one HIGH, two MEDIUM and nine
+  LOW, all dispositioned before new work:
+  1. HIGH: a review queued behind a running one is a draft in the database,
+  and its screen offered Start review with a ruleset the run would not use;
+  starting it answered 200 and dropped the choice. 9. LOW: the draft
+  control said nothing with no rulesets, or when its ruleset read failed.
+  Fixed 92635a8: Start shows only on a draft neither queued nor running,
+  with words and a link for no rulesets and Try again for a failed read.
+  The 5.11 test now checks the ruleset sent and waits for its run to end
+  (10 and 11 in part).
+  4. LOW: the theater showed the dropped-stream notice at the end of every
+  run, the server closing the stream on purpose. 5. LOW: a review that does
+  not exist had its stream reopened and its reading polled for as long as
+  the tab stayed open. Fixed 2ff683a; the 5.12 test matches the theater's
+  own words (10 in part).
+  2. MEDIUM: a failed ruleset read on the new review screen claimed no
+  rulesets existed. 7. LOW: the stale-refs banner outlived its refs. 8.
+  LOW: failed reads ran together as one sentence. 12, first half: the
+  pre-flight and the model list read after a probe were still bare. Fixed
+  8c3682a.
+  3. MEDIUM: the review screen's report read and the confirmation panel's
+  rules read had no error state, though row 5.13 was marked done for every
+  first read. Fixed 4e0a2db.
+  6. LOW: delete-everything judged clone status from a list read before
+  many awaits, and a clone's cleanup of a deleted project swallowed its
+  failure. Fixed 19efbf4; the re-read is by reading, not tested.
+  10, the list test: Try again was proved only by the old message going.
+  Fixed 018939b.
+  12, second half: row 5.13 gave no counts at 4845d0d. They were 1040 unit
+  and 51 browser tests; the row now says so.
