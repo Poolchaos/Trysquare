@@ -71,7 +71,10 @@ describe("completing a review whose checkout will not go", () => {
     const notes = readRunNotes(requireReview(db, review.id)).map((note) => note.message);
     expect(notes).toContain(body.cleanupNote);
     expect(body.cleanupNote).toContain("could not be removed: EBUSY");
-    expect(body.cleanupNote).toContain("delete its folder by hand");
+    // The checkout itself, not the run directory holding the evidence.
+    expect(body.cleanupNote).toContain(
+      `delete ${join(dataDir, "runs", review.id, "worktree")} by hand`,
+    );
     expect(body.cleanupNote).not.toMatch(/deleting the review/i);
   });
 });

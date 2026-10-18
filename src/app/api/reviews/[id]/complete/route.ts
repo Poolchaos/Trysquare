@@ -8,6 +8,7 @@
  * them (D-12).
  */
 
+import { worktreeRootDir } from "@/lib/paths";
 import { listAwaitingDecision } from "@/server/db/repositories/findings";
 import {
   appendRunNote,
@@ -68,10 +69,13 @@ export async function POST(
       // Not "delete the review", as it once said: that throws away the
       // findings and the report to tidy a folder (review of 5.5 to 5.7). The
       // folder is a copy of code the clone still holds.
+      // Named, because the checkout sits beside the bundle and the logs,
+      // which are the review's evidence, and "its folder" could be read as
+      // the run's (review of the D-133 fixes).
       const cleanupNote =
         `The review is complete, but its checkout could not be removed: ${cleanupError}. ` +
-        "It is only a copy of the code that was reviewed: delete its folder by hand once " +
-        "nothing has it open.";
+        "It is only a copy of the code that was reviewed: delete " +
+        `${worktreeRootDir(dataDir, id)} by hand once nothing has it open.`;
       appendRunNote(db, id, { kind: "note", message: cleanupNote });
       cleanup = { cleanupError, cleanupNote };
     }

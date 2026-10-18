@@ -154,7 +154,12 @@ async function serverMidStage(port: number): Promise<{ server: ChildProcess; cli
   expect(started.status).toBe(200);
 
   await expect.poll(() => existsSync(pidFile), { timeout: 60_000 }).toBe(true);
-  const cliPid = Number(readFileSync(pidFile, "utf8"));
+  // Refused unless it is a real pid: the cleanup above sends SIGKILL to it,
+  // and to process.kill a pid of 0 is the test runner's own process group
+  // (review of the D-133 fixes).
+  const pidText = readFileSync(pidFile, "utf8");
+  const cliPid = Number(pidText);
+  if (!Number.isInteger(cliPid) || cliPid <= 0) throw new Error(`The pid file held "${pidText}".`);
   launched.clis.push(cliPid);
   expect(isAlive(cliPid)).toBe(true);
   return { server, cliPid };
