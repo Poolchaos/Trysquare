@@ -60,6 +60,14 @@ describe("findings killed before the kind of kill was recorded (migration 0011)"
       ["moved", "killed", "Verification quoted line 1, which does not overlap the cited line 2."],
       ["refuted", "killed", "The caller already checks this."],
       ["default-refuted", "killed", "Refuted during verification."],
+      // A refutation that happens to echo a check's words is still one: the
+      // match was case-blind and loose until the review of 4.24 to 4.27.
+      ["lowercased", "killed", "the quotation did not match the file: a misreading."],
+      [
+        "loose",
+        "killed",
+        "Verification quoted the caller, which does not overlap the cited guard; refuted.",
+      ],
       ["kept", "verified", "checked"],
     ];
     for (const [id, status, note] of rows) insert.run(id, reviewId, status, note);
@@ -80,6 +88,8 @@ describe("findings killed before the kind of kill was recorded (migration 0011)"
       moved: "quote_check",
       refuted: "verification",
       "default-refuted": "verification",
+      lowercased: "verification",
+      loose: "verification",
       kept: null,
     });
   });
