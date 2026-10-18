@@ -2665,6 +2665,6 @@ verified evidence, in writing, here.
   refused on cost: the CLI's own index prices it at up to 5.59 times high
   per call (sonnet-5).
   Found on the way: the CLI swaps a retired model id for a current one
-  without a word (claude-opus-4-1 ran as claude-opus-5-5), and the older 4.x
-  and 3.x models send no effort at any level; both in the idea inbox or
-  D-123, neither among the candidates a review can run.
+  without a word (claude-opus-4-1 ran as claude-opus-5-5), and Sonnet 4.5,
+  Sonnet 4 and Sonnet 3.7 send no effort at any level; both in the idea
+  inbox or D-123, neither among the candidates a review can run.
