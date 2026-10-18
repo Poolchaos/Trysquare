@@ -131,7 +131,8 @@ const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/s;
  * `rename to` headers and do not depend on this.
  */
 export function pathFromDiffHeader(line: string): string | null {
-  const rest = line.slice("diff --git ".length).trim();
+  // Not trimmed: a trailing space belongs to the path (4.27).
+  const rest = line.slice("diff --git ".length);
   if (rest === "") return null;
 
   if (rest.startsWith('"')) {
@@ -174,6 +175,16 @@ export function pathFromDiffHeader(line: string): string | null {
  * Empty input yields an empty list, which is a legitimate result (a branch
  * with no changes) rather than an error.
  */
+/**
+ * The path on a `---` or `+++` line. Git ends the line with a tab when the
+ * name holds a space, and that tab is all that is removed: trimming the line
+ * took a name's own trailing spaces with it, reading `notes ` as `notes`
+ * (4.27).
+ */
+function headerLinePath(line: string): string {
+  return line.slice(4).replace(/\t$/, "");
+}
+
 export function parseUnifiedDiff(patch: string): ParsedFile[] {
   if (patch.trim() === "") return [];
 
@@ -280,12 +291,12 @@ export function parseUnifiedDiff(patch: string): ParsedFile[] {
     // file to whatever followed the plus signs (review of MVP 3.6 to 4.9).
     const beforeFirstHunk = current.hunks.length === 0;
     if (beforeFirstHunk && line.startsWith("--- ")) {
-      const raw = line.slice(4).trim();
+      const raw = headerLinePath(line);
       headerOldPath = raw === "/dev/null" ? null : stripPrefix(unquoteGitPath(raw));
       continue;
     }
     if (beforeFirstHunk && line.startsWith("+++ ")) {
-      const raw = line.slice(4).trim();
+      const raw = headerLinePath(line);
       headerNewPath = raw === "/dev/null" ? null : stripPrefix(unquoteGitPath(raw));
 
       // Resolve the path now that both sides are known.

@@ -191,6 +191,46 @@ describe("line numbering", () => {
   });
 });
 
+describe("a path with spaces at its end (4.27)", () => {
+  // Git ends a --- or +++ line with a tab when the name holds a space, and
+  // the parser trimmed that line, taking the name's own trailing spaces with
+  // the tab: `notes ` was read as `notes`. Verbatim git output.
+  it("keeps a file name's trailing space", () => {
+    const patch = [
+      "diff --git a/notes  b/notes ",
+      "new file mode 100644",
+      "index 0000000..ce01362",
+      "--- /dev/null",
+      "+++ b/notes \t",
+      "@@ -0,0 +1 @@",
+      "+hello",
+      "",
+    ].join("\n");
+    expect(parseUnifiedDiff(patch).map((file) => file.path)).toEqual(["notes "]);
+  });
+
+  it("still drops the tab after a name with a space inside it", () => {
+    const patch = [
+      "diff --git a/odd name b/odd name",
+      "index 1111111..2222222 100644",
+      "--- a/odd name\t",
+      "+++ b/odd name\t",
+      "@@ -1 +1 @@",
+      "-old",
+      "+new",
+      "",
+    ].join("\n");
+    expect(parseUnifiedDiff(patch).map((file) => file.path)).toEqual(["odd name"]);
+  });
+
+  it("keeps it where only the diff --git line names the file, a mode change", () => {
+    const patch = ["diff --git a/notes  b/notes ", "old mode 100644", "new mode 100755", ""].join(
+      "\n",
+    );
+    expect(parseUnifiedDiff(patch).map((file) => file.path)).toEqual(["notes "]);
+  });
+});
+
 describe("a typechange (4.25)", () => {
   // Git prints a symlink becoming a file, or the reverse, as a deletion and
   // an addition at one path; this is its output, verbatim. Read as two files,

@@ -2708,3 +2708,12 @@ verified evidence, in writing, here.
   stand-in for the API in a checkout whose .gitignore ignores everything,
   left nothing in it, ignored or not. A checkout has no ignored files when
   it is made, so the baseline is unaffected.
+- 2026-10-18 D-129 DECIDED (MVP 4.27; the driver's recommendation, under
+  the maintainer's instruction of 2026-10-18): the diff parser takes a path
+  from a --- or +++ line by removing only the tab git ends that line with
+  when the name holds a space (git's own rule, observed here on a new file
+  `notes `), and no longer trims the diff --git line. Trimming took a name's
+  own trailing spaces with the tab, so `notes ` was read as `notes`; since
+  D-108 the change set was then refused rather than reviewed under the
+  wrong name, which was safe but meant such a change could not be reviewed
+  at all.

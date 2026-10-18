@@ -339,6 +339,35 @@ describe("a Git LFS pointer as git diffs it (D-119 review)", () => {
   });
 });
 
+describe("a file whose name ends in a space (4.27)", () => {
+  it("is read under its own name, so the change set is not refused", async () => {
+    // The parser took `notes ` for `notes`, so the diff disagreed with git's
+    // own list of changed files and the change set was refused (D-108).
+    // Windows will not hold such a name on disk, only in git, hence the
+    // index rather than a file and NTFS protection off for this repository.
+    const origin = join(root, "space-origin");
+    execFileSync("git", ["init", "-q", "-b", "main", origin]);
+    git(["config", "core.autocrlf", "false"], origin);
+    git(["config", "core.protectNTFS", "false"], origin);
+    writeFileSync(join(origin, "base.txt"), "x\n");
+    git(["add", "base.txt"], origin);
+    git(["commit", "-qm", "init"], origin);
+    git(["checkout", "-qb", "feature"], origin);
+    const blob = git(["hash-object", "-w", "--stdin"], origin, "hello\n").trim();
+    git(["update-index", "--add", "--cacheinfo", `100644,${blob},notes `], origin);
+    git(["commit", "-qm", "add"], origin);
+    const clone = join(root, "space.git");
+    await cloneBare(origin, clone);
+
+    const { files } = await readChangeSet(
+      clone,
+      await mergeBase(clone, "main", "feature"),
+      await resolveBranch(clone, "feature"),
+    );
+    expect(files.map((file) => file.path)).toEqual(["notes "]);
+  });
+});
+
 describe("a symlink that became a file (4.25)", () => {
   it("is read as one changed file, as git lists it", async () => {
     // Git prints a typechange as a deletion and an addition at one path,
