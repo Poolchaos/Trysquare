@@ -329,7 +329,9 @@ test("a failed clone can be opened, tried again and deleted; a known address is 
   // the address still answers nothing, and the page follows it there.
   const retry = page.getByRole("button", { name: "Retry clone" });
   await expect(retry).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText(/nowhere\.git/).last()).toBeVisible();
+  // The error block itself: the header shows the address too, so a match on
+  // the address alone proved nothing (review of 5.5 to 5.7).
+  await expect(page.locator("pre", { hasText: "nowhere.git" })).toBeVisible();
   // Where the branches would be, the reason there are none, not a
   // "Fetching the latest refs..." that never ends.
   await expect(page.getByText("This project's clone failed, so it has no branches")).toBeVisible();

@@ -77,6 +77,10 @@ describe("an address added twice", () => {
     // Another spelling of the same address is the same repository.
     const respelled = await routes.projects.POST(post({ gitUrl: `${url}/` }));
     expect(respelled.status).toBe(409);
+
+    // Its clone, of an address with nothing behind it, runs on after the
+    // answer; awaited, so it cannot still be writing when the database closes.
+    expect((await settled(project.id)).cloneStatus).toBe("failed");
   });
 });
 
@@ -91,6 +95,8 @@ describe("a clone that failed", () => {
 
     // The repository arrives, as one does once an address is corrected.
     execFileSync("git", ["init", "-q", "-b", "main", origin]);
+    // Without it, git on Windows warns that the file's LF will become CRLF.
+    execFileSync("git", ["config", "core.autocrlf", "false"], { cwd: origin });
     writeFileSync(join(origin, "a.ts"), "export const a = 1;\n");
     execFileSync("git", ["add", "a.ts"], { cwd: origin });
     execFileSync(
