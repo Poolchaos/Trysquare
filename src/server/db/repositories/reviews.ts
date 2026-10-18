@@ -18,7 +18,7 @@ import {
   reviewStatusSchema,
 } from "@/lib/domain/state-machines";
 import type { Db } from "../client";
-import { reviews } from "../schema";
+import { projects, reviews } from "../schema";
 import { parseJsonColumn, serialiseJsonColumn } from "./json";
 
 export class ReviewNotFoundError extends Error {
@@ -290,6 +290,39 @@ export function listActiveReviews(db: Db): Review[] {
     .from(reviews)
     .where(inArray(reviews.status, [...ACTIVE_REVIEW_STATUSES]))
     .all();
+}
+
+/**
+ * What the top bar says of each review in flight, paused on a usage limit
+ * included: which stage, since when, at what cost, and on which project.
+ * One indexed read with the project's name joined, because the bar polls it
+ * every four seconds on every screen.
+ */
+export function listInFlightReviews(db: Db) {
+  return db
+    .select({
+      id: reviews.id,
+      status: reviews.status,
+      fromBranch: reviews.fromBranch,
+      intoBranch: reviews.intoBranch,
+      projectName: projects.name,
+      currentStage: reviews.currentStage,
+      startedAt: reviews.startedAt,
+      costEquivalentUsd: reviews.costEquivalentUsd,
+    })
+    .from(reviews)
+    .innerJoin(projects, eq(reviews.projectId, projects.id))
+    .where(inArray(reviews.status, [...ACTIVE_REVIEW_STATUSES, "paused_limit"]))
+    .all();
+}
+
+/** How many reviews wait on a person to decide their findings. */
+export function countAwaitingConfirmation(db: Db): number {
+  return db
+    .select({ id: reviews.id })
+    .from(reviews)
+    .where(eq(reviews.status, "awaiting_confirmation"))
+    .all().length;
 }
 
 /**

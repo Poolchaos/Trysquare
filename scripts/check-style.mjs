@@ -100,6 +100,14 @@ const CHECKS = [
     name: "A carriage return may only end a line",
     pattern: /\r(?!$)/,
   },
+  {
+    // CLAUDE.md section 8: all database access goes through repositories. Two
+    // routes queried the tables themselves until 5.10 (audit A6), which no
+    // gate could see.
+    name: "Routes and screens reach the database through repositories, not the schema or drizzle",
+    pattern: /from\s+["'](?:drizzle-orm[^"']*|@\/server\/db\/schema)["']/,
+    appliesTo: (path) => path.startsWith("src/app/") || path.startsWith("src/components/"),
+  },
 ];
 
 function collectFiles(entryPath, acc) {
@@ -161,9 +169,12 @@ if (files.length === 0) {
 
 const violations = [];
 for (const file of files) {
+  // Forward slashes on every platform, so a scoped check matches on Windows.
+  const path = relative(ROOT, file).split("\\").join("/");
   const lines = readFileSync(file, "utf8").split("\n");
   lines.forEach((line, index) => {
     for (const check of CHECKS) {
+      if (check.appliesTo && !check.appliesTo(path)) continue;
       if (check.pattern.test(line)) {
         violations.push(`${relative(ROOT, file)}:${index + 1}: ${check.name}\n    ${line.trim()}`);
       }

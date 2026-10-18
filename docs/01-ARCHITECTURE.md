@@ -75,7 +75,8 @@ Layering laws:
 
 - `lib/` is pure and fully unit-testable: no I/O, no imports from `server/`.
 - All DB access goes through `server/db/repositories`. No inline queries in
-  routes or components.
+  routes or components; the house-style gate refuses an import of the schema
+  or drizzle under `src/app` and `src/components` (MVP 5.10).
 - Only `server/gitops` spawns git; only `server/engine` spawns claude.
 - UI components never import from `server/`; they consume API payloads typed
   by shared zod schemas in `lib/`.

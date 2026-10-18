@@ -281,6 +281,15 @@ export class RulesetNameTakenError extends Error {
   }
 }
 
+/**
+ * Removes a ruleset. Its rules and directives go with it (ON DELETE CASCADE);
+ * a review frozen with it holds it in place (RESTRICT), so such reviews are
+ * deleted first.
+ */
+export function deleteRuleset(db: Db, rulesetId: string): void {
+  db.delete(rulesets).where(eq(rulesets.id, rulesetId)).run();
+}
+
 /** The ruleset already stored under this name, if one is. */
 export function findRulesetByName(db: Db, name: string): RulesetRow | undefined {
   return db.select().from(rulesets).where(eq(rulesets.name, name)).get();

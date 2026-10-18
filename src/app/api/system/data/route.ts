@@ -14,12 +14,10 @@
 import { exportsDir, projectDir } from "@/lib/paths";
 import { deleteProject, listProjects } from "@/server/db/repositories/projects";
 import { listActiveReviews, listReviewsForProject } from "@/server/db/repositories/reviews";
-import { listRulesets } from "@/server/db/repositories/rulesets";
-import { rulesets } from "@/server/db/schema";
+import { deleteRuleset, listRulesets } from "@/server/db/repositories/rulesets";
 import { deleteReviewEntirely } from "@/server/review/service";
 import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
-import { eq } from "drizzle-orm";
 import { removeRepo } from "@/server/gitops/repo";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +56,7 @@ export async function DELETE(): Promise<Response> {
     }
 
     const rulesetRows = listRulesets(db);
-    for (const row of rulesetRows) db.delete(rulesets).where(eq(rulesets.id, row.id)).run();
+    for (const row of rulesetRows) deleteRuleset(db, row.id);
 
     return ok({
       deleted: { projects: projects.length, reviews, rulesets: rulesetRows.length },
