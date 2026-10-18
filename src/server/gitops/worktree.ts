@@ -64,9 +64,13 @@ export async function removeWorktree(repoDir: string, worktreeDir: string): Prom
   await git(["worktree", "prune"], { cwd: repoDir }).catch(() => undefined);
 }
 
-/** Lists what a worktree considers modified, untracked, or staged. */
+/**
+ * Lists what a worktree considers modified, untracked, staged, or written
+ * where the repository ignores it. Without `--ignored`, a write under build/
+ * or to a .log file went unseen by the end-of-review check (4.26).
+ */
 export async function worktreeChanges(worktreeDir: string): Promise<string[]> {
-  const output = await git(["status", "--porcelain=v1", "--untracked-files=all"], {
+  const output = await git(["status", "--porcelain=v1", "--untracked-files=all", "--ignored"], {
     cwd: worktreeDir,
   });
   return toLines(output);
@@ -126,9 +130,12 @@ export async function worktreeBaseline(worktreeDir: string): Promise<WorktreeBas
  * quotes an unusual name and the quoted text is not a path on disk.
  */
 async function contentsOfChanged(worktreeDir: string): Promise<Record<string, string | null>> {
-  const output = await git(["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
-    cwd: worktreeDir,
-  });
+  const output = await git(
+    ["status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignored"],
+    {
+      cwd: worktreeDir,
+    },
+  );
   const entries = output.split("\0").filter((entry) => entry !== "");
   const contents: Record<string, string | null> = {};
   for (let index = 0; index < entries.length; index += 1) {

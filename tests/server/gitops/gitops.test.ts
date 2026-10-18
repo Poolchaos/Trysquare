@@ -5,7 +5,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -517,6 +517,33 @@ describe("review worktrees", () => {
     await expect(assertWorktreeClean(dir)).rejects.toThrow(/notes\.md/);
 
     await removeWorktree(cloneDir, dir);
+  });
+
+  it("detects a write to a path the repository ignores (4.26)", async () => {
+    // git status leaves ignored paths out unless asked, so a write under
+    // build/ or to a .log file went unseen by the end-of-review check.
+    const origin = join(root, "ignoring-origin");
+    execFileSync("git", ["init", "-q", "-b", "main", origin]);
+    git(["config", "core.autocrlf", "false"], origin);
+    writeFileSync(join(origin, ".gitignore"), "build/\n*.log\n");
+    writeFileSync(join(origin, "app.ts"), "export const a = 1;\n");
+    git(["add", ".gitignore", "app.ts"], origin);
+    git(["commit", "-qm", "init"], origin);
+    const clone = join(root, "ignoring.git");
+    await cloneBare(origin, clone);
+
+    const dir = join(root, "wt-ignored");
+    await addWorktree(clone, dir, await resolveBranch(clone, "main"));
+    const baseline = await worktreeBaseline(dir);
+    expect(baseline.changes).toEqual([]);
+
+    mkdirSync(join(dir, "build"));
+    writeFileSync(join(dir, "build", "out.js"), "written by the review\n");
+    writeFileSync(join(dir, "debug.log"), "written by the review\n");
+    await expect(assertWorktreeClean(dir)).rejects.toThrow(/build\/out\.js/);
+    await expect(assertWorktreeClean(dir, baseline)).rejects.toThrow(/debug\.log/);
+
+    await removeWorktree(clone, dir);
   });
 
   it("supports two repositories checked out side by side for a linked review", async () => {

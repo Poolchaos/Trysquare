@@ -2697,3 +2697,14 @@ verified evidence, in writing, here.
   every reader of the inventory would have to learn, for a change the
   model reads perfectly well as a modification. Not handled: a finding on
   a file that became a symlink is quote-checked through the link.
+- 2026-10-18 D-128 DECIDED (MVP 4.26; the driver's recommendation, under
+  the maintainer's instruction of 2026-10-18): the end-of-review worktree
+  check reads git status with --ignored, in the list of changes and in the
+  baseline's hashes alike. A write under a path the repository ignores,
+  build output or a log, was not a change to git status and went unseen,
+  though "the app never writes inside a worktree" covers it as much as any
+  other path. Checked before adopting it, since a clean review must not
+  fail on it: the bundled CLI, run with a stage's arguments against a local
+  stand-in for the API in a checkout whose .gitignore ignores everything,
+  left nothing in it, ignored or not. A checkout has no ignored files when
+  it is made, so the baseline is unaffected.
