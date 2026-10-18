@@ -382,7 +382,8 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
   library. The 04 bar ("nothing that reads as template output") is easier
   to hit from below than by fighting a kit's defaults.
 - D-15 SSE first with a 2-second polling fallback endpoint; no websockets.
-- D-16 Keyboard map for confirmation: j/k next/previous, c confirm, d
+- D-16 Keyboard map for confirmation: j/k next/previous, c confirm (Shift+C
+  since D-132, 2026-10-18), d
   dismiss (focus reason), e edit comment, enter toggle file context, g g /
   G list top/bottom. Shown in a footer hint bar.
 - D-17 Report filename: `exports/<project-slug>--<from>--into--<to>--<UTC

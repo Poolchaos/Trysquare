@@ -147,7 +147,7 @@ export function markOrphanedClonesFailed(db: Db): number {
       db,
       project.id,
       "failed",
-      "The server restarted while this clone was in flight. Delete the project and add it again.",
+      "The server restarted while this clone was in flight. Retry the clone.",
     );
   }
   return stranded.length;

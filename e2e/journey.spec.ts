@@ -442,8 +442,8 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.locator("body").press("k");
     await expect(page.getByText("(edited)")).toBeVisible();
     await expect(page.getByText(EDITED_COMMENT)).toBeVisible();
-    // Back onto an open finding, or the confirms below would press c at a
-    // decided one and decide nothing.
+    // Back onto an open finding, or the confirms below would press Shift+C
+    // at a decided one and decide nothing.
     await page.locator("body").press("j");
   });
 

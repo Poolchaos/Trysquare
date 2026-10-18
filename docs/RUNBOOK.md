@@ -88,7 +88,11 @@ Every step below is free until you press Start review.
 
 1. **Add a project.** Projects screen, paste a git URL, Add project. The row
    appears immediately and the clone runs in the background; if git fails, its
-   own error text is shown rather than a summary of it. Local paths work:
+   own error text is shown rather than a summary of it. Open the failed
+   project and press Retry clone once the cause (network, credentials,
+   access) is fixed; an address that was simply wrong is deleted and added
+   again. Adding an address that is already a project is refused, with a
+   link to that project. Local paths work:
    a `file:///path/to/repo` URL, or on Windows `C:\path\to\repo`, is a
    fast way to try this on something you already have. A network share
    (`\\host\share` or a `file://` URL with a host) is refused, because

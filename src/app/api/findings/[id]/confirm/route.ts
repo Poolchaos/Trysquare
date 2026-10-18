@@ -6,7 +6,7 @@
  * case adds nothing to it; dismissing does require one.
  *
  * A rewritten comment may travel with the acceptance. The body is optional so
- * the common case stays a bare POST, and so the `c` key does not have to know
+ * the common case stays a bare POST, and so Shift+C does not have to know
  * anything about editing.
  */
 

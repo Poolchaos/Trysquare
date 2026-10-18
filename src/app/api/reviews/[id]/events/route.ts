@@ -22,8 +22,8 @@ export async function GET(
     // Through runtime() like every other handler, so a stream opened as the
     // first request after a restart still finds an initialised manager.
     const { db, manager } = appRuntime();
-    // Read before the stream opens: inside it, an unknown review broke the
-    // stream after a 200 rather than answering 404 (4.20).
+    // Read before the stream opens: the stream reads the review while it is
+    // being built, and an unknown one threw from there as a 500 (4.20).
     requireReview(db, id);
     return reviewEventStream(manager, id, request);
   });
