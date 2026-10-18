@@ -1059,6 +1059,40 @@ test("a file the checkout could not give up is said as that, not as deleted", as
   await expect(page.getByText(/could not be read from the review's checkout/)).toHaveCount(0);
 });
 
+test("a file the change renamed is said to be renamed, and shown from its new name", async ({
+  page,
+}) => {
+  // Cited by its old name, the file was read where the checkout no longer
+  // has it, and the pane offered a Try again that could never work (D-141).
+  // The answer is the route's own shape for a renamed file.
+  const stopAnswering = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        path: "app/src/old-name.ts",
+        start: 1,
+        end: 1,
+        total: 1,
+        lines: [{ number: 1, text: "export const renamed = true;" }],
+        hunk: {
+          header: "@@ -1,1 +1,1 @@",
+          lines: ["-export const renamed = false;", "+export const renamed = true;"],
+        },
+        renamedTo: "app/src/new-name.ts",
+      },
+    }),
+  );
+  await page.goto("/reviews?status=awaiting");
+  await page.getByRole("main").locator("ul > li").first().getByRole("link").click();
+  await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible({ timeout: 30_000 });
+  await page.locator("body").press("Enter");
+  await expect(page.getByText("The change renamed this file to app/src/new-name.ts")).toBeVisible();
+  await expect(page.getByRole("group", { name: "The file around this finding" })).toContainText(
+    "export const renamed = true;",
+  );
+  await stopAnswering();
+});
+
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {
   // The one state that wants something from someone used to be visible only
   // by opening the reviews list and reading the chips, so a review that

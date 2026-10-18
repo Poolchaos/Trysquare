@@ -417,6 +417,66 @@ describe("reading the code a finding is about", () => {
     expect(response.status).toBe(404);
   }, 120_000);
 
+  it("reads a file the change renamed from its new name, and says so", async () => {
+    // Cited by its old name, which hunkFor matches through the rename, the
+    // file was read from a path the checkout no longer has: a read error,
+    // with a Try again that could never work (D-141).
+    const { runtime } = await import("@/server/runtime");
+    const { createCandidate } = await import("@/server/db/repositories/findings");
+    const oldName = "app/src/auth/old-guard.ts";
+    createCandidate(runtime().db, {
+      reviewId,
+      repo: "primary",
+      filePath: oldName,
+      lineStart: 1,
+      lineEnd: 1,
+      severity: "WARNING",
+      issue: "x",
+      comment: "x",
+      mechanism: "x",
+    });
+    const patchPath = join(bundleDir(dataDir, reviewId), "diff.patch");
+    const patch = readFileSync(patchPath, "utf8");
+    try {
+      writeFileSync(
+        patchPath,
+        [
+          "diff --git a/src/auth/old-guard.ts b/src/auth/guard.ts",
+          "similarity index 90%",
+          "rename from src/auth/old-guard.ts",
+          "rename to src/auth/guard.ts",
+          "index 1111111..2222222 100644",
+          "--- a/src/auth/old-guard.ts",
+          "+++ b/src/auth/guard.ts",
+          "@@ -1,1 +1,1 @@",
+          "-export const before = 1;",
+          "+export const after = 1;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const response = await routes.fileContext.GET(
+        new Request(`http://localhost/x?path=${encodeURIComponent(oldName)}&line=1`),
+        params(reviewId),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        lines: { number: number; text: string }[];
+        renamedTo?: string;
+        readError?: string;
+      };
+      expect(body.renamedTo).toBe("app/src/auth/guard.ts");
+      expect(body.readError).toBeUndefined();
+      const onDisk = readFileSync(
+        join(worktreeRootDir(dataDir, reviewId), "app/src/auth/guard.ts"),
+        "utf8",
+      );
+      expect(body.lines[0]!.text).toBe(onDisk.split("\n")[0]);
+    } finally {
+      writeFileSync(patchPath, patch, "utf8");
+    }
+  });
+
   it("never serves a file outside the checkout, whatever path a finding names", async () => {
     // A deletion-stage finding's path came straight from the model, and this
     // route joined it onto the worktree: a killed finding at a path climbing

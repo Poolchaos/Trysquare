@@ -55,6 +55,8 @@ interface FileContext {
   deleted?: boolean;
   /** Why the checkout's copy could not be read, its hunk still shown. */
   readError?: string;
+  /** The new name of a file the finding cites by its old one. */
+  renamedTo?: string;
 }
 
 const UNDECIDED = new Set(["verified", "open_question"]);
@@ -650,6 +652,12 @@ export function ConfirmationQueue({
 
                 <div>
                   <h4 className="mb-1 text-xs font-medium">The file as it stands</h4>
+                  {shownContext?.renamedTo ? (
+                    <p className="mb-1 text-xs text-[var(--color-ink-muted)]">
+                      The change renamed this file to <Mono>{shownContext.renamedTo}</Mono>, so it
+                      is shown from there.
+                    </p>
+                  ) : null}
                   <pre
                     tabIndex={0}
                     role="group"

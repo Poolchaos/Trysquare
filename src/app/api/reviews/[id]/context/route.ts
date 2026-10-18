@@ -69,15 +69,21 @@ export async function GET(
     const cited = listFindings(db, id).find((finding) => finding.filePath === path);
     if (!cited) return notFound("A file this review did not raise a finding in");
 
-    const { hunk, deleted } = await hunkFor(bundleDir(dataDir, id), cited.repo, path, line);
+    const { hunk, deleted, renamedTo } = await hunkFor(
+      bundleDir(dataDir, id),
+      cited.repo,
+      path,
+      line,
+    );
 
     // Contained like every other path a model named: an S4 finding path is
     // not reconciled against the change set, so it could point anywhere. One
     // that climbs out is refused before any read: not found, never "could
-    // not be read".
+    // not be read". A file the change renamed, cited by its old name, is read
+    // from its new one, the one the checkout has (D-141).
     let target: string;
     try {
-      target = insideRoot(worktreeRootDir(dataDir, id), path);
+      target = insideRoot(worktreeRootDir(dataDir, id), renamedTo ?? path);
     } catch {
       return notFound(`${path} in the review's checkout`);
     }
@@ -113,6 +119,7 @@ export async function GET(
       total: all.length,
       lines: all.slice(start - 1, end).map((text, index) => ({ number: start + index, text })),
       hunk,
+      ...(renamedTo ? { renamedTo } : {}),
     });
   });
 }
@@ -135,7 +142,7 @@ async function hunkFor(
   repo: string,
   qualifiedPath: string,
   line: number,
-): Promise<{ hunk: HunkView | null; deleted: boolean }> {
+): Promise<{ hunk: HunkView | null; deleted: boolean; renamedTo?: string }> {
   const patchName = repo === "linked" ? "diff-linked.patch" : "diff.patch";
   let patch: string;
   try {
@@ -144,7 +151,8 @@ async function hunkFor(
     return { hunk: null, deleted: false };
   }
 
-  const withoutSlug = qualifiedPath.split("/").slice(1).join("/");
+  const [slug, ...rest] = qualifiedPath.split("/");
+  const withoutSlug = rest.join("/");
   const file = parseUnifiedDiff(patch).find(
     (candidate) => candidate.path === withoutSlug || candidate.oldPath === withoutSlug,
   );
@@ -154,5 +162,6 @@ async function hunkFor(
   return {
     hunk: hunk ? { header: formatHunkHeader(hunk), lines: hunk.lines } : null,
     deleted: file.changeType === "deleted",
+    ...(file.path !== withoutSlug ? { renamedTo: `${slug}/${file.path}` } : {}),
   };
 }
