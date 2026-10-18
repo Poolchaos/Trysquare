@@ -149,13 +149,15 @@ function repositoryLawLines(path, text) {
  * copy of the server modules, and the routes share another, so an error the
  * manager threw was never `instanceof` a class a route or the handler held:
  * refusals meant as 404s and 409s went out as 500s (D-139, D-140). So in the
- * HTTP layer an error is known by the name its class sets, and `instanceof`
- * is kept for the platform's own classes, of which there is one copy. Outside
- * the manager's module nothing names its error classes at all: there is no
- * use of them that the name does not serve better. Comment lines are skipped.
+ * HTTP layer, and in any other file that calls the manager, an error is known
+ * by the name its class sets, and `instanceof`, or a constructor or prototype
+ * comparison, is kept for the platform's own classes, of which there is one
+ * copy. Outside the manager's module nothing names its error classes at all.
+ * Read per file, so a test Prettier wraps onto a second line is still seen,
+ * with comments and strings skipped (D-141).
  */
 const BOUNDARY_LAW =
-  "In src/app/api and src/server/api an app error is known by its name (isNamed), not instanceof";
+  "In the HTTP layer and the manager's callers an app error is known by its name (isNamed), not its class";
 const MANAGER_ERRORS_LAW =
   "The job manager's error classes are named only in its own module; elsewhere, match the name";
 const PLATFORM_CLASSES = new Set([
@@ -186,27 +188,54 @@ if (MANAGER_ERRORS.length === 0) {
   );
   process.exit(2);
 }
-const MANAGER_ERROR_USE = new RegExp(`(?<![\\w"'\`])(?:${MANAGER_ERRORS.join("|")})(?![\\w"'\`])`);
-const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*)/;
+const MANAGER_ERROR_USE = new RegExp(`\\b(?:${MANAGER_ERRORS.join("|")})\\b`, "g");
+const MANAGER_CALL = /\bmanager\.\w+\s*\(|\bjobManager\s*\(|\bJobManager\b/;
+const CLASS_TESTS = [
+  /\binstanceof\s+([\w$.]+)/g,
+  /\.constructor\s*[!=]==?\s*([\w$.]+)/g,
+  /([\w$.]+)\.prototype\.isPrototypeOf\s*\(/g,
+];
 
-function boundaryLines(path, lines) {
-  if (!path.startsWith("src/app/api/") && !path.startsWith("src/server/api/")) return [];
+/**
+ * Whether the text at `index` sits in a comment or a string on its line. A
+ * line's reading, not a parser's: enough for names that have no reason to sit
+ * in either, and a URL's "//" before one on the same line hides it.
+ */
+function inCommentOrString(text, index) {
+  const prefix = text
+    .slice(text.lastIndexOf("\n", index - 1) + 1, index)
+    .replace(/\/\*.*?\*\//g, "");
+  if (/^\s*(?:\/\/|\/\*|\*)/.test(prefix) || prefix.includes("//")) return true;
+  const unescaped = prefix.replace(/\\./g, "");
+  return ['"', "'", "`"].some((quote) => unescaped.split(quote).length % 2 === 0);
+}
+
+function lineOfIndex(text, index) {
+  return text.slice(0, index).split("\n").length;
+}
+
+function boundaryLines(path, text) {
+  const inScope =
+    path.startsWith("src/app/api/") ||
+    path.startsWith("src/server/api/") ||
+    (path.startsWith("src/") && path !== MANAGER_PATH && MANAGER_CALL.test(text));
+  if (!inScope) return [];
   const found = [];
-  lines.forEach((line, index) => {
-    if (COMMENT_LINE.test(line)) return;
-    for (const match of line.matchAll(/\binstanceof\s+([\w$.]+)/g)) {
-      if (!PLATFORM_CLASSES.has(match[1])) found.push(index + 1);
+  for (const pattern of CLASS_TESTS) {
+    for (const match of text.matchAll(pattern)) {
+      if (PLATFORM_CLASSES.has(match[1]) || inCommentOrString(text, match.index)) continue;
+      found.push(lineOfIndex(text, match.index));
     }
-  });
+  }
   return found;
 }
 
-function managerErrorLines(path, lines) {
+function managerErrorLines(path, text) {
   if (!path.startsWith("src/") || path === MANAGER_PATH) return [];
   const found = [];
-  lines.forEach((line, index) => {
-    if (!COMMENT_LINE.test(line) && MANAGER_ERROR_USE.test(line)) found.push(index + 1);
-  });
+  for (const match of text.matchAll(MANAGER_ERROR_USE)) {
+    if (!inCommentOrString(text, match.index)) found.push(lineOfIndex(text, match.index));
+  }
   return found;
 }
 
@@ -283,10 +312,10 @@ for (const file of files) {
   for (const line of repositoryLawLines(path, text)) {
     violations.push(`${path}:${line}: ${REPOSITORY_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
   }
-  for (const line of boundaryLines(path, lines)) {
+  for (const line of boundaryLines(path, text)) {
     violations.push(`${path}:${line}: ${BOUNDARY_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
   }
-  for (const line of managerErrorLines(path, lines)) {
+  for (const line of managerErrorLines(path, text)) {
     violations.push(`${path}:${line}: ${MANAGER_ERRORS_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
   }
 }

@@ -107,7 +107,7 @@ are accepted; anything else is refused by name.
   git diff and URL parsing, changed exported symbols, mechanical sweeps, the
   quotation check, stage schemas, budget arithmetic, ruleset import with a
   fidelity gate, prompt composition, batch planning, the report renderer,
-  and the request guard.
+  the request guard, and matching an error by the name its class sets.
 - `src/server/db/` - schema (14 tables), client, migrations 0000 to 0011, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings and stage executions.

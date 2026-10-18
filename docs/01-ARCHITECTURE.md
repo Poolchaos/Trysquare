@@ -45,10 +45,11 @@ Versions are pinned at WP-A and recorded in `PROJECT-STATE.md` once installed.
   on `globalThis`, built by the instrumentation bundle's copy of the server
   modules, while the routes share another copy, so an error it throws is not
   an instance of any class a route holds. The HTTP layer knows errors by the
-  name each class sets (`isNamed` in `src/server/api/respond.ts`), never by
+  name each class sets (`isNamed` in `src/lib/errors.ts`), never by
   `instanceof` (D-139, D-140); `scripts/check-style.mjs` refuses
-  `instanceof` on an app class in `src/app/api` and `src/server/api`, and
-  the manager's error classes outside its own module.
+  `instanceof` on an app class in `src/app/api`, `src/server/api` and any
+  file that calls the manager, and the manager's error classes outside its
+  own module (D-141).
 - **Progress:** job manager persists every state change to SQLite
   immediately; UI subscribes via one SSE endpoint per review
   (`/api/reviews/[id]/events`). A dropped stream falls back to polling

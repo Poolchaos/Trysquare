@@ -9,6 +9,10 @@
  */
 
 import { z } from "zod";
+import { isNamed } from "@/lib/errors";
+
+// Routes take it from here, beside the helpers that answer with it.
+export { isNamed };
 
 export interface ApiError {
   error: string;
@@ -87,24 +91,6 @@ function validated<T>(raw: unknown, schema: z.ZodType<T>): T {
     throw Response.json({ error: detail, code: "Invalid" }, { status: 400 });
   }
   return parsed.data;
-}
-
-/**
- * Whether `error` was thrown by a class of one of these names, whichever
- * copy of its module that was.
- *
- * Never `instanceof` in the HTTP layer: the job manager a route reaches
- * through runtime() was built by the instrumentation bundle's copy of the
- * server modules, and the routes share another, so an error the manager threw
- * was never an instance of a class a route or this file held, and refusals
- * meant as 404s and 409s went out as 500s (D-139, D-140). The names are the
- * ones each class sets; minification renames the classes themselves.
- */
-export function isNamed<T extends Error = Error>(
-  error: unknown,
-  ...names: readonly string[]
-): error is T {
-  return error instanceof Error && names.includes(error.name);
 }
 
 /** The repositories' errors for an id that names nothing. */
