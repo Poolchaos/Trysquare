@@ -526,8 +526,26 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     reloads.stop();
     await stopRefusing();
 
+    // A checkout that would not go after completing was said only in the run
+    // notes, folded away (review of 5.5 to 5.7). The server's real
+    // completion, with the note it adds when that happens; the note's words
+    // are the route's, tested with it.
+    const stopAdding = await answerOnce(page, "**/api/reviews/*/complete", async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as Record<string, unknown>;
+      await route.fulfill({
+        response,
+        json: {
+          ...body,
+          cleanupError: "EBUSY: resource busy or locked",
+          cleanupNote: "The review is complete, but its checkout could not be removed: EBUSY.",
+        },
+      });
+    });
     await page.getByRole("button", { name: "Complete review" }).click();
     await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/its checkout could not be removed: EBUSY/)).toBeVisible();
+    await stopAdding();
 
     // The report says what was examined, not only what was found, and is
     // typeset rather than printed as raw markdown. The document's structure is

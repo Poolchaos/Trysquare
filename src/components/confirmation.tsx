@@ -68,10 +68,13 @@ export function ConfirmationQueue({
   reviewId,
   findings,
   onChanged,
+  onCheckoutLeft,
 }: {
   reviewId: string;
   findings: Finding[];
   onChanged: () => void | Promise<void>;
+  /** Completed, but the review's checkout would not go: the server's note saying so. */
+  onCheckoutLeft: (note: string) => void;
 }) {
   // Grouped by severity, and that grouping is the order j and k walk, so what
   // the eye follows and what the keyboard follows are the same sequence.
@@ -308,6 +311,8 @@ export function ConfirmationQueue({
         if (response.status === 409) await onChanged();
         return;
       }
+      const body = (await response.json().catch(() => ({}))) as { cleanupNote?: string };
+      if (body.cleanupNote) onCheckoutLeft(body.cleanupNote);
       await onChanged();
     } finally {
       setBusy(false);

@@ -58,23 +58,24 @@ export async function POST(
     // The review is complete either way: a checkout that will not go is a
     // cleanup to report, not a failure of the decision the person made. It
     // used to answer 500, so the screen said completing had failed (5.6,
-    // audit A7). Said in the answer and kept as a run note.
-    let cleanupError: string | undefined;
+    // audit A7). Said in the answer, for the screen to show, and kept as a
+    // run note.
+    let cleanup: { cleanupError: string; cleanupNote: string } | undefined;
     try {
       await removeReviewWorktrees(db, id, dataDir);
     } catch (error) {
-      cleanupError = error instanceof Error ? error.message : String(error);
-      appendRunNote(db, id, {
-        kind: "note",
-        message:
-          `The review is complete, but its checkout could not be removed: ${cleanupError}. ` +
-          "Deleting the review removes it.",
-      });
+      const cleanupError = error instanceof Error ? error.message : String(error);
+      // Not "delete the review", as it once said: that throws away the
+      // findings and the report to tidy a folder (review of 5.5 to 5.7). The
+      // folder is a copy of code the clone still holds.
+      const cleanupNote =
+        `The review is complete, but its checkout could not be removed: ${cleanupError}. ` +
+        "It is only a copy of the code that was reviewed: delete its folder by hand once " +
+        "nothing has it open.";
+      appendRunNote(db, id, { kind: "note", message: cleanupNote });
+      cleanup = { cleanupError, cleanupNote };
     }
 
-    return ok({
-      snapshot: manager.snapshot(id),
-      ...(cleanupError === undefined ? {} : { cleanupError }),
-    });
+    return ok({ snapshot: manager.snapshot(id), ...cleanup });
   });
 }

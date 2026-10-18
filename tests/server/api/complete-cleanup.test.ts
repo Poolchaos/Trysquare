@@ -63,10 +63,15 @@ describe("completing a review whose checkout will not go", () => {
     });
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { cleanupError?: string };
+    const body = (await response.json()) as { cleanupError?: string; cleanupNote?: string };
     expect(body.cleanupError).toContain("EBUSY");
     expect(requireReview(db, review.id).status).toBe("complete");
+    // The note is the screen's words and the run's record alike, and it does
+    // not send anyone to delete the review to tidy a folder.
     const notes = readRunNotes(requireReview(db, review.id)).map((note) => note.message);
-    expect(notes.join(" ")).toContain("could not be removed");
+    expect(notes).toContain(body.cleanupNote);
+    expect(body.cleanupNote).toContain("could not be removed: EBUSY");
+    expect(body.cleanupNote).toContain("delete its folder by hand");
+    expect(body.cleanupNote).not.toMatch(/deleting the review/i);
   });
 });

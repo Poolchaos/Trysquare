@@ -364,6 +364,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [confirmingCancelFor, setConfirmingCancelFor] = useState<string | null>(null);
   const [cancellingHere, setCancellingHere] = useState(false);
   const [actionError, setActionError] = useState("");
+  // Shown once, when completing left the checkout behind; after a reload it
+  // is in the run notes, folded under Run detail.
+  const [checkoutLeft, setCheckoutLeft] = useState("");
 
   async function fetchSnapshot(): Promise<Snapshot | null> {
     // A dropped request reads as no picture, as a refusal does. Thrown, it
@@ -838,6 +841,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   reviewId={id}
                   findings={findings}
                   onChanged={() => void reload()}
+                  onCheckoutLeft={setCheckoutLeft}
                 />
                 <div className="mt-6">
                   <RunDetail snapshot={snapshot} done={done} executing={executing} folded />
@@ -845,6 +849,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               </>
             ) : review.status === "complete" ? (
               <>
+                {checkoutLeft ? (
+                  <p className="mb-4 text-sm text-[var(--color-ink-muted)]">{checkoutLeft}</p>
+                ) : null}
                 <ReportPanel
                   reviewId={id}
                   report={report}
