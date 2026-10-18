@@ -190,6 +190,7 @@ no pending sweep hits past S6.
 | quotedCode                       | text      | exact lines quoted at verification time                          |
 | status                           | text      | candidate, verified, killed, open_question, confirmed, dismissed |
 | verificationNote                 | text null | S5 outcome detail                                                |
+| killedBy                         | text null | when killed: verification (refuted) or quote_check (D-126)       |
 | dismissReason                    | text null | the user's reason, kept for history                               |
 | createdAt, verifiedAt, decidedAt | text      |                                                                  |
 

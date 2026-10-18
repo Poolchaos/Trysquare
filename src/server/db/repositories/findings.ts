@@ -9,7 +9,7 @@
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { newId, nowIso } from "@/lib/ids";
-import type { RepoRole, Severity } from "@/lib/domain/enums";
+import type { KillKind, RepoRole, Severity } from "@/lib/domain/enums";
 import {
   type FindingStatus,
   assertFindingTransition,
@@ -59,6 +59,7 @@ export function createCandidate(db: Db, input: CreateCandidateInput): Finding {
     quotedCode: "",
     status: "candidate" satisfies FindingStatus,
     verificationNote: null,
+    killedBy: null,
     dismissReason: null,
     editedComment: null,
     createdAt: nowIso(),
@@ -86,6 +87,7 @@ export function statusOf(finding: Finding): FindingStatus {
 interface TransitionPatch {
   quotedCode?: string;
   verificationNote?: string | null;
+  killedBy?: KillKind;
   dismissReason?: string | null;
   editedComment?: string | null;
   lineStart?: number;
@@ -143,8 +145,8 @@ export function markVerified(
 }
 
 /** Verification refuted it, or the quoted code did not match the file. */
-export function markKilled(db: Db, findingId: string, reason: string): Finding {
-  return transitionFinding(db, findingId, "killed", { verificationNote: reason });
+export function markKilled(db: Db, findingId: string, reason: string, by: KillKind): Finding {
+  return transitionFinding(db, findingId, "killed", { verificationNote: reason, killedBy: by });
 }
 
 /** Verification could neither confirm nor refute. Surfaced to the user as a question. */

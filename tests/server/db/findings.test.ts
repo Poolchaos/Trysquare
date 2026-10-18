@@ -117,7 +117,7 @@ describe("finding verification", () => {
 
   it("keeps a killed finding out of every user-facing list, permanently", () => {
     const finding = candidate();
-    markKilled(db, finding.id, "A guard at line 39 already handles this.");
+    markKilled(db, finding.id, "A guard at line 39 already handles this.", "verification");
 
     expect(listAwaitingDecision(db, reviewId)).toHaveLength(0);
     expect(() => confirmFinding(db, finding.id)).toThrow(IllegalTransitionError);
@@ -208,7 +208,7 @@ describe("human decision", () => {
 
     markVerified(db, verified.id, { quotedCode: "code", lineStart: 1, lineEnd: 1 });
     markOpenQuestion(db, question.id, "Unclear whether the caller can pass null.");
-    markKilled(db, killed.id, "False positive.");
+    markKilled(db, killed.id, "False positive.", "verification");
 
     const awaiting = listAwaitingDecision(db, reviewId);
     expect(awaiting.map((f) => f.id).sort()).toEqual([verified.id, question.id].sort());
@@ -227,7 +227,7 @@ describe("what a review yielded, across the whole list", () => {
     markVerified(db, dropped.id, { quotedCode: "code", lineStart: 1, lineEnd: 1 });
     confirmFinding(db, kept.id);
     dismissFinding(db, dropped.id, "Handled upstream.");
-    markKilled(db, invented.id, "Quoted code that was not there.");
+    markKilled(db, invented.id, "Quoted code that was not there.", "quote_check");
 
     const tally = findingTallies(db).get(reviewId);
     expect(tally).toEqual({ total: 3, confirmed: 1, dismissed: 1, killed: 1 });
@@ -236,7 +236,7 @@ describe("what a review yielded, across the whole list", () => {
   it("keeps killed findings in the count rather than hiding the engine's misses", () => {
     // They are the measurement of how often the engine invents things, and a
     // history that drops them reads cleaner than the one that happened.
-    markKilled(db, candidate().id, "False positive.");
+    markKilled(db, candidate().id, "False positive.", "verification");
     expect(findingTallies(db).get(reviewId)?.killed).toBe(1);
     expect(findingTallies(db).get(reviewId)?.total).toBe(1);
   });

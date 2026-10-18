@@ -672,7 +672,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     if (!finding) continue;
 
     if (verdict.verdict === "killed") {
-      markKilled(db, finding.id, verdict.note || "Refuted during verification.");
+      markKilled(db, finding.id, verdict.note || "Refuted during verification.", "verification");
       killed += 1;
       continue;
     }
@@ -691,6 +691,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         finding.id,
         `Verification quoted ${spanOf(verdict)}, which does not overlap the cited ` +
           `${spanOf(finding)}.`,
+        "quote_check",
       );
       killed += 1;
       killedByQuoteCheck += 1;
@@ -707,7 +708,12 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       input.baseContents?.get(finding.filePath) ??
       (await readFileIfPossible(input.worktreeRoot, finding.filePath));
     if (contents === null) {
-      markKilled(db, finding.id, `The cited file could not be read: ${finding.filePath}`);
+      markKilled(
+        db,
+        finding.id,
+        `The cited file could not be read: ${finding.filePath}`,
+        "quote_check",
+      );
       killed += 1;
       killedByQuoteCheck += 1;
       continue;
@@ -719,6 +725,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         db,
         finding.id,
         `The quotation did not match the file: ${describeMismatch(check.reason)}.`,
+        "quote_check",
       );
       killed += 1;
       killedByQuoteCheck += 1;

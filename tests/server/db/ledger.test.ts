@@ -160,7 +160,7 @@ describe("coverage ledger", () => {
       /1 candidate findings never verified/,
     );
 
-    markKilled(db, candidate.id, "Refuted on re-reading the file.");
+    markKilled(db, candidate.id, "Refuted on re-reading the file.", "verification");
     expect(() => assertCoverageComplete(db, reviewId)).not.toThrow();
   });
 });

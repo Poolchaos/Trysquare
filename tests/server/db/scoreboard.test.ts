@@ -92,9 +92,33 @@ describe("the two rates the product is about", () => {
     markVerified(db, real.id, evidence);
     waitOnAPerson();
     confirmFinding(db, real.id);
-    markKilled(db, candidate({ issue: "Invented" }).id, "Quoted code that was not there.");
+    markKilled(
+      db,
+      candidate({ issue: "Invented" }).id,
+      "Quoted code that was not there.",
+      "quote_check",
+    );
 
     expect(readScoreboard(db).inventionRate).toBe(0.5);
+  });
+
+  it("counts only the quotation check's kills as invention, not a refutation (4.24)", () => {
+    // A finding the verifier read and judged wrong was not invented: it cited
+    // real code. Counting it too made the rate say the engine invented code
+    // more often than it did.
+    const real = candidate();
+    markVerified(db, real.id, evidence);
+    waitOnAPerson();
+    confirmFinding(db, real.id);
+    markKilled(db, candidate({ issue: "Refuted" }).id, "Guarded upstream.", "verification");
+    markKilled(
+      db,
+      candidate({ issue: "Invented" }).id,
+      "Quoted code that was not there.",
+      "quote_check",
+    );
+
+    expect(readScoreboard(db).inventionRate).toBeCloseTo(1 / 3);
   });
 });
 
@@ -177,7 +201,12 @@ describe("what the dashboard widgets need", () => {
     const dropped = candidate({ issue: "Second" });
     const untouched = candidate({ issue: "Third" });
     for (const finding of [kept, dropped, untouched]) markVerified(db, finding.id, evidence);
-    markKilled(db, candidate({ issue: "Invented" }).id, "Quoted code that was not there.");
+    markKilled(
+      db,
+      candidate({ issue: "Invented" }).id,
+      "Quoted code that was not there.",
+      "quote_check",
+    );
     waitOnAPerson();
     confirmFinding(db, kept.id);
     dismissFinding(db, dropped.id, "Guarded upstream.");

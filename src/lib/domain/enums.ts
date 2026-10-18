@@ -150,3 +150,14 @@ export type HunkStatus = z.infer<typeof hunkStatusSchema>;
 export const SWEEP_DISPOSITIONS = ["pending", "cleared", "finding"] as const;
 export const sweepDispositionSchema = z.enum(SWEEP_DISPOSITIONS);
 export type SweepDisposition = z.infer<typeof sweepDispositionSchema>;
+
+/**
+ * Why a finding was killed (4.24). `verification`: the verifier read the code
+ * and refuted it. `quote_check`: the program's own checks threw it out, a
+ * quotation that did not match the file, a file that could not be read, or a
+ * verdict about lines the finding does not cite. Only the second measures how
+ * often the engine cites code that is not there.
+ */
+export const KILL_KINDS = ["verification", "quote_check"] as const;
+export const killKindSchema = z.enum(KILL_KINDS);
+export type KillKind = z.infer<typeof killKindSchema>;

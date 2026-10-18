@@ -2668,3 +2668,18 @@ verified evidence, in writing, here.
   without a word (claude-opus-4-1 ran as claude-opus-5-5), and Sonnet 4.5,
   Sonnet 4 and Sonnet 3.7 send no effort at any level; both in the idea
   inbox or D-123, neither among the candidates a review can run.
+- 2026-10-18 D-126 DECIDED (MVP 4.24; the driver's recommendation, taken
+  under the maintainer's instruction of 2026-10-18 to proceed on
+  recommendations while away): a killed finding records why, killed_by
+  `verification` when the verifier refuted it and `quote_check` when the
+  program's own checks threw it out, and the scoreboard's invention rate
+  and the demo's discarded quotes count only `quote_check`. A refuted
+  finding cited code that is there, so counting it as invention overstated
+  how often the engine makes things up. Earlier kills are classified by
+  migration 0011 from the note the pipeline wrote: the three checks have
+  written the same openings since the engine's first commit (1f60761; the
+  overlap check since 19bc554), so a model-written refutation note would
+  have to begin with one of them word for word to be misfiled. Rejected:
+  deriving the kind from the note at read time, which would tie a metric
+  to the wording of a message. D-97's count of what only a killed finding
+  covered still counts every kill; not changed here.

@@ -326,7 +326,11 @@ function scoreAgainstManifest(
     found,
     missed,
     falsePositives,
-    killedByQuoteCheck: findings.filter((finding) => statusOf(finding) === "killed").length,
+    // The program's own kills only: one the verifier refuted cited real code
+    // and is not a discarded quote (4.24).
+    killedByQuoteCheck: findings.filter(
+      (finding) => statusOf(finding) === "killed" && finding.killedBy === "quote_check",
+    ).length,
     openQuestions: findings.filter((finding) => statusOf(finding) === "open_question").length,
   };
 }

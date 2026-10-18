@@ -499,7 +499,10 @@ test("the scoreboard counts what the machine has actually run", async ({ page })
   await expect(page.getByRole("heading", { name: "Review scoreboard" })).toBeVisible();
 
   await expect(page.getByText("Total spend")).toBeVisible();
-  await expect(page.getByText("Invention rate")).toBeVisible();
+  // The journey's one kill is the verifier refuting a finding (D-97), which
+  // cited real code and is not invention; it used to count as some (4.24).
+  const invention = page.getByText("Invention rate").locator("..");
+  await expect(invention.getByText(/^0%$/)).toBeVisible();
 
   // The journey confirmed several findings and dismissed one, so precision is
   // a real fraction rather than the dash an undecided app would show.

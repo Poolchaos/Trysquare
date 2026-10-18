@@ -355,6 +355,13 @@ export const findings = sqliteTable(
     quotedCode: text("quoted_code").notNull().default(""),
     status: text("status").notNull().default("candidate"),
     verificationNote: text("verification_note"),
+    /**
+     * Set when killed: `verification` for a refutation, `quote_check` for the
+     * program's own checks (KillKind). Rows killed before the column were
+     * classified by the note the pipeline wrote, unchanged since its first
+     * commit (migration 0011).
+     */
+    killedBy: text("killed_by"),
     dismissReason: text("dismiss_reason"),
     createdAt: text("created_at").notNull(),
     verifiedAt: text("verified_at"),

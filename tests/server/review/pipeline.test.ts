@@ -705,7 +705,12 @@ describe("refusing to accept an incomplete stage", () => {
 });
 
 describe("the quotation check", () => {
-  async function verifyWith(quote: string, lineStart: number, lineEnd: number) {
+  async function verifyWith(
+    quote: string,
+    lineStart: number,
+    lineEnd: number,
+    verdict: "verified" | "killed" = "verified",
+  ) {
     const runner = async (request: StageRequest): Promise<StageResponse> => {
       if (request.stage === "s5_verification") {
         return {
@@ -716,7 +721,7 @@ describe("the quotation check", () => {
                 // database read is needed, because the label does not depend
                 // on ids that change between runs.
                 ref: "C1",
-                verdict: "verified",
+                verdict,
                 quotedCode: quote,
                 lineStart,
                 lineEnd,
@@ -765,6 +770,17 @@ describe("the quotation check", () => {
     const finding = listFindings(db, reviewId)[0]!;
     expect(statusOf(finding)).toBe("killed");
     expect(finding.verificationNote).toContain("did not match the file");
+    expect(finding.killedBy).toBe("quote_check");
+  });
+
+  it("records a refutation as the verifier's, not the quotation check's (4.24)", async () => {
+    // Both used to count as invention on the dashboard, though a refuted
+    // finding cited code that is there.
+    const { result } = await verifyWith("  const user = payload as User;", 2, 2, "killed");
+    expect(result.killedByQuoteCheck).toBe(0);
+    const finding = listFindings(db, reviewId)[0]!;
+    expect(statusOf(finding)).toBe("killed");
+    expect(finding.killedBy).toBe("verification");
   });
 
   it("kills a finding citing lines past the end of the file", async () => {
@@ -778,6 +794,7 @@ describe("the quotation check", () => {
     expect(result.killedByQuoteCheck).toBe(1);
     const finding = listFindings(db, reviewId)[0]!;
     expect(finding.verificationNote).toContain("could not be read");
+    expect(finding.killedBy).toBe("quote_check");
   });
 
   it("kills a finding verified by quoting code it does not cite", async () => {
@@ -794,6 +811,7 @@ describe("the quotation check", () => {
     expect(finding.verificationNote).toBe(
       "Verification quoted line 1, which does not overlap the cited line 2.",
     );
+    expect(finding.killedBy).toBe("quote_check");
   });
 
   it("verifies a quotation that corrects the range while still overlapping it", async () => {
