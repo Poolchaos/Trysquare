@@ -326,10 +326,9 @@ test("the new review screen says why a read failed, not that a repository is emp
   // Each said on its own, not run together into one sentence, and an unread
   // list is not an empty one: "No rulesets imported yet" and "Import a
   // ruleset first" were untrue then (D-137).
-  await expect(
-    page.getByText("Refused for this test: the rulesets.", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("Refused for this test: the models.", { exact: true })).toBeVisible();
+  // Each named by its read, and keyed by it (D-138).
+  await expect(page.getByText("Rulesets: Refused for this test: the rulesets.")).toBeVisible();
+  await expect(page.getByText("Models: Refused for this test: the models.")).toBeVisible();
   await expect(page.getByText(/No rulesets imported yet|Import a ruleset first/)).toHaveCount(0);
   await expect(page.getByText(/Nothing has been pushed/)).toHaveCount(0);
   await expect(page.getByText(/Fetched from the remote at/)).toHaveCount(0);
@@ -337,7 +336,8 @@ test("the new review screen says why a read failed, not that a repository is emp
   await stopRulesets();
   await stopModels();
 
-  await page.getByRole("button", { name: "Try again" }).first().click();
+  // One Try again on the screen, the branch card's (D-138).
+  await page.getByRole("button", { name: "Try again" }).click();
   await expect(
     page.getByRole("main").locator("label").filter({ hasText: "feature/rename-prefs" }).first(),
   ).toBeVisible({ timeout: 30_000 });

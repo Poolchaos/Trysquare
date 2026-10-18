@@ -110,7 +110,9 @@ export function ConfirmationQueue({
     data: FileContext;
     error?: string;
   } | null>(null);
-  const [rules, setRules] = useState<SnapshotRule[]>([]);
+  // Null until read, so a read in flight is not mistaken for a rule missing
+  // from the ruleset (D-138).
+  const [rules, setRules] = useState<SnapshotRule[] | null>(null);
   // Why the frozen rules could not be read. Dropped, the panel said a cited
   // rule "is not in the ruleset the review was frozen with", which was
   // untrue, on the screen where findings are decided (D-137).
@@ -150,7 +152,7 @@ export function ConfirmationQueue({
   }, []);
 
   const current = queue[Math.min(selected, Math.max(queue.length - 1, 0))];
-  const currentRule = rules.find((rule) => rule.code === current?.ruleCode);
+  const currentRule = rules?.find((rule) => rule.code === current?.ruleCode);
   const editing = current !== undefined && editingFor === current.id;
   const ruleOpen = current !== undefined && ruleOpenFor === current.id;
   const showContext = current !== undefined && contextFor === current.id;
@@ -526,7 +528,13 @@ export function ConfirmationQueue({
                   <div className="mt-2 grid gap-2">
                     <Problem>{rulesProblem}</Problem>
                     <div>
-                      <Button onClick={() => setRulesAttempt((attempt) => attempt + 1)}>
+                      <Button
+                        onClick={() => {
+                          setRulesProblem("");
+                          setRules(null);
+                          setRulesAttempt((attempt) => attempt + 1);
+                        }}
+                      >
                         Try again
                       </Button>
                     </div>
@@ -539,8 +547,10 @@ export function ConfirmationQueue({
                     className="mt-2 max-h-64 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs whitespace-pre-wrap"
                   >
                     <code className="font-[family-name:var(--font-mono)]">
-                      {currentRule?.raw ??
-                        "This rule is not in the ruleset the review was frozen with."}
+                      {rules === null
+                        ? "Reading the review's rules..."
+                        : (currentRule?.raw ??
+                          "This rule is not in the ruleset the review was frozen with.")}
                     </code>
                   </pre>
                 ) : null}

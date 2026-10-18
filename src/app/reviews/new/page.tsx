@@ -126,10 +126,18 @@ function NewReview() {
   const [branchProblem, setBranchProblem] = useState("");
   // One per read that failed, each its own line: joined, a dropped
   // connection's three messages ran together into one sentence (D-137).
-  const [readProblems, setReadProblems] = useState<string[]>([]);
+  const [readProblems, setReadProblems] = useState<{ read: string; error: string }[]>([]);
   // Not read is not empty: an unread list claimed "No rulesets imported yet"
   // and "Import a ruleset first" (D-137).
   const [rulesetReadFailed, setRulesetReadFailed] = useState(false);
+  // Every read again, and the screen shows them in flight: the branch list
+  // cleared, so refs from before are not left to pick from (D-138).
+  const retryReads = () => {
+    setReadProblems([]);
+    setBranchProblem("");
+    setBranches(null);
+    setRefreshCount((count) => count + 1);
+  };
   const [linkProblem, setLinkProblem] = useState("");
   // Bumped by the Refresh control, so the branch list re-fetches on demand.
   const [refreshCount, setRefreshCount] = useState(0);
@@ -199,8 +207,18 @@ function NewReview() {
       ]);
       if (cancelled) return;
 
+      // Named by the read, and keyed by it: the same words from the server
+      // for each, as a second server holding the data directory gives, were
+      // three identical lines under one key, with no way to tell them apart
+      // (D-138).
       setReadProblems(
-        [detail, rulesetList, modelList].flatMap((sent) => (sent.ok ? [] : [sent.error])),
+        (
+          [
+            ["Project", detail],
+            ["Rulesets", rulesetList],
+            ["Models", modelList],
+          ] as const
+        ).flatMap(([read, sent]) => (sent.ok ? [] : [{ read, error: sent.error }])),
       );
       setRulesetReadFailed(!rulesetList.ok);
       if (detail.ok) setLinks(detail.body.links ?? []);
@@ -466,14 +484,20 @@ function NewReview() {
         >
           {readProblems.length > 0 ? (
             <div className="grid gap-2">
-              {readProblems.map((problem) => (
-                <Problem key={problem}>{problem}</Problem>
+              {readProblems.map(({ read, error: problem }) => (
+                <Problem key={read}>
+                  {read}: {problem}
+                </Problem>
               ))}
-              <div>
-                <Button type="button" onClick={() => setRefreshCount((count) => count + 1)}>
-                  Try again
-                </Button>
-              </div>
+              {/* One Try again on the screen: the branch card's covers this
+                  when it has one, and both re-read everything (D-138). */}
+              {branchProblem ? null : (
+                <div>
+                  <Button type="button" onClick={retryReads}>
+                    Try again
+                  </Button>
+                </div>
+              )}
             </div>
           ) : null}
           {stale ? (
@@ -513,14 +537,7 @@ function NewReview() {
             ) : null}
 
             {branchProblem ? (
-              <Loading
-                error={branchProblem}
-                onRetry={() => {
-                  setBranchProblem("");
-                  setBranches(null);
-                  setRefreshCount((count) => count + 1);
-                }}
-              />
+              <Loading error={branchProblem} onRetry={retryReads} />
             ) : branches === null ? (
               <p className="py-6 text-center text-sm text-[var(--color-ink-muted)]">
                 Fetching the latest branches...

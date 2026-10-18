@@ -814,7 +814,15 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {isDraft && draftReadProblem ? (
               <>
                 <span className="text-sm text-[var(--color-critical)]">{draftReadProblem}</span>
-                <Button onClick={() => setDraftReadAttempt((attempt) => attempt + 1)}>
+                <Button
+                  onClick={() => {
+                    // Cleared first, so a retry in flight reads as one: the
+                    // old message stayed until the answer came (D-138).
+                    setDraftReadProblem("");
+                    setDraftRulesets(null);
+                    setDraftReadAttempt((attempt) => attempt + 1);
+                  }}
+                >
                   Try again
                 </Button>
               </>
@@ -826,6 +834,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 </Link>
                 .
               </span>
+            ) : isDraft && draftRulesets === null ? (
+              <span className="text-sm text-[var(--color-ink-muted)]">Reading the rulesets...</span>
             ) : isDraft ? (
               <>
                 <Select
