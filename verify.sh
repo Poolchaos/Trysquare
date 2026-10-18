@@ -103,15 +103,21 @@ run() {
 #   65,664 bytes, every time, and none either side (measured 2026-10-18).
 #   Windows CI run 39115191562 sat 35 minutes here on a unit-test output of
 #   65,624 bytes.
-# Any grep status but 1 (no match) counts as a marker: grep failing, status 2,
-# must not read as a clean output.
+# Anything that stops the scan reading the whole output counts as a marker,
+# so the step fails rather than reading clean: no temporary file, a write
+# that failed part way (a disk that filled during the build), or grep itself
+# failing, status 2. Only status 1, no match, is a clean output.
 has_error_marker() {
   local file status
   if ! file=$(mktemp); then
     echo "note: the error-marker scan had no temporary file, so the step fails"
     return 0
   fi
-  printf '%s\n' "$1" >"$file"
+  if ! printf '%s\n' "$1" >"$file"; then
+    rm -f "$file"
+    echo "note: the output could not be written for the error-marker scan, so the step fails"
+    return 0
+  fi
   grep -Eq "$ERROR_MARKERS" "$file"
   status=$?
   rm -f "$file"
@@ -121,16 +127,24 @@ has_error_marker() {
 # The scan proves itself on every run, at the sizes that once broke it: a
 # gate that cannot see an error is silent in exactly the way it exists to
 # prevent, and one that hangs never answers at all.
-check_scanner() {
+scanner_self_check() {
   local filler window marker='TypeError: scanner self-check'
   printf -v filler '%*s' 300000 ''
   printf -v window '%*s' 65600 ''
-  if ! has_error_marker "${marker}"$'\n'"${filler}" ||
-    ! has_error_marker "${filler}"$'\n'"${marker}" ||
-    has_error_marker "${filler}" ||
-    has_error_marker "${window}" ||
-    ! has_error_marker "${window}"$'\n'"${marker}"; then
-    echo "GATE FAILED: the error-marker scan failed its own self-check"
+  has_error_marker "${marker}"$'\n'"${filler}" &&
+    has_error_marker "${filler}"$'\n'"${marker}" &&
+    ! has_error_marker "${filler}" &&
+    ! has_error_marker "${window}" &&
+    has_error_marker "${window}"$'\n'"${marker}"
+}
+
+# In a child under a time limit: the failure the 65,600-byte case exists to
+# catch is a hang, and run in the gate's own shell it hung the gate with it.
+check_scanner() {
+  export ERROR_MARKERS
+  export -f has_error_marker scanner_self_check
+  if ! with_timeout 60 bash -c scanner_self_check; then
+    echo "GATE FAILED: the error-marker scan failed its own self-check, or did not finish in 60s"
     FAILED+=("marker scan self-check")
   fi
 }

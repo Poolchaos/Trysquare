@@ -33,11 +33,15 @@ form reported a pass whenever a marker sat early in output over about
 (MVP-PLAN WP 1.1, measured 2026-10-16). Git Bash 5.2.37 hangs writing a
 here-string of 65,537 to 65,664 bytes, which held Windows CI run
 39115191562 for 35 minutes (D-134, measured 2026-10-18). A grep status
-other than 1 counts as a marker, so grep failing cannot read as clean.
-Every run starts with a self-check: a 300KB output with the marker first,
-then last, then absent, and a 65,600-byte output with the marker absent,
-then last. The gate fails unless all five read correctly. The check took
-about 0.3s on Windows (three runs, 318 to 321 ms).
+other than 1 counts as a marker, and so does a write to the temporary file
+that fails, so neither grep failing nor a short file can read as clean
+(D-135). Every run starts with a self-check: a 300KB output with the
+marker first, then last, then absent, and a 65,600-byte output with the
+marker absent, then last. It runs in a child process limited to 60
+seconds, so a scan that hangs fails the gate instead of hanging it: with the
+here-string scan swapped back in, it failed at 60 seconds (D-135). The gate
+fails unless all five read correctly. The check took about 0.3s on Windows
+(three runs, 318 to 321 ms).
 
 ## 2. Unit and integration (vitest)
 
