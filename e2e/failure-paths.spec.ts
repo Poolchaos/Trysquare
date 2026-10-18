@@ -330,15 +330,43 @@ test("a failed clone can be opened, tried again and deleted; a known address is 
   const retry = page.getByRole("button", { name: "Retry clone" });
   await expect(retry).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/nowhere\.git/).last()).toBeVisible();
-  // Waited on by its answer: the retry can fail again too fast for the
-  // button ever to be seen gone, so its being back proves nothing alone.
+  // Where the branches would be, the reason there are none, not a
+  // "Fetching the latest refs..." that never ends.
+  await expect(page.getByText("This project's clone failed, so it has no branches")).toBeVisible();
+
+  // While the clone runs only the project is asked after: the whole page,
+  // branches and all, once a second ran git fetch inside the clone still
+  // being written (review of 5.5 to 5.7). A clone of nothing fails too fast
+  // to watch, so the page is told "cloning" for its first three answers.
+  const projectApi = new URL(page.url()).pathname.replace(/^\/projects\//, "/api/projects/");
+  let cloningAnswers = 3;
+  await page.route(`**${projectApi}`, async (route) => {
+    if (route.request().method() !== "GET" || cloningAnswers === 0) return route.fallback();
+    cloningAnswers -= 1;
+    const response = await route.fetch();
+    const body = (await response.json()) as { project: { cloneStatus: string } };
+    body.project.cloneStatus = "cloning";
+    return route.fulfill({ response, json: body });
+  });
+  let branchReads = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === `${projectApi}/branches`) branchReads += 1;
+  });
+
+  // Waited on by its answer, not by the button going: the clone itself can
+  // fail again before anything is drawn.
   const retried = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname.endsWith("/clone") && response.request().method() === "POST",
   );
   await retry.click();
   expect((await retried).status()).toBe(200);
+  await expect(page.getByText("cloning", { exact: true })).toBeVisible();
   await expect(retry).toBeVisible({ timeout: 60_000 });
+  // Once when the retry was accepted and once when it settled; the polls
+  // between read the project alone.
+  await expect.poll(() => branchReads).toBe(2);
+  await page.unroute(`**${projectApi}`);
 
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await page.getByRole("button", { name: /^Yes, delete nowhere/ }).click();

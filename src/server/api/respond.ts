@@ -12,7 +12,7 @@ import { z } from "zod";
 import { IllegalTransitionError, InvalidCloneTransitionError } from "@/lib/domain/state-machines";
 import { FindingNotFoundError } from "@/server/db/repositories/findings";
 import { ModelNotFoundError } from "@/server/db/repositories/models";
-import { ProjectNotFoundError } from "@/server/db/repositories/projects";
+import { CloneNotReadyError, ProjectNotFoundError } from "@/server/db/repositories/projects";
 import { ReviewNotFoundError } from "@/server/db/repositories/reviews";
 import { RulesetNotFoundError } from "@/server/db/repositories/rulesets";
 
@@ -79,15 +79,15 @@ const NOT_FOUND = [
   ModelNotFoundError,
 ];
 
-/** The state machines' refusals of a step from where the thing now is. */
-const CONFLICT = [IllegalTransitionError, InvalidCloneTransitionError];
+/** Refusals of a step from the state the thing is in. */
+const CONFLICT = [IllegalTransitionError, InvalidCloneTransitionError, CloneNotReadyError];
 
 /**
  * Wraps a handler so a thrown Response is returned, an id that names nothing
- * is a 404, a step the state machine refuses is a 409, and anything else is a
- * 500. Every error used to be a 500, so a wrong request read as the server
- * failing (5.6, audit A1). By class, not by name: CliNotFoundError is a
- * missing program, not a missing resource.
+ * is a 404, a step refused by the state the thing is in is a 409, and
+ * anything else is a 500. Every error used to be a 500, so a wrong request
+ * read as the server failing (5.6, audit A1). By class, not by name:
+ * CliNotFoundError is a missing program, not a missing resource.
  */
 export function handler(run: () => Promise<Response>): Promise<Response> {
   return run().catch((error: unknown) => {

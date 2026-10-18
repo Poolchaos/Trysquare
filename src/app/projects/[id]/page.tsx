@@ -26,7 +26,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
-import { send } from "@/components/request";
+import { send, type Sent } from "@/components/request";
 
 interface Detail {
   project: {
@@ -62,13 +62,26 @@ interface Branches {
   lastFetchedAt: string | null;
 }
 
+const underWay = (cloneStatus: string | undefined) =>
+  cloneStatus === "pending" || cloneStatus === "cloning";
+
+/** The project and its branches, read side by side. Never throws. */
+function readPage(id: string): Promise<[Sent<Detail>, Sent<Branches>]> {
+  return Promise.all([
+    send<Detail>(`/api/projects/${id}`, {}, "This project could not be read"),
+    send<Branches>(`/api/projects/${id}/branches`, {}, "The branches could not be listed"),
+  ]);
+}
+
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loadError, setLoadError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const [branches, setBranches] = useState<Branches | null>(null);
+  // The answer itself, so a refusal (a clone not ready) shows in place of the
+  // list instead of a "Fetching" that never ends.
+  const [branches, setBranches] = useState<Sent<Branches> | null>(null);
   const [filter, setFilter] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -82,37 +95,26 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [packageName, setPackageName] = useState("");
 
   const load = useCallback(async () => {
-    const [detailResponse, branchResponse] = await Promise.all([
-      fetch(`/api/projects/${id}`),
-      fetch(`/api/projects/${id}/branches`),
-    ]);
-    if (detailResponse.ok) setDetail((await detailResponse.json()) as Detail);
-    if (branchResponse.ok) setBranches((await branchResponse.json()) as Branches);
+    const [detailSent, branchSent] = await readPage(id);
+    if (detailSent.ok) setDetail(detailSent.body);
+    setBranches(branchSent);
   }, [id]);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      try {
-        const [detailResponse, branchResponse] = await Promise.all([
-          fetch(`/api/projects/${id}`),
-          fetch(`/api/projects/${id}/branches`),
-        ]);
-        if (cancelled) return;
-        // The project itself is the screen; without it there is nothing to
-        // draw, and saying so beats a "Loading..." that never resolves.
-        if (!detailResponse.ok) {
-          const body = (await detailResponse.json().catch(() => ({}))) as { error?: string };
-          setLoadError(body.error ?? "This project could not be read.");
-          return;
-        }
-        setDetail((await detailResponse.json()) as Detail);
-        // Branches are a separate concern: the remote may be unreachable while
-        // the project is perfectly readable, and the branch card says so.
-        if (branchResponse.ok) setBranches((await branchResponse.json()) as Branches);
-      } catch {
-        if (!cancelled) setLoadError("This project could not be read.");
+      const [detailSent, branchSent] = await readPage(id);
+      if (cancelled) return;
+      // The project itself is the screen; without it there is nothing to
+      // draw, and saying so beats a "Loading..." that never resolves.
+      if (!detailSent.ok) {
+        setLoadError(detailSent.error);
+        return;
       }
+      setDetail(detailSent.body);
+      // Branches are a separate concern: the remote may be unreachable while
+      // the project is perfectly readable, and the branch card says so.
+      setBranches(branchSent);
     })();
     return () => {
       cancelled = true;
@@ -137,14 +139,29 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   }
 
   // Followed while a clone is queued or under way, as the list does, so a
-  // clone tried again shows how it ended without a reload (5.7).
-  const cloneUnderWay =
-    detail?.project.cloneStatus === "pending" || detail?.project.cloneStatus === "cloning";
+  // clone tried again shows how it ended without a reload (5.7). Only the
+  // project row, one request at a time: the whole page every second fetched
+  // the remote into the clone still being written (review of 5.5 to 5.7).
+  // Once it settles the page is read whole, so a finished clone lists its
+  // branches.
+  const cloneUnderWay = underWay(detail?.project.cloneStatus);
   useEffect(() => {
     if (!cloneUnderWay) return;
-    const timer = setInterval(() => void load(), 1000);
-    return () => clearInterval(timer);
-  }, [cloneUnderWay, load]);
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      const sent = await send<Detail>(`/api/projects/${id}`, {}, "This project could not be read");
+      if (stopped) return;
+      if (sent.ok && underWay(sent.body.project.cloneStatus)) setDetail(sent.body);
+      else if (sent.ok) await load();
+      if (!stopped) timer = setTimeout(() => void poll(), 1000);
+    };
+    timer = setTimeout(() => void poll(), 1000);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [cloneUnderWay, id, load]);
 
   if (!detail) {
     return (
@@ -160,7 +177,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   }
 
   const { project } = detail;
-  const shown = (branches?.branches ?? []).filter((branch) => branch.name.includes(filter));
+  const listed = branches?.ok ? branches.body : null;
+  const shown = (listed?.branches ?? []).filter((branch) => branch.name.includes(filter));
 
   return (
     <>
@@ -216,10 +234,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             {project.cloneError}
           </pre>
         ) : null}
-        {branches?.stale ? (
+        {listed?.stale ? (
           <div className="mb-4">
             <p className="text-sm text-[var(--color-ink-muted)]">
-              These branches are from the last successful fetch: {branches.stale}
+              These branches are from the last successful fetch: {listed.stale}
             </p>
           </div>
         ) : null}
@@ -238,14 +256,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
             {branches === null ? (
               <p className="text-sm text-[var(--color-ink-muted)]">Fetching the latest refs...</p>
+            ) : !branches.ok ? (
+              <p className="text-sm text-[var(--color-ink-muted)]">{branches.error}</p>
             ) : shown.length === 0 ? (
-              (branches.branches ?? []).length === 0 ? (
+              (branches.body.branches ?? []).length === 0 ? (
                 <Empty title="This repository has no branches">
                   Nothing has been pushed to it yet, or the clone could not read its refs.
                 </Empty>
               ) : (
                 <Empty title="No branch matches that filter">
-                  {(branches.branches ?? []).length} branch(es) are here; the filter is hiding them.
+                  {(branches.body.branches ?? []).length} branch(es) are here; the filter is hiding
+                  them.
                 </Empty>
               )
             ) : (
@@ -268,7 +289,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                       >
                         <td className="px-3 py-2">
                           <Mono className="text-xs">{branch.name}</Mono>
-                          {branch.name === branches.defaultBranch ? (
+                          {branch.name === branches.body.defaultBranch ? (
                             <span className="ml-2 text-xs text-[var(--color-ink-faint)]">
                               default
                             </span>
@@ -280,7 +301,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                           {branch.subject}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          {branch.name === branches.defaultBranch ? null : (
+                          {branch.name === branches.body.defaultBranch ? null : (
                             <Link
                               href={`/reviews/new?projectId=${id}&fromBranch=${encodeURIComponent(branch.name)}`}
                               className="text-xs text-[var(--color-accent)] hover:underline"

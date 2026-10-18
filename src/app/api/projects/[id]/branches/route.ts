@@ -8,7 +8,11 @@
  */
 
 import { detectDefaultBranch, divergence, fetchAll, listBranches } from "@/server/gitops/repo";
-import { recordFetch, requireProject } from "@/server/db/repositories/projects";
+import {
+  recordFetch,
+  requireClonedProject,
+  requireProject,
+} from "@/server/db/repositories/projects";
 import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -21,7 +25,7 @@ export async function GET(
   return handler(async () => {
     const { db } = runtime();
     const { id } = await context.params;
-    const project = requireProject(db, id);
+    const project = requireClonedProject(db, id);
 
     let stale: string | null = null;
     try {

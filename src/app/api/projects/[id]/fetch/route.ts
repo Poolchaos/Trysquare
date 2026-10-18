@@ -7,7 +7,11 @@
  * the person reading it.
  */
 
-import { recordFetch, requireProject } from "@/server/db/repositories/projects";
+import {
+  recordFetch,
+  requireClonedProject,
+  requireProject,
+} from "@/server/db/repositories/projects";
 import { failed, handler, ok } from "@/server/api/respond";
 import { fetchAll } from "@/server/gitops/repo";
 import { runtime } from "@/server/runtime";
@@ -21,7 +25,7 @@ export async function POST(
   return handler(async () => {
     const { db } = runtime();
     const { id } = await context.params;
-    const project = requireProject(db, id);
+    const project = requireClonedProject(db, id);
 
     try {
       await fetchAll(project.clonePath);

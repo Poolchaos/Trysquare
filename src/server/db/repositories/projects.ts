@@ -19,6 +19,20 @@ export class ProjectNotFoundError extends Error {
   }
 }
 
+export class CloneNotReadyError extends Error {
+  constructor(
+    readonly projectId: string,
+    readonly cloneStatus: string,
+  ) {
+    super(
+      cloneStatus === "failed"
+        ? "This project's clone failed, so it has no branches to list or fetch. Retry the clone."
+        : "This project is still being cloned. Its branches can be listed once the clone is ready.",
+    );
+    this.name = "CloneNotReadyError";
+  }
+}
+
 export class ProjectHasReviewsError extends Error {
   constructor(
     readonly projectId: string,
@@ -62,6 +76,21 @@ export function getProject(db: Db, projectId: string): Project | undefined {
 export function requireProject(db: Db, projectId: string): Project {
   const project = getProject(db, projectId);
   if (!project) throw new ProjectNotFoundError(projectId);
+  return project;
+}
+
+/**
+ * A project whose clone git can read and fetch into.
+ *
+ * A clone still being written has a directory git will half-read, and a fetch
+ * there downloads the history a second time beside the clone; the project
+ * page asked for one every second while it waited (review of 5.5 to 5.7).
+ */
+export function requireClonedProject(db: Db, projectId: string): Project {
+  const project = requireProject(db, projectId);
+  if (project.cloneStatus !== "ready") {
+    throw new CloneNotReadyError(projectId, project.cloneStatus);
+  }
   return project;
 }
 

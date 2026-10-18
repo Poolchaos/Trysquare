@@ -155,7 +155,7 @@ engine fixes in phase 4 have landed.
 | 5.10 | A6: the two routes go through repositories. | - | TODO |
 | 5.11 | U7: a draft review can be started from its screen. | - | TODO |
 | 5.12 | U8: SSE reconnects with backoff and the feed resumes; the theater shows the dropped-stream notice. | - | TODO |
-| 5.13 | U9, U10: every initial fetch has an error state carrying the server's message; project detail draws before `git fetch` returns. | - | TODO |
+| 5.13 | U9, U10: every initial fetch has an error state carrying the server's message; project detail draws before `git fetch` returns. | - | TODO. Done early, in the D-133 fixes: the project page's branch card shows the server's refusal or error instead of "Fetching the latest refs..." forever. Drawing before `git fetch` returns is still to do. |
 | 5.14 | U11, U12: the new-review traps and the focus gaps. | - | TODO |
 
 ### Phase 6: Claude connect

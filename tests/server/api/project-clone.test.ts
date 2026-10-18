@@ -18,6 +18,8 @@ let routes: {
   projects: typeof import("@/app/api/projects/route");
   project: typeof import("@/app/api/projects/[id]/route");
   clone: typeof import("@/app/api/projects/[id]/clone/route");
+  branches: typeof import("@/app/api/projects/[id]/branches/route");
+  fetch: typeof import("@/app/api/projects/[id]/fetch/route");
 };
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
@@ -34,6 +36,8 @@ beforeAll(async () => {
     projects: await import("@/app/api/projects/route"),
     project: await import("@/app/api/projects/[id]/route"),
     clone: await import("@/app/api/projects/[id]/clone/route"),
+    branches: await import("@/app/api/projects/[id]/branches/route"),
+    fetch: await import("@/app/api/projects/[id]/fetch/route"),
   };
 });
 
@@ -101,4 +105,42 @@ describe("a clone that failed", () => {
     const again = await routes.clone.POST(new Request("http://localhost/x"), params(project.id));
     expect(again.status).toBe(409);
   }, 60_000);
+});
+
+describe("a clone that is not ready", () => {
+  it("is neither fetched into nor listed, while queued or once failed", async () => {
+    const { runtime } = await import("@/server/runtime");
+    const { createProject, setCloneStatus } = await import("@/server/db/repositories/projects");
+    const { db } = runtime();
+    // Made directly, so no background clone races the answers below.
+    const queued = createProject(db, {
+      name: "queued",
+      gitUrl: pathToFileURL(join(root, "queued")).href,
+      defaultBranch: "main",
+      clonePath: join(root, "queued.git"),
+    });
+    const answers = async () => [
+      await routes.branches.GET(new Request("http://localhost/x"), params(queued.id)),
+      await routes.fetch.POST(
+        new Request("http://localhost/x", { method: "POST" }),
+        params(queued.id),
+      ),
+    ];
+
+    // The project page asked for both every second while a clone ran, and
+    // each ran git fetch inside the clone still being written.
+    for (const answer of await answers()) {
+      expect(answer.status).toBe(409);
+      expect(await answer.json()).toEqual({
+        code: "CloneNotReadyError",
+        error: expect.stringContaining("still being cloned") as unknown,
+      });
+    }
+
+    setCloneStatus(db, queued.id, "failed", "fatal: nothing there");
+    for (const answer of await answers()) {
+      expect(answer.status).toBe(409);
+      expect(((await answer.json()) as { error: string }).error).toContain("clone failed");
+    }
+  });
 });
