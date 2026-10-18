@@ -278,9 +278,11 @@ test("an emptied budget field keeps its ceiling rather than removing it", async 
   const before = await budget.inputValue();
 
   // Not yet a number reads "" as well, and was told it was left empty.
-  await budget.focus();
-  await page.keyboard.press("Control+A");
-  await page.keyboard.type("1e");
+  // Emptied, then typed: Control+A selects all only off macOS, and there it
+  // put the caret first, so "1e" before the stored 15 made 1e15, a number
+  // (macOS CI, run 39109455025).
+  await budget.fill("");
+  await budget.pressSequentially("1e");
   await budget.blur();
   await expect(
     page.getByText("Budget per call (USD) needs a number, so it was not changed."),
