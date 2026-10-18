@@ -13,7 +13,7 @@
 
 import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Route } from "@playwright/test";
 import { answerOnce } from "./answer-once";
 import { APP_REPO, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
 
@@ -344,6 +344,69 @@ test("the new review screen says why a read failed, not that a repository is emp
   await expect(page.getByText("Refused for this test: the rulesets.")).toHaveCount(0);
 });
 
+test("refs from last time go while the branches are read again", async ({ page, request }) => {
+  // Try again and Refresh cleared the branches but left "these are the refs
+  // from last time" and "Cached refs" up, with no refs under them, for as
+  // long as git fetch ran (D-139). Cached refs and a refused ruleset read
+  // put both lines and the head's Try again on screen; each read again is
+  // held while the screen is checked.
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app");
+  expect(app).toBeDefined();
+  const cachedBranches = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({ response, json: { ...body, stale: "Stale for this test." } });
+  };
+  const holdBranches = async () => {
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const stop = await answerOnce(page, "**/api/projects/*/branches", async (route) => {
+      await held;
+      await cachedBranches(route);
+    });
+    return { release, stop };
+  };
+
+  const stopCached = await answerOnce(page, "**/api/projects/*/branches", cachedBranches);
+  const stopRulesets = await answerOnce(page, "**/api/rulesets", (route) =>
+    route.fulfill({
+      status: 500,
+      json: { error: "Refused for this test: the rulesets.", code: "Test" },
+    }),
+  );
+  await page.goto(`/reviews/new?projectId=${app!.id}`);
+  const lastTime = page.getByText(/these are the refs from last time/);
+  const cachedLine = page.getByText("Cached refs, shown because the remote could not be reached.");
+  const fetching = page.getByText("Fetching the latest branches...");
+  await expect(lastTime).toBeVisible({ timeout: 30_000 });
+  await expect(cachedLine).toBeVisible();
+  await stopCached();
+  await stopRulesets();
+
+  const retried = await holdBranches();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(fetching).toBeVisible();
+  await expect(lastTime).toHaveCount(0);
+  await expect(cachedLine).toHaveCount(0);
+  retried.release();
+  await expect(cachedLine).toBeVisible({ timeout: 30_000 });
+  await retried.stop();
+
+  const refreshed = await holdBranches();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(fetching).toBeVisible();
+  await expect(lastTime).toHaveCount(0);
+  await expect(cachedLine).toHaveCount(0);
+  refreshed.release();
+  await expect(cachedLine).toBeVisible({ timeout: 30_000 });
+  await refreshed.stop();
+});
+
 test("a report that could not be read says so, and is read again on Try again", async ({
   page,
 }) => {
@@ -362,6 +425,14 @@ test("a report that could not be read says so, and is read again on Try again", 
   await expect(page.getByRole("heading", { name: "What was examined" })).toBeVisible({
     timeout: 30_000,
   });
+});
+
+test("a new review of a project that does not exist offers the way back", async ({ page }) => {
+  // From a stale bookmark, or a project deleted in another tab: the screen
+  // said why with a Try again that could never succeed (D-139).
+  await page.goto("/reviews/new?projectId=NOPE123");
+  await expect(page.getByRole("link", { name: "All projects" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
 });
 
 test("a page the server let go of opens a new stream rather than polling", async ({ page }) => {

@@ -130,12 +130,18 @@ function NewReview() {
   // Not read is not empty: an unread list claimed "No rulesets imported yet"
   // and "Import a ruleset first" (D-137).
   const [rulesetReadFailed, setRulesetReadFailed] = useState(false);
+  // No such project, from a stale bookmark or one deleted in another tab:
+  // the way back, not a Try again that could never work (D-139).
+  const [projectMissing, setProjectMissing] = useState(false);
   // Every read again, and the screen shows them in flight: the branch list
   // cleared, so refs from before are not left to pick from (D-138).
   const retryReads = () => {
     setReadProblems([]);
     setBranchProblem("");
     setBranches(null);
+    // The lines about the refs from last time go with the refs (D-139).
+    setStale(null);
+    setBranchesAsOf(null);
     setRefreshCount((count) => count + 1);
   };
   const [linkProblem, setLinkProblem] = useState("");
@@ -221,6 +227,9 @@ function NewReview() {
         ).flatMap(([read, sent]) => (sent.ok ? [] : [{ read, error: sent.error }])),
       );
       setRulesetReadFailed(!rulesetList.ok);
+      setProjectMissing(
+        (!detail.ok && detail.status === 404) || (!branchList.ok && branchList.status === 404),
+      );
       if (detail.ok) setLinks(detail.body.links ?? []);
 
       // A refused list, for a clone not ready say, is neither a repository
@@ -528,6 +537,8 @@ function NewReview() {
                   className="underline underline-offset-2 hover:text-[var(--color-ink)]"
                   onClick={() => {
                     setBranches(null);
+                    setStale(null);
+                    setBranchesAsOf(null);
                     setRefreshCount((count) => count + 1);
                   }}
                 >
@@ -537,7 +548,12 @@ function NewReview() {
             ) : null}
 
             {branchProblem ? (
-              <Loading error={branchProblem} onRetry={retryReads} />
+              <Loading
+                error={branchProblem}
+                {...(projectMissing
+                  ? { back: { href: "/projects", label: "All projects" } }
+                  : { onRetry: retryReads })}
+              />
             ) : branches === null ? (
               <p className="py-6 text-center text-sm text-[var(--color-ink-muted)]">
                 Fetching the latest branches...
