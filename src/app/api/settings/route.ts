@@ -39,7 +39,16 @@ export function GET(): Promise<Response> {
 export function PUT(request: Request): Promise<Response> {
   return handler(async () => {
     const { db, manager } = runtime();
-    const body = await readJson(request, z.record(z.string(), z.unknown()));
+    // The object JSON.parse made, not a copy: zod's record drops a
+    // "__proto__" key, which then answered 200 having written nothing
+    // (D-136). JSON.parse keeps it as an own key, and the check below refuses it.
+    const body = await readJson(
+      request,
+      z.custom<Record<string, unknown>>(
+        (value) => typeof value === "object" && value !== null && !Array.isArray(value),
+        "the body must be an object of settings",
+      ),
+    );
 
     // Every key is judged before any is written: one at a time, a refused
     // value left the keys before it stored by a request that answered 400.

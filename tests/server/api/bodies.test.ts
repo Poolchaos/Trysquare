@@ -52,6 +52,12 @@ describe("a setting named after something every object has", () => {
       );
       expect(await answer(response), key).toEqual([400, "UnknownSetting"]);
     }
+    // Sent as text, as a client would: zod's record dropped this key, and the
+    // route answered 200 having written nothing (D-136).
+    const proto = await routes.settings.PUT(
+      new Request("http://localhost/x", { method: "PUT", body: '{"__proto__":1}' }),
+    );
+    expect(await answer(proto)).toEqual([400, "UnknownSetting"]);
   });
 });
 
