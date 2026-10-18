@@ -140,10 +140,16 @@ scanner_self_check() {
 
 # In a child under a time limit: the failure the 65,600-byte case exists to
 # catch is a hang, and run in the gate's own shell it hung the gate with it.
+# Exported inside a subshell only: exported in the gate's own shell, every
+# later step carried the markers' text in its environment, so one that
+# printed its environment read as a runtime error (D-136). "$BASH" is the
+# bash that exported the functions.
 check_scanner() {
-  export ERROR_MARKERS
-  export -f has_error_marker scanner_self_check
-  if ! with_timeout 60 bash -c scanner_self_check; then
+  if ! (
+    export ERROR_MARKERS
+    export -f has_error_marker scanner_self_check
+    with_timeout 60 "$BASH" -c scanner_self_check
+  ); then
     echo "GATE FAILED: the error-marker scan failed its own self-check, or did not finish in 60s"
     FAILED+=("marker scan self-check")
   fi
