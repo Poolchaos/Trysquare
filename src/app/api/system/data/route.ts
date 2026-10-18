@@ -11,14 +11,14 @@
  * says so rather than leaving it to be discovered.
  */
 
-import { exportsDir, projectDir } from "@/lib/paths";
+import { exportsDir } from "@/lib/paths";
 import { deleteProject, listProjects } from "@/server/db/repositories/projects";
 import { listActiveReviews, listReviewsForProject } from "@/server/db/repositories/reviews";
 import { deleteRuleset, listRulesets } from "@/server/db/repositories/rulesets";
 import { deleteReviewEntirely } from "@/server/review/service";
 import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
-import { removeRepo } from "@/server/gitops/repo";
+import { removeProjectFiles } from "@/server/projects/clone";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +52,7 @@ export async function DELETE(): Promise<Response> {
     }
     for (const project of projects) {
       deleteProject(db, project.id);
-      await removeRepo(projectDir(dataDir, project.id));
+      await removeProjectFiles(dataDir, project);
     }
 
     const rulesetRows = listRulesets(db);

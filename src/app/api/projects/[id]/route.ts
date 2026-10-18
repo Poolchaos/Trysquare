@@ -8,9 +8,8 @@ import {
   requireProject,
 } from "@/server/db/repositories/projects";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
-import { projectDir } from "@/lib/paths";
 import { failed, handler, ok } from "@/server/api/respond";
-import { removeRepo } from "@/server/gitops/repo";
+import { removeProjectFiles } from "@/server/projects/clone";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +61,7 @@ export async function DELETE(
   return handler(async () => {
     const { db, dataDir } = runtime();
     const { id } = await context.params;
-    requireProject(db, id);
+    const project = requireProject(db, id);
 
     try {
       deleteProject(db, id);
@@ -81,7 +80,7 @@ export async function DELETE(
     // The project's whole directory, not just the bare repo inside it.
     // Removing only the clone leaves an empty directory per deleted project,
     // accumulating quietly forever.
-    await removeRepo(projectDir(dataDir, id));
+    await removeProjectFiles(dataDir, project);
     return ok({ removed: id });
   });
 }

@@ -11,11 +11,13 @@
  */
 
 import { dirname } from "node:path";
+import { projectDir } from "@/lib/paths";
 import type { Db } from "../db/client";
 import {
   ProjectNotFoundError,
   setCloneStatus,
   setDefaultBranch,
+  type Project,
 } from "../db/repositories/projects";
 import { cloneBare, detectDefaultBranch, removeRepo } from "../gitops/repo";
 
@@ -59,5 +61,22 @@ export async function cloneProjectInBackground(
       // a task nothing awaits; swallowing it would hide a real bug.
       console.error("Recording a clone failure failed:", writeError);
     }
+  }
+}
+
+/**
+ * Removes what a deleted project kept on disk.
+ *
+ * A clone still running writes into the directory as it is removed, so the
+ * removal can fail part way: Windows CI run 39134600720 answered a delete
+ * with "ENOTEMPTY: directory not empty", the row already gone. That clone,
+ * finding its project gone when it ends, removes the directory itself
+ * (above), so the failure is not one. With no clone running, it is.
+ */
+export async function removeProjectFiles(dataDir: string, project: Project): Promise<void> {
+  try {
+    await removeRepo(projectDir(dataDir, project.id));
+  } catch (error) {
+    if (project.cloneStatus !== "pending" && project.cloneStatus !== "cloning") throw error;
   }
 }
