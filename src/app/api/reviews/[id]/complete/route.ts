@@ -9,9 +9,14 @@
  */
 
 import { listAwaitingDecision } from "@/server/db/repositories/findings";
-import { requireReview, statusOf, transitionReview } from "@/server/db/repositories/reviews";
+import {
+  appendRunNote,
+  requireReview,
+  statusOf,
+  transitionReview,
+} from "@/server/db/repositories/reviews";
 import { removeReviewWorktrees } from "@/server/review/service";
-import { failed, handler, ok } from "@/server/api/respond";
+import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -50,14 +55,26 @@ export async function POST(
 
     transitionReview(db, id, "complete", { currentStage: null });
 
+    // The review is complete either way: a checkout that will not go is a
+    // cleanup to report, not a failure of the decision the person made. It
+    // used to answer 500, so the screen said completing had failed (5.6,
+    // audit A7). Said in the answer and kept as a run note.
+    let cleanupError: string | undefined;
     try {
       await removeReviewWorktrees(db, id, dataDir);
     } catch (error) {
-      // The review is complete either way; a stuck checkout is not a reason
-      // to refuse the decision the human already made.
-      return failed(error, 500);
+      cleanupError = error instanceof Error ? error.message : String(error);
+      appendRunNote(db, id, {
+        kind: "note",
+        message:
+          `The review is complete, but its checkout could not be removed: ${cleanupError}. ` +
+          "Deleting the review removes it.",
+      });
     }
 
-    return ok({ snapshot: manager.snapshot(id) });
+    return ok({
+      snapshot: manager.snapshot(id),
+      ...(cleanupError === undefined ? {} : { cleanupError }),
+    });
   });
 }

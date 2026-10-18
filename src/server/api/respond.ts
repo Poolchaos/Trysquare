@@ -9,6 +9,12 @@
  */
 
 import { z } from "zod";
+import { IllegalTransitionError, InvalidCloneTransitionError } from "@/lib/domain/state-machines";
+import { FindingNotFoundError } from "@/server/db/repositories/findings";
+import { ModelNotFoundError } from "@/server/db/repositories/models";
+import { ProjectNotFoundError } from "@/server/db/repositories/projects";
+import { ReviewNotFoundError } from "@/server/db/repositories/reviews";
+import { RulesetNotFoundError } from "@/server/db/repositories/rulesets";
 
 export interface ApiError {
   error: string;
@@ -64,10 +70,30 @@ export async function readJson<T>(request: Request, schema: z.ZodType<T>): Promi
   return parsed.data;
 }
 
-/** Wraps a handler so a thrown Response is returned and anything else is a 500. */
+/** The repositories' errors for an id that names nothing. */
+const NOT_FOUND = [
+  ReviewNotFoundError,
+  ProjectNotFoundError,
+  RulesetNotFoundError,
+  FindingNotFoundError,
+  ModelNotFoundError,
+];
+
+/** The state machines' refusals of a step from where the thing now is. */
+const CONFLICT = [IllegalTransitionError, InvalidCloneTransitionError];
+
+/**
+ * Wraps a handler so a thrown Response is returned, an id that names nothing
+ * is a 404, a step the state machine refuses is a 409, and anything else is a
+ * 500. Every error used to be a 500, so a wrong request read as the server
+ * failing (5.6, audit A1). By class, not by name: CliNotFoundError is a
+ * missing program, not a missing resource.
+ */
 export function handler(run: () => Promise<Response>): Promise<Response> {
   return run().catch((error: unknown) => {
     if (error instanceof Response) return error;
+    if (NOT_FOUND.some((kind) => error instanceof kind)) return failed(error, 404);
+    if (CONFLICT.some((kind) => error instanceof kind)) return failed(error, 409);
     return failed(error, 500);
   });
 }
