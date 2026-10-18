@@ -2841,3 +2841,43 @@ verified evidence, in writing, here.
   pid 0, and process.kill(0, 0) succeeds for the caller's own group, so the
   stopped process read as running; 6 of 300 tight reads on Windows found the
   file empty. Fixed 365f507: written whole and renamed into place, 0 of 300.
+- 2026-10-18 D-134 REVIEW (the D-133 fixes, 1dba8b5..316894b, by a separate
+  read-only reviewer; each finding re-run here before it was fixed). Ten
+  findings, one MEDIUM and nine LOW, all dispositioned before new work:
+  1. MEDIUM: the fix commits' gate results and CI runs were recorded
+  nowhere, and rows 5.5 to 5.7 did not name the fixes. Fixed with this
+  record: those rows carry each fix's commit, its Windows `./verify.sh
+  --e2e` counts and its CI run.
+  2. LOW: the repository key folded `.git` on every hosted address, read
+  `C://repos/app` as a scheme and folded every backslash, so two
+  repositories could be refused as one. Fixed 3aecbe2: `.git` folds only on
+  github.com and gitlab.com (measured with git ls-remote), a drive path is
+  tested first, and backslashes fold only in a Windows path. This replaces
+  D-133 item 7's "a hosted address's .git".
+  3. LOW: deleting a project, and deleting everything, removed the parent of
+  the row's path. Fixed 60a438d.
+  4. LOW: a preview whose dependency names nothing answered 400. 5. LOW:
+  creating and previewing a review fetched into a clone that was not ready.
+  4 and 5 fixed cb7c523. The new review screen's untrue lines beside that
+  refusal, and its dependency read that drops one, are added to row 5.13.
+  6. LOW: the project page followed a project deleted mid-clone forever,
+  dropped failed reads without a word, and kept a refusal over a ready
+  project when its two reads straddled the clone finishing. 10. LOW: the
+  browser test counted branch reads before a late poll could add one, and
+  never removed its listener. 6 and 10 fixed eb0df4e.
+  7. LOW: three untrue sentences. D-133 and the 365f507 message say c32925c
+  changed only docs and comments; it also changed the restart message in
+  the projects repository, which could not have caused that failure. The
+  retry route's "before the first await" is corrected in 60a438d, and the
+  repository key's "most servers hold App and app as two repositories" in
+  3aecbe2.
+  8. LOW: the completion note said "its folder", and the evidence sits
+  beside the checkout. 9. LOW: the shutdown browser test read the pid file
+  without a guard before a SIGKILL. 8 and 9 fixed 3b1b7fd.
+  Found during the fixes: Windows CI hung 35 minutes at 316894b (run
+  39115191562, cancelled by hand), after its unit tests had passed. Root
+  cause, measured: Git Bash 5.2.37 hangs writing a here-string of 65,537 to
+  65,664 bytes, and the gate's error-marker scan gave grep the unit output,
+  65,624 bytes that run, as one. Fixed 7a2eb0d, with the testing doc in
+  59df9de: the scan reads a temporary file, its self-check runs at a size
+  in that window, and the CI job has a 30-minute limit.
