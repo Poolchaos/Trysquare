@@ -117,13 +117,35 @@ test("cancelling a running review stops it and says so", async ({ page }) => {
   // test exists to check. The event feed says when the stage is truly open,
   // in the label a person reads rather than the stage's internal id.
   await expect(page.getByText("Risk started")).toBeVisible({ timeout: 60_000 });
-  await page.getByRole("button", { name: "Cancel" }).click();
+
+  // Cancelled is terminal, so one click no longer ends a review: it asks,
+  // and nothing is sent until the answer (5.1).
+  let cancels = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.endsWith("/cancel")) cancels += 1;
+  });
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Yes, cancel", exact: true })).toBeVisible();
+  expect(cancels).toBe(0);
+
+  // A cancel that does not get through says so, and the review runs on;
+  // the response used to be ignored, and the screen claimed nothing (5.1).
+  const stopRefusing = await answerOnce(page, "**/api/reviews/*/cancel", (route) =>
+    route.fulfill({ status: 500, contentType: "text/html", body: "<html>Server error</html>" }),
+  );
+  await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+  await expect(page.getByText("The review could not be cancelled.")).toBeVisible();
+  await expect(page.getByText("running", { exact: true })).toBeVisible();
+  await stopRefusing();
+
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
 
   await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
   // The stage it was on is shown as a decision, not a red fault.
   await expect(page.getByText("Cancelled mid-stage.")).toBeVisible();
   // And it is genuinely over: nothing is left running to come back later.
-  await expect(page.getByRole("button", { name: "Cancel" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeHidden();
 });
 
 test("a review deleted from the list takes its evidence with it", async ({ page }) => {

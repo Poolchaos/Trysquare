@@ -359,11 +359,32 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [report, setReport] = useState<string | null>(null);
   const [exported, setExported] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [actionError, setActionError] = useState("");
 
   async function fetchSnapshot(): Promise<Snapshot | null> {
     const response = await fetch(`/api/reviews/${id}`);
     return response.ok ? ((await response.json()) as Snapshot) : null;
+  }
+
+  /**
+   * Asks the server to cancel, and says why when it did not: a dropped
+   * request, a refusal, or a review with nothing left to cancel. The answer
+   * used to be ignored, so a cancel that failed looked like one that worked
+   * (5.1). Empty when the cancel took.
+   */
+  async function cancelReview(): Promise<string> {
+    const response = await fetch(`/api/reviews/${id}/cancel`, { method: "POST" }).catch(
+      (error: unknown) => (error instanceof Error ? error : new Error(String(error))),
+    );
+    if (response instanceof Error) return `The review could not be cancelled: ${response.message}`;
+    const body = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      cancelled?: boolean;
+    };
+    if (!response.ok) return body.error ?? "The review could not be cancelled.";
+    if (body.cancelled === false) return "Nothing was cancelled: the review had already ended.";
+    return "";
   }
 
   async function reload() {
@@ -509,8 +530,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         batch={batch}
         onMinimize={() => setMinimizedRun(review.startedAt)}
         onCancel={async () => {
-          await fetch(`/api/reviews/${id}/cancel`, { method: "POST" });
+          const problem = await cancelReview();
           await reload();
+          return problem;
         }}
       />
     );
@@ -691,14 +713,27 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 place to forget one, and it was (paused and interrupted reviews
                 had no way to be cancelled from the screen). */}
             {snapshot.queued || canTransitionReview(review.status as ReviewStatus, "cancelled") ? (
-              <Button
-                onClick={async () => {
-                  await fetch(`/api/reviews/${id}/cancel`, { method: "POST" });
-                  await reload();
-                }}
-              >
-                Cancel
-              </Button>
+              // Asks first: cancelled is terminal, and one click used to end
+              // a review (5.1).
+              confirmingCancel ? (
+                <>
+                  <Button
+                    variant="primary"
+                    onClick={async () => {
+                      setConfirmingCancel(false);
+                      setActionError(await cancelReview());
+                      await reload();
+                    }}
+                  >
+                    Yes, cancel
+                  </Button>
+                  <Button variant="quiet" onClick={() => setConfirmingCancel(false)}>
+                    No, keep it
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setConfirmingCancel(true)}>Cancel</Button>
+              )
             ) : null}
 
             {!snapshot.running && !snapshot.queued ? (
@@ -1375,7 +1410,8 @@ function ScanTheater({
   now: number;
   batch: { number: number; count: number } | null;
   onMinimize: () => void;
-  onCancel: () => Promise<void>;
+  /** Resolves with why the cancel failed, or empty when it took. */
+  onCancel: () => Promise<string>;
 }) {
   const { review, coverage } = snapshot;
   const done = new Set(
@@ -1386,6 +1422,8 @@ function ScanTheater({
   const usual = executing !== null ? snapshot.stageMedians[executing] : undefined;
   const feedRef = useRef<HTMLDivElement>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelProblem, setCancelProblem] = useState("");
 
   // The feed follows the work. New entries arrive several times a second
   // while the engine reads, and a stream someone must scroll by hand is a
@@ -1433,18 +1471,39 @@ function ScanTheater({
           <Button variant="quiet" onClick={onMinimize}>
             Hide
           </Button>
-          <Button
-            variant="quiet"
-            disabled={cancelling}
-            onClick={() => {
-              setCancelling(true);
-              void onCancel().finally(() => setCancelling(false));
-            }}
-          >
-            Cancel
-          </Button>
+          {confirmingCancel ? (
+            <>
+              <Button
+                variant="primary"
+                disabled={cancelling}
+                onClick={() => {
+                  setCancelling(true);
+                  void onCancel()
+                    .then((problem) => {
+                      setCancelProblem(problem);
+                      setConfirmingCancel(false);
+                    })
+                    .finally(() => setCancelling(false));
+                }}
+              >
+                Yes, cancel
+              </Button>
+              <Button variant="quiet" onClick={() => setConfirmingCancel(false)}>
+                No, keep it
+              </Button>
+            </>
+          ) : (
+            <Button variant="quiet" onClick={() => setConfirmingCancel(true)}>
+              Cancel
+            </Button>
+          )}
         </div>
       </header>
+      {cancelProblem ? (
+        <div className="mt-3">
+          <Problem>{cancelProblem}</Problem>
+        </div>
+      ) : null}
 
       {/* The pipeline as a ruled gauge: seven segments, filled as they land,
           the live one glowing. */}
