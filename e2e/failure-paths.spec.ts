@@ -13,7 +13,7 @@
 
 import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { answerOnce } from "./answer-once";
 import { APP_REPO, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
 
@@ -255,12 +255,19 @@ test("a list whose data cannot be read says so, and reads again on Try again", a
   // with a bare fetch. A server error left "Loading..." for good, or an empty
   // column or section, and a failure that looks like slowness is waited out
   // (5.13, audit U9).
-  for (const [screen, api] of [
-    ["/projects", "**/api/projects"],
-    ["/reviews", "**/api/reviews"],
-    ["/rulesets", "**/api/rulesets"],
-    ["/settings", "**/api/settings"],
-  ] as const) {
+  // Each with what its read brings, so Try again is proved by the content it
+  // reads rather than by the old message going (D-137).
+  const screens: [string, string, (on: import("@playwright/test").Page) => Locator][] = [
+    ["/projects", "**/api/projects", (on) => on.getByRole("link", { name: "app", exact: true })],
+    ["/reviews", "**/api/reviews", (on) => on.getByRole("main").locator("ul > li").first()],
+    [
+      "/rulesets",
+      "**/api/rulesets",
+      (on) => on.getByRole("main").getByText("Example protocol").first(),
+    ],
+    ["/settings", "**/api/settings", (on) => on.getByLabel("Stage timeout (minutes)")],
+  ];
+  for (const [screen, api, content] of screens) {
     const refusal = `Refused for this test: ${screen}.`;
     const stopRefusing = await answerOnce(page, api, (route) =>
       route.fulfill({ status: 500, json: { error: refusal, code: "Test" } }),
@@ -269,6 +276,7 @@ test("a list whose data cannot be read says so, and reads again on Try again", a
     await expect(page.getByText(refusal)).toBeVisible({ timeout: 30_000 });
     await stopRefusing();
     await page.getByRole("button", { name: "Try again" }).click();
+    await expect(content(page)).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(refusal)).toHaveCount(0);
     await expect(page.getByText("Loading...")).toHaveCount(0);
   }
