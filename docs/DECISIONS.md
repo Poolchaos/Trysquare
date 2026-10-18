@@ -2791,3 +2791,53 @@ verified evidence, in writing, here.
   Rejected: an undo for the last decision, which adds reversal state to a
   record whose premise is that each decision was deliberate; and removing
   the shortcut, which a person working down a long queue relies on.
+- 2026-10-18 D-133 REVIEW (MVP 5.5 to 5.7, 52f977c..1dba8b5, by a separate
+  read-only reviewer; each finding re-run here before it was fixed). Twelve
+  findings, one HIGH, three MEDIUM, eight LOW, all dispositioned before new
+  work:
+  1. HIGH: while a clone ran, the project page reloaded itself every
+  second without waiting for the last reload, and each one listed branches,
+  which runs git fetch inside the clone still being written. 8. LOW: a
+  failed clone's page said "Fetching the latest refs..." forever. Fixed
+  82ccf3f: the branches and fetch routes refuse a clone that is not ready
+  with a 409, the page polls the project alone, one request at a time, and
+  the branch card shows the refusal or error.
+  2. MEDIUM: a retry whose removal of the last clone's leftovers threw left
+  the project pending with nothing cloning it. 12. LOW: that removal is
+  recursive and went wherever the row's path pointed. Fixed 0f43155: the
+  project goes back to failed with the reason, and the path is derived from
+  the data directory and the id.
+  3. MEDIUM: routes that caught every error themselves still hid an unknown
+  id: deleting a review answered 409, starting one 400, linking to a
+  project 400, its links an empty 200, and patching a rule 400. Fixed
+  43bee5f.
+  4. MEDIUM: rows 4.20 and 5.5 to 5.7 lacked their commits and gate
+  results, and the macOS CI failure at 52f977c (run 39109455025) with its
+  fix in 6819704 was on no row. 5. LOW: "a stream that breaks after a 200"
+  was wrong, it was a 500; the d7c2cc1 message says it too and stays as
+  pushed. 10. LOW: stale records: the restart message's "delete the project
+  and add it again", Retry clone missing from the UI design doc and the
+  runbook, 34 route handlers where there are 35, and keyboard comments and
+  D-16 saying c. The 5.7 row said the project page read through the request
+  helper, which was false until 82ccf3f. Fixed c32925c.
+  6. LOW: under Caps Lock, Shift+C arrives as "c" with Shift held and
+  confirmed nothing. Fixed e7762a9; the other letter keys under Caps Lock
+  are in the idea inbox.
+  7. LOW: a repository already added was recognised only character for
+  character. Fixed e025bcf: addresses compare by a key that folds a
+  trailing slash, the host's case, a local path's slashes and drive letter,
+  and a hosted address's .git, and keeps the path's case and a local .git.
+  9. LOW: a completion that left the checkout behind was not shown on the
+  page, and its note advised deleting the review. Fixed a862595: the note
+  is shown above the report and advises deleting the folder by hand.
+  11. LOW, tests: the bare-c step did not count confirm requests (it does
+  since e7762a9); the retry's polling and its removal were not exercised
+  (82ccf3f, 0f43155); and the failed clone's error was matched by text the
+  page header also shows, the "twice" project's clone was not awaited, and
+  the project test's git printed a line-ending warning (c4a8636).
+  Found during the fixes: macOS CI failed a stopped-stage test at c32925c
+  (run 39113234471), which changed only docs and comments. The fake CLI
+  created its pid file before writing the number, a read in between gave
+  pid 0, and process.kill(0, 0) succeeds for the caller's own group, so the
+  stopped process read as running; 6 of 300 tight reads on Windows found the
+  file empty. Fixed 365f507: written whole and renamed into place, 0 of 300.
