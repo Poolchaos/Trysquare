@@ -2881,3 +2881,36 @@ verified evidence, in writing, here.
   65,624 bytes that run, as one. Fixed 7a2eb0d, with the testing doc in
   59df9de: the scan reads a temporary file, its self-check runs at a size
   in that window, and the CI job has a 30-minute limit.
+- 2026-10-18 D-135 REVIEW (the D-134 fixes and the gate's scan,
+  316894b..c5e64c8, by a separate read-only reviewer; each finding re-run
+  here before it was fixed). Eight findings, all LOW, all dispositioned
+  before new work:
+  1. A write to the scan's temporary file that failed part way left grep a
+  short file that read as clean. 2. The 65,600-byte self-check ran in the
+  gate's own shell, so the hang it exists to catch would have hung the gate
+  too; 7a2eb0d and 05-TESTING said it would fail. 1 and 2 fixed 920682b: a
+  failed write counts as a marker, and the self-check runs in a child under
+  a 60-second limit. With the here-string scan swapped back in, the gate
+  failed at 60 seconds.
+  3. 7a2eb0d's gate result and CI run were recorded nowhere. Windows
+  `./verify.sh --e2e` exited 0 at 7a2eb0d with 1033 unit and 45 browser
+  tests, and CI run 39118829036 at 59df9de, which carried it, passed on all
+  three. Row 1.1 now says so.
+  4. "However it is spelled" (row 5.7, the repository key's docstring, the
+  projects repository) overclaimed: `git@github.com:acme/app` and
+  `https://github.com/acme/app` are one repository and two keys, by
+  design. Each now names what folds.
+  5. No test drove a linked dependency that was not ready, so reverting
+  either route's check passed the suite. 6. Creating a review fetched the
+  primary before it read the dependency. 5 and 6 fixed 073336d: the
+  dependency is read and its link checked first, both sides are fetched
+  before either is pinned, and a test covers a dependency still cloning,
+  one unknown and one not linked.
+  7. The demo fixture cloned into a shared directory and left its projects
+  pending, so a data directory kept with --keep refused them, failed them
+  at the next start, and since 60a438d deleting one left its clone. Fixed
+  9b15ab8.
+  8. A path shaped like a Windows one is read as Windows on every platform,
+  so on Linux and macOS `.\app` and `./app` share a key. Left as it is,
+  and said in the docstring: it matters only for a directory whose name
+  begins with `.\` or a drive letter.

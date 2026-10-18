@@ -95,7 +95,7 @@ export function requireClonedProject(db: Db, projectId: string): Project {
   return project;
 }
 
-/** The project already made from this repository, however its address was spelled. */
+/** The project already made from this repository, under any spelling repositoryKey folds. */
 export function findProjectByUrl(db: Db, gitUrl: string): Project | undefined {
   const key = repositoryKey(gitUrl);
   return listProjects(db).find((project) => repositoryKey(project.gitUrl) === key);

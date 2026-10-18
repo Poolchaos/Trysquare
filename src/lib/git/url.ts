@@ -104,14 +104,19 @@ const WINDOWS_PATH = /^\/?[A-Za-z]:[\\/]|^\.{1,2}\\/;
 
 /**
  * What two spellings of one repository's address share, so a repository
- * already added is known however it is typed again (review of 5.5 to 5.7).
- * Only what cannot tell two repositories apart is folded: a trailing slash,
- * the host's case, a Windows path's slash direction and drive letter case,
- * and `.git` on the hosts above. Everything else is kept, so a doubt is a
+ * already added is known when it is typed again in a spelling folded here
+ * (review of 5.5 to 5.7); `git@github.com:acme/app` and
+ * `https://github.com/acme/app` stay two keys. Only what cannot tell two
+ * repositories apart is folded: a trailing slash, the host's case, a Windows
+ * path's slash direction and drive letter case, and `.git` on the hosts
+ * above. Everything else is kept, so a doubt is a
  * duplicate missed rather than a second repository refused as the first:
  * the path's case, which GitHub and the Windows and macOS file system
  * defaults ignore but other servers and Linux do not, and a backslash
- * outside a Windows path, which is a character in a POSIX name.
+ * outside a Windows path, which is a character in a POSIX name. A path
+ * shaped like a Windows one is read as Windows on every platform, so on
+ * Linux and macOS `.\app` and `./app` share a key; they are two directories
+ * only for a name that begins with `.\` or a drive letter (D-135).
  */
 export function repositoryKey(url: string): string {
   const trimmed = url.trim();
