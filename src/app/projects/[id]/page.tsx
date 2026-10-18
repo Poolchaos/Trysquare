@@ -68,15 +68,26 @@ const underWay = (cloneStatus: string | undefined) =>
 /**
  * The project and its branches, read side by side. Never throws.
  *
+ * The project is handed to `onProject` the moment it arrives, so the page
+ * draws without waiting for the branches: their route runs git fetch first,
+ * seconds on a large or distant remote, and the page drew nothing until it
+ * was done (5.13, U10).
+ *
  * Side by side, the two reads can straddle the clone finishing: the project
  * ready, its branches refused as not ready, and no poll left to correct the
  * card. The branches are asked again then (review of the D-133 fixes).
  */
-async function readPage(id: string): Promise<[Sent<Detail>, Sent<Branches>]> {
+async function readPage(
+  id: string,
+  onProject: (detail: Sent<Detail>) => void,
+): Promise<[Sent<Detail>, Sent<Branches>]> {
   const readBranches = () =>
     send<Branches>(`/api/projects/${id}/branches`, {}, "The branches could not be listed");
   const [detail, branches] = await Promise.all([
-    send<Detail>(`/api/projects/${id}`, {}, "This project could not be read"),
+    send<Detail>(`/api/projects/${id}`, {}, "This project could not be read").then((read) => {
+      onProject(read);
+      return read;
+    }),
     readBranches(),
   ]);
   const straddled =
@@ -111,23 +122,23 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [packageName, setPackageName] = useState("");
 
   const load = useCallback(async () => {
-    const [detailSent, branchSent] = await readPage(id);
-    if (detailSent.ok) setDetail(detailSent.body);
+    const [, branchSent] = await readPage(id, (detailSent) => {
+      if (detailSent.ok) setDetail(detailSent.body);
+    });
     setBranches(branchSent);
   }, [id]);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [detailSent, branchSent] = await readPage(id);
-      if (cancelled) return;
-      // The project itself is the screen; without it there is nothing to
-      // draw, and saying so beats a "Loading..." that never resolves.
-      if (!detailSent.ok) {
-        setLoadError(detailSent.error);
-        return;
-      }
-      setDetail(detailSent.body);
+      const [detailSent, branchSent] = await readPage(id, (read) => {
+        if (cancelled) return;
+        // The project itself is the screen; without it there is nothing to
+        // draw, and saying so beats a "Loading..." that never resolves.
+        if (read.ok) setDetail(read.body);
+        else setLoadError(read.error);
+      });
+      if (cancelled || !detailSent.ok) return;
       // Branches are a separate concern: the remote may be unreachable while
       // the project is perfectly readable, and the branch card says so.
       setBranches(branchSent);

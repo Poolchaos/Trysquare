@@ -411,6 +411,29 @@ test("a failed clone can be opened, tried again and deleted; a known address is 
   await expect(page.getByRole("main").locator("li").filter({ hasText: "nowhere" })).toHaveCount(0);
 });
 
+test("a project's page draws before its branches, which wait on git fetch", async ({ page }) => {
+  // The branch list runs git fetch first, which takes seconds on a large or
+  // distant remote, and the page drew nothing until it came back (5.13,
+  // audit U10). Held here until the page has been checked.
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stopHolding = await answerOnce(page, "**/api/projects/*/branches", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/projects");
+  await page.getByRole("main").getByRole("link", { name: "app", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "app", level: 1 })).toBeVisible();
+  await expect(page.getByText("Fetching the latest refs...")).toBeVisible();
+  release();
+  await expect(page.getByRole("link", { name: "Review", exact: true }).first()).toBeVisible({
+    timeout: 30_000,
+  });
+  await stopHolding();
+});
+
 test("a project read just as its clone finished still lists its branches", async ({ page }) => {
   // The project and its branches are read side by side, so the two can
   // straddle the clone finishing: the project ready, its branches refused as
