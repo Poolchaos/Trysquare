@@ -289,6 +289,67 @@ describe("reading the code a finding is about", () => {
     await routes.review.DELETE(new Request("http://localhost"), params(draftId));
   });
 
+  it("says a deleted file was deleted, and a file it cannot read was not read", async () => {
+    // Any failed read with a hunk was answered as a file the change deleted,
+    // so a modified file whose checkout copy could not be read was said to be
+    // deleted (D-140). The guard finding is in a file the change modified.
+    const finding = (await snapshot()).findings.find((entry) =>
+      entry.filePath.endsWith("src/auth/guard.ts"),
+    );
+    expect(finding).toBeDefined();
+    const ask = async () => {
+      const response = await routes.fileContext.GET(
+        new Request(
+          `http://localhost/x?path=${encodeURIComponent(finding!.filePath)}&line=${finding!.lineStart}`,
+        ),
+        params(reviewId),
+      );
+      expect(response.status).toBe(200);
+      return (await response.json()) as {
+        lines: unknown[];
+        hunk: unknown;
+        deleted?: boolean;
+        readError?: string;
+      };
+    };
+    const checkoutCopy = join(worktreeRootDir(dataDir, reviewId), finding!.filePath);
+    const patchPath = join(bundleDir(dataDir, reviewId), "diff.patch");
+    const contents = readFileSync(checkoutCopy, "utf8");
+    const patch = readFileSync(patchPath, "utf8");
+    try {
+      rmSync(checkoutCopy);
+      const unread = await ask();
+      expect(unread.lines).toHaveLength(0);
+      expect(unread.hunk).not.toBeNull();
+      expect(unread.deleted).toBeUndefined();
+      expect(unread.readError).toMatch(/ENOENT/);
+
+      // The same file, as a change that deleted it whole would record it.
+      const withoutSlug = finding!.filePath.split("/").slice(1).join("/");
+      writeFileSync(
+        patchPath,
+        [
+          `diff --git a/${withoutSlug} b/${withoutSlug}`,
+          "deleted file mode 100644",
+          "index 1111111..0000000",
+          `--- a/${withoutSlug}`,
+          "+++ /dev/null",
+          "@@ -1,2 +0,0 @@",
+          "-export const gone = 1;",
+          "-export const alsoGone = 2;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const deleted = await ask();
+      expect(deleted.deleted).toBe(true);
+      expect(deleted.readError).toBeUndefined();
+    } finally {
+      writeFileSync(checkoutCopy, contents, "utf8");
+      writeFileSync(patchPath, patch, "utf8");
+    }
+  });
+
   it("refuses a file this review never raised a finding in", async () => {
     // Otherwise the endpoint is a way to read any file on the machine.
     //

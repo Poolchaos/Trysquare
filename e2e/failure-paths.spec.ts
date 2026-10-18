@@ -1002,7 +1002,11 @@ test("a file the change deleted is said to be deleted, not the checkout gone", a
   const stopAnswering = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
     route.fulfill({
       status: 200,
-      json: { lines: [], hunk: { header: "@@ -1,2 +0,0 @@", lines: ["-gone", "-also gone"] } },
+      json: {
+        lines: [],
+        hunk: { header: "@@ -1,2 +0,0 @@", lines: ["-gone", "-also gone"] },
+        deleted: true,
+      },
     }),
   );
   await page.goto("/reviews?status=awaiting");
@@ -1012,6 +1016,34 @@ test("a file the change deleted is said to be deleted, not the checkout gone", a
   await expect(page.getByText(/the change deleted it/)).toBeVisible();
   await expect(page.getByText(/no longer available for this review/)).toHaveCount(0);
   await stopAnswering();
+});
+
+test("a file the checkout could not give up is said as that, not as deleted", async ({ page }) => {
+  // Every failed read with a hunk was answered as a deletion, so a modified
+  // file the checkout held but could not give up, busy on Windows say, was
+  // said to be deleted (D-140). The answer is the route's own shape for it.
+  const stopAnswering = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        lines: [],
+        hunk: { header: "@@ -1,2 +1,2 @@", lines: ["-before", "+after"] },
+        readError: "EBUSY: resource busy or locked, open 'guard.ts'",
+      },
+    }),
+  );
+  await page.goto("/reviews?status=awaiting");
+  await page.getByRole("main").locator("ul > li").first().getByRole("link").click();
+  await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible({ timeout: 30_000 });
+  await page.locator("body").press("Enter");
+  await expect(
+    page.getByText(/could not be read from the review's checkout: EBUSY: resource busy/),
+  ).toBeVisible();
+  await expect(page.getByText("+after")).toBeVisible();
+  await expect(page.getByText(/the change deleted it/)).toHaveCount(0);
+  await stopAnswering();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText(/could not be read from the review's checkout/)).toHaveCount(0);
 });
 
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {

@@ -51,6 +51,10 @@ interface SnapshotRule {
 interface FileContext {
   lines: { number: number; text: string }[];
   hunk: { header: string; lines: string[] } | null;
+  /** The change deleted the file, so the checkout has no copy of it. */
+  deleted?: boolean;
+  /** Why the checkout's copy could not be read, its hunk still shown. */
+  readError?: string;
 }
 
 const UNDECIDED = new Set(["verified", "open_question"]);
@@ -254,9 +258,15 @@ export function ConfirmationQueue({
       );
       if (cancelled) return;
       setContext(
-        sent.ok
-          ? { forId: id, data: sent.body }
-          : { forId: id, data: { lines: [], hunk: null }, error: sent.error },
+        !sent.ok
+          ? { forId: id, data: { lines: [], hunk: null }, error: sent.error }
+          : sent.body.readError
+            ? {
+                forId: id,
+                data: sent.body,
+                error: `The file could not be read from the review's checkout: ${sent.body.readError}`,
+              }
+            : { forId: id, data: sent.body },
       );
     })();
     return () => {
@@ -651,26 +661,26 @@ export function ConfirmationQueue({
                         ? "Reading the file..."
                         : contextError
                           ? "Not read."
-                          : shownContext.lines.length === 0
-                            ? // Only a file the change deleted answers with no lines:
-                              // the checkout is there, without it (D-139).
-                              "This file is not in the review's checkout: the change deleted it, and the change above is all there is of it."
-                            : shownContext.lines.map((line) => (
-                                <span
-                                  key={line.number}
-                                  className={`block ${
-                                    line.number >= current.lineStart &&
-                                    line.number <= current.lineEnd
-                                      ? "bg-[var(--color-accent-soft)]"
-                                      : ""
-                                  }`}
-                                >
-                                  <span className="mr-3 inline-block w-10 text-right text-[var(--color-ink-faint)]">
-                                    {line.number}
+                          : shownContext.deleted
+                            ? "This file is not in the review's checkout: the change deleted it, and the change above is all there is of it."
+                            : shownContext.lines.length === 0
+                              ? "No lines of this file to show here."
+                              : shownContext.lines.map((line) => (
+                                  <span
+                                    key={line.number}
+                                    className={`block ${
+                                      line.number >= current.lineStart &&
+                                      line.number <= current.lineEnd
+                                        ? "bg-[var(--color-accent-soft)]"
+                                        : ""
+                                    }`}
+                                  >
+                                    <span className="mr-3 inline-block w-10 text-right text-[var(--color-ink-faint)]">
+                                      {line.number}
+                                    </span>
+                                    {line.text}
                                   </span>
-                                  {line.text}
-                                </span>
-                              ))}
+                                ))}
                     </code>
                   </pre>
                 </div>
