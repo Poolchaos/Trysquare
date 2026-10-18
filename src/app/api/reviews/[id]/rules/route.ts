@@ -10,7 +10,8 @@
  * what the engine claims it says, and a parsed summary cannot answer that.
  */
 
-import { readReviewSnapshot } from "@/server/db/repositories/rulesets";
+import { requireReview } from "@/server/db/repositories/reviews";
+import { hasReviewSnapshot, readReviewSnapshot } from "@/server/db/repositories/rulesets";
 import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -21,8 +22,22 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   return handler(async () => {
+    const { db } = runtime();
     const { id } = await context.params;
-    const snapshot = readReviewSnapshot(runtime().db, id);
+    // Looked up first: an id that names nothing, and a review that has not
+    // run, both fell through to the snapshot read and were answered 500
+    // (D-139).
+    requireReview(db, id);
+    if (!hasReviewSnapshot(db, id)) {
+      throw Response.json(
+        {
+          error: "This review has not run yet, so no ruleset is frozen onto it.",
+          code: "RulesetNotFrozen",
+        },
+        { status: 409 },
+      );
+    }
+    const snapshot = readReviewSnapshot(db, id);
 
     return ok({
       rules: snapshot.rules.map((rule) => ({

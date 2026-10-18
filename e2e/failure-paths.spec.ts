@@ -11,8 +11,8 @@
  * these can start a review without repeating the setup.
  */
 
-import { rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { expect, test, type Locator } from "@playwright/test";
 import { answerOnce } from "./answer-once";
 import { APP_REPO, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
@@ -827,13 +827,47 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
   await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
 });
 
-test("a cancel of a review that does not exist is answered 404", async ({ page }) => {
-  // The manager looked the review up and threw its own bundle's not-found
-  // error, which the route's handler could not place, so it answered 500
-  // (D-139).
-  const answer = await page.request.post("/api/reviews/NOPE123/cancel");
-  expect(answer.status()).toBe(404);
-  expect(((await answer.json()) as { code: string }).code).toBe("ReviewNotFoundError");
+test("no route answers an id that names nothing with a server failure", async ({ page }) => {
+  // Every route with an id in its path, read from the routes on disk so a
+  // new one is asked too, and asked of the built app, where the job manager
+  // is another bundle's copy. Two answered 500: the rules route, which never
+  // looked the review up, and a cancel, whose lookup was the manager's
+  // (D-139). A body of {} may be refused before the lookup, which is fine.
+  const apiRoot = join(process.cwd(), "src", "app", "api");
+  const routes: { path: string; methods: string[] }[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name === "route.ts") {
+        const path = relative(apiRoot, dir).split("\\").join("/");
+        if (!path.includes("[")) continue;
+        const source = readFileSync(full, "utf8");
+        const methods = [
+          ...source.matchAll(/export (?:async )?function (GET|POST|PUT|PATCH|DELETE)\b/g),
+        ];
+        routes.push({ path, methods: methods.map((match) => match[1]!) });
+      }
+    }
+  };
+  walk(apiRoot);
+  // Read from the right place: an empty walk would pass by asking nothing.
+  expect(routes.map((route) => route.path)).toEqual(
+    expect.arrayContaining(["reviews/[id]/cancel", "reviews/[id]/rules", "findings/[id]/confirm"]),
+  );
+
+  for (const { path, methods } of routes) {
+    for (const method of methods) {
+      const url = `/api/${path.replace(/\[[^\]]+\]/g, "NOPE123")}`;
+      const answer = await page.request.fetch(url, {
+        method,
+        ...(method === "GET" || method === "DELETE" ? {} : { data: {} }),
+      });
+      expect
+        .soft([400, 404], `${method} ${url}: ${await answer.text()}`)
+        .toContain(answer.status());
+    }
+  }
 });
 
 test("a file the change deleted is said to be deleted, not the checkout gone", async ({ page }) => {

@@ -264,6 +264,31 @@ describe("reading the code a finding is about", () => {
     expect(rule!.raw).toContain(rule!.title);
   }, 120_000);
 
+  it("answers a review that names nothing with 404, and one not yet run with 409", async () => {
+    // Neither was looked up: both fell through to the snapshot read's plain
+    // error, and the server answered its own failure, a 500 (D-139).
+    const unknown = await routes.rules.GET(new Request("http://localhost"), params("NOPE123"));
+    expect(unknown.status).toBe(404);
+    expect(((await unknown.json()) as { code: string }).code).toBe("ReviewNotFoundError");
+
+    const listed = (await (await routes.projects.GET()).json()) as {
+      projects: { id: string }[];
+    };
+    const createdDraft = await routes.reviews.POST(
+      post({
+        projectId: listed.projects[0]!.id,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    const draftId = ((await createdDraft.json()) as { review: { id: string } }).review.id;
+    const draft = await routes.rules.GET(new Request("http://localhost"), params(draftId));
+    expect(draft.status).toBe(409);
+    expect(((await draft.json()) as { code: string }).code).toBe("RulesetNotFrozen");
+    await routes.review.DELETE(new Request("http://localhost"), params(draftId));
+  });
+
   it("refuses a file this review never raised a finding in", async () => {
     // Otherwise the endpoint is a way to read any file on the machine.
     //
