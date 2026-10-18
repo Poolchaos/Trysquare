@@ -12,9 +12,10 @@
  */
 
 import { rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { answerOnce } from "./answer-once";
-import { LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
+import { APP_REPO, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
 
 /** Unix seconds, and deliberately a fixed moment so the banner is checkable. */
 const RESETS_AT = 1785408600;
@@ -299,6 +300,50 @@ test("an emptied budget field keeps its ceiling rather than removing it", async 
     settings: Record<string, number>;
   };
   expect(stored.settings.stageMaxBudgetUsd).toBe(Number(before));
+});
+
+test("a failed clone can be opened, tried again and deleted; a known address is named", async ({
+  page,
+}) => {
+  // A failed clone was a dead end: the list would not open it, nothing could
+  // try it again, and adding its address again was a 500 in SQLite's words
+  // (5.7, audits A2 and U6).
+  await page.goto("/projects");
+  const address = page.getByPlaceholder("git@github.com:you/your-app.git");
+
+  await address.fill(`file://${APP_REPO}`);
+  await page.getByRole("button", { name: "Add project" }).click();
+  await expect(page.getByText('This repository is already the project "app".')).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open it" })).toHaveAttribute(
+    "href",
+    /\/projects\/[A-Z0-9]+$/i,
+  );
+
+  await address.fill(`file://${join(E2E_ROOT, "nowhere.git")}`);
+  await page.getByRole("button", { name: "Add project" }).click();
+  const row = page.getByRole("main").locator("li").filter({ hasText: "nowhere" });
+  await expect(row.getByText("clone failed")).toBeVisible({ timeout: 60_000 });
+  await row.getByRole("link", { name: "nowhere" }).click();
+
+  // Its page says why and offers another try, which fails the same way while
+  // the address still answers nothing, and the page follows it there.
+  const retry = page.getByRole("button", { name: "Retry clone" });
+  await expect(retry).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/nowhere\.git/).last()).toBeVisible();
+  // Waited on by its answer: the retry can fail again too fast for the
+  // button ever to be seen gone, so its being back proves nothing alone.
+  const retried = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname.endsWith("/clone") && response.request().method() === "POST",
+  );
+  await retry.click();
+  expect((await retried).status()).toBe(200);
+  await expect(retry).toBeVisible({ timeout: 60_000 });
+
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("button", { name: /^Yes, delete nowhere/ }).click();
+  await expect(page).toHaveURL(/\/projects$/);
+  await expect(page.getByRole("main").locator("li").filter({ hasText: "nowhere" })).toHaveCount(0);
 });
 
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {

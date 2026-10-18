@@ -65,6 +65,11 @@ export function requireProject(db: Db, projectId: string): Project {
   return project;
 }
 
+/** The project already made from this address, if one was. */
+export function findProjectByUrl(db: Db, gitUrl: string): Project | undefined {
+  return db.select().from(projects).where(eq(projects.gitUrl, gitUrl)).get();
+}
+
 export function listProjects(db: Db): Project[] {
   return db.select().from(projects).orderBy(asc(projects.name)).all();
 }

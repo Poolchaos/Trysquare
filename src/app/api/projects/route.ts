@@ -12,6 +12,7 @@ import { repoSlug, validateGitUrl } from "@/lib/git/url";
 import { projectRepoDir } from "@/lib/paths";
 import {
   createProject,
+  findProjectByUrl,
   listDependencyLinks,
   listProjects,
   setClonePath,
@@ -66,6 +67,21 @@ export function POST(request: Request): Promise<Response> {
       return failed(error, 400);
     }
     const name = body.name ?? nameFromUrl(url);
+
+    // Asked first: the address is unique in the table, and adding it again
+    // used to reach the index as a 500 carrying SQLite's own words (5.7,
+    // audit A2). The answer names the project it already is.
+    const existing = findProjectByUrl(db, url);
+    if (existing) {
+      return Response.json(
+        {
+          error: `This repository is already the project "${existing.name}".`,
+          code: "DuplicateProject",
+          projectId: existing.id,
+        },
+        { status: 409 },
+      );
+    }
 
     const project = createProject(db, {
       name,

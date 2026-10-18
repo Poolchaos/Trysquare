@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PageBody, PageHeader } from "@/components/page";
 import { Badge, Button, Card, Empty, Field, Input, Mono, Problem } from "@/components/ui";
+import { send } from "@/components/request";
 
 interface Project {
   id: string;
@@ -49,6 +50,8 @@ export default function ProjectsPage() {
   const [adding, setAdding] = useState(false);
   const [fetching, setFetching] = useState("");
   const [error, setError] = useState("");
+  /** The project an address already is, when adding it again was refused. */
+  const [duplicateOf, setDuplicateOf] = useState("");
 
   const load = useCallback(async () => {
     const response = await fetch("/api/projects");
@@ -88,15 +91,19 @@ export default function ProjectsPage() {
   async function add(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+    setDuplicateOf("");
     setAdding(true);
     try {
-      const response = await fetch("/api/projects", {
-        method: "POST",
-        body: JSON.stringify({ gitUrl }),
-      });
-      const body = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        setError(body.error ?? "The project could not be added.");
+      const sent = await send(
+        "/api/projects",
+        { method: "POST", body: JSON.stringify({ gitUrl }) },
+        "The project could not be added",
+      );
+      if (!sent.ok) {
+        setError(sent.error);
+        // The address is already a project: the way to it, not a dead end
+        // (5.7, audit A2).
+        setDuplicateOf(typeof sent.body.projectId === "string" ? sent.body.projectId : "");
         return;
       }
       setGitUrl("");
@@ -130,7 +137,18 @@ export default function ProjectsPage() {
               {adding ? "Cloning..." : "Add project"}
             </Button>
           </form>
-          {error ? <div className="mt-3">{error ? <Problem>{error}</Problem> : null}</div> : null}
+          {error ? (
+            <div className="mt-3">
+              <Problem>
+                {error}{" "}
+                {duplicateOf ? (
+                  <Link href={`/projects/${duplicateOf}`} className="underline">
+                    Open it
+                  </Link>
+                ) : null}
+              </Problem>
+            </div>
+          ) : null}
         </Card>
 
         {projects === null ? (
@@ -148,7 +166,9 @@ export default function ProjectsPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        {project.cloneStatus === "ready" ? (
+                        {/* A failed clone opens too: its page says why and
+                            can try again (5.7, audit U6). */}
+                        {project.cloneStatus === "ready" || project.cloneStatus === "failed" ? (
                           <Link
                             href={`/projects/${project.id}`}
                             className="font-medium hover:underline"

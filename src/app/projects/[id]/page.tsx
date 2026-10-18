@@ -123,10 +123,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     setError("");
     setBusy(true);
     try {
-      const response = await fetch(path, init);
-      if (!response.ok) {
-        const body = (await response.json()) as { error?: string };
-        setError(body.error ?? "That did not work.");
+      const sent = await send(path, init, "That did not work");
+      if (!sent.ok) {
+        setError(sent.error);
         return false;
       }
       onDone?.();
@@ -136,6 +135,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       setBusy(false);
     }
   }
+
+  // Followed while a clone is queued or under way, as the list does, so a
+  // clone tried again shows how it ended without a reload (5.7).
+  const cloneUnderWay =
+    detail?.project.cloneStatus === "pending" || detail?.project.cloneStatus === "cloning";
+  useEffect(() => {
+    if (!cloneUnderWay) return;
+    const timer = setInterval(() => void load(), 1000);
+    return () => clearInterval(timer);
+  }, [cloneUnderWay, load]);
 
   if (!detail) {
     return (
@@ -169,17 +178,31 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           </span>
         }
         actions={
-          <>
+          project.cloneStatus === "ready" ? (
+            <>
+              <Button
+                disabled={busy}
+                onClick={() => void call(`/api/projects/${id}/fetch`, { method: "POST" })}
+              >
+                Fetch now
+              </Button>
+              <Link href={`/reviews/new?projectId=${id}`}>
+                <Button variant="primary">New review</Button>
+              </Link>
+            </>
+          ) : project.cloneStatus === "failed" ? (
+            // A failed clone used to be a dead end; the address may answer
+            // now, after a fix to it or to the network (5.7, audit U6).
             <Button
+              variant="primary"
               disabled={busy}
-              onClick={() => void call(`/api/projects/${id}/fetch`, { method: "POST" })}
+              onClick={() => void call(`/api/projects/${id}/clone`, { method: "POST" })}
             >
-              Fetch now
+              Retry clone
             </Button>
-            <Link href={`/reviews/new?projectId=${id}`}>
-              <Button variant="primary">New review</Button>
-            </Link>
-          </>
+          ) : (
+            <Badge tone="accent">cloning</Badge>
+          )
         }
       />
       <PageBody>
