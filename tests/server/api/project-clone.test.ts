@@ -6,7 +6,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -152,5 +152,36 @@ describe("a clone that is not ready", () => {
       expect(answer.status).toBe(409);
       expect(((await answer.json()) as { error: string }).error).toContain("clone failed");
     }
+  });
+});
+
+describe("deleting a project", () => {
+  it("removes its own directory, never one its row names", async () => {
+    // A row is data, and the recursive removal went to the parent of whatever
+    // path it named, outside the data directory if that is where it pointed
+    // (review of the D-133 fixes).
+    const outside = mkdtempSync(join(tmpdir(), "trysquare-not-ours-"));
+    const { runtime } = await import("@/server/runtime");
+    const { createProject } = await import("@/server/db/repositories/projects");
+    const project = createProject(runtime().db, {
+      name: "planted",
+      gitUrl: "git@example.com:acme/planted.git",
+      defaultBranch: "main",
+      clonePath: join(outside, "repo.git"),
+    });
+    const own = join(dataDir, "projects", project.id);
+    mkdirSync(own, { recursive: true });
+
+    expect(
+      (
+        await routes.project.DELETE(
+          new Request("http://localhost/x", { method: "DELETE" }),
+          params(project.id),
+        )
+      ).status,
+    ).toBe(200);
+    expect(existsSync(outside)).toBe(true);
+    expect(existsSync(own)).toBe(false);
+    rmSync(outside, { recursive: true, force: true });
   });
 });

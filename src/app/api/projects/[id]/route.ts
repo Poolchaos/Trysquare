@@ -8,8 +8,8 @@ import {
   requireProject,
 } from "@/server/db/repositories/projects";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
+import { projectDir } from "@/lib/paths";
 import { failed, handler, ok } from "@/server/api/respond";
-import { dirname } from "node:path";
 import { removeRepo } from "@/server/gitops/repo";
 import { runtime } from "@/server/runtime";
 
@@ -60,9 +60,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   return handler(async () => {
-    const { db } = runtime();
+    const { db, dataDir } = runtime();
     const { id } = await context.params;
-    const project = requireProject(db, id);
+    requireProject(db, id);
 
     try {
       deleteProject(db, id);
@@ -81,7 +81,7 @@ export async function DELETE(
     // The project's whole directory, not just the bare repo inside it.
     // Removing only the clone leaves an empty directory per deleted project,
     // accumulating quietly forever.
-    if (project.clonePath) await removeRepo(dirname(project.clonePath));
+    await removeRepo(projectDir(dataDir, id));
     return ok({ removed: id });
   });
 }

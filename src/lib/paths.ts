@@ -33,9 +33,18 @@ export function dbPath(dataDir: string): string {
   return join(dataDir, "db.sqlite");
 }
 
+/**
+ * Everything on disk for one project. Removals derive it from the id rather
+ * than read it from the row: a recursive removal of whatever path a row named
+ * could reach outside the data directory (review of the D-133 fixes).
+ */
+export function projectDir(dataDir: string, projectId: string): string {
+  return join(dataDir, "projects", projectId);
+}
+
 /** Bare clone: there is no working tree to accidentally modify. */
 export function projectRepoDir(dataDir: string, projectId: string): string {
-  return join(dataDir, "projects", projectId, "repo.git");
+  return join(projectDir(dataDir, projectId), "repo.git");
 }
 
 /** Held by the one server using a data directory (4.18, D-118). */

@@ -35,8 +35,9 @@ export async function POST(
         { status: 409 },
       );
     }
-    // Before the first await, so a second retry sent alongside this one finds
-    // it pending and is refused instead of cloning into the same directory.
+    // With no await between the check above and this write, so a second
+    // retry sent alongside this one finds it pending and is refused instead
+    // of cloning into the same directory.
     setCloneStatus(db, id, "pending");
 
     // Derived, not read from the row: a recursive removal goes only where this

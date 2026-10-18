@@ -8,7 +8,7 @@
  * it claims, and refuses when a review is still running.
  */
 
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, beforeAll, expect, it } from "vitest";
@@ -176,3 +176,25 @@ it("deletes every project, review and ruleset, and the clone on disk with them",
   // Exports are kept: a report is the thing the review was for.
   expect(body.kept.exports.startsWith(dataDir)).toBe(true);
 }, 240_000);
+
+it("removes each project's own directory, never one its row names", async () => {
+  // A row is data, and the recursive removal went to the parent of whatever
+  // path it named, outside the data directory if that is where it pointed
+  // (review of the D-133 fixes).
+  const outside = mkdtempSync(join(tmpdir(), "trysquare-not-ours-"));
+  const { runtime } = await import("@/server/runtime");
+  const { createProject } = await import("@/server/db/repositories/projects");
+  const project = createProject(runtime().db, {
+    name: "planted",
+    gitUrl: "git@example.com:acme/planted.git",
+    defaultBranch: "main",
+    clonePath: join(outside, "repo.git"),
+  });
+  const own = join(dataDir, "projects", project.id);
+  mkdirSync(own, { recursive: true });
+
+  expect((await routes.wipe.DELETE()).status).toBe(200);
+  expect(existsSync(outside)).toBe(true);
+  expect(existsSync(own)).toBe(false);
+  rmSync(outside, { recursive: true, force: true });
+});

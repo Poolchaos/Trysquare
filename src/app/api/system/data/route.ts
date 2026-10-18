@@ -11,7 +11,7 @@
  * says so rather than leaving it to be discovered.
  */
 
-import { exportsDir } from "@/lib/paths";
+import { exportsDir, projectDir } from "@/lib/paths";
 import { deleteProject, listProjects } from "@/server/db/repositories/projects";
 import { listActiveReviews, listReviewsForProject } from "@/server/db/repositories/reviews";
 import { listRulesets } from "@/server/db/repositories/rulesets";
@@ -19,7 +19,6 @@ import { rulesets } from "@/server/db/schema";
 import { deleteReviewEntirely } from "@/server/review/service";
 import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
-import { dirname } from "node:path";
 import { eq } from "drizzle-orm";
 import { removeRepo } from "@/server/gitops/repo";
 
@@ -55,7 +54,7 @@ export async function DELETE(): Promise<Response> {
     }
     for (const project of projects) {
       deleteProject(db, project.id);
-      if (project.clonePath) await removeRepo(dirname(project.clonePath));
+      await removeRepo(projectDir(dataDir, project.id));
     }
 
     const rulesetRows = listRulesets(db);
