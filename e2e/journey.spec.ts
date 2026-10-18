@@ -341,10 +341,20 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
 
   await test.step("a bare c decides nothing; confirming takes Shift+C", async () => {
     // One stray lowercase keystroke confirmed the finding in front of it, and
-    // no decision can be taken back (5.5, MG-6, D-132).
+    // no decision can be taken back (5.5, MG-6, D-132). With Caps Lock on, a
+    // bare c arrives as "C" without Shift. Counted at the request, not only at
+    // the tally, so a confirm the server refused would still be caught.
+    let confirms = 0;
+    const onRequest = (request: import("@playwright/test").Request) => {
+      if (new URL(request.url()).pathname.endsWith("/confirm")) confirms += 1;
+    };
+    page.on("request", onRequest);
     const before = await page.getByText(/\d+ of \d+ decided/).textContent();
     await page.locator("body").press("c");
+    await page.locator("body").dispatchEvent("keydown", { key: "C" });
     await page.waitForTimeout(300);
+    page.off("request", onRequest);
+    expect(confirms).toBe(0);
     await expect(page.getByText(/\d+ of \d+ decided/)).toHaveText(String(before));
   });
 
@@ -461,6 +471,13 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
   let decidedTotal = 0;
 
   await test.step("the rest are confirmed from the keyboard", async () => {
+    // The first with Caps Lock on, where Shift+C arrives as "c" with Shift
+    // held and used to confirm nothing (review of 5.5 to 5.7).
+    const tally = await page.getByText(/\d+ of \d+ decided/).textContent();
+    const decidedSoFar = Number(/(\d+) of/.exec(tally ?? "")?.[1]);
+    await page.locator("body").dispatchEvent("keydown", { key: "c", shiftKey: true });
+    await expect(page.getByText(new RegExp(`^${decidedSoFar + 1} of \\d+ decided`))).toBeVisible();
+
     for (let guard = 0; guard < 30; guard += 1) {
       if ((await page.getByRole("button", { name: "Confirm" }).count()) === 0) break;
       await page.locator("body").press("Shift+C");

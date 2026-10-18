@@ -49,3 +49,7 @@ the line entirely would lose the trail.
   checkout leaves empty, is not reported by git status, so the end-of-review
   worktree check cannot see it (D-130); list those directories at checkout and
   require them still empty.
+- 2026-10-18: with Caps Lock on, the queue's j, k, d and e arrive as capitals
+  and do nothing, and a g arrives as G and jumps to the bottom (found while
+  fixing Shift+C under Caps Lock, review of 5.5 to 5.7); decide whether the
+  letter keys should ignore case.

@@ -276,8 +276,9 @@ export function ConfirmationQueue({
       else if (event.key === "G") moveTo(queue.length - 1);
       // Shift+C, not a bare c: one stray lowercase keystroke confirmed the
       // finding in front of it, and no decision can be taken back (5.5,
-      // MG-6, D-132).
-      else if (event.key === "C" && event.shiftKey && UNDECIDED.has(current.status)) {
+      // MG-6, D-132). Shift decides, not the letter's case: Caps Lock turns
+      // Shift+C into "c" and a bare c into "C".
+      else if (event.shiftKey && event.key.toLowerCase() === "c" && UNDECIDED.has(current.status)) {
         if (!busy) void act(current, "confirm", drafts[current.id]);
       } else if (event.key === "d" && UNDECIDED.has(current.status)) {
         reasonRef.current?.focus();
