@@ -730,9 +730,17 @@ test("a run whose last reading fails still shows how it ended", async ({ page })
   await expect(page.getByText("Risk started")).toBeVisible({ timeout: 60_000 });
   const dropReads = (route: import("@playwright/test").Route) =>
     route.request().method() === "GET" ? route.abort() : route.fallback();
+  // The stream ending is the run ending: the server closes it then. Waited
+  // on, not timed, so the end is known to fall while readings are dropped,
+  // or the reading after it would succeed and prove nothing (D-139).
+  const runEnded = page.waitForEvent("requestfinished", {
+    predicate: (request) => new URL(request.url()).pathname.endsWith("/events"),
+    timeout: 60_000,
+  });
   await page.route(reviewApi, dropReads);
-  // The held stage gives up after six seconds, and the run ends with it.
-  await page.waitForTimeout(9_000);
+  await runEnded;
+  // Past one poll, which the dropped readings answer with nothing.
+  await page.waitForTimeout(2_500);
   await page.unroute(reviewApi, dropReads);
   await expect(page.getByRole("button", { name: "Resume" })).toBeVisible({ timeout: 15_000 });
 });

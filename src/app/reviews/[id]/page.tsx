@@ -432,6 +432,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
   /** A new run needs a new stream: the old one was closed by the run that ended. */
   function watchAgain() {
+    // Unknown again, which counts as live: a run just started or resumed was
+    // still "not live" from before until a reading landed, and a stream that
+    // dropped in that moment was never opened again (D-139).
+    runLive.current = null;
     setStreaming(true);
     setWatchEpoch((epoch) => epoch + 1);
   }
@@ -572,9 +576,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           const fresh = await fetchSnapshot();
           if (cancelled) return;
           if (!fresh) {
-            // On a 404 alone: a stale "not live" from before a Start or a
-            // Resume stopped a poll that a dropped reading should keep going.
-            if (missing.current && poll !== undefined) {
+            // A review that does not exist, or one a reading showed not
+            // live: a run just started or resumed is unknown, so a dropped
+            // reading keeps the poll going for it (D-138, D-139).
+            if ((missing.current || runLive.current === false) && poll !== undefined) {
               clearInterval(poll);
               poll = undefined;
             }
