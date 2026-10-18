@@ -9,8 +9,7 @@ import { z } from "zod";
 import { rulesetTierSchema } from "@/lib/domain/enums";
 import { hasReviewSnapshot, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
 import { requireReview } from "@/server/db/repositories/reviews";
-import { failed, handler, ok, readOptionalJson } from "@/server/api/respond";
-import { isStartRefusal } from "@/server/jobs/manager";
+import { handler, ok, readOptionalJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -62,12 +61,9 @@ export async function POST(
       };
     }
 
-    try {
-      const state = manager.start(id, ...(ruleset ? [{ ruleset }] : []));
-      return ok({ state, snapshot: manager.snapshot(id) });
-    } catch (error) {
-      if (isStartRefusal(error)) return failed(error, 409);
-      throw error;
-    }
+    // A review that cannot run, or a ruleset for one already running or in
+    // line, is refused by the manager and answered 409 by the handler.
+    const state = manager.start(id, ...(ruleset ? [{ ruleset }] : []));
+    return ok({ state, snapshot: manager.snapshot(id) });
   });
 }

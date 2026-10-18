@@ -1,14 +1,14 @@
 /** One project, with its dependency links and its reviews. Or gone. */
 
 import {
-  ProjectHasReviewsError,
+  type ProjectHasReviewsError,
   deleteProject,
   listDependencyLinks,
   listProjects,
   requireProject,
 } from "@/server/db/repositories/projects";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
-import { failed, handler, ok } from "@/server/api/respond";
+import { failed, handler, isNamed, ok } from "@/server/api/respond";
 import { removeProjectFiles } from "@/server/projects/clone";
 import { runtime } from "@/server/runtime";
 
@@ -66,7 +66,7 @@ export async function DELETE(
     try {
       deleteProject(db, id);
     } catch (error) {
-      if (error instanceof ProjectHasReviewsError) {
+      if (isNamed<ProjectHasReviewsError>(error, "ProjectHasReviewsError")) {
         // The count travels as a field, so the screen can offer the remedy
         // (delete those reviews first) with the real number on the button.
         return Response.json(

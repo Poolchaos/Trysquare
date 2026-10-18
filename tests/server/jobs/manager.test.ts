@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { importProtocol } from "@/lib/rulesets/import";
 import { isResumableReview, type ReviewStatus } from "@/lib/domain/state-machines";
 import { logsDir, worktreeRootDir } from "@/lib/paths";
@@ -28,7 +28,6 @@ import {
 import { SETTING_KEYS, writeSetting } from "@/server/db/repositories/settings";
 import { models, projects } from "@/server/db/schema";
 import {
-  isStartRefusal,
   JobManager,
   ReviewAlreadyStartedError,
   ReviewNotStartableError,
@@ -201,26 +200,6 @@ describe("deciding what runs now", () => {
     expect(() => start(reviewId)).toThrow(/is cancelled, which cannot be started or resumed/);
     expect(manager.isRunning(reviewId)).toBe(false);
     expect(manager.queueDepth()).toBe(0);
-  });
-
-  it("knows its refusals by name, as a route holding another copy of it sees them", async () => {
-    // In the built app the manager comes from the instrumentation bundle's
-    // copy of this module and the start route has its own, so the manager's
-    // errors were not instances of the route's classes and both refusals were
-    // answered 500 (D-139). A second copy is loaded here the same way.
-    vi.resetModules();
-    const other = await import("@/server/jobs/manager");
-    const refusals = [
-      new other.ReviewAlreadyStartedError("r", "queued"),
-      new other.ReviewNotStartableError("r", "cancelled"),
-    ];
-    for (const refusal of refusals) {
-      expect(refusal instanceof ReviewAlreadyStartedError).toBe(false);
-      expect(refusal instanceof ReviewNotStartableError).toBe(false);
-      expect(isStartRefusal(refusal)).toBe(true);
-    }
-    expect(isStartRefusal(new Error("Review is cancelled"))).toBe(false);
-    expect(isStartRefusal("ReviewNotStartableError")).toBe(false);
   });
 });
 

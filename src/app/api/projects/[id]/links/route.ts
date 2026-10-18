@@ -8,12 +8,11 @@
 
 import { z } from "zod";
 import {
-  InvalidProjectLinkError,
   linkDependency,
   listDependencyLinks,
   requireProject,
 } from "@/server/db/repositories/projects";
-import { created, failed, handler, ok, readJson } from "@/server/api/respond";
+import { created, failed, handler, isNamed, ok, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +57,7 @@ export async function POST(
         }),
       });
     } catch (error) {
-      if (error instanceof InvalidProjectLinkError) return failed(error, 400);
+      if (isNamed(error, "InvalidProjectLinkError")) return failed(error, 400);
       throw error;
     }
   });

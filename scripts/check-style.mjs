@@ -146,28 +146,68 @@ function repositoryLawLines(path, text) {
 
 /**
  * The job manager on globalThis was built by the instrumentation bundle's
- * copy of src/server/jobs/manager.ts, and every route bundle has a copy of its
- * own, so an error the manager throws is never `instanceof` a class a route
- * imported: both start refusals went out as 500s (D-139). A route or the
- * response helpers importing one of its error classes can only be about to
- * make that mistake again.
+ * copy of the server modules, and the routes share another, so an error the
+ * manager threw was never `instanceof` a class a route or the handler held:
+ * refusals meant as 404s and 409s went out as 500s (D-139, D-140). So in the
+ * HTTP layer an error is known by the name its class sets, and `instanceof`
+ * is kept for the platform's own classes, of which there is one copy. Outside
+ * the manager's module nothing names its error classes at all: there is no
+ * use of them that the name does not serve better. Comment lines are skipped.
  */
+const BOUNDARY_LAW =
+  "In src/app/api and src/server/api an app error is known by its name (isNamed), not instanceof";
 const MANAGER_ERRORS_LAW =
-  "Recognise the job manager's errors by name (isStartRefusal), not by a class imported from it";
-const MANAGER_MODULE = /(?:^|\/)jobs\/manager(?:\.ts)?$/;
+  "The job manager's error classes are named only in its own module; elsewhere, match the name";
+const PLATFORM_CLASSES = new Set([
+  "Error",
+  "TypeError",
+  "SyntaxError",
+  "RangeError",
+  "Response",
+  "Request",
+  "URL",
+  "Date",
+  "Array",
+  "Map",
+  "Set",
+  "Promise",
+  "Uint8Array",
+  "ArrayBuffer",
+  "ReadableStream",
+]);
+const MANAGER_PATH = "src/server/jobs/manager.ts";
+const MANAGER_ERRORS = [
+  ...readFileSync(join(ROOT, MANAGER_PATH), "utf8").matchAll(/export class (\w+Error)\b/g),
+].map((match) => match[1]);
+// Found none, the rule would check nothing and say it was clean.
+if (MANAGER_ERRORS.length === 0) {
+  console.error(
+    `check-style: no error classes found in ${MANAGER_PATH}; the gate is misconfigured.`,
+  );
+  process.exit(2);
+}
+const MANAGER_ERROR_USE = new RegExp(`(?<![\\w"'\`])(?:${MANAGER_ERRORS.join("|")})(?![\\w"'\`])`);
+const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*)/;
 
-function managerErrorLines(path, text) {
-  if (!path.startsWith("src/app/") && !path.startsWith("src/server/api/")) return [];
-  const lineOf = (index) => text.slice(0, index).split("\n").length;
-  const lines = [];
-  for (const match of text.matchAll(
-    /\bimport\s+(type\s+)?\{([^}]*)\}\s*from\s+["']([^"']+)["']/g,
-  )) {
-    if (match[1] || !MANAGER_MODULE.test(match[3])) continue;
-    const values = match[2].split(",").filter((name) => !/^\s*type\s/.test(name));
-    if (values.some((name) => /\w+Error\b/.test(name))) lines.push(lineOf(match.index));
-  }
-  return lines;
+function boundaryLines(path, lines) {
+  if (!path.startsWith("src/app/api/") && !path.startsWith("src/server/api/")) return [];
+  const found = [];
+  lines.forEach((line, index) => {
+    if (COMMENT_LINE.test(line)) return;
+    for (const match of line.matchAll(/\binstanceof\s+([\w$.]+)/g)) {
+      if (!PLATFORM_CLASSES.has(match[1])) found.push(index + 1);
+    }
+  });
+  return found;
+}
+
+function managerErrorLines(path, lines) {
+  if (!path.startsWith("src/") || path === MANAGER_PATH) return [];
+  const found = [];
+  lines.forEach((line, index) => {
+    if (!COMMENT_LINE.test(line) && MANAGER_ERROR_USE.test(line)) found.push(index + 1);
+  });
+  return found;
 }
 
 function collectFiles(entryPath, acc) {
@@ -243,7 +283,10 @@ for (const file of files) {
   for (const line of repositoryLawLines(path, text)) {
     violations.push(`${path}:${line}: ${REPOSITORY_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
   }
-  for (const line of managerErrorLines(path, text)) {
+  for (const line of boundaryLines(path, lines)) {
+    violations.push(`${path}:${line}: ${BOUNDARY_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
+  }
+  for (const line of managerErrorLines(path, lines)) {
     violations.push(`${path}:${line}: ${MANAGER_ERRORS_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
   }
 }

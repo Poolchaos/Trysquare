@@ -10,7 +10,7 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 let dataDir: string;
 let routes: {
@@ -156,6 +156,72 @@ describe("an id that names nothing", () => {
   it("is a 404 for a review's event stream too, not a broken stream (4.20)", async () => {
     const response = await routes.events.GET(get(), params("NOPE"));
     expect(response.status).toBe(404);
+  });
+});
+
+describe("an error thrown by another copy of its module", () => {
+  it("is still a 404 or a 409, known by the name its class sets", async () => {
+    // In the built app the job manager is the instrumentation bundle's copy
+    // of the server modules and the routes share another, so the errors it
+    // threw were never instances of the classes the handler held: a cancel of
+    // an unknown review, and both start refusals, went out as 500s (D-139,
+    // D-140). A second copy is loaded here the same way.
+    const { handler } = await import("@/server/api/respond");
+    const { ReviewNotFoundError } = await import("@/server/db/repositories/reviews");
+    vi.resetModules();
+    const otherReviews = await import("@/server/db/repositories/reviews");
+    const otherManager = await import("@/server/jobs/manager");
+    const notFound = new otherReviews.ReviewNotFoundError("NOPE123");
+    expect(notFound instanceof ReviewNotFoundError).toBe(false);
+
+    const answer = (error: Error) =>
+      handler(async () => {
+        throw error;
+      });
+    expect((await answer(notFound)).status).toBe(404);
+    expect((await answer(new otherManager.ReviewNotStartableError("r", "cancelled"))).status).toBe(
+      409,
+    );
+    expect((await answer(new otherManager.ReviewAlreadyStartedError("r", "queued"))).status).toBe(
+      409,
+    );
+    // Exact names, never a pattern: a missing program is not a missing thing.
+    const { CliNotFoundError } = await import("@/server/engine/cli");
+    expect((await answer(new CliNotFoundError("claude", []))).status).toBe(500);
+  });
+
+  it("is placed for every class the handler names, so no name drifts from its class", async () => {
+    // The handler holds names as text, so one spelled unlike its class would
+    // place nothing and say nothing.
+    const { handler } = await import("@/server/api/respond");
+    vi.resetModules();
+    const projects = await import("@/server/db/repositories/projects");
+    const rulesets = await import("@/server/db/repositories/rulesets");
+    const findings = await import("@/server/db/repositories/findings");
+    const models = await import("@/server/db/repositories/models");
+    const reviews = await import("@/server/db/repositories/reviews");
+    const machines = await import("@/lib/domain/state-machines");
+    const manager = await import("@/server/jobs/manager");
+    const expected: [Error, number][] = [
+      [new reviews.ReviewNotFoundError("x"), 404],
+      [new projects.ProjectNotFoundError("x"), 404],
+      [new projects.LinkNotFoundError("x", "y"), 404],
+      [new rulesets.RulesetNotFoundError("x"), 404],
+      [new rulesets.RuleNotFoundError("x", "y"), 404],
+      [new findings.FindingNotFoundError("x"), 404],
+      [new models.ModelNotFoundError("x"), 404],
+      [new machines.IllegalTransitionError("review", "complete", "running", []), 409],
+      [new machines.InvalidCloneTransitionError("ready", "pending"), 409],
+      [new projects.CloneNotReadyError("x", "cloning"), 409],
+      [new manager.ReviewNotStartableError("x", "cancelled"), 409],
+      [new manager.ReviewAlreadyStartedError("x", "queued"), 409],
+    ];
+    for (const [error, status] of expected) {
+      const response = await handler(async () => {
+        throw error;
+      });
+      expect(response.status, error.name).toBe(status);
+    }
   });
 });
 

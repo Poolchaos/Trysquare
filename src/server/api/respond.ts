@@ -9,16 +9,6 @@
  */
 
 import { z } from "zod";
-import { IllegalTransitionError, InvalidCloneTransitionError } from "@/lib/domain/state-machines";
-import { FindingNotFoundError } from "@/server/db/repositories/findings";
-import { ModelNotFoundError } from "@/server/db/repositories/models";
-import {
-  CloneNotReadyError,
-  LinkNotFoundError,
-  ProjectNotFoundError,
-} from "@/server/db/repositories/projects";
-import { ReviewNotFoundError } from "@/server/db/repositories/reviews";
-import { RuleNotFoundError, RulesetNotFoundError } from "@/server/db/repositories/rulesets";
 
 export interface ApiError {
   error: string;
@@ -99,32 +89,58 @@ function validated<T>(raw: unknown, schema: z.ZodType<T>): T {
   return parsed.data;
 }
 
+/**
+ * Whether `error` was thrown by a class of one of these names, whichever
+ * copy of its module that was.
+ *
+ * Never `instanceof` in the HTTP layer: the job manager a route reaches
+ * through runtime() was built by the instrumentation bundle's copy of the
+ * server modules, and the routes share another, so an error the manager threw
+ * was never an instance of a class a route or this file held, and refusals
+ * meant as 404s and 409s went out as 500s (D-139, D-140). The names are the
+ * ones each class sets; minification renames the classes themselves.
+ */
+export function isNamed<T extends Error = Error>(
+  error: unknown,
+  ...names: readonly string[]
+): error is T {
+  return error instanceof Error && names.includes(error.name);
+}
+
 /** The repositories' errors for an id that names nothing. */
 const NOT_FOUND = [
-  ReviewNotFoundError,
-  ProjectNotFoundError,
-  LinkNotFoundError,
-  RulesetNotFoundError,
-  RuleNotFoundError,
-  FindingNotFoundError,
-  ModelNotFoundError,
-];
+  "ReviewNotFoundError",
+  "ProjectNotFoundError",
+  "LinkNotFoundError",
+  "RulesetNotFoundError",
+  "RuleNotFoundError",
+  "FindingNotFoundError",
+  "ModelNotFoundError",
+] as const;
 
 /** Refusals of a step from the state the thing is in. */
-const CONFLICT = [IllegalTransitionError, InvalidCloneTransitionError, CloneNotReadyError];
+const CONFLICT = [
+  "IllegalTransitionError",
+  "InvalidCloneTransitionError",
+  "CloneNotReadyError",
+  // The job manager's: a review that cannot run, and a ruleset for one that
+  // is already running or in line.
+  "ReviewNotStartableError",
+  "ReviewAlreadyStartedError",
+] as const;
 
 /**
  * Wraps a handler so a thrown Response is returned, an id that names nothing
  * is a 404, a step refused by the state the thing is in is a 409, and
  * anything else is a 500. Every error used to be a 500, so a wrong request
- * read as the server failing (5.6, audit A1). By class, not by name:
+ * read as the server failing (5.6, audit A1). By exact name, never a pattern:
  * CliNotFoundError is a missing program, not a missing resource.
  */
 export function handler(run: () => Promise<Response>): Promise<Response> {
   return run().catch((error: unknown) => {
     if (error instanceof Response) return error;
-    if (NOT_FOUND.some((kind) => error instanceof kind)) return failed(error, 404);
-    if (CONFLICT.some((kind) => error instanceof kind)) return failed(error, 409);
+    if (isNamed(error, ...NOT_FOUND)) return failed(error, 404);
+    if (isNamed(error, ...CONFLICT)) return failed(error, 409);
     return failed(error, 500);
   });
 }

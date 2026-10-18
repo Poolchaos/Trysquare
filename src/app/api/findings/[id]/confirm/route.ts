@@ -11,8 +11,8 @@
  */
 
 import { z } from "zod";
-import { ReviewNotDecidingError, confirmFinding } from "@/server/db/repositories/findings";
-import { failed, handler, ok, readOptionalJson } from "@/server/api/respond";
+import { confirmFinding } from "@/server/db/repositories/findings";
+import { failed, handler, isNamed, ok, readOptionalJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export async function POST(
     try {
       return ok({ finding: confirmFinding(runtime().db, id, { comment }) });
     } catch (error) {
-      if (error instanceof ReviewNotDecidingError) return failed(error, 409);
+      if (isNamed(error, "ReviewNotDecidingError")) return failed(error, 409);
       throw error;
     }
   });

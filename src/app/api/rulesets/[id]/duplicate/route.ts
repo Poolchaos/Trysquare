@@ -9,12 +9,8 @@
 
 import { z } from "zod";
 import { rulesetTierSchema } from "@/lib/domain/enums";
-import {
-  RulesetNameTakenError,
-  duplicateRuleset,
-  requireRuleset,
-} from "@/server/db/repositories/rulesets";
-import { created, failed, handler, readJson } from "@/server/api/respond";
+import { duplicateRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
+import { created, failed, handler, isNamed, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +39,7 @@ export async function POST(
     } catch (error) {
       // A name collision is the caller's to resolve, not something to paper
       // over by merging into whatever already holds the name.
-      if (error instanceof RulesetNameTakenError) return failed(error, 409);
+      if (isNamed(error, "RulesetNameTakenError")) return failed(error, 409);
       throw error;
     }
   });

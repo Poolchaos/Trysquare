@@ -74,25 +74,6 @@ export class ReviewAlreadyStartedError extends Error {
   }
 }
 
-/**
- * Whether `error` is the manager refusing a start.
- *
- * By name, never `instanceof`: the manager a route reaches through
- * `runtime()` was built by the instrumentation bundle's copy of this module,
- * and each route bundle has a copy of its own. The manager's errors were never
- * instances of the start route's classes, so both refusals went out as 500s
- * (D-139). The names are the ones each class sets; minification renames the
- * classes themselves.
- */
-export function isStartRefusal(
-  error: unknown,
-): error is ReviewNotStartableError | ReviewAlreadyStartedError {
-  return (
-    error instanceof Error &&
-    (error.name === "ReviewNotStartableError" || error.name === "ReviewAlreadyStartedError")
-  );
-}
-
 export interface ReviewSnapshot {
   review: ReturnType<typeof requireReview>;
   stages: ReturnType<typeof listForReview>;
