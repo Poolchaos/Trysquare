@@ -298,17 +298,31 @@ test("the new review screen says why a read failed, not that a repository is emp
       json: { error: "Refused for this test: the rulesets.", code: "Test" },
     }),
   );
+  const stopModels = await answerOnce(page, "**/api/models", (route) =>
+    route.fulfill({
+      status: 500,
+      json: { error: "Refused for this test: the models.", code: "Test" },
+    }),
+  );
   await page.goto(`/reviews/new?projectId=${app!.id}`);
   await expect(page.getByText("Refused for this test: the branches.")).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByText("Refused for this test: the rulesets.")).toBeVisible();
+  // Each said on its own, not run together into one sentence, and an unread
+  // list is not an empty one: "No rulesets imported yet" and "Import a
+  // ruleset first" were untrue then (D-137).
+  await expect(
+    page.getByText("Refused for this test: the rulesets.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Refused for this test: the models.", { exact: true })).toBeVisible();
+  await expect(page.getByText(/No rulesets imported yet|Import a ruleset first/)).toHaveCount(0);
   await expect(page.getByText(/Nothing has been pushed/)).toHaveCount(0);
   await expect(page.getByText(/Fetched from the remote at/)).toHaveCount(0);
   await stopBranches();
   await stopRulesets();
+  await stopModels();
 
-  await page.getByRole("button", { name: "Try again" }).click();
+  await page.getByRole("button", { name: "Try again" }).first().click();
   await expect(
     page.getByRole("main").locator("label").filter({ hasText: "feature/rename-prefs" }).first(),
   ).toBeVisible({ timeout: 30_000 });

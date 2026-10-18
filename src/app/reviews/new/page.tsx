@@ -124,7 +124,12 @@ function NewReview() {
   // for the branch list, at the head of the form for the project, rulesets
   // and models, by the dependency's fields for its branches.
   const [branchProblem, setBranchProblem] = useState("");
-  const [readProblem, setReadProblem] = useState("");
+  // One per read that failed, each its own line: joined, a dropped
+  // connection's three messages ran together into one sentence (D-137).
+  const [readProblems, setReadProblems] = useState<string[]>([]);
+  // Not read is not empty: an unread list claimed "No rulesets imported yet"
+  // and "Import a ruleset first" (D-137).
+  const [rulesetReadFailed, setRulesetReadFailed] = useState(false);
   const [linkProblem, setLinkProblem] = useState("");
   // Bumped by the Refresh control, so the branch list re-fetches on demand.
   const [refreshCount, setRefreshCount] = useState(0);
@@ -194,9 +199,10 @@ function NewReview() {
       ]);
       if (cancelled) return;
 
-      setReadProblem(
-        [detail, rulesetList, modelList].flatMap((sent) => (sent.ok ? [] : [sent.error])).join(" "),
+      setReadProblems(
+        [detail, rulesetList, modelList].flatMap((sent) => (sent.ok ? [] : [sent.error])),
       );
+      setRulesetReadFailed(!rulesetList.ok);
       if (detail.ok) setLinks(detail.body.links ?? []);
 
       // A refused list, for a clone not ready say, is neither a repository
@@ -210,6 +216,8 @@ function NewReview() {
         setChosenInto((current) => current || branchList.body.defaultBranch);
       } else {
         setBranchProblem(branchList.error);
+        // The refs it described are not on screen any more (D-137).
+        setStale(null);
       }
 
       if (rulesetList.ok) {
@@ -254,13 +262,19 @@ function NewReview() {
         return;
       }
       const { model: probed } = (await response.json()) as { model: Omit<Model, "availability"> };
-      const listed = await fetch("/api/models").then(
-        (r) => r.json() as Promise<{ models: Model[] }>,
+      const listed = await send<{ models: Model[] }>(
+        "/api/models",
+        {},
+        "The probe finished, but the models could not be read again",
       );
-      setModels(pickerOrder(listed.models));
+      if (!listed.ok) {
+        setError(listed.error);
+        return;
+      }
+      setModels(pickerOrder(listed.body.models));
       // Probing is what someone does to use the model, so a successful probe
       // selects it unless a choice was already made.
-      const fresh = listed.models.find((row) => row.id === probed.id);
+      const fresh = listed.body.models.find((row) => row.id === probed.id);
       if (fresh && isSelectable(fresh.availability)) {
         setModel((current) => current || fresh.id);
       }
@@ -323,26 +337,27 @@ function NewReview() {
     if (!readyToPreflight) return;
     let cancelled = false;
     void (async () => {
-      const response = await fetch("/api/reviews/preflight", {
-        method: "POST",
-        body: JSON.stringify({
-          projectId,
-          fromBranch,
-          intoBranch,
-          rulesetId,
-          model,
-          ...(profileOverride === "" ? {} : { profileId: profileOverride }),
-          ...(includeLink && linkFrom && linkInto
-            ? { linked: { projectId: includeLink, fromBranch: linkFrom, intoBranch: linkInto } }
-            : {}),
-        }),
-      });
-      if (cancelled) return;
-      const body = await response.json();
-      setPreflight(response.ok ? (body as Preflight) : null);
-      setPreflightError(
-        response.ok ? "" : ((body as { error?: string }).error ?? "The pre-flight failed."),
+      const sent = await send<Preflight>(
+        "/api/reviews/preflight",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            projectId,
+            fromBranch,
+            intoBranch,
+            rulesetId,
+            model,
+            ...(profileOverride === "" ? {} : { profileId: profileOverride }),
+            ...(includeLink && linkFrom && linkInto
+              ? { linked: { projectId: includeLink, fromBranch: linkFrom, intoBranch: linkInto } }
+              : {}),
+          }),
+        },
+        "The pre-flight could not be run",
       );
+      if (cancelled) return;
+      setPreflight(sent.ok ? sent.body : null);
+      setPreflightError(sent.ok ? "" : sent.error);
     })();
     return () => {
       cancelled = true;
@@ -449,7 +464,18 @@ function NewReview() {
           }}
           className="grid max-w-3xl gap-5"
         >
-          {readProblem ? <Problem>{readProblem}</Problem> : null}
+          {readProblems.length > 0 ? (
+            <div className="grid gap-2">
+              {readProblems.map((problem) => (
+                <Problem key={problem}>{problem}</Problem>
+              ))}
+              <div>
+                <Button type="button" onClick={() => setRefreshCount((count) => count + 1)}>
+                  Try again
+                </Button>
+              </div>
+            </div>
+          ) : null}
           {stale ? (
             <Problem>
               The branch list could not be refreshed, so these are the refs from last time: {stale}
@@ -569,7 +595,13 @@ function NewReview() {
               hint="What the change is judged against, frozen when the review starts."
             >
               <Select value={rulesetId} onChange={(event) => setRulesetId(event.target.value)}>
-                {rulesets.length === 0 ? <option value="">No rulesets imported yet</option> : null}
+                {rulesets.length === 0 ? (
+                  <option value="">
+                    {rulesetReadFailed
+                      ? "The rulesets could not be read"
+                      : "No rulesets imported yet"}
+                  </option>
+                ) : null}
                 {[...new Set(rulesets.map((ruleset) => ruleset.tier))].map((tier) => (
                   <optgroup key={tier} label={tier}>
                     {rulesets
@@ -924,7 +956,7 @@ function NewReview() {
             <Button type="submit" variant="primary" disabled={!ready || starting}>
               {starting ? "Starting..." : "Start review"}
             </Button>
-            {rulesets.length === 0 ? (
+            {rulesets.length === 0 && !rulesetReadFailed ? (
               <span className="text-sm text-[var(--color-ink-muted)]">
                 Import a ruleset first:{" "}
                 <Link href="/rulesets" className="underline">
