@@ -91,11 +91,43 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
     page.getByText("Review is cancelled, which cannot be started or resumed."),
   ).toBeVisible();
 
+  // The toolbar's Cancel asks too, and an answer that cancelled nothing is
+  // said rather than read as done (5.1; driven here since the review of 5.1
+  // to 5.4: only the theater's had been).
+  const cancel = page.getByRole("button", { name: "Cancel", exact: true });
+  const yesCancel = page.getByRole("button", { name: "Yes, cancel", exact: true });
+  await cancel.click();
+  await page.getByRole("button", { name: "No, keep it", exact: true }).click();
+  await expect(cancel).toBeVisible();
+  const stopAnswering = await answerOnce(page, "**/api/reviews/*/cancel", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ cancelled: false, snapshot: null }),
+    }),
+  );
+  await cancel.click();
+  await yesCancel.click();
+  await expect(
+    page.getByText("Nothing was cancelled: the review had already ended."),
+  ).toBeVisible();
+  await expect(page.getByText("paused limit")).toBeVisible();
+  await stopAnswering();
+
+  // Armed and left armed, the confirmation used to outlive the status it was
+  // asked under: once the run below finished, one click on a still-showing
+  // "Yes, cancel" would have cancelled the paid-for review (review of 5.1 to
+  // 5.4). It belongs to the status it was armed for.
+  await cancel.click();
+  await expect(yesCancel).toBeVisible();
+
   // The trigger armed one call and disarmed itself, so the resume runs to the
   // end, paying only for the stages the first attempt never reached.
   await page.getByRole("button", { name: "Resume" }).click();
   await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
   await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible();
+  await expect(yesCancel).toBeHidden();
+  await expect(cancel).toBeVisible();
 
   // The pause is over, so the banner is gone rather than lingering as a
   // warning about something that has already been dealt with.
@@ -137,6 +169,20 @@ test("cancelling a running review stops it and says so", async ({ page }) => {
   await expect(page.getByText("The review could not be cancelled.")).toBeVisible();
   await expect(page.getByText("running", { exact: true })).toBeVisible();
   await stopRefusing();
+
+  // A server that has gone away drops the cancel and the reading after it.
+  // The reading threw past the theater, so it said nothing at all, the most
+  // likely way for a local app's cancel to fail (review of 5.1 to 5.4).
+  const reviewPath = `**/api${new URL(page.url()).pathname}`;
+  const stopDroppingCancel = await answerOnce(page, "**/api/reviews/*/cancel", (route) =>
+    route.abort(),
+  );
+  const stopDroppingRead = await answerOnce(page, reviewPath, (route) => route.abort());
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+  await expect(page.getByText(/The review could not be cancelled: /)).toBeVisible();
+  await stopDroppingCancel();
+  await stopDroppingRead();
 
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();

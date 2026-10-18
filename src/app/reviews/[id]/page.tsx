@@ -359,12 +359,17 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [report, setReport] = useState<string | null>(null);
   const [exported, setExported] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  /** The status a Cancel was asked under, or null when none is being asked. */
+  const [confirmingCancelFor, setConfirmingCancelFor] = useState<string | null>(null);
+  const [cancellingHere, setCancellingHere] = useState(false);
   const [actionError, setActionError] = useState("");
 
   async function fetchSnapshot(): Promise<Snapshot | null> {
-    const response = await fetch(`/api/reviews/${id}`);
-    return response.ok ? ((await response.json()) as Snapshot) : null;
+    // A dropped request reads as no picture, as a refusal does. Thrown, it
+    // escaped the theater's cancel, which then said nothing at all when the
+    // server had gone away (review of 5.1 to 5.4).
+    const response = await fetch(`/api/reviews/${id}`).catch(() => null);
+    return response?.ok ? ((await response.json()) as Snapshot) : null;
   }
 
   /**
@@ -714,25 +719,44 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 had no way to be cancelled from the screen). */}
             {snapshot.queued || canTransitionReview(review.status as ReviewStatus, "cancelled") ? (
               // Asks first: cancelled is terminal, and one click used to end
-              // a review (5.1).
-              confirmingCancel ? (
+              // a review (5.1). The question belongs to the status it was
+              // asked under: left armed, it outlived a run finishing, and one
+              // click then cancelled a paid-for review (review of 5.1 to 5.4).
+              confirmingCancelFor === review.status ? (
                 <>
                   <Button
                     variant="primary"
+                    disabled={cancellingHere}
                     onClick={async () => {
-                      setConfirmingCancel(false);
-                      setActionError(await cancelReview());
-                      await reload();
+                      setCancellingHere(true);
+                      try {
+                        setActionError(await cancelReview());
+                        await reload();
+                      } finally {
+                        setCancellingHere(false);
+                        setConfirmingCancelFor(null);
+                      }
                     }}
                   >
-                    Yes, cancel
+                    {cancellingHere ? "Cancelling..." : "Yes, cancel"}
                   </Button>
-                  <Button variant="quiet" onClick={() => setConfirmingCancel(false)}>
+                  <Button
+                    variant="quiet"
+                    disabled={cancellingHere}
+                    onClick={() => setConfirmingCancelFor(null)}
+                  >
                     No, keep it
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => setConfirmingCancel(true)}>Cancel</Button>
+                <Button
+                  onClick={() => {
+                    setConfirmingDelete(false);
+                    setConfirmingCancelFor(review.status);
+                  }}
+                >
+                  Cancel
+                </Button>
               )
             ) : null}
 
@@ -758,7 +782,14 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => setConfirmingDelete(true)}>Delete</Button>
+                <Button
+                  onClick={() => {
+                    setConfirmingCancelFor(null);
+                    setConfirmingDelete(true);
+                  }}
+                >
+                  Delete
+                </Button>
               )
             ) : null}
           </>
@@ -1488,7 +1519,13 @@ function ScanTheater({
               >
                 Yes, cancel
               </Button>
-              <Button variant="quiet" onClick={() => setConfirmingCancel(false)}>
+              <Button
+                variant="quiet"
+                // Not while the cancel is on its way: taking it back then
+                // showed Cancel again over a review being cancelled anyway.
+                disabled={cancelling}
+                onClick={() => setConfirmingCancel(false)}
+              >
                 No, keep it
               </Button>
             </>
