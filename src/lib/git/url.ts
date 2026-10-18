@@ -92,45 +92,62 @@ export function validateGitUrl(rawUrl: string): string {
 }
 
 /**
+ * Hosts where an address with and without `.git` reaches one repository
+ * (measured 2026-10-18 with git ls-remote: GitHub answers both, GitLab
+ * redirects the bare form). Elsewhere `app` and `app.git` can be two
+ * repositories side by side.
+ */
+const OPTIONAL_DOT_GIT = new Set(["github.com", "gitlab.com"]);
+
+/** A drive path, or a relative one written with backslashes. */
+const WINDOWS_PATH = /^\/?[A-Za-z]:[\\/]|^\.{1,2}\\/;
+
+/**
  * What two spellings of one repository's address share, so a repository
  * already added is known however it is typed again (review of 5.5 to 5.7).
  * Only what cannot tell two repositories apart is folded: a trailing slash,
- * the host's case, a local path's slash direction and drive letter case, and
- * a hosted address's trailing `.git`. A path's own case is kept, because most
- * servers and file systems hold `App` and `app` as two repositories, and so
- * is a local `.git`, because `repo` and `repo.git` can sit side by side.
+ * the host's case, a Windows path's slash direction and drive letter case,
+ * and `.git` on the hosts above. Everything else is kept, so a doubt is a
+ * duplicate missed rather than a second repository refused as the first:
+ * the path's case, which GitHub and the Windows and macOS file system
+ * defaults ignore but other servers and Linux do not, and a backslash
+ * outside a Windows path, which is a character in a POSIX name.
  */
 export function repositoryKey(url: string): string {
   const trimmed = url.trim();
-  const withScheme = /^([A-Za-z][A-Za-z0-9+.-]*:\/\/)([^/\\]*)(.*)$/.exec(trimmed);
+  // Tested first: `C://repos/app` would otherwise read as a scheme.
+  const withScheme = WINDOWS_PATH.test(trimmed)
+    ? null
+    : /^([A-Za-z][A-Za-z0-9+.-]*:\/\/)([^/\\]*)(.*)$/.exec(trimmed);
   let key: string;
-  let hosted: boolean;
+  let host = "";
   if (withScheme) {
     const [, scheme = "", authority = "", path = ""] = withScheme;
     // The user before the @ is not folded: only a host name ignores case.
     const at = authority.lastIndexOf("@");
-    hosted = scheme.toLowerCase() !== "file://";
+    host = authority.slice(at + 1).toLowerCase();
     key =
       scheme.toLowerCase() +
       authority.slice(0, at + 1) +
-      authority.slice(at + 1).toLowerCase() +
-      (hosted ? path : localPath(path));
+      host +
+      (scheme.toLowerCase() === "file://" ? windowsPath(path) : path);
   } else if (SCP_LIKE.test(trimmed)) {
     const at = trimmed.indexOf("@");
     const colon = trimmed.indexOf(":", at);
-    hosted = true;
-    key =
-      trimmed.slice(0, at + 1) + trimmed.slice(at + 1, colon).toLowerCase() + trimmed.slice(colon);
+    host = trimmed.slice(at + 1, colon).toLowerCase();
+    key = trimmed.slice(0, at + 1) + host + trimmed.slice(colon);
   } else {
-    hosted = false;
-    key = localPath(trimmed);
+    key = windowsPath(trimmed);
   }
   key = key.replace(/\/+$/, "");
-  return hosted ? key.replace(/\.git$/, "").replace(/\/+$/, "") : key;
+  return OPTIONAL_DOT_GIT.has(host.replace(/:\d+$/, ""))
+    ? key.replace(/\.git$/, "").replace(/\/+$/, "")
+    : key;
 }
 
 /** Windows reads either slash, and a drive letter in either case. */
-function localPath(path: string): string {
+function windowsPath(path: string): string {
+  if (!WINDOWS_PATH.test(path)) return path;
   return path
     .replace(/\\/g, "/")
     .replace(

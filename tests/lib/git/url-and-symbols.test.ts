@@ -106,7 +106,9 @@ describe("one repository, however its address is spelled", () => {
       ["https://github.com/acme/app", "https://github.com/acme/app/"],
       ["HTTPS://GitHub.com/acme/app.git", "https://github.com/acme/app.git"],
       ["git@GitHub.com:acme/app.git", "git@github.com:acme/app"],
+      ["https://gitlab.com/group/app", "https://gitlab.com/group/app.git"],
       ["C:\\repos\\app", "c:/repos/app/"],
+      ["file:///C:\\repos\\app", "file:///c:/repos/app"],
       ["file:///C:/repos/app", "file:///c:/repos/app/"],
       ["/srv/repos/app/", "/srv/repos/app"],
     ];
@@ -120,6 +122,12 @@ describe("one repository, however its address is spelled", () => {
       ["file:///srv/repos/app", "file:///srv/repos/app.git"],
       ["https://Alice@example.com/app", "https://alice@example.com/app"],
       ["git@github.com:acme/app", "https://github.com/acme/app"],
+      // Folded once for every host, which a review of the D-133 fixes found
+      // made two repositories on a plain git server one.
+      ["ssh://git@host/srv/git/app", "ssh://git@host/srv/git/app.git"],
+      ["git@host:srv/app", "git@host:srv/app.git"],
+      ["C://repos/app", "C://repos/app.git"],
+      ["/srv/a\\b", "/srv/a/b"],
     ];
     for (const [a, b] of different) {
       expect(repositoryKey(a), `${a} and ${b}`).not.toBe(repositoryKey(b));
