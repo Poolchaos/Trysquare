@@ -130,8 +130,8 @@ Every step below is free until you press Start review.
    of fresh input tokens, cached reads, output tokens and cost equivalent.
 6. **Decide every finding.** When the run reaches awaiting confirmation, the
    findings become a queue grouped by severity, worst first. Keyboard: `j` and
-   `k` to move, `c` to confirm, `d` to jump to the dismissal reason, `e` to
-   rewrite the comment before confirming (the engine's wording is kept beside
+   `k` to move, Shift+C to confirm (a bare `c` does nothing, D-132), `d` to
+   jump to the dismissal reason, `e` to rewrite the comment before confirming (the engine's wording is kept beside
    yours), `Enter` to pull up the diff hunk and the real code around the
    citation, `g g` for the first finding and `G` for the last. The shortcuts
    are printed at the foot of the queue. Dismissing needs a written reason;

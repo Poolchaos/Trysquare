@@ -2782,3 +2782,12 @@ verified evidence, in writing, here.
   adding the link again, and nothing is lost by it.
   9. LOW: rows 5.1 to 5.4 lacked their commits and gate results. Fixed
   with this record.
+- 2026-10-18 D-132 DECIDED (MVP 5.5; MG-6 resolved (a), taken by the
+  driver on the plan's recommendation under the maintainer's instruction of
+  2026-10-18 to proceed on recommendations while away, and open to the
+  maintainer's reversal): confirming a finding from the keyboard takes
+  Shift+C, and a bare `c` does nothing. One stray lowercase keystroke
+  confirmed the finding in front of it, and no decision can be taken back.
+  Rejected: an undo for the last decision, which adds reversal state to a
+  record whose premise is that each decision was deliberate; and removing
+  the shortcut, which a person working down a long queue relies on.

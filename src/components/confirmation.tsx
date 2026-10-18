@@ -274,7 +274,10 @@ export function ConfirmationQueue({
       } else if (event.key === "j") moveTo((index) => Math.min(index + 1, queue.length - 1));
       else if (event.key === "k") moveTo((index) => Math.max(index - 1, 0));
       else if (event.key === "G") moveTo(queue.length - 1);
-      else if (event.key === "c" && UNDECIDED.has(current.status)) {
+      // Shift+C, not a bare c: one stray lowercase keystroke confirmed the
+      // finding in front of it, and no decision can be taken back (5.5,
+      // MG-6, D-132).
+      else if (event.key === "C" && event.shiftKey && UNDECIDED.has(current.status)) {
         if (!busy) void act(current, "confirm", drafts[current.id]);
       } else if (event.key === "d" && UNDECIDED.has(current.status)) {
         reasonRef.current?.focus();
@@ -671,7 +674,7 @@ export function ConfirmationQueue({
 
       <footer className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-aside text-[var(--color-ink-faint)]">
         <Key label="j / k" action="next / previous" />
-        <Key label="c" action="confirm" />
+        <Key label="Shift+C" action="confirm" />
         <Key label="d" action="dismiss" />
         <Key label="e" action="edit comment" />
         <Key label="enter" action="show code" />

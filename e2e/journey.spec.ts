@@ -334,7 +334,16 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // a report without a person deciding it, and holding a key is not
     // deciding twenty things.
     const before = await page.getByText(/\d+ of \d+ decided/).textContent();
-    await page.locator("body").dispatchEvent("keydown", { key: "c", repeat: true });
+    await page.locator("body").dispatchEvent("keydown", { key: "C", shiftKey: true, repeat: true });
+    await page.waitForTimeout(300);
+    await expect(page.getByText(/\d+ of \d+ decided/)).toHaveText(String(before));
+  });
+
+  await test.step("a bare c decides nothing; confirming takes Shift+C", async () => {
+    // One stray lowercase keystroke confirmed the finding in front of it, and
+    // no decision can be taken back (5.5, MG-6, D-132).
+    const before = await page.getByText(/\d+ of \d+ decided/).textContent();
+    await page.locator("body").press("c");
     await page.waitForTimeout(300);
     await expect(page.getByText(/\d+ of \d+ decided/)).toHaveText(String(before));
   });
@@ -344,7 +353,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // used to fail in silence: the decision was lost and looked made.
     const before = await page.getByText(/\d+ of \d+ decided/).textContent();
     await page.route("**/api/findings/*/confirm", (route) => route.abort(), { times: 1 });
-    await page.locator("body").press("c");
+    await page.locator("body").press("Shift+C");
     await expect(page.getByText(/The decision could not be sent/)).toBeVisible();
 
     await page.route(
@@ -353,7 +362,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
         route.fulfill({ status: 500, contentType: "text/html", body: "<html>Server error</html>" }),
       { times: 1 },
     );
-    await page.locator("body").press("c");
+    await page.locator("body").press("Shift+C");
     await expect(page.getByText("The decision could not be recorded.")).toBeVisible();
     await expect(page.getByText(/\d+ of \d+ decided/)).toHaveText(String(before));
 
@@ -374,7 +383,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
         }),
       }),
     );
-    await page.locator("body").press("c");
+    await page.locator("body").press("Shift+C");
     await expect(page.getByText(/its findings are decided only while it awaits/)).toBeVisible();
     await expect.poll(() => reloads.count, { timeout: 15_000 }).toBeGreaterThan(0);
     reloads.stop();
@@ -425,7 +434,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // Escape leaves the editor without losing the draft; only then can c
     // drive the queue again, since keys typed into an input never do.
     await editor.press("Escape");
-    await page.locator("body").press("c");
+    await page.locator("body").press("Shift+C");
 
     // The decision lands in the list, and stepping back onto the confirmed
     // finding shows the rewritten comment marked as the person's.
@@ -454,7 +463,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
   await test.step("the rest are confirmed from the keyboard", async () => {
     for (let guard = 0; guard < 30; guard += 1) {
       if ((await page.getByRole("button", { name: "Confirm" }).count()) === 0) break;
-      await page.locator("body").press("c");
+      await page.locator("body").press("Shift+C");
       await page.waitForTimeout(200);
     }
     await expect(page.getByRole("button", { name: "Complete review" })).toBeEnabled({

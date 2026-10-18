@@ -89,7 +89,7 @@ the job manager rather than the status column, since a row can say running
 while no process owns it. At phone width the wordmark collapses to the mark
 and icons drop before labels: a label without an icon still navigates, an
 icon without a label guesses. Keyboard-first:
-review confirmation flow fully drivable by keys (j/k next/prev, c confirm,
+review confirmation flow fully drivable by keys (j/k next/prev, Shift+C confirm,
 d dismiss with reason, enter open file context).
 
 ## 3. Screens
