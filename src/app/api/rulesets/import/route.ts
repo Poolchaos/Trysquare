@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { importProtocol } from "@/lib/rulesets/import";
 import { rulesetTierSchema } from "@/lib/domain/enums";
-import { saveImportedRuleset } from "@/server/db/repositories/rulesets";
+import { findRulesetByName, saveImportedRuleset } from "@/server/db/repositories/rulesets";
 import { created, handler, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -20,6 +20,8 @@ const body = z.object({
   tier: rulesetTierSchema,
   markdown: z.string().min(1),
   sourceDoc: z.string().optional(),
+  // Said explicitly to import over a ruleset of the same name (5.9, A5).
+  replace: z.boolean().optional(),
 });
 
 export function POST(request: Request): Promise<Response> {
@@ -55,6 +57,25 @@ export function POST(request: Request): Promise<Response> {
           unmapped: lost,
         },
         { status: 400 },
+      );
+    }
+
+    // Asked, not done in silence: an import over a name already taken
+    // replaces every rule, and undoes every rule switched off or re-graded
+    // since (5.9, A5). After the document is judged, so the question is never
+    // asked about a document that would be refused anyway.
+    const existing = findRulesetByName(db, input.name);
+    if (existing && input.replace !== true) {
+      throw Response.json(
+        {
+          error:
+            `A ruleset called "${existing.name}" already exists, at version ${existing.version}. ` +
+            "Importing this document replaces its rules with the document's, and undoes any " +
+            "rule switched off or re-graded since.",
+          code: "RulesetExists",
+          rulesetId: existing.id,
+        },
+        { status: 409 },
       );
     }
 

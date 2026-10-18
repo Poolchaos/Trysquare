@@ -33,6 +33,9 @@ export default function RulesetsPage() {
   const [markdown, setMarkdown] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
+  // The server's question when the name is taken: an import over it replaces
+  // every rule and undoes every edit since, so it is asked, not done (5.9, A5).
+  const [replacing, setReplacing] = useState("");
 
   const load = useCallback(async () => {
     const response = await fetch("/api/rulesets");
@@ -52,16 +55,17 @@ export default function RulesetsPage() {
     };
   }, []);
 
-  async function importRuleset(event: React.FormEvent) {
-    event.preventDefault();
+  async function importRuleset(replace: boolean) {
     setError("");
     setResult("");
+    setReplacing("");
     const response = await fetch("/api/rulesets/import", {
       method: "POST",
-      body: JSON.stringify({ name, tier, markdown }),
+      body: JSON.stringify({ name, tier, markdown, ...(replace ? { replace: true } : {}) }),
     });
     const body = (await response.json()) as {
       error?: string;
+      code?: string;
       unmapped?: { line: number; text: string }[];
       rules?: number;
       directives?: number;
@@ -69,6 +73,10 @@ export default function RulesetsPage() {
       changed?: boolean;
       fidelity?: { totalLines: number; mappedLines: number };
     };
+    if (response.status === 409 && body.code === "RulesetExists") {
+      setReplacing(body.error ?? `A ruleset called "${name}" already exists.`);
+      return;
+    }
     if (!response.ok) {
       // A blocked import names the lines it would have dropped, so the fix is
       // an edit to the document rather than a guess.
@@ -105,7 +113,13 @@ export default function RulesetsPage() {
       <PageBody>
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="p-4">
-            <form onSubmit={importRuleset} className="grid gap-4">
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void importRuleset(false);
+              }}
+              className="grid gap-4"
+            >
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Name">
                   <Input value={name} onChange={(event) => setName(event.target.value)} />
@@ -131,6 +145,23 @@ export default function RulesetsPage() {
                 />
               </Field>
               {error ? <Problem>{error}</Problem> : null}
+              {replacing ? (
+                <div className="grid gap-2">
+                  <p className="text-sm">{replacing}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={() => void importRuleset(true)}
+                    >
+                      Replace {name.trim()}
+                    </Button>
+                    <Button type="button" variant="quiet" onClick={() => setReplacing("")}>
+                      Keep it
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
               {result ? (
                 <p className="rounded-md border border-[var(--color-good)] bg-[var(--color-good-soft)] px-3 py-2 text-sm text-[var(--color-good)]">
                   {result}

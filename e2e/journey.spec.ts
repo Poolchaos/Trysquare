@@ -76,6 +76,21 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // The fidelity report: the sentence a reader trusts the ruleset with, made
     // of the importer's own counts rather than reassurance.
     await expect(page.getByText(/All \d+ lines of the document are accounted for/)).toBeVisible();
+
+    // The same name again is asked about, not replaced in silence: an import
+    // replaces every rule, and undoes every rule switched off or re-graded
+    // since (5.9, audit A5). Kept first, then replaced.
+    const document = page.getByPlaceholder("Paste the markdown protocol here");
+    await document.fill(readFileSync(PROTOCOL_PATH, "utf8"));
+    await page.getByRole("button", { name: "Import" }).click();
+    await expect(page.getByText(/"Example protocol" already exists/)).toBeVisible();
+    await page.getByRole("button", { name: "Keep it" }).click();
+    await expect(page.getByText(/"Example protocol" already exists/)).toHaveCount(0);
+    await page.getByRole("button", { name: "Import" }).click();
+    await page.getByRole("button", { name: "Replace Example protocol" }).click();
+    await expect(page.getByText(/unchanged from what was already stored/)).toBeVisible({
+      timeout: 30_000,
+    });
   });
 
   await test.step("the project page lists its branches with how far they have moved", async () => {

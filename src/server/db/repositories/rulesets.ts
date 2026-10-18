@@ -281,6 +281,11 @@ export class RulesetNameTakenError extends Error {
   }
 }
 
+/** The ruleset already stored under this name, if one is. */
+export function findRulesetByName(db: Db, name: string): RulesetRow | undefined {
+  return db.select().from(rulesets).where(eq(rulesets.name, name)).get();
+}
+
 /** The ruleset row itself: its name, tier and version, not its rules. */
 export function requireRuleset(db: Db, rulesetId: string): RulesetRow {
   const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();

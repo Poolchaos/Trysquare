@@ -409,6 +409,36 @@ describe("importing a ruleset", () => {
     expect(body.fidelity.mappedLines).toBe(body.fidelity.totalLines);
   });
 
+  it("asks before importing over a ruleset of the same name", async () => {
+    // An import under a name already taken replaced that ruleset's rules,
+    // and undid every rule switched off or re-graded since, without a word
+    // (5.9, audit A5).
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const again = (extra: Record<string, unknown> = {}) =>
+      routes.rulesets.POST(
+        post("http://localhost/api/rulesets/import", {
+          name: "Example protocol",
+          tier: "global",
+          markdown,
+          ...extra,
+        }),
+      );
+
+    const refused = await again();
+    expect(refused.status).toBe(409);
+    const body = (await refused.json()) as { code: string; error: string; rulesetId: string };
+    expect(body.code).toBe("RulesetExists");
+    expect(body.error).toContain('"Example protocol" already exists');
+    expect(body.rulesetId).toMatch(/\w+/);
+
+    // Said, it goes ahead: the same document, so nothing changes.
+    const replaced = await again({ replace: true });
+    expect(replaced.status).toBe(201);
+    expect(((await replaced.json()) as { changed: boolean }).changed).toBe(false);
+  });
+
   it("refuses a document that produced no rules", async () => {
     // A review judged against nothing comes back clean, and reads exactly like
     // a review that found nothing wrong.
