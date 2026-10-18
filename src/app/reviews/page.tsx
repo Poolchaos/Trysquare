@@ -24,6 +24,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
+import { send } from "@/components/request";
 
 interface Row {
   id: string;
@@ -92,10 +93,13 @@ function ReviewsList() {
     setError("");
     setBusy(id);
     try {
-      const response = await fetch(`/api/reviews/${id}`, { method: "DELETE" });
-      if (!response.ok) {
-        const body = (await response.json()) as { error?: string };
-        setError(body.error ?? "The review could not be deleted.");
+      const sent = await send(
+        `/api/reviews/${id}`,
+        { method: "DELETE" },
+        "The review could not be deleted",
+      );
+      if (!sent.ok) {
+        setError(sent.error);
         return;
       }
       setConfirming("");

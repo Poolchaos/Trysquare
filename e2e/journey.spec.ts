@@ -512,6 +512,15 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByText(/app\/src\//).first()).toBeVisible();
     await expect(page.getByText(EDITED_COMMENT)).toBeVisible();
 
+    // An export the server failed with an error page that is not JSON used
+    // to throw before saying so (review of 5.1 to 5.4).
+    const stopFailing = await answerOnce(page, "**/api/reviews/*/export", (route) =>
+      route.fulfill({ status: 500, contentType: "text/html", body: "<html>Server error</html>" }),
+    );
+    await page.getByRole("button", { name: "Export" }).click();
+    await expect(page.getByText("The report could not be exported.")).toBeVisible();
+    await stopFailing();
+
     await page.getByRole("button", { name: "Export" }).click();
     // The path shown is the HTML one, because that is the file a person
     // sends to whoever fixes the code.

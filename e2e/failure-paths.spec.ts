@@ -204,9 +204,25 @@ test("a review deleted from the list takes its evidence with it", async ({ page 
   const rows = page.getByRole("main").locator("ul > li");
   const before = await rows.count();
   expect(before).toBeGreaterThan(0);
+
+  // A delete whose request never arrives says so; reading no answer used to
+  // throw past the message (review of 5.1 to 5.4).
+  // Its own route rather than answerOnce: the pattern also matches the reads
+  // this page makes, and only the first DELETE is to be dropped.
+  let dropped = false;
+  const dropDelete = (route: import("@playwright/test").Route) => {
+    if (dropped || route.request().method() !== "DELETE") return route.fallback();
+    dropped = true;
+    return route.abort();
+  };
+  await page.route("**/api/reviews/*", dropDelete);
   await rows.first().getByRole("button", { name: "Delete" }).click();
   await rows.first().getByRole("button", { name: "Yes, delete" }).click();
+  await expect(page.getByText(/The review could not be deleted: /)).toBeVisible();
+  await expect(rows).toHaveCount(before);
+  await page.unroute("**/api/reviews/*", dropDelete);
 
+  await rows.first().getByRole("button", { name: "Yes, delete" }).click();
   await expect(rows).toHaveCount(before - 1);
 });
 
@@ -260,6 +276,16 @@ test("an emptied budget field keeps its ceiling rather than removing it", async 
   const budget = page.getByLabel("Budget per call (USD)");
   await expect(budget).toHaveValue(/^\d/, { timeout: 30_000 });
   const before = await budget.inputValue();
+
+  // Not yet a number reads "" as well, and was told it was left empty.
+  await budget.focus();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("1e");
+  await budget.blur();
+  await expect(
+    page.getByText("Budget per call (USD) needs a number, so it was not changed."),
+  ).toBeVisible();
+  await expect(budget).toHaveValue(before);
 
   await budget.fill("");
   await budget.blur();

@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { PageBody, PageHeader } from "@/components/page";
 import { Badge, Button, Card, Empty, Field, Input, Mono, Problem } from "@/components/ui";
+import { send } from "@/components/request";
 
 interface Model {
   id: string;
@@ -88,32 +89,38 @@ export default function SettingsPage() {
   async function save(field: (typeof FIELDS)[number], input: HTMLInputElement) {
     setError("");
     setSaved(false);
+    const restore = () => {
+      if (settings !== null) input.value = String(settings[field.key]);
+    };
+    // A number field reads "" for what is not yet a number, "1e" or "-", as
+    // much as for an empty one, so that is asked first: such input was told
+    // it had been left empty (review of 5.1 to 5.4).
+    if (input.validity.badInput) {
+      restore();
+      setError(`${field.label} needs a number, so it was not changed.`);
+      return;
+    }
     // An emptied field is a field left alone, not a request for zero:
     // Number("") is 0, and for the budget zero removes the ceiling, so
     // clearing it lifted the cap on every model call without a word (5.3).
     if (input.value.trim() === "") {
-      if (settings !== null) input.value = String(settings[field.key]);
+      restore();
       setError(
         `${field.label} was left empty, so it was not changed.` +
           (field.key === "stageMaxBudgetUsd" ? " To remove the ceiling, enter 0." : ""),
       );
       return;
     }
-    const value = Number(input.value);
-    if (!Number.isFinite(value)) {
-      setError(`${field.label} needs a number.`);
+    const sent = await send<{ settings?: Record<string, number> }>(
+      "/api/settings",
+      { method: "PUT", body: JSON.stringify({ [field.key]: Number(input.value) }) },
+      "That setting could not be saved",
+    );
+    if (!sent.ok) {
+      setError(sent.error);
       return;
     }
-    const response = await fetch("/api/settings", {
-      method: "PUT",
-      body: JSON.stringify({ [field.key]: value }),
-    });
-    const body = (await response.json()) as { settings?: Record<string, number>; error?: string };
-    if (!response.ok) {
-      setError(body.error ?? "That setting could not be saved.");
-      return;
-    }
-    setSettings(body.settings ?? null);
+    setSettings(sent.body.settings ?? null);
     setSaved(true);
   }
 

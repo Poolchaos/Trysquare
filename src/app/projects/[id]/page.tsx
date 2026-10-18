@@ -26,6 +26,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
+import { send } from "@/components/request";
 
 interface Detail {
   project: {
@@ -399,22 +400,22 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                     disabled={busy}
                     onClick={async () => {
                       setBlockingReviews(null);
-                      const response = await fetch(`/api/projects/${id}`, { method: "DELETE" });
-                      if (response.ok) {
+                      const sent = await send(
+                        `/api/projects/${id}`,
+                        { method: "DELETE" },
+                        "The project could not be deleted",
+                      );
+                      if (sent.ok) {
                         router.push("/projects");
                         return;
                       }
-                      const body = (await response.json()) as {
-                        error?: string;
-                        code?: string;
-                        reviewCount?: number;
-                      };
+                      const body = sent.body as { code?: string; reviewCount?: number };
                       if (body.code === "ProjectHasReviewsError" && body.reviewCount) {
                         // The remedy 02 promises: offer to remove the history
                         // first, by its real count, behind its own second step.
                         setBlockingReviews(body.reviewCount);
                       } else {
-                        setError(body.error ?? "The project could not be deleted.");
+                        setError(sent.error);
                       }
                     }}
                   >

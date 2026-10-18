@@ -32,6 +32,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
+import { send } from "@/components/request";
 
 /**
  * The whole pipeline, not only the stages that call a model.
@@ -766,13 +767,13 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   <Button
                     variant="primary"
                     onClick={async () => {
-                      const response = await fetch(`/api/reviews/${id}`, { method: "DELETE" });
-                      if (response.ok) router.push("/reviews");
-                      else
-                        setActionError(
-                          ((await response.json()) as { error?: string }).error ??
-                            "The review could not be deleted.",
-                        );
+                      const sent = await send(
+                        `/api/reviews/${id}`,
+                        { method: "DELETE" },
+                        "The review could not be deleted",
+                      );
+                      if (sent.ok) router.push("/reviews");
+                      else setActionError(sent.error);
                     }}
                   >
                     Yes, delete
@@ -1036,14 +1037,13 @@ function ReportPanel({
           <Button
             variant="primary"
             onClick={async () => {
-              const response = await fetch(`/api/reviews/${reviewId}/export`, { method: "POST" });
-              const body = (await response.json()) as {
-                path?: string;
-                htmlPath?: string;
-                error?: string;
-              };
-              if (response.ok && body.path) onExported(body.htmlPath ?? body.path);
-              else setError(body.error ?? "The report could not be exported.");
+              const sent = await send<{ path?: string; htmlPath?: string }>(
+                `/api/reviews/${reviewId}/export`,
+                { method: "POST" },
+                "The report could not be exported",
+              );
+              if (sent.ok && sent.body.path) onExported(sent.body.htmlPath ?? sent.body.path);
+              else setError(sent.ok ? "The report could not be exported." : sent.error);
             }}
           >
             Export
