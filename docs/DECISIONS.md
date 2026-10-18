@@ -2621,3 +2621,50 @@ verified evidence, in writing, here.
   Not measured: an organisation-managed cap. Rejected: pinning through
   --settings and reading the person's settings for a cap, and recording
   the difference as accepted.
+- 2026-10-18 D-125 REVIEW (MVP 4.5 to 4.7 and D-120 to D-122,
+  fe271cd..45ec555, by a separate read-only reviewer; each finding re-run
+  here before it was fixed). Eight findings, all dispositioned before new
+  work:
+  1. HIGH: D-122 refused xhigh on claude-sonnet-5 on a misread of the CLI's
+  model table; the row is marked, and a probe against a local stand-in for
+  the API showed sonnet-5 sending xhigh. Fixed 71add72 (D-123, maintainer's
+  choice: offer it wherever the CLI runs it).
+  2. HIGH: CI run 39059059261 failed the journey on Windows. The page's
+  reload after a 409 is in Chromium's net log and in no Playwright event: a
+  times: 1 route that expires as the last one turns interception off, and
+  Playwright 1.62 then never reports a request it was holding. Measured
+  here, the next request never finished in 5 of 100 trials with times: 1
+  and in 0 of 100 with a route that stays until removed. Fixed fe3135b.
+  3. MEDIUM: CLAUDE_CODE_EXTRA_BODY, which D-120 let through, outranks
+  --effort. 4. MEDIUM: the person's settings, loaded through
+  --setting-sources user, changed the effort a review ran at (a settings
+  effort, a maxEffortLevel cap), and the same flag put the person's own
+  CLAUDE.md into every request. 3 and 4 fixed 2e018f3 (D-124, maintainer's
+  choice: read no settings file, strip the extra body), with a test that
+  runs the real CLI against a stand-in for the API on every platform.
+  5. MEDIUM: the picker kept Extra high as the choice under a model that
+  showed high, so switching back brought it back. Fixed f432f1c.
+  6. LOW: the shutdown test allowed the SIGTERM case fifteen seconds where
+  the control waits two, and leaked its server if setup failed part way.
+  Fixed e74b083.
+  7. LOW: D-120's names left out what the CLI itself deletes when it starts
+  a fresh session, token file descriptors among them, and matched case
+  exactly. Fixed 5d44180. D-120's 17 runs were: none; each of CLAUDECODE,
+  CLAUDE_CODE_ENTRYPOINT, CLAUDE_CODE_CHILD_SESSION, CLAUDE_CODE_SESSION_ID,
+  CLAUDE_CODE_SESSION_ATTENDED, CLAUDE_CODE_EXECPATH,
+  CLAUDE_CODE_MESSAGING_SOCKET, CLAUDE_CODE_MESSAGING_TOKEN,
+  CLAUDE_CODE_EMIT_STARTUP_TIMING, CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING,
+  CLAUDE_CODE_ENABLE_TASKS, CLAUDE_CODE_QUESTION_PREVIEW_FORMAT,
+  CLAUDE_AGENT_SDK_VERSION, CLAUDE_EFFORT and CLAUDE_PID alone; and all
+  together. The last four session-host switches named there pass through,
+  which D-120's wording overstated.
+  8. LOW: stale records: the effort comment in the stage arguments, max
+  described as the tier that spawns workflows, and rows 4.6 and 4.7 without
+  commits. Fixed ba2e726. In 2.1.301 the workflow tier is ultracode, a
+  separate setting no review reads since D-124, and the maintainer kept max
+  refused on cost: the CLI's own index prices it at up to 5.59 times high
+  per call (sonnet-5).
+  Found on the way: the CLI swaps a retired model id for a current one
+  without a word (claude-opus-4-1 ran as claude-opus-5-5), and the older 4.x
+  and 3.x models send no effort at any level; both in the idea inbox or
+  D-123, neither among the candidates a review can run.
