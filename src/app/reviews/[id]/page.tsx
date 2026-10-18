@@ -351,6 +351,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const reconnects = useRef(0);
   const [streaming, setStreaming] = useState(true);
   const [loadError, setLoadError] = useState("");
+  // The review does not exist: the screen offers the way back, not a Try
+  // again that could never work (D-138).
+  const [loadMissing, setLoadMissing] = useState(false);
+  const lastReadError = useRef("");
   // Which request of how many is in flight, for the stage that divides its
   // work. Cleared when a stage without batches starts, so it never describes
   // the stage before it.
@@ -388,13 +392,17 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     // A dropped request reads as no picture, as a refusal does. Thrown, it
     // escaped the theater's cancel, which then said nothing at all when the
     // server had gone away (review of 5.1 to 5.4).
-    const response = await fetch(`/api/reviews/${id}`).catch(() => null);
+    const sent = await send<Snapshot>(`/api/reviews/${id}`, {}, "This review could not be read");
     // No such review is no run to follow: its stream is not opened again and
     // the poll stops, where both went on for as long as the tab stayed open
     // (D-137).
-    missing.current = response?.status === 404;
+    missing.current = !sent.ok && sent.status === 404;
     if (missing.current) runLive.current = false;
-    return response?.ok ? ((await response.json()) as Snapshot) : null;
+    if (!sent.ok) {
+      lastReadError.current = sent.error;
+      return null;
+    }
+    return sent.body;
   }
 
   /**
@@ -466,7 +474,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       if (cancelled) return;
       // A review that cannot be read is not a review that is slow to read.
       if (fresh) setSnapshot(fresh);
-      else setLoadError("This review could not be read.");
+      else {
+        // The server's words, which a fixed sentence replaced (D-138).
+        setLoadError(lastReadError.current);
+        setLoadMissing(missing.current);
+      }
     })();
 
     const source = new EventSource(`/api/reviews/${id}/events`);
@@ -625,10 +637,14 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       <PageLoading
         title="Review"
         {...(loadError === "" ? {} : { error: loadError })}
-        onRetry={() => {
-          setLoadError("");
-          watchAgain();
-        }}
+        {...(loadMissing
+          ? { back: { href: "/reviews", label: "All reviews" } }
+          : {
+              onRetry: () => {
+                setLoadError("");
+                watchAgain();
+              },
+            })}
       />
     );
   }

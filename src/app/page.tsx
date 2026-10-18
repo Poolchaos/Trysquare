@@ -18,7 +18,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PageBody, PageHeader } from "@/components/page";
+import { Loading, PageBody, PageHeader } from "@/components/page";
+import { send } from "@/components/request";
 import { Badge, Card, Empty, Mono, StatTile, statusLabel, statusTone } from "@/components/ui";
 
 interface Row {
@@ -177,6 +178,7 @@ export default function HomePage() {
   const [live, setLive] = useState<LiveRun | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState("");
+  const [boardAttempt, setBoardAttempt] = useState(0);
 
   // The same narrow endpoint the bar polls, so a running review appears here
   // without a second source of truth about what is running.
@@ -215,22 +217,21 @@ export default function HomePage() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      try {
-        const response = await fetch("/api/scoreboard");
-        if (cancelled) return;
-        if (!response.ok) {
-          setError("The scoreboard could not be read.");
-          return;
-        }
-        setBoard((await response.json()) as Scoreboard);
-      } catch {
-        if (!cancelled) setError("The scoreboard could not be read.");
-      }
+      // The server's words, with Try again: a fixed sentence and no way to
+      // read again was all a failure said (D-138).
+      const sent = await send<Scoreboard>(
+        "/api/scoreboard",
+        {},
+        "The scoreboard could not be read",
+      );
+      if (cancelled) return;
+      if (sent.ok) setBoard(sent.body);
+      else setError(sent.error);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [boardAttempt]);
 
   const percent = (rate: number | null) => (rate === null ? "-" : `${Math.round(rate * 100)}%`);
 
@@ -241,11 +242,14 @@ export default function HomePage() {
         subtitle="Everything here is counted from reviews this machine has run."
       />
       <PageBody>
-        {error ? <p className="text-body text-[var(--color-critical)]">{error}</p> : null}
         {board === null ? (
-          !error ? (
-            <p className="text-body text-[var(--color-ink-muted)]">Loading...</p>
-          ) : null
+          <Loading
+            {...(error === "" ? {} : { error })}
+            onRetry={() => {
+              setError("");
+              setBoardAttempt((attempt) => attempt + 1);
+            }}
+          />
         ) : board.reviewsTotal === 0 ? (
           <Empty title="Nothing has been reviewed yet">
             Add a project, import a protocol as a ruleset, then pick two branches and run a review.

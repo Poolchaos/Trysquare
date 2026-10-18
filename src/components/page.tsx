@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 /** Every screen opens the same way: what this is, then what you can do here. */
@@ -41,16 +42,22 @@ export function PageLoading({
   title,
   error,
   onRetry,
+  back,
 }: {
   title: ReactNode;
   error?: string;
   onRetry?: () => void;
+  back?: { href: string; label: string };
 }) {
   return (
     <>
       <PageHeader title={title} />
       <PageBody>
-        <Loading {...(error === undefined ? {} : { error })} {...(onRetry ? { onRetry } : {})} />
+        <Loading
+          {...(error === undefined ? {} : { error })}
+          {...(onRetry ? { onRetry } : {})}
+          {...(back ? { back } : {})}
+        />
       </PageBody>
     </>
   );
@@ -62,11 +69,27 @@ export function PageLoading({
  * subject uses it, and so does a list inside a page, which used to stay on
  * "Loading..." when its read failed (5.13, U9).
  */
-export function Loading({ error, onRetry }: { error?: string; onRetry?: () => void }) {
+export function Loading({
+  error,
+  onRetry,
+  back,
+}: {
+  error?: string;
+  onRetry?: () => void;
+  /**
+   * Where to go instead, for a subject that does not exist: Try again
+   * offered there could never succeed (D-138).
+   */
+  back?: { href: string; label: string };
+}) {
   return error ? (
     <div className="grid max-w-xl gap-3">
       <p className="text-sm text-[var(--color-critical)]">{error}</p>
-      {onRetry ? (
+      {back ? (
+        <Link href={back.href} className="w-fit text-sm text-[var(--color-accent)] hover:underline">
+          {back.label}
+        </Link>
+      ) : onRetry ? (
         <button
           type="button"
           onClick={onRetry}

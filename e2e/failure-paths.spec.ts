@@ -237,12 +237,18 @@ test("a screen whose data cannot be read says so instead of loading forever", as
   // back ok, so a review, project or ruleset that could not be read left
   // "Loading..." on the screen permanently. A failure indistinguishable from
   // slowness is the one a person waits out rather than acts on.
-  for (const path of ["/reviews/NOPE123", "/projects/NOPE123", "/rulesets/NOPE123"]) {
+  for (const [path, back] of [
+    ["/reviews/NOPE123", "All reviews"],
+    ["/projects/NOPE123", "All projects"],
+    ["/rulesets/NOPE123", "All rulesets"],
+  ] as const) {
     await page.goto(path);
-    // The server's own words where it has them, this screen's where it does
-    // not; either way the screen stops claiming to be loading.
-    await expect(page.getByRole("button", { name: "Try again" })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(/could not be read|not found|No \w+ with id/)).toBeVisible();
+    // The server's own words, and the way back: Try again for something that
+    // does not exist could never work, and the review screen replaced the
+    // server's words with a fixed sentence (D-138).
+    await expect(page.getByRole("link", { name: back })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/not found|No \w+ with id/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
     await expect(page.getByText("Loading...")).toBeHidden();
     // And the page keeps its shape while it fails, rather than collapsing to
     // a bare line of text with no header.
@@ -266,6 +272,7 @@ test("a list whose data cannot be read says so, and reads again on Try again", a
       (on) => on.getByRole("main").getByText("Example protocol").first(),
     ],
     ["/settings", "**/api/settings", (on) => on.getByLabel("Stage timeout (minutes)")],
+    ["/", "**/api/scoreboard", (on) => on.getByText("Precision").first()],
   ];
   for (const [screen, api, content] of screens) {
     const refusal = `Refused for this test: ${screen}.`;
@@ -742,7 +749,7 @@ test("a review that does not exist is not asked after again and again", async ({
   };
   page.on("request", count);
   await page.goto("/reviews/NOPE123");
-  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("link", { name: "All reviews" })).toBeVisible({ timeout: 30_000 });
   // Past the first reopen (one second) and the first poll (two).
   await page.waitForTimeout(5_000);
   page.off("request", count);

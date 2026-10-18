@@ -11,6 +11,7 @@
 import { use, useCallback, useEffect, useState } from "react";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import { Badge, Button, Card, Input, Mono, Problem, Select, severityTone } from "@/components/ui";
+import { send } from "@/components/request";
 
 interface Detail {
   ruleset: {
@@ -40,6 +41,9 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loadError, setLoadError] = useState("");
+  // The ruleset does not exist: the way back, not a Try again that could
+  // never work (D-138).
+  const [loadMissing, setLoadMissing] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
@@ -59,17 +63,12 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      try {
-        const response = await fetch(`/api/rulesets/${id}`);
-        if (cancelled) return;
-        if (!response.ok) {
-          const body = (await response.json().catch(() => ({}))) as { error?: string };
-          setLoadError(body.error ?? "This ruleset could not be read.");
-          return;
-        }
-        setDetail((await response.json()) as Detail);
-      } catch {
-        if (!cancelled) setLoadError("This ruleset could not be read.");
+      const sent = await send<Detail>(`/api/rulesets/${id}`, {}, "This ruleset could not be read");
+      if (cancelled) return;
+      if (sent.ok) setDetail(sent.body);
+      else {
+        setLoadError(sent.error);
+        setLoadMissing(sent.status === 404);
       }
     })();
     return () => {
@@ -123,10 +122,14 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
       <PageLoading
         title="Ruleset"
         {...(loadError === "" ? {} : { error: loadError })}
-        onRetry={() => {
-          setLoadError("");
-          setLoadAttempt((attempt) => attempt + 1);
-        }}
+        {...(loadMissing
+          ? { back: { href: "/rulesets", label: "All rulesets" } }
+          : {
+              onRetry: () => {
+                setLoadError("");
+                setLoadAttempt((attempt) => attempt + 1);
+              },
+            })}
       />
     );
   }

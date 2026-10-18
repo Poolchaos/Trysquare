@@ -103,6 +103,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const router = useRouter();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loadError, setLoadError] = useState("");
+  // The project does not exist: the way back, not a Try again that could
+  // never work (D-138).
+  const [loadMissing, setLoadMissing] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   // The answer itself, so a refusal (a clone not ready) shows in place of the
   // list instead of a "Fetching" that never ends.
@@ -136,7 +139,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         // The project itself is the screen; without it there is nothing to
         // draw, and saying so beats a "Loading..." that never resolves.
         if (read.ok) setDetail(read.body);
-        else setLoadError(read.error);
+        else {
+          setLoadError(read.error);
+          setLoadMissing(read.status === 404);
+        }
       });
       if (cancelled || !detailSent.ok) return;
       // Branches are a separate concern: the remote may be unreachable while
@@ -188,6 +194,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       if (!sent.ok && sent.status === 404) {
         setDetail(null);
         setLoadError(sent.error);
+        setLoadMissing(true);
         return;
       }
       // Any other failure is said too, and the following goes on: a server
@@ -209,10 +216,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <PageLoading
         title="Project"
         {...(loadError === "" ? {} : { error: loadError })}
-        onRetry={() => {
-          setLoadError("");
-          setLoadAttempt((attempt) => attempt + 1);
-        }}
+        {...(loadMissing
+          ? { back: { href: "/projects", label: "All projects" } }
+          : {
+              onRetry: () => {
+                setLoadError("");
+                setLoadAttempt((attempt) => attempt + 1);
+              },
+            })}
       />
     );
   }
