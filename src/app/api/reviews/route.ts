@@ -18,7 +18,7 @@ import {
 import {
   listDependencyLinks,
   recordFetch,
-  requireProject,
+  requireClonedProject,
 } from "@/server/db/repositories/projects";
 import { appendRunNote, createReview, listActiveReviews } from "@/server/db/repositories/reviews";
 import { getModel } from "@/server/db/repositories/models";
@@ -90,7 +90,9 @@ export function POST(request: Request): Promise<Response> {
   return handler(async () => {
     const { db } = runtime();
     const input = await readJson(request, body);
-    const project = requireProject(db, input.projectId);
+    // Ready, or the fetch below runs inside a clone still being written
+    // (review of the D-133 fixes).
+    const project = requireClonedProject(db, input.projectId);
 
     // Fetched immediately before pinning, so the commits recorded are the tips
     // the remote has now rather than whatever the last clone left behind.
@@ -100,7 +102,7 @@ export function POST(request: Request): Promise<Response> {
 
     let linked;
     if (input.linked) {
-      const dependency = requireProject(db, input.linked.projectId);
+      const dependency = requireClonedProject(db, input.linked.projectId);
       const isLinked = listDependencyLinks(db, project.id).some(
         (link) => link.dependencyProjectId === dependency.id,
       );

@@ -20,6 +20,8 @@ let routes: {
   clone: typeof import("@/app/api/projects/[id]/clone/route");
   branches: typeof import("@/app/api/projects/[id]/branches/route");
   fetch: typeof import("@/app/api/projects/[id]/fetch/route");
+  reviews: typeof import("@/app/api/reviews/route");
+  preflight: typeof import("@/app/api/reviews/preflight/route");
 };
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
@@ -38,6 +40,8 @@ beforeAll(async () => {
     clone: await import("@/app/api/projects/[id]/clone/route"),
     branches: await import("@/app/api/projects/[id]/branches/route"),
     fetch: await import("@/app/api/projects/[id]/fetch/route"),
+    reviews: await import("@/app/api/reviews/route"),
+    preflight: await import("@/app/api/reviews/preflight/route"),
   };
 });
 
@@ -129,12 +133,17 @@ describe("a clone that is not ready", () => {
       defaultBranch: "main",
       clonePath: join(root, "queued.git"),
     });
+    // Starting a review, and previewing one, fetch into the clone as well
+    // (review of the D-133 fixes).
+    const pair = { projectId: queued.id, fromBranch: "feature/x", intoBranch: "main" };
     const answers = async () => [
       await routes.branches.GET(new Request("http://localhost/x"), params(queued.id)),
       await routes.fetch.POST(
         new Request("http://localhost/x", { method: "POST" }),
         params(queued.id),
       ),
+      await routes.reviews.POST(post({ ...pair, model: "claude-fable-5[1m]" })),
+      await routes.preflight.POST(post({ ...pair, rulesetId: "R", model: "claude-fable-5[1m]" })),
     ];
 
     // The project page asked for both every second while a clone ran, and

@@ -22,6 +22,7 @@ let routes: {
   start: typeof import("@/app/api/reviews/[id]/start/route");
   links: typeof import("@/app/api/projects/[id]/links/route");
   rule: typeof import("@/app/api/rulesets/[id]/rules/[code]/route");
+  preflight: typeof import("@/app/api/reviews/preflight/route");
 };
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
@@ -42,6 +43,7 @@ beforeAll(async () => {
     start: await import("@/app/api/reviews/[id]/start/route"),
     links: await import("@/app/api/projects/[id]/links/route"),
     rule: await import("@/app/api/rulesets/[id]/rules/[code]/route"),
+    preflight: await import("@/app/api/reviews/preflight/route"),
   };
 });
 
@@ -104,6 +106,49 @@ describe("an id that names nothing", () => {
     ];
     expect(answers.map((response) => response.status)).toEqual([404, 404, 404, 404, 404, 404]);
     expect(await codeOf(answers[5]!)).toBe("RuleNotFoundError");
+  });
+
+  it("is a 404 for a preview's unknown dependency, not git's 400", async () => {
+    // Looked up inside the catch that answers 400 for what git refuses
+    // (review of the D-133 fixes).
+    const { runtime } = await import("@/server/runtime");
+    const { db } = runtime();
+    const { createProject, setCloneStatus } = await import("@/server/db/repositories/projects");
+    const { saveImportedRuleset } = await import("@/server/db/repositories/rulesets");
+    const { importProtocol } = await import("@/lib/rulesets/import");
+    const source = readFileSync(
+      new URL("../../fixtures/example-protocol.md", import.meta.url),
+      "utf8",
+    );
+    const { rulesetId } = saveImportedRuleset(db, {
+      name: "Preview protocol",
+      tier: "global",
+      imported: importProtocol(source).ruleset,
+    });
+    const project = createProject(db, {
+      name: "previewed",
+      gitUrl: "git@example.com:acme/previewed.git",
+      defaultBranch: "main",
+      clonePath: join(dataDir, "previewed.git"),
+    });
+    setCloneStatus(db, project.id, "cloning");
+    setCloneStatus(db, project.id, "ready");
+
+    const branches = { fromBranch: "feature/x", intoBranch: "main" };
+    const response = await routes.preflight.POST(
+      new Request("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({
+          projectId: project.id,
+          ...branches,
+          rulesetId,
+          model: "claude-fable-5[1m]",
+          linked: { projectId: "NOPE", ...branches },
+        }),
+      }),
+    );
+    expect(response.status).toBe(404);
+    expect(await codeOf(response)).toBe("ProjectNotFoundError");
   });
 
   it("is a 404 for a review's event stream too, not a broken stream (4.20)", async () => {

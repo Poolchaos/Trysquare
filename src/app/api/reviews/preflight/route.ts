@@ -23,7 +23,7 @@ import { composeSystemPrompt, planRuleBatches } from "@/lib/rulesets/compose";
 import { isJudgmentProfile, resolveProfile } from "@/lib/review/profiles";
 import { availabilityOf } from "@/lib/models/availability";
 import { getModel } from "@/server/db/repositories/models";
-import { recordFetch, requireProject } from "@/server/db/repositories/projects";
+import { recordFetch, requireClonedProject } from "@/server/db/repositories/projects";
 import { loadRuleset } from "@/server/db/repositories/rulesets";
 import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
 import { git } from "@/server/gitops/run";
@@ -63,7 +63,12 @@ export function POST(request: Request): Promise<Response> {
   return handler(async () => {
     const { db } = runtime();
     const input = await readJson(request, body);
-    const project = requireProject(db, input.projectId);
+    const project = requireClonedProject(db, input.projectId);
+    // Read before the catch below, which answers 400 for what git refuses: a
+    // dependency that names nothing is a 404, and one not cloned yet a 409
+    // (review of the D-133 fixes).
+    const dependency =
+      input.linked === undefined ? undefined : requireClonedProject(db, input.linked.projectId);
     const ruleset = loadRuleset(db, input.rulesetId);
 
     let primary: Side;
@@ -72,8 +77,7 @@ export function POST(request: Request): Promise<Response> {
       primary = await inspect(project.clonePath, repoSlug(project.name), input);
       recordFetch(db, project.id);
 
-      if (input.linked) {
-        const dependency = requireProject(db, input.linked.projectId);
+      if (input.linked && dependency) {
         const slug =
           repoSlug(dependency.name) === primary.slug
             ? `${repoSlug(dependency.name)}-dep`
