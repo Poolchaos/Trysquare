@@ -611,10 +611,24 @@ test("a review left as a draft can be started from its own screen", async ({ pag
   await expect(page.getByText("Refused for this test.")).toBeVisible();
   await stopRefusing();
 
+  // A ruleset read that fails says so, with Try again, rather than leaving a
+  // disabled picker and no word why (D-137).
+  const stopRulesets = await answerOnce(page, "**/api/rulesets", (route) =>
+    route.fulfill({
+      status: 500,
+      json: { error: "Refused for this test: the rulesets.", code: "Test" },
+    }),
+  );
   await page.goto(`/reviews/${review.id}`);
+  await expect(page.getByText("Refused for this test: the rulesets.")).toBeVisible({
+    timeout: 30_000,
+  });
+  await stopRulesets();
+  await page.getByRole("button", { name: "Try again" }).click();
   const start = page.getByRole("button", { name: "Start review" });
   await expect(start).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByLabel("Ruleset to start with")).toHaveValue(/.+/);
+  const chosen = await page.getByLabel("Ruleset to start with").inputValue();
+  expect(chosen).not.toBe("");
   const started = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname === `/api/reviews/${review.id}/start` &&
@@ -623,8 +637,48 @@ test("a review left as a draft can be started from its own screen", async ({ pag
   await start.click();
   const answer = await started;
   expect(answer.status()).toBe(200);
-  expect(answer.request().postDataJSON()).toEqual({ rulesetId: expect.any(String) });
+  expect(answer.request().postDataJSON()).toEqual({ rulesetId: chosen });
   await expect(start).toHaveCount(0);
+  // Let the run end, so the screenshots after this suite are of a settled app
+  // rather than one mid-run (D-137).
+  await expect
+    .poll(
+      async () =>
+        (
+          (await (await page.request.get(`/api/reviews/${review.id}`)).json()) as {
+            review: { status: string };
+          }
+        ).review.status,
+      { timeout: 60_000 },
+    )
+    .not.toMatch(/^(draft|running|verifying)$/);
+});
+
+test("a review waiting its turn offers no Start of its own", async ({ page }) => {
+  // A review queued behind a running one is still a draft in the database,
+  // and its screen offered Start review with a ruleset it would not use;
+  // starting it answered 200 and dropped the choice (D-137). One runs at a
+  // time, so the second of two is queued while the first is held in a stage.
+  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 30_000 }), "utf8");
+  await startAReview(page);
+  const running = page.url();
+  await expect(page.getByText("Risk started")).toBeVisible({ timeout: 60_000 });
+
+  await startAReview(page);
+  await expect(page.getByText(/Waiting for the running review to finish/)).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByRole("button", { name: "Start review" })).toHaveCount(0);
+  await expect(page.getByLabel("Ruleset to start with")).toHaveCount(0);
+
+  // Both cancelled, the waiting one first, so neither runs on into the suites after.
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+  await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await page.goto(running);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+  await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
 });
 
 test("the top bar says how many reviews are waiting on a person", async ({ page }) => {

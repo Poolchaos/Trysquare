@@ -9,6 +9,7 @@
  * rather than holding the connection open.
  */
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import {
@@ -375,6 +376,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   // used to offer only Resume, which a draft is not (5.11, U7).
   const [draftRulesets, setDraftRulesets] = useState<{ id: string; name: string }[] | null>(null);
   const [draftRuleset, setDraftRuleset] = useState("");
+  const [draftReadProblem, setDraftReadProblem] = useState("");
+  const [draftReadAttempt, setDraftReadAttempt] = useState(0);
   // Shown once, when completing left the checkout behind; after a reload it
   // is in the run notes, folded under Run detail.
   const [checkoutLeft, setCheckoutLeft] = useState("");
@@ -571,7 +574,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     if (snapshot) runLive.current = snapshot.running || snapshot.queued;
   }, [snapshot]);
 
-  const isDraft = snapshot?.review.status === "draft";
+  // A draft waiting in the queue, or launched a moment ago, is no draft to
+  // start: its screen offered Start with a ruleset the run would not use,
+  // and starting it answered 200 and dropped the choice (D-137).
+  const isDraft = snapshot?.review.status === "draft" && !snapshot.queued && !snapshot.running;
   useEffect(() => {
     if (!isDraft) return;
     let cancelled = false;
@@ -582,17 +588,15 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         "The rulesets could not be read",
       );
       if (cancelled) return;
-      if (!sent.ok) {
-        setActionError(sent.error);
-        return;
-      }
+      setDraftReadProblem(sent.ok ? "" : sent.error);
+      if (!sent.ok) return;
       setDraftRulesets(sent.body.rulesets);
       setDraftRuleset((current) => current || (sent.body.rulesets[0]?.id ?? ""));
     })();
     return () => {
       cancelled = true;
     };
-  }, [isDraft]);
+  }, [isDraft, draftReadAttempt]);
 
   if (!snapshot) {
     return (
@@ -769,7 +773,22 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 </span>
               </span>
             ) : null}
-            {review.status === "draft" ? (
+            {isDraft && draftReadProblem ? (
+              <>
+                <span className="text-sm text-[var(--color-critical)]">{draftReadProblem}</span>
+                <Button onClick={() => setDraftReadAttempt((attempt) => attempt + 1)}>
+                  Try again
+                </Button>
+              </>
+            ) : isDraft && draftRulesets !== null && draftRulesets.length === 0 ? (
+              <span className="text-sm text-[var(--color-ink-muted)]">
+                No ruleset to start it with yet:{" "}
+                <Link href="/rulesets" className="text-[var(--color-accent)] hover:underline">
+                  import one
+                </Link>
+                .
+              </span>
+            ) : isDraft ? (
               <>
                 <Select
                   aria-label="Ruleset to start with"
