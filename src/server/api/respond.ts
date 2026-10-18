@@ -54,12 +54,37 @@ export async function readJson<T>(request: Request, schema: z.ZodType<T>): Promi
   try {
     raw = await request.json();
   } catch {
-    throw Response.json(
-      { error: "The request body was not JSON.", code: "BadBody" },
-      { status: 400 },
-    );
+    throw notJson();
   }
+  return validated(raw, schema);
+}
 
+/**
+ * Reads a body that may be left out: an empty one is `{}`, so a bare POST
+ * still means "nothing to add". A body that is there is held to the schema
+ * as readJson holds it. Read leniently, a confirm's malformed comment was
+ * taken as no comment and a start's malformed ruleset as none (5.8, A8).
+ */
+export async function readOptionalJson<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
+  const text = await request.text();
+  if (text.trim() === "") return validated({}, schema);
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw notJson();
+  }
+  return validated(raw, schema);
+}
+
+function notJson(): Response {
+  return Response.json(
+    { error: "The request body was not JSON.", code: "BadBody" },
+    { status: 400 },
+  );
+}
+
+function validated<T>(raw: unknown, schema: z.ZodType<T>): T {
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
     const detail = parsed.error.issues

@@ -45,7 +45,9 @@ export function PUT(request: Request): Promise<Response> {
     // value left the keys before it stored by a request that answered 400.
     const accepted: [string, unknown][] = [];
     for (const [key, value] of Object.entries(body)) {
-      const entry = CATALOGUE[key as Key];
+      // An own key only: "constructor" found Object's constructor on the
+      // catalogue, which has no schema, and the route crashed (5.8, A3).
+      const entry = Object.hasOwn(CATALOGUE, key) ? CATALOGUE[key as Key] : undefined;
       if (!entry) {
         throw Response.json(
           { error: `There is no setting called "${key}".`, code: "UnknownSetting" },

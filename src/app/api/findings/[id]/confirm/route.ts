@@ -12,7 +12,7 @@
 
 import { z } from "zod";
 import { ReviewNotDecidingError, confirmFinding } from "@/server/db/repositories/findings";
-import { failed, handler, ok } from "@/server/api/respond";
+import { failed, handler, ok, readOptionalJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +25,10 @@ export async function POST(
 ): Promise<Response> {
   return handler(async () => {
     const { id } = await context.params;
-    // A missing or unparseable body means no replacement comment, which is
-    // what a keyboard confirm sends.
-    const parsed = body.safeParse(await request.json().catch(() => ({})));
-    const comment = parsed.success ? parsed.data.comment : undefined;
+    // No body means no replacement comment. One that is there but malformed
+    // is refused: it used to confirm with the engine's words, as though the
+    // person had written none (5.8, A8).
+    const { comment } = await readOptionalJson(request, body);
     try {
       return ok({ finding: confirmFinding(runtime().db, id, { comment }) });
     } catch (error) {

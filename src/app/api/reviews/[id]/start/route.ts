@@ -9,7 +9,7 @@ import { z } from "zod";
 import { rulesetTierSchema } from "@/lib/domain/enums";
 import { hasReviewSnapshot, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
 import { requireReview } from "@/server/db/repositories/reviews";
-import { failed, handler, ok, readJson } from "@/server/api/respond";
+import { failed, handler, ok, readOptionalJson } from "@/server/api/respond";
 import { ReviewNotStartableError } from "@/server/jobs/manager";
 import { runtime } from "@/server/runtime";
 
@@ -24,7 +24,10 @@ export async function POST(
   return handler(async () => {
     const { db, manager } = runtime();
     const { id } = await context.params;
-    const input = await readJson(request, body).catch(() => ({ rulesetId: undefined }));
+    // A resume sends no body. A ruleset id that is malformed is refused for
+    // what it is: dropped, it was answered "Choose a ruleset", as though the
+    // request had named none (5.8, A8).
+    const input = await readOptionalJson(request, body);
 
     requireReview(db, id);
 
