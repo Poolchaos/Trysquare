@@ -140,6 +140,82 @@ test("a dependency ticked with no branch keeps Start off and says why", async ({
   await page.unroute(`**/api/projects/${app.id}`, withLink);
 });
 
+test("a dependency's suggested branch follows the branch under review until chosen", async ({
+  page,
+  request,
+}) => {
+  // Suggested once and kept, it stayed on the first branch's name after the
+  // branch under review moved, with "Suggested: it has a branch of the same
+  // name" still beside it, and the review paired the new branch with the old
+  // one's half (D-145).
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const names = (
+    (await (await request.get(`/api/projects/${app.id}/branches`)).json()) as {
+      branches: { name: string }[];
+    }
+  ).branches.map((branch) => branch.name);
+  const third = names.find((name) => name !== "main" && name !== "feature/rename-prefs");
+  expect(third, "a third branch to move to").toBeDefined();
+  const withLink = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        links: [
+          {
+            id: "LINK123",
+            dependencyProjectId: "DEP123",
+            dependencyName: "shared-core",
+            packageName: "@acme/core",
+          },
+        ],
+      },
+    });
+  };
+  await page.route(`**/api/projects/${app.id}`, withLink);
+  const dependencyBranches = (route: Route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        branches: names.map((name) => ({
+          name,
+          commit: "a".repeat(40),
+          subject: name,
+          committedAt: "2026-10-01T00:00:00Z",
+          ahead: 0,
+          behind: 0,
+        })),
+        defaultBranch: "main",
+      },
+    });
+  await page.route("**/api/projects/DEP123/branches", dependencyBranches);
+
+  await fillANewReview(page);
+  await page.getByLabel(/Include shared-core/).check();
+  const its = page.getByLabel("Its branch");
+  const hint = page.getByText("Suggested: it has a branch of the same name.");
+  await expect(its).toHaveValue("feature/rename-prefs");
+  await expect(hint).toBeVisible();
+
+  await page.getByRole("main").locator("label").filter({ hasText: third! }).first().click();
+  await expect(its).toHaveValue(third!);
+  await expect(hint).toBeVisible();
+
+  // Chosen by hand, it stays, and nothing calls it suggested.
+  await its.selectOption("feature/rename-prefs");
+  await page.getByRole("main").locator("label").filter({ hasText: "main" }).first().click();
+  await expect(its).toHaveValue("feature/rename-prefs");
+  await expect(hint).toHaveCount(0);
+
+  await page.unroute("**/api/projects/DEP123/branches", dependencyBranches);
+  await page.unroute(`**/api/projects/${app.id}`, withLink);
+});
+
 test("a ticked dependency says what its branches are doing, and lets go with its link", async ({
   page,
   request,

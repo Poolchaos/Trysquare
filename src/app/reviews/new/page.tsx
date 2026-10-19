@@ -185,7 +185,8 @@ function NewReview() {
   const [links, setLinks] = useState<Link[]>([]);
   const [includeLink, setIncludeLink] = useState<string>("");
   const [linkBranches, setLinkBranches] = useState<Branch[]>([]);
-  const [linkFrom, setLinkFrom] = useState("");
+  // The dependency's branch, once chosen by hand; null until then.
+  const [chosenLinkFrom, setChosenLinkFrom] = useState<string | null>(null);
   const [linkInto, setLinkInto] = useState("");
   // Which dependency's branch read has answered, and a count to read again.
   const [linkBranchesFor, setLinkBranchesFor] = useState("");
@@ -199,6 +200,14 @@ function NewReview() {
   const includedName =
     links.find((link) => link.dependencyProjectId === included)?.dependencyName ?? "";
   const linkRead = included !== "" && linkBranchesFor === included;
+  // Suggested until chosen by hand: the dependency's branch of the same name
+  // as the one under review, following it when it moves. Written once and
+  // kept, it stayed on the first branch's name after the primary moved, the
+  // hint still vouching for it (D-145).
+  const suggestedLinkFrom = linkBranches.some((branch) => branch.name === fromBranch)
+    ? fromBranch
+    : "";
+  const linkFrom = chosenLinkFrom ?? suggestedLinkFrom;
   const [preflight, setPreflight] = useState<Preflight | null>(null);
   const [preflightError, setPreflightError] = useState("");
 
@@ -341,18 +350,16 @@ function NewReview() {
       setLinkProblem(sent.ok ? "" : sent.error);
       if (!sent.ok) return;
       const body = sent.body;
+      // Suggested from these, never assumed: a dependency branch with the
+      // same name as the one being reviewed is almost always the other half
+      // of the change, and almost always is not always.
       setLinkBranches(body.branches);
-      // Suggested, never assumed: a dependency branch with the same name as
-      // the one being reviewed is almost always the other half of the change,
-      // and almost always is not always.
-      const sameName = body.branches.find((branch) => branch.name === fromBranch);
-      setLinkFrom((current) => current || sameName?.name || "");
       setLinkInto((current) => current || body.defaultBranch);
     })();
     return () => {
       cancelled = true;
     };
-  }, [included, fromBranch, linkAttempt]);
+  }, [included, linkAttempt]);
 
   /**
    * The branch to compare against, never the branch under review.
@@ -886,7 +893,7 @@ function NewReview() {
                         setLinkBranchesFor("");
                         setLinkProblem("");
                         setLinkBranches([]);
-                        setLinkFrom("");
+                        setChosenLinkFrom(null);
                         setLinkInto("");
                       }}
                     />
@@ -933,14 +940,14 @@ function NewReview() {
                     <Field
                       label="Its branch"
                       hint={
-                        linkBranches.some((branch) => branch.name === fromBranch)
+                        chosenLinkFrom === null && linkFrom !== ""
                           ? "Suggested: it has a branch of the same name."
                           : undefined
                       }
                     >
                       <Select
                         value={linkFrom}
-                        onChange={(event) => setLinkFrom(event.target.value)}
+                        onChange={(event) => setChosenLinkFrom(event.target.value)}
                       >
                         <option value="">Choose a branch</option>
                         {linkBranches.map((branch) => (
