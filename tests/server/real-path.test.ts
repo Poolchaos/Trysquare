@@ -4,7 +4,7 @@
  * is stood in for.
  */
 
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -27,14 +27,24 @@ describe("a real path", () => {
   });
 
   it("walks the path itself when the native call says EISDIR, as it does on a RAM disk", async () => {
-    // Every file read on such a disk answered "could not be read", with a
-    // Try again that could never work (D-144).
-    const walked = await realPath(
-      "R:/data/file.txt",
-      failing("EISDIR"),
-      async (path) => `${path}!`,
-    );
-    expect(walked).toBe("R:/data/file.txt!");
+    // On such a disk every file read would have answered "could not be
+    // read", with a Try again that could never work (D-144; not seen here).
+    // Only the native call is stood in for: the walk is Node's own, through
+    // a real link, so a fallback that did not walk would fail here (D-145).
+    const dir = mkdtempSync(join(tmpdir(), "trysquare-real-"));
+    try {
+      const target = join(dir, "target");
+      mkdirSync(target);
+      writeFileSync(join(target, "file.txt"), "x", "utf8");
+      const link = join(dir, "link");
+      symlinkSync(target, link, process.platform === "win32" ? "junction" : "dir");
+      const through = join(link, "file.txt");
+      expect(await realPath(through, failing("EISDIR"))).toBe(realpathSync(through));
+      expect(realpathSync(through)).not.toBe(through);
+    } finally {
+      rmSync(join(dir, "link"), { force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("passes on any other failure, which is the read's to answer", async () => {
