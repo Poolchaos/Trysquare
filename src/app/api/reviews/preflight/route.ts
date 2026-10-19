@@ -11,6 +11,7 @@
  * moment someone looked at a panel. The screen says so.
  */
 
+import { apart, COMPARED_WITH_ITSELF } from "@/lib/git/branch-pair";
 import { z } from "zod";
 import { REVIEW_PROFILES, reviewProfileSchema } from "@/lib/domain/enums";
 import type { ParsedFile } from "@/lib/git/diff";
@@ -33,21 +34,24 @@ import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
 
-const body = z.object({
-  projectId: z.string().min(1),
-  fromBranch: z.string().min(1),
-  intoBranch: z.string().min(1),
-  rulesetId: z.string().min(1),
-  model: z.string().min(1),
-  profileId: reviewProfileSchema.optional(),
-  linked: z
-    .object({
-      projectId: z.string().min(1),
-      fromBranch: z.string().min(1),
-      intoBranch: z.string().min(1),
-    })
-    .optional(),
-});
+const body = z
+  .object({
+    projectId: z.string().min(1),
+    fromBranch: z.string().min(1),
+    intoBranch: z.string().min(1),
+    rulesetId: z.string().min(1),
+    model: z.string().min(1),
+    profileId: reviewProfileSchema.optional(),
+    linked: z
+      .object({
+        projectId: z.string().min(1),
+        fromBranch: z.string().min(1),
+        intoBranch: z.string().min(1),
+      })
+      .refine(apart, COMPARED_WITH_ITSELF)
+      .optional(),
+  })
+  .refine(apart, COMPARED_WITH_ITSELF);
 
 interface Side {
   slug: string;

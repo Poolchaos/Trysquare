@@ -354,6 +354,12 @@ function NewReview() {
     chosenInto === "" || chosenInto === fromBranch
       ? ((branches ?? []).find((branch) => branch.name !== fromBranch)?.name ?? "")
       : chosenInto;
+  // The dependency's the same way: its pair could be one branch against
+  // itself, an empty half of the review that reads as clean (D-144).
+  const linkIntoBranch =
+    linkInto === "" || linkInto === linkFrom
+      ? (linkBranches.find((branch) => branch.name !== linkFrom)?.name ?? "")
+      : linkInto;
 
   // The size of the review, recomputed whenever the decisions that change it
   // do. Free and read-only, so it can run on every change without a thought.
@@ -375,8 +381,14 @@ function NewReview() {
             rulesetId,
             model,
             ...(profileOverride === "" ? {} : { profileId: profileOverride }),
-            ...(includeLink && linkFrom && linkInto
-              ? { linked: { projectId: includeLink, fromBranch: linkFrom, intoBranch: linkInto } }
+            ...(includeLink && linkFrom && linkIntoBranch
+              ? {
+                  linked: {
+                    projectId: includeLink,
+                    fromBranch: linkFrom,
+                    intoBranch: linkIntoBranch,
+                  },
+                }
               : {}),
           }),
         },
@@ -399,7 +411,7 @@ function NewReview() {
     profileOverride,
     includeLink,
     linkFrom,
-    linkInto,
+    linkIntoBranch,
   ]);
 
   async function start(event: React.FormEvent) {
@@ -418,8 +430,14 @@ function NewReview() {
           ...(engineMode === "headless" ? {} : { engineMode }),
           ...(profileOverride === "" ? {} : { profileId: profileOverride }),
           ...(intent.trim() === "" ? {} : { intent }),
-          ...(includeLink && linkFrom && linkInto
-            ? { linked: { projectId: includeLink, fromBranch: linkFrom, intoBranch: linkInto } }
+          ...(includeLink && linkFrom && linkIntoBranch
+            ? {
+                linked: {
+                  projectId: includeLink,
+                  fromBranch: linkFrom,
+                  intoBranch: linkIntoBranch,
+                },
+              }
             : {}),
         }),
       });
@@ -452,7 +470,7 @@ function NewReview() {
 
   // A dependency ticked without both its branches was dropped from the
   // review it was ticked for, without a word (5.14, audit U11).
-  const linkIncomplete = includeLink !== "" && (linkFrom === "" || linkInto === "");
+  const linkIncomplete = includeLink !== "" && (linkFrom === "" || linkIntoBranch === "");
   const ready =
     fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetId !== "" && !linkIncomplete;
 
@@ -891,14 +909,16 @@ function NewReview() {
                     </Field>
                     <Field label="Compare against">
                       <Select
-                        value={linkInto}
+                        value={linkIntoBranch}
                         onChange={(event) => setLinkInto(event.target.value)}
                       >
-                        {linkBranches.map((branch) => (
-                          <option key={branch.name} value={branch.name}>
-                            {branch.name}
-                          </option>
-                        ))}
+                        {linkBranches
+                          .filter((branch) => branch.name !== linkFrom)
+                          .map((branch) => (
+                            <option key={branch.name} value={branch.name}>
+                              {branch.name}
+                            </option>
+                          ))}
                       </Select>
                     </Field>
                   </div>

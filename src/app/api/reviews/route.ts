@@ -8,6 +8,7 @@
  * fetch that fails therefore blocks creation rather than falling back.
  */
 
+import { apart, COMPARED_WITH_ITSELF } from "@/lib/git/branch-pair";
 import { z } from "zod";
 import {
   engineModeSchema,
@@ -35,30 +36,34 @@ import { listReviewsForProject } from "@/server/db/repositories/reviews";
 
 export const dynamic = "force-dynamic";
 
-const body = z.object({
-  projectId: z.string().min(1),
-  fromBranch: z.string().min(1),
-  intoBranch: z.string().min(1),
-  model: z
-    .string()
-    .min(1)
-    .superRefine((model, context) => {
-      if (!isFullModelId(model)) context.addIssue({ code: "custom", message: aliasRefusal(model) });
-    }),
-  // No default: absent means "whatever the model is registered for", which is
-  // not the same request as explicitly asking for full-context.
-  profileId: reviewProfileSchema.optional(),
-  engineMode: engineModeSchema.optional(),
-  effort: reviewEffortSchema.default("high"),
-  intent: z.string().optional(),
-  linked: z
-    .object({
-      projectId: z.string().min(1),
-      fromBranch: z.string().min(1),
-      intoBranch: z.string().min(1),
-    })
-    .optional(),
-});
+const body = z
+  .object({
+    projectId: z.string().min(1),
+    fromBranch: z.string().min(1),
+    intoBranch: z.string().min(1),
+    model: z
+      .string()
+      .min(1)
+      .superRefine((model, context) => {
+        if (!isFullModelId(model))
+          context.addIssue({ code: "custom", message: aliasRefusal(model) });
+      }),
+    // No default: absent means "whatever the model is registered for", which is
+    // not the same request as explicitly asking for full-context.
+    profileId: reviewProfileSchema.optional(),
+    engineMode: engineModeSchema.optional(),
+    effort: reviewEffortSchema.default("high"),
+    intent: z.string().optional(),
+    linked: z
+      .object({
+        projectId: z.string().min(1),
+        fromBranch: z.string().min(1),
+        intoBranch: z.string().min(1),
+      })
+      .refine(apart, COMPARED_WITH_ITSELF)
+      .optional(),
+  })
+  .refine(apart, COMPARED_WITH_ITSELF);
 
 export function GET(): Promise<Response> {
   return handler(async () => {

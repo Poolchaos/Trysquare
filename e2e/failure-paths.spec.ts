@@ -111,6 +111,14 @@ test("a dependency ticked with no branch keeps Start off and says why", async ({
   await expect(start).toBeDisabled();
   await expect(page.getByText("Choose the dependency's branch, or untick it.")).toBeVisible();
 
+  // Its branch set to the one it would be compared against, it was a
+  // dependency compared with itself, an empty half that reads as clean;
+  // compare-against moves off it, as the primary's does (D-144).
+  await page.getByLabel("Its branch").selectOption("main");
+  const itsInto = page.getByLabel("Compare against").nth(1);
+  await expect(itsInto).toHaveValue("release");
+  await expect(itsInto.locator("option", { hasText: /^main$/ })).toHaveCount(0);
+
   await page.getByLabel("Its branch").selectOption("release");
   await expect(start).toBeEnabled();
   await page.getByLabel(/Include shared-core/).uncheck();

@@ -135,6 +135,37 @@ describe("a confirm or a start whose body is there but wrong", () => {
   });
 });
 
+describe("a branch compared against itself", () => {
+  it("is refused by the create and the pre-flight, on either side of a review", async () => {
+    // One branch against itself is an empty change, and a review of nothing
+    // reads as clean. The screen kept the primary pair apart but not the
+    // dependency's, and neither route refused either (D-144). Refused before
+    // anything is looked up, so no project is needed.
+    const create = (await import("@/app/api/reviews/route")).POST;
+    const preflight = (await import("@/app/api/reviews/preflight/route")).POST;
+    const base = {
+      projectId: "P",
+      fromBranch: "feature",
+      intoBranch: "main",
+      model: "claude-fable-5[1m]",
+      rulesetId: "R",
+    };
+    const sent = [
+      { ...base, linked: { projectId: "D", fromBranch: "main", intoBranch: "main" } },
+      { ...base, intoBranch: "feature" },
+    ];
+    for (const route of [create, preflight]) {
+      for (const pair of sent) {
+        const response = await route(post(JSON.stringify(pair)));
+        const body = (await response.json()) as { code: string; error: string };
+        expect(response.status, body.error).toBe(400);
+        expect(body.code).toBe("Invalid");
+        expect(body.error).toMatch(/intoBranch: .*against itself/);
+      }
+    }
+  });
+});
+
 describe("a start that names a ruleset for a review already frozen with one", () => {
   it("is refused, not answered with the ruleset ignored", async () => {
     // A review carries the ruleset frozen onto it, and one sent with its

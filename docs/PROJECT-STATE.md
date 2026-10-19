@@ -104,10 +104,11 @@ are accepted; anything else is refused by name.
 
 - `CLAUDE.md` - charter. `docs/` - specs, ledgers, plans.
 - `src/lib/` - pure and I/O free: paths, ids, domain enums and state machines,
-  git diff and URL parsing, changed exported symbols, mechanical sweeps, the
-  quotation check, stage schemas, budget arithmetic, ruleset import with a
-  fidelity gate, prompt composition, batch planning, the report renderer,
-  the request guard, and matching an error by the name its class sets.
+  git diff and URL parsing, a branch pair kept apart, changed exported
+  symbols, mechanical sweeps, the quotation check, stage schemas, budget
+  arithmetic, ruleset import with a fidelity gate, prompt composition, batch
+  planning, the report renderer, the request guard, and matching an error by
+  the name its class sets.
 - `src/server/db/` - schema (14 tables), client, migrations 0000 to 0011, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings and stage executions.
