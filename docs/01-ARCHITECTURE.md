@@ -49,7 +49,9 @@ Versions are pinned at WP-A and recorded in `PROJECT-STATE.md` once installed.
   `instanceof` (D-139, D-140); `scripts/check-style.mjs` refuses
   `instanceof` on an app class in `src/app/api`, `src/server/api` and any
   file that calls the manager, and the manager's error classes outside its
-  own module (D-141).
+  own module (D-141). The instrumentation is excepted: it builds the
+  runtime, so the manager is its own copy, and it keeps `instanceof` for the
+  lock's errors, one of which is a subclass with a name of its own (D-142).
 - **Progress:** job manager persists every state change to SQLite
   immediately; UI subscribes via one SSE endpoint per review
   (`/api/reviews/[id]/events`). A dropped stream falls back to polling

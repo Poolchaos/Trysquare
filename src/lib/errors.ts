@@ -9,6 +9,9 @@
  * out as 500s (D-139, D-140). So the HTTP layer, and any file that calls the
  * manager, matches an error by the name its class sets, never `instanceof`
  * (D-141). Minification renames the classes and leaves the names alone.
+ *
+ * A subclass that sets a name of its own is matched by that name only, never
+ * by its parent's: name it too.
  */
 export function isNamed<T extends Error = Error>(
   error: unknown,

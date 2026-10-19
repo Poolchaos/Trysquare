@@ -214,11 +214,22 @@ function lineOfIndex(text, index) {
   return text.slice(0, index).split("\n").length;
 }
 
+/** Files that call the manager from its own copy of the modules, and why. */
+const SAME_COPY_AS_MANAGER = new Map([
+  [
+    "src/instrumentation-node.ts",
+    "builds the runtime, so the manager and the lock errors it catches are its own copy's",
+  ],
+]);
+
 function boundaryLines(path, text) {
   const inScope =
     path.startsWith("src/app/api/") ||
     path.startsWith("src/server/api/") ||
-    (path.startsWith("src/") && path !== MANAGER_PATH && MANAGER_CALL.test(text));
+    (path.startsWith("src/") &&
+      path !== MANAGER_PATH &&
+      !SAME_COPY_AS_MANAGER.has(path) &&
+      MANAGER_CALL.test(text));
   if (!inScope) return [];
   const found = [];
   for (const pattern of CLASS_TESTS) {

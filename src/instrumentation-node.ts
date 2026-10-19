@@ -10,7 +10,7 @@
  */
 
 import { SHUTDOWN } from "@/lib/domain/shutdown";
-import { isNamed } from "@/lib/errors";
+import { DataDirLockError } from "@/server/data-dir-lock";
 import { runtime } from "@/server/runtime";
 
 /**
@@ -21,7 +21,10 @@ function start(): ReturnType<typeof runtime> {
   try {
     return runtime();
   } catch (error) {
-    if (!isNamed(error, "DataDirLockError")) throw error;
+    // By class: the lock is taken by this copy of the modules, and the
+    // refusal a second server gets is a subclass with a name of its own,
+    // which a match by name let through as a crash (D-142).
+    if (!(error instanceof DataDirLockError)) throw error;
     console.error(error.message);
     process.exit(1);
   }

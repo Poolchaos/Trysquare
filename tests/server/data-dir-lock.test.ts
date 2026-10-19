@@ -206,6 +206,11 @@ describe("the lock and the runtime", () => {
     );
     expect(started.status).toBe(1);
     expect(started.stderr).toContain(`Another Trysquare server, process ${process.pid},`);
+    // The reason alone, not a crash: matched by its parent class's name
+    // alone, the refusal a second server gets was rethrown, and stderr held
+    // a stack and Node's crash banner around the same words (D-142).
+    expect(started.stderr).not.toMatch(/^\s+at /m);
+    expect(started.stderr).not.toContain("DataDirInUseError:");
     expect(existsSync(join(dataDir, "db.sqlite"))).toBe(false);
   }, 60_000);
 });
