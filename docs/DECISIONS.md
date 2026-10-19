@@ -3145,3 +3145,30 @@ verified evidence, in writing, here.
   lost; and its "all five and the helper" named four forms and the helper.
   D-141 item 4's fix, 8aef7be, carried the regression item 2 here undoes.
   The docs now say what bac0b5d does.
+- 2026-10-19 D-143 REVIEW (the D-142 fixes and their record, 8d6124b..33be9c1,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Seven findings, all LOW, all dispositioned before new work:
+  1. A link the change itself made, leading out of the checkout, was
+  answered 404 and its hunk dropped. 2. A realpath that failed skipped the
+  check, and the read resolved the path again. 1 and 2 fixed eff42db; 2 is
+  by reading, no case being found where realpath fails and the read works.
+  3. bac0b5d's rules missed an import named by a template literal, by
+  import-equals or through "..", an app class with a global's name, and
+  prototype comparisons. Fixed f1196f6, whose message says it "touches no
+  app code"; it also corrected a comment in src/lib/errors.ts, item 6.
+  4. b3b9b5d's comment, its test's and D-142 item 1 said git lists a copy
+  before the file it came from. Git lists entries by the path they go to,
+  so a copy comes first when its path sorts first: in a scratch repo
+  diffed with -M -C, a.ts, then b.ts copied from m.ts, then m.ts, then
+  z.ts copied from a.ts. The fix never depended on the order; the comments
+  are corrected in eff42db.
+  5. 3f06eb1's message said nothing else pins IllegalTransitionError at the
+  handler. The status test's second-decision case pins it through the
+  confirm route. InvalidCloneTransitionError was the one listed status no
+  route test named: with it flipped to 404 in the handler's list, the unit
+  suite failed in that test alone (1 failed, 1050 passed), and with the
+  test from before 3f06eb1 it passed whole (1051).
+  6. src/lib/errors.ts still said any file that calls the manager matches
+  by name, which the instrumentation does not. Corrected in f1196f6.
+  7. Row 5.11 said all its counts came from the browser gate, and
+  3f06eb1's came from ./verify.sh alone. Corrected here, with f1196f6's.
