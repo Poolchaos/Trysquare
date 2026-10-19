@@ -7,7 +7,15 @@
  * with hand-written findings would prove nothing about the real one.
  */
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -529,6 +537,42 @@ describe("reading the code a finding is about", () => {
       expect(body.hunk!.lines).toContain("+the file's line after");
     } finally {
       writeFileSync(patchPath, patch, "utf8");
+    }
+  });
+
+  it("never serves a file that a link in the checkout leads out to", async () => {
+    // The path was held to the checkout by its text alone, and the read
+    // followed a link the change committed to wherever it pointed (D-142).
+    // A directory junction on Windows, which needs no privilege there.
+    const { runtime } = await import("@/server/runtime");
+    const { createCandidate } = await import("@/server/db/repositories/findings");
+    const outside = mkdtempSync(join(tmpdir(), "trysquare-outside-"));
+    writeFileSync(join(outside, "secret.txt"), "SECRET=hunter3\n", "utf8");
+    const link = join(worktreeRootDir(dataDir, reviewId), "app", "zz-linked");
+    symlinkSync(outside, link, process.platform === "win32" ? "junction" : "dir");
+    try {
+      const cited = "app/zz-linked/secret.txt";
+      createCandidate(runtime().db, {
+        reviewId,
+        repo: "primary",
+        filePath: cited,
+        lineStart: 1,
+        lineEnd: 1,
+        severity: "WARNING",
+        issue: "x",
+        comment: "x",
+        mechanism: "x",
+      });
+      const response = await routes.fileContext.GET(
+        new Request(`http://localhost/x?path=${encodeURIComponent(cited)}&line=1`),
+        params(reviewId),
+      );
+      expect(response.status).toBe(404);
+      expect(await response.text()).not.toContain("hunter3");
+    } finally {
+      // The link alone: removed without following it.
+      rmSync(link, { force: true });
+      rmSync(outside, { recursive: true, force: true });
     }
   });
 

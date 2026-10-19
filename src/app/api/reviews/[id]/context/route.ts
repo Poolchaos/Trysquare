@@ -15,8 +15,8 @@
  * finding is the record.
  */
 
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, realpath } from "node:fs/promises";
+import { join, sep } from "node:path";
 import { z } from "zod";
 import { formatHunkHeader, hunkForLine, parseUnifiedDiff } from "@/lib/git/diff";
 import { bundleDir, insideRoot, worktreeRootDir } from "@/lib/paths";
@@ -81,10 +81,20 @@ export async function GET(
     // that climbs out is refused before any read: not found, never "could
     // not be read". A file the change renamed, cited by its old name, is read
     // from its new one, the one the checkout has (D-141).
+    const root = worktreeRootDir(dataDir, id);
     let target: string;
     try {
-      target = insideRoot(worktreeRootDir(dataDir, id), renamedTo ?? path);
+      target = insideRoot(root, renamedTo ?? path);
     } catch {
+      return notFound(`${path} in the review's checkout`);
+    }
+    // And where it really is: a link the change committed passes the text
+    // check and leads the read wherever it points (D-142).
+    const [realTarget, realRoot] = await Promise.all([
+      realpath(target).catch(() => null),
+      realpath(root).catch(() => root),
+    ]);
+    if (realTarget !== null && realTarget !== realRoot && !realTarget.startsWith(realRoot + sep)) {
       return notFound(`${path} in the review's checkout`);
     }
 
