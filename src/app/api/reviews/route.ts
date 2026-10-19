@@ -26,7 +26,7 @@ import { getModel } from "@/server/db/repositories/models";
 import { effortRunsOn } from "@/lib/models/effort-support";
 import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
 import { resolveProfile } from "@/lib/review/profiles";
-import { fetchAll, mergeBase, resolveBranch } from "@/server/gitops/repo";
+import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
 import { created, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
 import { findingTallies } from "@/server/db/repositories/findings";
@@ -138,17 +138,31 @@ export function POST(request: Request): Promise<Response> {
             ...(await pin(dependency.clonePath, input.linked.fromBranch, input.linked.intoBranch)),
           }
         : undefined;
-    // A side with nothing on top of what it is compared against, a branch
-    // never committed to or one already merged, is a review of no change,
-    // which ran and read as clean (D-145).
+    // A side whose change is empty, a branch never committed to or one
+    // already merged, is a review of no change, which ran and read as clean
+    // (D-145). Judged by the change set the review would read: commits that
+    // add up to nothing, an empty commit or one and its revert, passed a
+    // check by commits alone (D-146).
     for (const side of [
-      { ...pins, fromBranch: input.fromBranch, intoBranch: input.intoBranch },
-      ...(linked ? [linked] : []),
+      {
+        ...pins,
+        clonePath: project.clonePath,
+        fromBranch: input.fromBranch,
+        intoBranch: input.intoBranch,
+        whose: "",
+      },
+      ...(linked && dependency
+        ? [{ ...linked, clonePath: dependency.clonePath, whose: `${dependency.name}'s ` }]
+        : []),
     ]) {
-      if (side.fromCommit === side.mergeBaseCommit) {
+      const empty =
+        side.fromCommit === side.mergeBaseCommit ||
+        (await readChangeSet(side.clonePath, side.mergeBaseCommit, side.fromCommit)).files
+          .length === 0;
+      if (empty) {
         throw Response.json(
           {
-            error: `${side.fromBranch} has nothing on top of ${side.intoBranch}: a review of no change reads as clean.`,
+            error: `${side.whose}${side.fromBranch} changes nothing against ${side.intoBranch}: a review of no change reads as clean.`,
             code: "EmptyChange",
           },
           { status: 400 },

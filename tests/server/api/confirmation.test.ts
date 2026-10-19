@@ -7,6 +7,7 @@
  * with hand-written findings would prove nothing about the real one.
  */
 
+import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -424,8 +425,46 @@ describe("reading the code a finding is about", () => {
     const body = (await response.json()) as { code: string; error: string };
     expect(response.status, body.error).toBe(400);
     expect(body.code).toBe("EmptyChange");
-    expect(body.error).toContain("main has nothing on top of feature/rename-prefs");
+    expect(body.error).toContain("main changes nothing against feature/rename-prefs");
   });
+
+  it("refuses a branch whose commits change nothing, as an empty push does", async () => {
+    // Past the merge base, a branch whose one commit is empty passed a check
+    // by commits and ran a review of no change, reading as clean (D-146).
+    // Made in the repository the project fetches from, as a push would.
+    const tree = execFileSync("git", ["rev-parse", "main^{tree}"], {
+      cwd: fixture.appClone,
+      encoding: "utf8",
+    }).trim();
+    const empty = execFileSync("git", ["commit-tree", tree, "-p", "main", "-m", "kick CI"], {
+      cwd: fixture.appClone,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "Fixture",
+        GIT_AUTHOR_EMAIL: "fixture@example.invalid",
+        GIT_COMMITTER_NAME: "Fixture",
+        GIT_COMMITTER_EMAIL: "fixture@example.invalid",
+      },
+    }).trim();
+    execFileSync("git", ["update-ref", "refs/heads/empty-push", empty], { cwd: fixture.appClone });
+
+    const listed = (await (await routes.projects.GET()).json()) as {
+      projects: { id: string }[];
+    };
+    const response = await routes.reviews.POST(
+      post({
+        projectId: listed.projects[0]!.id,
+        fromBranch: "empty-push",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    const body = (await response.json()) as { code: string; error: string };
+    expect(response.status, body.error).toBe(400);
+    expect(body.code).toBe("EmptyChange");
+    expect(body.error).toContain("empty-push changes nothing against main");
+  }, 60_000);
 
   it("refuses a file this review never raised a finding in", async () => {
     // Otherwise the endpoint is a way to read any file on the machine.
