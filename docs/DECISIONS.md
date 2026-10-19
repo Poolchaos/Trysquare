@@ -3117,3 +3117,31 @@ verified evidence, in writing, here.
   7. Row 4.19 put the 500's end at 5057a5d, where it ended at e05cfed, and
   row 5.11 said the start route knows the refusals by name, which the
   handler has done since 5057a5d. Both corrected here.
+- 2026-10-19 D-142 REVIEW (the D-141 fixes and their record, bce003a..8d6124b,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Six findings, two MEDIUM and four LOW, all dispositioned before
+  new work:
+  1. MEDIUM: the context route matched a finding's file by its path or the
+  path it came from, and a copy carries the path it was copied from, listed
+  before the file itself: a finding on a file the change also copied was
+  shown the copy's hunk since 3f630e3, and since 892368e said to be renamed
+  to the copy and shown its lines. Fixed b3b9b5d.
+  2. MEDIUM: 8aef7be matched the instrumentation's lock check by name, and
+  the refusal a second server gets is a subclass with a name of its own, so
+  it crashed with a stack where it had said its reason; the startup test,
+  checking the exit status and the words, passed the crash. Fixed 06efb83:
+  instanceof again, the instrumentation being the manager's own copy, and
+  the test wants no stack.
+  3. LOW: bd194d1's test read each expected status from the list it
+  checked. Fixed 3f06eb1.
+  4. LOW: the check-style rules read lines, not code, and chose files by
+  the word "manager". Fixed bac0b5d: TypeScript's parse, and the importers
+  of the runtime and job modules.
+  5. LOW, there before: a link in the checkout could lead the file read out
+  of it. Fixed b97fd24.
+  6. LOW, the record: row 5.11 and 01-ARCHITECTURE said the rules cover
+  "every file that calls the manager", a text match on the word; 8aef7be
+  said the instrumentation "now matches by name" without the subclass it
+  lost; and its "all five and the helper" named four forms and the helper.
+  D-141 item 4's fix, 8aef7be, carried the regression item 2 here undoes.
+  The docs now say what bac0b5d does.
