@@ -682,6 +682,23 @@ describe("reading the code a finding is about", () => {
       expect(body.brokenLink).toBe(true);
       expect(body.readError).toBeUndefined();
       expect(body.hunk).not.toBeNull();
+
+      // To a directory that is there, inside the checkout, it is no link to
+      // nothing: it was called one (D-145). It is a read of a directory.
+      rmSync(link, { force: true });
+      symlinkSync(
+        join(worktreeRootDir(dataDir, reviewId), "app", "src"),
+        link,
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      const toDirectory = (await (
+        await routes.fileContext.GET(
+          new Request(`http://localhost/x?path=${encodeURIComponent(cited)}&line=1`),
+          params(reviewId),
+        )
+      ).json()) as { brokenLink?: boolean; readError?: string };
+      expect(toDirectory.brokenLink).toBeUndefined();
+      expect(toDirectory.readError).toMatch(/EISDIR/);
     } finally {
       rmSync(link, { force: true });
       writeFileSync(patchPath, patch, "utf8");

@@ -112,10 +112,14 @@ export async function GET(
       // refused, as a file not found (D-141). Not found is kept for a file
       // that is not there and is not in the change.
       if (deleted) return ok({ ...empty, deleted: true });
+      const code = error instanceof Error && "code" in error ? error.code : undefined;
       // A link the change made to something not there: its hunk says where it
-      // points, and there is nothing to read or try again (D-144).
+      // points, and there is nothing to read or try again (D-144). Only when
+      // what it points at is missing: a link to a directory, or to a file
+      // busy or refused, was called a link to nothing (D-145).
       if (
         hunk &&
+        (code === "ENOENT" || code === "ELOOP") &&
         (await lstat(target).then(
           (stat) => stat.isSymbolicLink(),
           () => false,
@@ -123,7 +127,6 @@ export async function GET(
       ) {
         return ok({ ...empty, brokenLink: true });
       }
-      const code = error instanceof Error && "code" in error ? error.code : undefined;
       if (hunk || (code !== "ENOENT" && code !== "ENOTDIR")) {
         return ok({ ...empty, readError: error instanceof Error ? error.message : String(error) });
       }
