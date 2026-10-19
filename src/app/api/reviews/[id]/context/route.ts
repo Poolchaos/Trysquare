@@ -88,19 +88,21 @@ export async function GET(
     } catch {
       return notFound(`${path} in the review's checkout`);
     }
-    // And where it really is: a link the change committed passes the text
-    // check and leads the read wherever it points (D-142).
-    const [realTarget, realRoot] = await Promise.all([
-      realpath(target).catch(() => null),
-      realpath(root).catch(() => root),
-    ]);
-    if (realTarget !== null && realTarget !== realRoot && !realTarget.startsWith(realRoot + sep)) {
-      return notFound(`${path} in the review's checkout`);
-    }
-
+    const empty = { path, start: 0, end: 0, total: 0, lines: [], hunk };
     let contents: string;
     try {
-      contents = await readFile(target, "utf8");
+      // Read from where it really is, and only inside the checkout: a link
+      // the change committed passes the text check and led the read wherever
+      // it pointed (D-142). Resolved once and read from there, so what is
+      // checked is what is read (D-143).
+      const [realTarget, realRoot] = await Promise.all([realpath(target), realpath(root)]);
+      if (realTarget !== realRoot && !realTarget.startsWith(realRoot + sep)) {
+        // A link the change made shows its hunk, which says where it points;
+        // where it points is never read (D-143).
+        if (hunk) return ok({ ...empty, outside: true });
+        return notFound(`${path} in the review's checkout`);
+      }
+      contents = await readFile(realTarget, "utf8");
     } catch (error) {
       // A file the change deleted has no copy in the checkout, and its hunk is
       // the only view of it there is. Any other file that could not be read
@@ -108,7 +110,6 @@ export async function GET(
       // to be answered as a deletion (D-140), and one with no hunk, busy or
       // refused, as a file not found (D-141). Not found is kept for a file
       // that is not there and is not in the change.
-      const empty = { path, start: 0, end: 0, total: 0, lines: [], hunk };
       if (deleted) return ok({ ...empty, deleted: true });
       const code = error instanceof Error && "code" in error ? error.code : undefined;
       if (hunk || (code !== "ENOENT" && code !== "ENOTDIR")) {
@@ -164,8 +165,9 @@ async function hunkFor(
   const [slug, ...rest] = qualifiedPath.split("/");
   const withoutSlug = rest.join("/");
   // The file itself first, then a file renamed from it. A copy carries the
-  // path it was copied from too, and git lists a copy before the file it came
-  // from, so matching either path took the copy for the file (D-142).
+  // path it was copied from too, and git lists entries by the path they go
+  // to, so a copy can come first, and matching either path took it for the
+  // file (D-142, D-143).
   const files = parseUnifiedDiff(patch);
   const file =
     files.find((candidate) => candidate.path === withoutSlug) ??

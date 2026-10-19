@@ -57,6 +57,8 @@ interface FileContext {
   readError?: string;
   /** The new name of a file the finding cites by its old one. */
   renamedTo?: string;
+  /** A link the change made, leading out of the checkout: never read. */
+  outside?: boolean;
 }
 
 const UNDECIDED = new Set(["verified", "open_question"]);
@@ -669,28 +671,30 @@ export function ConfirmationQueue({
                         ? "Reading the file..."
                         : contextError
                           ? "Not read."
-                          : shownContext.deleted
-                            ? shownContext.hunk
-                              ? "This file is not in the review's checkout: the change deleted it, and the change above is all there is of it."
-                              : "This file is not in the review's checkout: the change deleted it."
-                            : shownContext.lines.length === 0
-                              ? "No lines of this file to show here."
-                              : shownContext.lines.map((line) => (
-                                  <span
-                                    key={line.number}
-                                    className={`block ${
-                                      line.number >= current.lineStart &&
-                                      line.number <= current.lineEnd
-                                        ? "bg-[var(--color-accent-soft)]"
-                                        : ""
-                                    }`}
-                                  >
-                                    <span className="mr-3 inline-block w-10 text-right text-[var(--color-ink-faint)]">
-                                      {line.number}
+                          : shownContext.outside
+                            ? "This file is a link that leads out of the review's checkout, so where it leads is not shown: the change above says where it points."
+                            : shownContext.deleted
+                              ? shownContext.hunk
+                                ? "This file is not in the review's checkout: the change deleted it, and the change above is all there is of it."
+                                : "This file is not in the review's checkout: the change deleted it."
+                              : shownContext.lines.length === 0
+                                ? "No lines of this file to show here."
+                                : shownContext.lines.map((line) => (
+                                    <span
+                                      key={line.number}
+                                      className={`block ${
+                                        line.number >= current.lineStart &&
+                                        line.number <= current.lineEnd
+                                          ? "bg-[var(--color-accent-soft)]"
+                                          : ""
+                                      }`}
+                                    >
+                                      <span className="mr-3 inline-block w-10 text-right text-[var(--color-ink-faint)]">
+                                        {line.number}
+                                      </span>
+                                      {line.text}
                                     </span>
-                                    {line.text}
-                                  </span>
-                                ))}
+                                  ))}
                     </code>
                   </pre>
                 </div>

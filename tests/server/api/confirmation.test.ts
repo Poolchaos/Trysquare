@@ -486,9 +486,11 @@ describe("reading the code a finding is about", () => {
   });
 
   it("shows a file the change also copied as itself, not as the copy", async () => {
-    // A copy carries the path it was copied from, and git lists the copy
-    // before the file it came from, so a finding on the file was shown the
-    // copy's hunk, and since 892368e said to be renamed to it (D-142).
+    // A copy carries the path it was copied from, and git lists entries by
+    // the path they go to, so a copy whose path sorts first came first, and a
+    // finding on the file was shown the copy's hunk, and since 892368e said
+    // to be renamed to it (D-142, D-143). guard-copy.ts sorts before
+    // guard.ts, "-" before ".", so git lists them as this patch does.
     const finding = (await snapshot()).findings.find((entry) =>
       entry.filePath.endsWith("src/auth/guard.ts"),
     );
@@ -549,6 +551,8 @@ describe("reading the code a finding is about", () => {
     const outside = mkdtempSync(join(tmpdir(), "trysquare-outside-"));
     writeFileSync(join(outside, "secret.txt"), "SECRET=hunter3\n", "utf8");
     const link = join(worktreeRootDir(dataDir, reviewId), "app", "zz-linked");
+    const patchPath = join(bundleDir(dataDir, reviewId), "diff.patch");
+    const patch = readFileSync(patchPath, "utf8");
     symlinkSync(outside, link, process.platform === "win32" ? "junction" : "dir");
     try {
       const cited = "app/zz-linked/secret.txt";
@@ -569,10 +573,40 @@ describe("reading the code a finding is about", () => {
       );
       expect(response.status).toBe(404);
       expect(await response.text()).not.toContain("hunter3");
+
+      // In the change, the link was answered not found and its hunk dropped,
+      // the one view of where it points (D-143): now the hunk, and still
+      // nothing of what it points at.
+      writeFileSync(
+        patchPath,
+        [
+          "diff --git a/zz-linked/secret.txt b/zz-linked/secret.txt",
+          "new file mode 120000",
+          "index 0000000..1111111",
+          "--- /dev/null",
+          "+++ b/zz-linked/secret.txt",
+          "@@ -0,0 +1 @@",
+          "+/somewhere/outside/secret.txt",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const inTheChange = await routes.fileContext.GET(
+        new Request(`http://localhost/x?path=${encodeURIComponent(cited)}&line=1`),
+        params(reviewId),
+      );
+      expect(inTheChange.status).toBe(200);
+      const text = await inTheChange.text();
+      expect(text).not.toContain("hunter3");
+      const body = JSON.parse(text) as { lines: unknown[]; hunk: unknown; outside?: boolean };
+      expect(body.outside).toBe(true);
+      expect(body.lines).toHaveLength(0);
+      expect(body.hunk).not.toBeNull();
     } finally {
       // The link alone: removed without following it.
       rmSync(link, { force: true });
       rmSync(outside, { recursive: true, force: true });
+      writeFileSync(patchPath, patch, "utf8");
     }
   });
 

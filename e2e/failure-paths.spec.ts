@@ -1041,6 +1041,33 @@ test("a file the change deleted is said to be deleted, not the checkout gone", a
   }
 });
 
+test("a link the change made out of the checkout shows its hunk, not where it leads", async ({
+  page,
+}) => {
+  // Answered 404, not found, the link's hunk went with it, though the hunk is
+  // what says where it points (D-143). The answer is the route's own shape.
+  const stopAnswering = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        lines: [],
+        hunk: { header: "@@ -0,0 +1 @@", lines: ["+/somewhere/outside/secret.txt"] },
+        outside: true,
+      },
+    }),
+  );
+  await page.goto("/reviews?status=awaiting");
+  await page.getByRole("main").locator("ul > li").first().getByRole("link").click();
+  await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible({ timeout: 30_000 });
+  await page.locator("body").press("Enter");
+  await expect(page.getByRole("group", { name: "The file around this finding" })).toHaveText(
+    /a link that leads out of the review's checkout/,
+  );
+  await expect(page.getByText("+/somewhere/outside/secret.txt")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await stopAnswering();
+});
+
 test("a file the checkout could not give up is said as that, not as deleted", async ({ page }) => {
   // Every failed read with a hunk was answered as a deletion, so a modified
   // file the checkout held but could not give up, busy on Windows say, was
