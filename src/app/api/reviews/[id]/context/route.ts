@@ -15,7 +15,7 @@
  * finding is the record.
  */
 
-import { readFile, realpath } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import { join, sep } from "node:path";
 import { z } from "zod";
 import { formatHunkHeader, hunkForLine, parseUnifiedDiff } from "@/lib/git/diff";
@@ -23,6 +23,7 @@ import { bundleDir, insideRoot, worktreeRootDir } from "@/lib/paths";
 import { listFindings } from "@/server/db/repositories/findings";
 import { requireReview, statusOf } from "@/server/db/repositories/reviews";
 import { failed, handler, notFound, ok } from "@/server/api/respond";
+import { realPath } from "@/server/real-path";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -95,7 +96,7 @@ export async function GET(
       // the change committed passes the text check and led the read wherever
       // it pointed (D-142). Resolved once and read from there, so what is
       // checked is what is read (D-143).
-      const [realTarget, realRoot] = await Promise.all([realpath(target), realpath(root)]);
+      const [realTarget, realRoot] = await Promise.all([realPath(target), realPath(root)]);
       if (realTarget !== realRoot && !realTarget.startsWith(realRoot + sep)) {
         // A link the change made shows its hunk, which says where it points;
         // where it points is never read (D-143).
@@ -111,6 +112,17 @@ export async function GET(
       // refused, as a file not found (D-141). Not found is kept for a file
       // that is not there and is not in the change.
       if (deleted) return ok({ ...empty, deleted: true });
+      // A link the change made to something not there: its hunk says where it
+      // points, and there is nothing to read or try again (D-144).
+      if (
+        hunk &&
+        (await lstat(target).then(
+          (stat) => stat.isSymbolicLink(),
+          () => false,
+        ))
+      ) {
+        return ok({ ...empty, brokenLink: true });
+      }
       const code = error instanceof Error && "code" in error ? error.code : undefined;
       if (hunk || (code !== "ENOENT" && code !== "ENOTDIR")) {
         return ok({ ...empty, readError: error instanceof Error ? error.message : String(error) });

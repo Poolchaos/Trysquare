@@ -1231,6 +1231,31 @@ test("a link the change made out of the checkout shows its hunk, not where it le
   await stopAnswering();
 });
 
+test("a link the change made to nothing is said as that, with no Try again", async ({ page }) => {
+  // Its target not on this machine, it was a read error with a Try again
+  // that could never work (D-144). The answer is the route's own shape.
+  const stopAnswering = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        lines: [],
+        hunk: { header: "@@ -0,0 +1 @@", lines: ["+../nowhere"] },
+        brokenLink: true,
+      },
+    }),
+  );
+  await page.goto("/reviews?status=awaiting");
+  await page.getByRole("main").locator("ul > li").first().getByRole("link").click();
+  await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible({ timeout: 30_000 });
+  await page.locator("body").press("Enter");
+  await expect(page.getByRole("group", { name: "The file around this finding" })).toHaveText(
+    /a link to something that is not there/,
+  );
+  await expect(page.getByText("+../nowhere")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await stopAnswering();
+});
+
 test("a file the checkout could not give up is said as that, not as deleted", async ({ page }) => {
   // Every failed read with a hunk was answered as a deletion, so a modified
   // file the checkout held but could not give up, busy on Windows say, was

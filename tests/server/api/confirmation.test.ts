@@ -610,6 +610,64 @@ describe("reading the code a finding is about", () => {
     }
   });
 
+  it("says a link the change made to nothing is that, with nothing to try again", async () => {
+    // Its target not on this machine, the link was answered as a read error
+    // with a Try again that could never work; the same link to a target that
+    // is there was answered as outside (D-144). A directory junction on
+    // Windows, which needs no privilege there.
+    const { runtime } = await import("@/server/runtime");
+    const { createCandidate } = await import("@/server/db/repositories/findings");
+    const nowhere = join(tmpdir(), `trysquare-nowhere-${Date.now()}`);
+    const link = join(worktreeRootDir(dataDir, reviewId), "app", "zz-broken");
+    symlinkSync(nowhere, link, process.platform === "win32" ? "junction" : "dir");
+    const patchPath = join(bundleDir(dataDir, reviewId), "diff.patch");
+    const patch = readFileSync(patchPath, "utf8");
+    try {
+      const cited = "app/zz-broken";
+      createCandidate(runtime().db, {
+        reviewId,
+        repo: "primary",
+        filePath: cited,
+        lineStart: 1,
+        lineEnd: 1,
+        severity: "WARNING",
+        issue: "x",
+        comment: "x",
+        mechanism: "x",
+      });
+      writeFileSync(
+        patchPath,
+        [
+          "diff --git a/zz-broken b/zz-broken",
+          "new file mode 120000",
+          "index 0000000..1111111",
+          "--- /dev/null",
+          "+++ b/zz-broken",
+          "@@ -0,0 +1 @@",
+          "+../nowhere",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const response = await routes.fileContext.GET(
+        new Request(`http://localhost/x?path=${encodeURIComponent(cited)}&line=1`),
+        params(reviewId),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        hunk: unknown;
+        brokenLink?: boolean;
+        readError?: string;
+      };
+      expect(body.brokenLink).toBe(true);
+      expect(body.readError).toBeUndefined();
+      expect(body.hunk).not.toBeNull();
+    } finally {
+      rmSync(link, { force: true });
+      writeFileSync(patchPath, patch, "utf8");
+    }
+  });
+
   it("never serves a file outside the checkout, whatever path a finding names", async () => {
     // A deletion-stage finding's path came straight from the model, and this
     // route joined it onto the worktree: a killed finding at a path climbing
