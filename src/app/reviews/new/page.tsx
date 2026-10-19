@@ -187,6 +187,18 @@ function NewReview() {
   const [linkBranches, setLinkBranches] = useState<Branch[]>([]);
   const [linkFrom, setLinkFrom] = useState("");
   const [linkInto, setLinkInto] = useState("");
+  // Which dependency's branch read has answered, and a count to read again.
+  const [linkBranchesFor, setLinkBranchesFor] = useState("");
+  const [linkAttempt, setLinkAttempt] = useState(0);
+  // Ticked, and still linked: a link removed in another tab, seen at a read
+  // again, left the dependency ticked out of sight, and Start off for good
+  // beside a line about a box no longer there (D-144).
+  const included = links.some((link) => link.dependencyProjectId === includeLink)
+    ? includeLink
+    : "";
+  const includedName =
+    links.find((link) => link.dependencyProjectId === included)?.dependencyName ?? "";
+  const linkRead = included !== "" && linkBranchesFor === included;
   const [preflight, setPreflight] = useState<Preflight | null>(null);
   const [preflightError, setPreflightError] = useState("");
 
@@ -314,15 +326,16 @@ function NewReview() {
 
   // The dependency's own branches, once one is included.
   useEffect(() => {
-    if (includeLink === "") return;
+    if (included === "") return;
     let cancelled = false;
     void (async () => {
       const sent = await send<{ branches: Branch[]; defaultBranch: string }>(
-        `/api/projects/${includeLink}/branches`,
+        `/api/projects/${included}/branches`,
         {},
         "The dependency's branches could not be listed",
       );
       if (cancelled) return;
+      setLinkBranchesFor(included);
       // A refusal was dropped, and the dependency's branch fields simply never
       // appeared (D-134).
       setLinkProblem(sent.ok ? "" : sent.error);
@@ -339,7 +352,7 @@ function NewReview() {
     return () => {
       cancelled = true;
     };
-  }, [includeLink, fromBranch]);
+  }, [included, fromBranch, linkAttempt]);
 
   /**
    * The branch to compare against, never the branch under review.
@@ -381,10 +394,10 @@ function NewReview() {
             rulesetId,
             model,
             ...(profileOverride === "" ? {} : { profileId: profileOverride }),
-            ...(includeLink && linkFrom && linkIntoBranch
+            ...(included && linkFrom && linkIntoBranch
               ? {
                   linked: {
-                    projectId: includeLink,
+                    projectId: included,
                     fromBranch: linkFrom,
                     intoBranch: linkIntoBranch,
                   },
@@ -409,7 +422,7 @@ function NewReview() {
     rulesetId,
     model,
     profileOverride,
-    includeLink,
+    included,
     linkFrom,
     linkIntoBranch,
   ]);
@@ -430,10 +443,10 @@ function NewReview() {
           ...(engineMode === "headless" ? {} : { engineMode }),
           ...(profileOverride === "" ? {} : { profileId: profileOverride }),
           ...(intent.trim() === "" ? {} : { intent }),
-          ...(includeLink && linkFrom && linkIntoBranch
+          ...(included && linkFrom && linkIntoBranch
             ? {
                 linked: {
-                  projectId: includeLink,
+                  projectId: included,
                   fromBranch: linkFrom,
                   intoBranch: linkIntoBranch,
                 },
@@ -470,9 +483,9 @@ function NewReview() {
 
   // A dependency ticked without both its branches was dropped from the
   // review it was ticked for, without a word (5.14, audit U11).
-  const linkIncomplete = includeLink !== "" && (linkFrom === "" || linkIntoBranch === "");
-  const ready =
-    fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetId !== "" && !linkIncomplete;
+  const linkIncomplete = included !== "" && (linkFrom === "" || linkIntoBranch === "");
+  const baseReady = fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetId !== "";
+  const ready = baseReady && !linkIncomplete;
 
   if (!projectId) {
     return (
@@ -870,6 +883,8 @@ function NewReview() {
                       checked={includeLink === link.dependencyProjectId}
                       onChange={(event) => {
                         setIncludeLink(event.target.checked ? link.dependencyProjectId : "");
+                        setLinkBranchesFor("");
+                        setLinkProblem("");
                         setLinkBranches([]);
                         setLinkFrom("");
                         setLinkInto("");
@@ -884,8 +899,36 @@ function NewReview() {
                   </label>
                 ))}
 
-                {includeLink !== "" && linkProblem ? <Problem>{linkProblem}</Problem> : null}
-                {includeLink !== "" && linkBranches.length > 0 ? (
+                {included !== "" && !linkRead ? (
+                  <p className="text-sm text-[var(--color-ink-muted)]">
+                    Reading {includedName}&apos;s branches...
+                  </p>
+                ) : null}
+                {linkRead && linkProblem ? (
+                  <div className="grid gap-2">
+                    <Problem>{linkProblem}</Problem>
+                    <div>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setLinkProblem("");
+                          setLinkBranchesFor("");
+                          setLinkAttempt((attempt) => attempt + 1);
+                        }}
+                      >
+                        Try again
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+                {linkRead && !linkProblem && linkBranches.length < 2 ? (
+                  <p className="text-sm text-[var(--color-ink-muted)]">
+                    {linkBranches.length === 0
+                      ? `${includedName} has no branches to review, so it cannot be included: untick it.`
+                      : `${includedName} has one branch, so there is nothing to compare it against: untick it.`}
+                  </p>
+                ) : null}
+                {linkRead && linkBranches.length > 1 ? (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field
                       label="Its branch"
@@ -1020,9 +1063,17 @@ function NewReview() {
                   Rulesets
                 </Link>
               </span>
-            ) : linkIncomplete ? (
+            ) : baseReady && linkIncomplete ? (
+              // Only when the dependency is all that is missing: beside a
+              // branch or a model not yet chosen it read as the only reason.
               <span className="text-sm text-[var(--color-ink-muted)]">
-                Choose the dependency&apos;s branch, or untick it.
+                {!linkRead
+                  ? "Reading the dependency's branches..."
+                  : linkProblem
+                    ? "The dependency's branches could not be read: try again above, or untick it."
+                    : linkBranches.length < 2
+                      ? "The dependency has nothing to compare: untick it."
+                      : "Choose the dependency's branch, or untick it."}
               </span>
             ) : (
               <span className="text-sm text-[var(--color-ink-muted)]">

@@ -119,11 +119,105 @@ test("a dependency ticked with no branch keeps Start off and says why", async ({
   await expect(itsInto).toHaveValue("release");
   await expect(itsInto.locator("option", { hasText: /^main$/ })).toHaveCount(0);
 
+  // Then the line goes, and the review asked about has the dependency in
+  // it: the gate alone proved neither (D-144).
+  const line = page.getByText("Choose the dependency's branch, or untick it.");
+  const asked = page.waitForRequest(
+    (sent) =>
+      sent.url().endsWith("/api/reviews/preflight") &&
+      (sent.postDataJSON() as { linked?: { fromBranch: string } }).linked?.fromBranch === "release",
+  );
   await page.getByLabel("Its branch").selectOption("release");
   await expect(start).toBeEnabled();
+  await expect(line).toHaveCount(0);
+  expect((await asked).postDataJSON()).toMatchObject({
+    linked: { projectId: "DEP123", fromBranch: "release", intoBranch: "main" },
+  });
   await page.getByLabel(/Include shared-core/).uncheck();
   await expect(start).toBeEnabled();
+  await expect(line).toHaveCount(0);
   await stopBranches();
+  await page.unroute(`**/api/projects/${app.id}`, withLink);
+});
+
+test("a ticked dependency says what its branches are doing, and lets go with its link", async ({
+  page,
+  request,
+}) => {
+  // Its branch read in flight, refused, or answered with no branches, the
+  // screen said only "Choose the dependency's branch" over no picker; and a
+  // link removed in another tab, seen at a Refresh, left it ticked out of
+  // sight with Start off for good (D-144).
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  let linked = true;
+  const withLink = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        links: linked
+          ? [
+              {
+                id: "LINK123",
+                dependencyProjectId: "DEP123",
+                dependencyName: "shared-core",
+                packageName: "@acme/core",
+              },
+            ]
+          : [],
+      },
+    });
+  };
+  await page.route(`**/api/projects/${app.id}`, withLink);
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let reads = 0;
+  const dependencyBranches = async (route: Route) => {
+    reads += 1;
+    if (reads === 1) {
+      await held;
+      await route.fulfill({
+        status: 500,
+        json: { error: "Refused for this test: the dependency's branches.", code: "Test" },
+      });
+    } else {
+      await route.fulfill({ status: 200, json: { branches: [], defaultBranch: "main" } });
+    }
+  };
+  await page.route("**/api/projects/DEP123/branches", dependencyBranches);
+
+  await fillANewReview(page);
+  const start = page.getByRole("button", { name: "Start review" });
+  const beside = (text: string) => page.getByText(text, { exact: true });
+  await page.getByLabel(/Include shared-core/).check();
+  await expect(page.getByText("Reading shared-core's branches...")).toBeVisible();
+  await expect(beside("Reading the dependency's branches...")).toBeVisible();
+  await expect(start).toBeDisabled();
+
+  release();
+  await expect(page.getByText("Refused for this test: the dependency's branches.")).toBeVisible();
+  await expect(
+    beside("The dependency's branches could not be read: try again above, or untick it."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(
+    page.getByText("shared-core has no branches to review, so it cannot be included: untick it."),
+  ).toBeVisible();
+  await expect(beside("The dependency has nothing to compare: untick it.")).toBeVisible();
+  await expect(start).toBeDisabled();
+
+  linked = false;
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(page.getByLabel(/Include shared-core/)).toHaveCount(0);
+  await expect(start).toBeEnabled({ timeout: 60_000 });
+  await page.unroute("**/api/projects/DEP123/branches", dependencyBranches);
   await page.unroute(`**/api/projects/${app.id}`, withLink);
 });
 
