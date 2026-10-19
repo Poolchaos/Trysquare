@@ -186,7 +186,6 @@ const SAME_COPY_AS_MANAGER = new Map([
 
 const SOURCE = /\.(?:ts|tsx|mts)$/;
 
-/** A class the platform defines once for the process, which is any global constructor. */
 /**
  * A class the platform defines once for the process: a global constructor
  * the file neither imports nor declares. An app class may share a global's
@@ -212,7 +211,11 @@ function namesOf(source) {
         ts.isImportEqualsDeclaration(node) ||
         ts.isClassDeclaration(node) ||
         ts.isFunctionDeclaration(node) ||
-        ts.isVariableDeclaration(node)) &&
+        ts.isVariableDeclaration(node) ||
+        // A parameter or a destructured name is the file's own too: taken
+        // for the global it shares a name with, it hid a class test (D-144).
+        ts.isParameter(node) ||
+        ts.isBindingElement(node)) &&
       node.name &&
       ts.isIdentifier(node.name)
     ) {
@@ -305,7 +308,16 @@ function boundaryLines(path, text) {
             ? node.left
             : undefined;
         if (other && !isPlatformClass(other, ownNames)) found.push(lineOf(node));
-        const owner = prototypeOwner(node.left) ?? prototypeOwner(node.right);
+        // Against undefined, null or a literal it is no class test:
+        // fn.prototype === undefined asks whether fn is an arrow (D-144).
+        const isNothing = (side) =>
+          side.kind === ts.SyntaxKind.NullKeyword ||
+          (ts.isIdentifier(side) && side.text === "undefined") ||
+          ts.isLiteralExpression(side);
+        const [read, against] = prototypeOwner(node.left)
+          ? [node.left, node.right]
+          : [node.right, node.left];
+        const owner = isNothing(against) ? undefined : prototypeOwner(read);
         if (owner && !isPlatformClass(owner, ownNames)) found.push(lineOf(node));
       }
     }
