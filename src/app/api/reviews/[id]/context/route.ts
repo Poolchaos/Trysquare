@@ -153,9 +153,15 @@ async function hunkFor(
 
   const [slug, ...rest] = qualifiedPath.split("/");
   const withoutSlug = rest.join("/");
-  const file = parseUnifiedDiff(patch).find(
-    (candidate) => candidate.path === withoutSlug || candidate.oldPath === withoutSlug,
-  );
+  // The file itself first, then a file renamed from it. A copy carries the
+  // path it was copied from too, and git lists a copy before the file it came
+  // from, so matching either path took the copy for the file (D-142).
+  const files = parseUnifiedDiff(patch);
+  const file =
+    files.find((candidate) => candidate.path === withoutSlug) ??
+    files.find(
+      (candidate) => candidate.changeType === "renamed" && candidate.oldPath === withoutSlug,
+    );
   if (!file) return { hunk: null, deleted: false };
 
   const hunk = hunkForLine(file, line);

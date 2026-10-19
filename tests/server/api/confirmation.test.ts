@@ -477,6 +477,61 @@ describe("reading the code a finding is about", () => {
     }
   });
 
+  it("shows a file the change also copied as itself, not as the copy", async () => {
+    // A copy carries the path it was copied from, and git lists the copy
+    // before the file it came from, so a finding on the file was shown the
+    // copy's hunk, and since 892368e said to be renamed to it (D-142).
+    const finding = (await snapshot()).findings.find((entry) =>
+      entry.filePath.endsWith("src/auth/guard.ts"),
+    );
+    expect(finding).toBeDefined();
+    const patchPath = join(bundleDir(dataDir, reviewId), "diff.patch");
+    const patch = readFileSync(patchPath, "utf8");
+    try {
+      writeFileSync(
+        patchPath,
+        [
+          "diff --git a/src/auth/guard.ts b/src/auth/guard-copy.ts",
+          "similarity index 90%",
+          "copy from src/auth/guard.ts",
+          "copy to src/auth/guard-copy.ts",
+          "index 1111111..2222222 100644",
+          "--- a/src/auth/guard.ts",
+          "+++ b/src/auth/guard-copy.ts",
+          "@@ -1,1 +1,1 @@",
+          "-the copy's line before",
+          "+the copy's line after",
+          "diff --git a/src/auth/guard.ts b/src/auth/guard.ts",
+          "index 1111111..3333333 100644",
+          "--- a/src/auth/guard.ts",
+          "+++ b/src/auth/guard.ts",
+          "@@ -1,1 +1,1 @@",
+          "-the file's line before",
+          "+the file's line after",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const response = await routes.fileContext.GET(
+        new Request(`http://localhost/x?path=${encodeURIComponent(finding!.filePath)}&line=1`),
+        params(reviewId),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        lines: unknown[];
+        hunk: { lines: string[] } | null;
+        renamedTo?: string;
+        readError?: string;
+      };
+      expect(body.renamedTo).toBeUndefined();
+      expect(body.readError).toBeUndefined();
+      expect(body.lines.length).toBeGreaterThan(0);
+      expect(body.hunk!.lines).toContain("+the file's line after");
+    } finally {
+      writeFileSync(patchPath, patch, "utf8");
+    }
+  });
+
   it("never serves a file outside the checkout, whatever path a finding names", async () => {
     // A deletion-stage finding's path came straight from the model, and this
     // route joined it onto the worktree: a killed finding at a path climbing
