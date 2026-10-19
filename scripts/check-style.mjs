@@ -10,8 +10,9 @@
  */
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, extname, join, relative } from "node:path";
+import { basename, extname, join, posix, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 
 /**
  * fileURLToPath, never `URL.pathname`: a repository path containing a space
@@ -149,72 +150,33 @@ function repositoryLawLines(path, text) {
  * copy of the server modules, and the routes share another, so an error the
  * manager threw was never `instanceof` a class a route or the handler held:
  * refusals meant as 404s and 409s went out as 500s (D-139, D-140). So in the
- * HTTP layer, and in any other file that calls the manager, an error is known
- * by the name its class sets, and `instanceof`, or a constructor or prototype
- * comparison, is kept for the platform's own classes, of which there is one
- * copy. Outside the manager's module nothing names its error classes at all.
- * Read per file, so a test Prettier wraps onto a second line is still seen,
- * with comments and strings skipped (D-141).
+ * HTTP layer, and in any file that imports the runtime or the job modules, an
+ * error is known by the name its class sets: `instanceof`, or a constructor
+ * or prototype comparison, is kept for the platform's own classes, of which
+ * there is one copy. Outside the manager's module nothing names its error
+ * classes at all. Read from TypeScript's own parse of each file, so a string,
+ * a comment, a regex or a template is never taken for code, nor code for one
+ * (D-141, D-142).
  */
 const BOUNDARY_LAW =
-  "In the HTTP layer and the manager's callers an app error is known by its name (isNamed), not its class";
+  "In the HTTP layer and the importers of the runtime and job modules, an app error is known by its name (isNamed), not its class";
 const MANAGER_ERRORS_LAW =
   "The job manager's error classes are named only in its own module; elsewhere, match the name";
-const PLATFORM_CLASSES = new Set([
-  "Error",
-  "TypeError",
-  "SyntaxError",
-  "RangeError",
-  "Response",
-  "Request",
-  "URL",
-  "Date",
-  "Array",
-  "Map",
-  "Set",
-  "Promise",
-  "Uint8Array",
-  "ArrayBuffer",
-  "ReadableStream",
-]);
 const MANAGER_PATH = "src/server/jobs/manager.ts";
-const MANAGER_ERRORS = [
-  ...readFileSync(join(ROOT, MANAGER_PATH), "utf8").matchAll(/export class (\w+Error)\b/g),
-].map((match) => match[1]);
+const MANAGER_ERRORS = new Set(
+  [...readFileSync(join(ROOT, MANAGER_PATH), "utf8").matchAll(/export class (\w+Error)\b/g)].map(
+    (match) => match[1],
+  ),
+);
 // Found none, the rule would check nothing and say it was clean.
-if (MANAGER_ERRORS.length === 0) {
+if (MANAGER_ERRORS.size === 0) {
   console.error(
     `check-style: no error classes found in ${MANAGER_PATH}; the gate is misconfigured.`,
   );
   process.exit(2);
 }
-const MANAGER_ERROR_USE = new RegExp(`\\b(?:${MANAGER_ERRORS.join("|")})\\b`, "g");
-const MANAGER_CALL = /\bmanager\.\w+\s*\(|\bjobManager\s*\(|\bJobManager\b/;
-const CLASS_TESTS = [
-  /\binstanceof\s+([\w$.]+)/g,
-  /\.constructor\s*[!=]==?\s*([\w$.]+)/g,
-  /([\w$.]+)\.prototype\.isPrototypeOf\s*\(/g,
-];
 
-/**
- * Whether the text at `index` sits in a comment or a string on its line. A
- * line's reading, not a parser's: enough for names that have no reason to sit
- * in either, and a URL's "//" before one on the same line hides it.
- */
-function inCommentOrString(text, index) {
-  const prefix = text
-    .slice(text.lastIndexOf("\n", index - 1) + 1, index)
-    .replace(/\/\*.*?\*\//g, "");
-  if (/^\s*(?:\/\/|\/\*|\*)/.test(prefix) || prefix.includes("//")) return true;
-  const unescaped = prefix.replace(/\\./g, "");
-  return ['"', "'", "`"].some((quote) => unescaped.split(quote).length % 2 === 0);
-}
-
-function lineOfIndex(text, index) {
-  return text.slice(0, index).split("\n").length;
-}
-
-/** Files that call the manager from its own copy of the modules, and why. */
+/** Files that use the manager from its own copy of the modules, and why. */
 const SAME_COPY_AS_MANAGER = new Map([
   [
     "src/instrumentation-node.ts",
@@ -222,31 +184,115 @@ const SAME_COPY_AS_MANAGER = new Map([
   ],
 ]);
 
+const SOURCE = /\.(?:ts|tsx|mts)$/;
+
+/** A class the platform defines once for the process, which is any global constructor. */
+function isPlatformClass(node) {
+  return (
+    ts.isIdentifier(node) && /^[A-Z]/.test(node.text) && typeof globalThis[node.text] === "function"
+  );
+}
+
+/** Where the module a specifier names sits, as a repository path, or null for a package. */
+function importedPath(path, specifier) {
+  if (specifier.startsWith("@/")) return `src/${specifier.slice(2)}`;
+  if (specifier.startsWith(".")) return posix.join(posix.dirname(path), specifier);
+  return null;
+}
+
+function parsed(path, text) {
+  return ts.createSourceFile(
+    path,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+}
+
+function reachesTheManager(path, source) {
+  let reaches = false;
+  const visit = (node) => {
+    const specifier =
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier
+        ? node.moduleSpecifier
+        : ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+          ? node.arguments[0]
+          : undefined;
+    if (specifier && ts.isStringLiteral(specifier)) {
+      const target = importedPath(path, specifier.text)?.replace(/\.(?:ts|js)$/, "");
+      if (target === "src/server/runtime" || target?.startsWith("src/server/jobs/")) {
+        reaches = true;
+      }
+    }
+    if (!reaches) ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return reaches;
+}
+
 function boundaryLines(path, text) {
+  if (!path.startsWith("src/") || !SOURCE.test(path) || path === MANAGER_PATH) return [];
+  if (SAME_COPY_AS_MANAGER.has(path)) return [];
+  const source = parsed(path, text);
   const inScope =
     path.startsWith("src/app/api/") ||
     path.startsWith("src/server/api/") ||
-    (path.startsWith("src/") &&
-      path !== MANAGER_PATH &&
-      !SAME_COPY_AS_MANAGER.has(path) &&
-      MANAGER_CALL.test(text));
+    reachesTheManager(path, source);
   if (!inScope) return [];
   const found = [];
-  for (const pattern of CLASS_TESTS) {
-    for (const match of text.matchAll(pattern)) {
-      if (PLATFORM_CLASSES.has(match[1]) || inCommentOrString(text, match.index)) continue;
-      found.push(lineOfIndex(text, match.index));
+  const lineOf = (node) => source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
+  const isConstructorRead = (node) =>
+    ts.isPropertyAccessExpression(node) && node.name.text === "constructor";
+  const visit = (node) => {
+    if (ts.isBinaryExpression(node)) {
+      const operator = node.operatorToken.kind;
+      if (operator === ts.SyntaxKind.InstanceOfKeyword && !isPlatformClass(node.right)) {
+        found.push(lineOf(node));
+      }
+      const equality = [
+        ts.SyntaxKind.EqualsEqualsEqualsToken,
+        ts.SyntaxKind.EqualsEqualsToken,
+        ts.SyntaxKind.ExclamationEqualsEqualsToken,
+        ts.SyntaxKind.ExclamationEqualsToken,
+      ].includes(operator);
+      if (equality) {
+        const other = isConstructorRead(node.left)
+          ? node.right
+          : isConstructorRead(node.right)
+            ? node.left
+            : undefined;
+        if (other && !isPlatformClass(other)) found.push(lineOf(node));
+      }
     }
-  }
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === "isPrototypeOf" &&
+      ts.isPropertyAccessExpression(node.expression.expression) &&
+      node.expression.expression.name.text === "prototype" &&
+      !isPlatformClass(node.expression.expression.expression)
+    ) {
+      found.push(lineOf(node));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
   return found;
 }
 
 function managerErrorLines(path, text) {
-  if (!path.startsWith("src/") || path === MANAGER_PATH) return [];
+  if (!path.startsWith("src/") || !SOURCE.test(path) || path === MANAGER_PATH) return [];
+  if (![...MANAGER_ERRORS].some((name) => text.includes(name))) return [];
+  const source = parsed(path, text);
   const found = [];
-  for (const match of text.matchAll(MANAGER_ERROR_USE)) {
-    if (!inCommentOrString(text, match.index)) found.push(lineOfIndex(text, match.index));
-  }
+  const visit = (node) => {
+    if (ts.isIdentifier(node) && MANAGER_ERRORS.has(node.text)) {
+      found.push(source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
   return found;
 }
 
