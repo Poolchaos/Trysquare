@@ -157,6 +157,14 @@ function repositoryLawLines(path, text) {
  * classes at all. Read from TypeScript's own parse of each file, so a string,
  * a comment, a regex or a template is never taken for code, nor code for one
  * (D-141, D-142).
+ *
+ * The class tests it sees: `instanceof`, a constructor compared with === or
+ * !==, X.prototype compared or asked isPrototypeOf. Not a switch on
+ * error.constructor, an includes over a list of classes, or a call through
+ * Object.prototype.isPrototypeOf: those it would pass (D-145). The names a
+ * file declares are taken file-wide, so a parameter named Error in one
+ * function makes `instanceof Error` in another look like an app class: that
+ * fails loud, never quiet.
  */
 const BOUNDARY_LAW =
   "In the HTTP layer and the importers of the runtime and job modules, an app error is known by its name (isNamed), not its class";
@@ -302,18 +310,21 @@ function boundaryLines(path, text) {
         ts.SyntaxKind.ExclamationEqualsToken,
       ].includes(operator);
       if (equality) {
+        // Against undefined, null or a literal it is no class test:
+        // fn.prototype === undefined asks whether fn is an arrow (D-144), and
+        // error.constructor === undefined whether it has one (D-145).
+        const isNothing = (side) =>
+          side.kind === ts.SyntaxKind.NullKeyword ||
+          (ts.isIdentifier(side) && side.text === "undefined") ||
+          ts.isLiteralExpression(side);
         const other = isConstructorRead(node.left)
           ? node.right
           : isConstructorRead(node.right)
             ? node.left
             : undefined;
-        if (other && !isPlatformClass(other, ownNames)) found.push(lineOf(node));
-        // Against undefined, null or a literal it is no class test:
-        // fn.prototype === undefined asks whether fn is an arrow (D-144).
-        const isNothing = (side) =>
-          side.kind === ts.SyntaxKind.NullKeyword ||
-          (ts.isIdentifier(side) && side.text === "undefined") ||
-          ts.isLiteralExpression(side);
+        if (other && !isNothing(other) && !isPlatformClass(other, ownNames)) {
+          found.push(lineOf(node));
+        }
         const [read, against] = prototypeOwner(node.left)
           ? [node.left, node.right]
           : [node.right, node.left];
