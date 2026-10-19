@@ -450,7 +450,11 @@ function NewReview() {
 
   const shown = (branches ?? []).filter((branch) => branch.name.includes(filter));
 
-  const ready = fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetId !== "";
+  // A dependency ticked without both its branches was dropped from the
+  // review it was ticked for, without a word (5.14, audit U11).
+  const linkIncomplete = includeLink !== "" && (linkFrom === "" || linkInto === "");
+  const ready =
+    fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetId !== "" && !linkIncomplete;
 
   if (!projectId) {
     return (
@@ -995,6 +999,10 @@ function NewReview() {
                 <Link href="/rulesets" className="underline">
                   Rulesets
                 </Link>
+              </span>
+            ) : linkIncomplete ? (
+              <span className="text-sm text-[var(--color-ink-muted)]">
+                Choose the dependency&apos;s branch, or untick it.
               </span>
             ) : (
               <span className="text-sm text-[var(--color-ink-muted)]">

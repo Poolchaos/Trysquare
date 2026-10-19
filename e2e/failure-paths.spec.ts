@@ -58,6 +58,67 @@ async function startAReview(page: import("@playwright/test").Page): Promise<void
   await expect(page).toHaveURL(/\/reviews\/[A-Z0-9]+$/i, { timeout: 60_000 });
 }
 
+test("a dependency ticked with no branch keeps Start off and says why", async ({
+  page,
+  request,
+}) => {
+  // Ticked, with no branch of the same name to suggest, the dependency's
+  // branch stayed at "Choose a branch", Start stayed on, and the review was
+  // created without the dependency, saying nothing (5.14, audit U11).
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const withLink = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        links: [
+          {
+            id: "LINK123",
+            dependencyProjectId: "DEP123",
+            dependencyName: "shared-core",
+            packageName: "@acme/core",
+          },
+        ],
+      },
+    });
+  };
+  await page.route(`**/api/projects/${app.id}`, withLink);
+  const branch = (name: string) => ({
+    name,
+    commit: "a".repeat(40),
+    subject: name,
+    committedAt: "2026-10-01T00:00:00Z",
+    ahead: 0,
+    behind: 0,
+  });
+  const stopBranches = await answerOnce(page, "**/api/projects/DEP123/branches", (route) =>
+    route.fulfill({
+      status: 200,
+      json: { branches: [branch("main"), branch("release")], defaultBranch: "main" },
+    }),
+  );
+
+  await fillANewReview(page);
+  const start = page.getByRole("button", { name: "Start review" });
+  await expect(start).toBeEnabled();
+  await page.getByLabel(/Include shared-core/).check();
+  await expect(page.getByLabel("Its branch")).toHaveValue("");
+  await expect(start).toBeDisabled();
+  await expect(page.getByText("Choose the dependency's branch, or untick it.")).toBeVisible();
+
+  await page.getByLabel("Its branch").selectOption("release");
+  await expect(start).toBeEnabled();
+  await page.getByLabel(/Include shared-core/).uncheck();
+  await expect(start).toBeEnabled();
+  await stopBranches();
+  await page.unroute(`**/api/projects/${app.id}`, withLink);
+});
+
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
   page,
 }) => {
