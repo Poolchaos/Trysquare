@@ -158,13 +158,15 @@ function repositoryLawLines(path, text) {
  * a comment, a regex or a template is never taken for code, nor code for one
  * (D-141, D-142).
  *
- * The class tests it sees: `instanceof`, a constructor compared with === or
- * !==, X.prototype compared or asked isPrototypeOf. Not a switch on
- * error.constructor, an includes over a list of classes, or a call through
- * Object.prototype.isPrototypeOf: those it would pass (D-145). The names a
- * file declares are taken file-wide, so a parameter named Error in one
- * function makes `instanceof Error` in another look like an app class: that
- * fails loud, never quiet.
+ * The class tests it sees, and the only ones: `instanceof`, a constructor
+ * compared with ===, ==, !== or !=, X.prototype compared or asked
+ * isPrototypeOf. Any other it passes: a switch on error.constructor, an
+ * includes over a list of classes, a call through
+ * Object.prototype.isPrototypeOf, Object.is with a constructor, a
+ * constructor held in a variable first, or one destructured (D-145, D-146).
+ * The names a file declares are taken file-wide, so a parameter named Error
+ * in one function makes `instanceof Error` in another look like an app
+ * class: that fails loud, never quiet.
  */
 const BOUNDARY_LAW =
   "In the HTTP layer and the importers of the runtime and job modules, an app error is known by its name (isNamed), not its class";
