@@ -187,15 +187,46 @@ const SAME_COPY_AS_MANAGER = new Map([
 const SOURCE = /\.(?:ts|tsx|mts)$/;
 
 /** A class the platform defines once for the process, which is any global constructor. */
-function isPlatformClass(node) {
+/**
+ * A class the platform defines once for the process: a global constructor
+ * the file neither imports nor declares. An app class may share a global's
+ * name, and the text alone took it for the global (D-143).
+ */
+function isPlatformClass(node, ownNames) {
   return (
-    ts.isIdentifier(node) && /^[A-Z]/.test(node.text) && typeof globalThis[node.text] === "function"
+    ts.isIdentifier(node) &&
+    /^[A-Z]/.test(node.text) &&
+    typeof globalThis[node.text] === "function" &&
+    !ownNames.has(node.text)
   );
+}
+
+/** Every name a file imports or declares, at any depth. */
+function namesOf(source) {
+  const names = new Set();
+  const visit = (node) => {
+    if (
+      (ts.isImportClause(node) ||
+        ts.isNamespaceImport(node) ||
+        ts.isImportSpecifier(node) ||
+        ts.isImportEqualsDeclaration(node) ||
+        ts.isClassDeclaration(node) ||
+        ts.isFunctionDeclaration(node) ||
+        ts.isVariableDeclaration(node)) &&
+      node.name &&
+      ts.isIdentifier(node.name)
+    ) {
+      names.add(node.name.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return names;
 }
 
 /** Where the module a specifier names sits, as a repository path, or null for a package. */
 function importedPath(path, specifier) {
-  if (specifier.startsWith("@/")) return `src/${specifier.slice(2)}`;
+  if (specifier.startsWith("@/")) return posix.normalize(`src/${specifier.slice(2)}`);
   if (specifier.startsWith(".")) return posix.join(posix.dirname(path), specifier);
   return null;
 }
@@ -213,13 +244,17 @@ function parsed(path, text) {
 function reachesTheManager(path, source) {
   let reaches = false;
   const visit = (node) => {
+    // Every way to name a module: import and export from, import(), and
+    // import x = require(); a template with nothing in it is a string too.
     const specifier =
       (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier
         ? node.moduleSpecifier
         : ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
           ? node.arguments[0]
-          : undefined;
-    if (specifier && ts.isStringLiteral(specifier)) {
+          : ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)
+            ? node.moduleReference.expression
+            : undefined;
+    if (specifier && ts.isStringLiteralLike(specifier)) {
       const target = importedPath(path, specifier.text)?.replace(/\.(?:ts|js)$/, "");
       if (target === "src/server/runtime" || target?.startsWith("src/server/jobs/")) {
         reaches = true;
@@ -241,13 +276,20 @@ function boundaryLines(path, text) {
     reachesTheManager(path, source);
   if (!inScope) return [];
   const found = [];
+  const ownNames = namesOf(source);
   const lineOf = (node) => source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
-  const isConstructorRead = (node) =>
-    ts.isPropertyAccessExpression(node) && node.name.text === "constructor";
+  const isNamedRead = (node, name) =>
+    (ts.isPropertyAccessExpression(node) && node.name.text === name) ||
+    (ts.isElementAccessExpression(node) &&
+      ts.isStringLiteralLike(node.argumentExpression) &&
+      node.argumentExpression.text === name);
+  const isConstructorRead = (node) => isNamedRead(node, "constructor");
+  // X.prototype, as Object.getPrototypeOf(error) === X.prototype compares it.
+  const prototypeOwner = (node) => (isNamedRead(node, "prototype") ? node.expression : undefined);
   const visit = (node) => {
     if (ts.isBinaryExpression(node)) {
       const operator = node.operatorToken.kind;
-      if (operator === ts.SyntaxKind.InstanceOfKeyword && !isPlatformClass(node.right)) {
+      if (operator === ts.SyntaxKind.InstanceOfKeyword && !isPlatformClass(node.right, ownNames)) {
         found.push(lineOf(node));
       }
       const equality = [
@@ -262,7 +304,9 @@ function boundaryLines(path, text) {
           : isConstructorRead(node.right)
             ? node.left
             : undefined;
-        if (other && !isPlatformClass(other)) found.push(lineOf(node));
+        if (other && !isPlatformClass(other, ownNames)) found.push(lineOf(node));
+        const owner = prototypeOwner(node.left) ?? prototypeOwner(node.right);
+        if (owner && !isPlatformClass(owner, ownNames)) found.push(lineOf(node));
       }
     }
     if (
@@ -271,7 +315,7 @@ function boundaryLines(path, text) {
       node.expression.name.text === "isPrototypeOf" &&
       ts.isPropertyAccessExpression(node.expression.expression) &&
       node.expression.expression.name.text === "prototype" &&
-      !isPlatformClass(node.expression.expression.expression)
+      !isPlatformClass(node.expression.expression.expression, ownNames)
     ) {
       found.push(lineOf(node));
     }
