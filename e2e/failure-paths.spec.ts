@@ -221,6 +221,24 @@ test("a ticked dependency says what its branches are doing, and lets go with its
   await page.unroute(`**/api/projects/${app.id}`, withLink);
 });
 
+test("Enter on the Advanced fold or a link in the new review form does what it says", async ({
+  page,
+}) => {
+  // The form's guard against Enter starting a paid review took every Enter
+  // but a button's and a text area's, so Enter on the Advanced fold did not
+  // open it, and Enter on a link went nowhere (D-144).
+  await fillANewReview(page);
+  const engine = page.getByLabel("Engine");
+  await expect(engine).toBeHidden();
+  await page.getByText("Advanced", { exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(engine).toBeVisible();
+
+  await page.getByRole("link", { name: "See which rules apply" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/rulesets\/[A-Z0-9]+$/i, { timeout: 30_000 });
+});
+
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
   page,
 }) => {

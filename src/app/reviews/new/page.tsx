@@ -513,13 +513,13 @@ function NewReview() {
           // this one starts a paid review: a keystroke meant for the branch
           // filter, or to pick a branch or a model, started one (5.2; the
           // review of 5.1 to 5.4). Only Start review submits; a text area
-          // keeps its newline.
+          // keeps its newline, and a link and the Advanced fold keep their
+          // Enter, which taken here opened nothing (D-144).
           onKeyDown={(event) => {
             const target = event.target as HTMLElement;
             if (
               event.key === "Enter" &&
-              target.tagName !== "BUTTON" &&
-              target.tagName !== "TEXTAREA"
+              !["BUTTON", "TEXTAREA", "A", "SUMMARY"].includes(target.tagName)
             ) {
               event.preventDefault();
             }
