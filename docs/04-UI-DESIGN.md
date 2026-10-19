@@ -166,9 +166,12 @@ will run as more, smaller requests and why.
 app -> shared-core), an optional "Include <dependency>" toggle appears with
 its own from/into pickers. If the dependency repo has a branch with the
 same name as the selected from-branch, the toggle is pre-suggested with
-that branch preselected (suggested, never auto-enabled). When enabled, the
-pre-flight shows both repos' counts and the changed-exported-symbols count
-from the dependency diff.
+that branch preselected (suggested, never auto-enabled), following the
+from-branch until the dependency's branch is chosen by hand. When enabled,
+the pre-flight shows each repo's changed files and the changed-exported-
+symbols count from the dependency diff. A side with no change is said, and
+Start stays off: a review of no change reads as clean, and the create route
+refuses one too.
 
 ### Review run (live)
 

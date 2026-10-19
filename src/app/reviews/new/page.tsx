@@ -492,7 +492,18 @@ function NewReview() {
   // review it was ticked for, without a word (5.14, audit U11).
   const linkIncomplete = included !== "" && (linkFrom === "" || linkIntoBranch === "");
   const baseReady = fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetId !== "";
-  const ready = baseReady && !linkIncomplete;
+  // A half with no change ran and read as clean (D-145).
+  const emptyHalves = preflight
+    ? [
+        ...(preflight.pins.primary.files === 0
+          ? [`${fromBranch} changes nothing against ${intoBranch}`]
+          : []),
+        ...(preflight.pins.linked?.files === 0
+          ? [`The dependency's ${linkFrom} changes nothing against ${linkIntoBranch}`]
+          : []),
+      ]
+    : [];
+  const ready = baseReady && !linkIncomplete && emptyHalves.length === 0;
 
   if (!projectId) {
     return (
@@ -983,7 +994,14 @@ function NewReview() {
             <Card className="p-4">
               <h2 className="mb-3 text-heading font-medium">What this review will examine</h2>
               <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
-                <Row label="Files changed" value={String(preflight.files)} />
+                <Row
+                  label="Files changed"
+                  value={
+                    preflight.pins.linked
+                      ? `${preflight.pins.primary.files} here, ${preflight.pins.linked.files} in the dependency`
+                      : String(preflight.files)
+                  }
+                />
                 <Row label="Hunks" value={String(preflight.hunks)} />
                 <Row label="Sweep hits" value={String(preflight.sweepHits)} />
                 {preflight.changedSymbols > 0 ? (
@@ -1009,6 +1027,15 @@ function NewReview() {
                   />
                 ) : null}
               </dl>
+
+              {emptyHalves.length > 0 ? (
+                <div className="mt-3">
+                  <Problem>
+                    {emptyHalves.join(". ")}, so a review of it would find nothing and read as
+                    clean. Choose a branch with a change.
+                  </Problem>
+                </div>
+              ) : null}
 
               {preflight.contextWindow === null ? (
                 <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
@@ -1069,6 +1096,10 @@ function NewReview() {
                 <Link href="/rulesets" className="underline">
                   Rulesets
                 </Link>
+              </span>
+            ) : emptyHalves.length > 0 ? (
+              <span className="text-sm text-[var(--color-ink-muted)]">
+                The pre-flight found a half of this review with no change: see above.
               </span>
             ) : baseReady && linkIncomplete ? (
               // Only when the dependency is all that is missing: beside a

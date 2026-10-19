@@ -138,6 +138,23 @@ export function POST(request: Request): Promise<Response> {
             ...(await pin(dependency.clonePath, input.linked.fromBranch, input.linked.intoBranch)),
           }
         : undefined;
+    // A side with nothing on top of what it is compared against, a branch
+    // never committed to or one already merged, is a review of no change,
+    // which ran and read as clean (D-145).
+    for (const side of [
+      { ...pins, fromBranch: input.fromBranch, intoBranch: input.intoBranch },
+      ...(linked ? [linked] : []),
+    ]) {
+      if (side.fromCommit === side.mergeBaseCommit) {
+        throw Response.json(
+          {
+            error: `${side.fromBranch} has nothing on top of ${side.intoBranch}: a review of no change reads as clean.`,
+            code: "EmptyChange",
+          },
+          { status: 400 },
+        );
+      }
+    }
 
     // How the work is divided follows from the model, not from a default. The
     // registry knows what each model can absorb; asking for more than that is

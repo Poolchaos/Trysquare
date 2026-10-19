@@ -63,11 +63,11 @@ afterAll(async () => {
   delete process.env.TRYSQUARE_DATA;
 });
 
-async function makeReview(): Promise<string> {
+async function makeReview(fromBranch = "feature/rename-prefs"): Promise<string> {
   const created = await routes.reviews.POST(
     post({
       projectId,
-      fromBranch: "feature/rename-prefs",
+      fromBranch,
       intoBranch: "main",
       model: "claude-fable-5[1m]",
     }),
@@ -135,7 +135,10 @@ describe("noticing that a branch has merged", () => {
 
 describe("deleting a review", () => {
   it("removes the row and the run directory", async () => {
-    const reviewId = await makeReview();
+    // Not the feature branch, which the merge test above merged into main:
+    // a review of it is now a review of no change, which is refused (D-145).
+    // The fixed variant is that branch and one commit more.
+    const reviewId = await makeReview("rename-prefs-migrated");
     const response = await routes.review.DELETE(new Request("http://localhost"), params(reviewId));
     expect(response.status).toBe(200);
 

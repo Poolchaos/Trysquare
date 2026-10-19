@@ -407,6 +407,26 @@ describe("reading the code a finding is about", () => {
     }
   });
 
+  it("refuses a review of a branch with nothing on top of what it is compared against", async () => {
+    // Its change empty, it ran and read as clean, the one confusion the app
+    // exists to prevent (D-145). main against a branch made from it is that.
+    const listed = (await (await routes.projects.GET()).json()) as {
+      projects: { id: string }[];
+    };
+    const response = await routes.reviews.POST(
+      post({
+        projectId: listed.projects[0]!.id,
+        fromBranch: "main",
+        intoBranch: "feature/rename-prefs",
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    const body = (await response.json()) as { code: string; error: string };
+    expect(response.status, body.error).toBe(400);
+    expect(body.code).toBe("EmptyChange");
+    expect(body.error).toContain("main has nothing on top of feature/rename-prefs");
+  });
+
   it("refuses a file this review never raised a finding in", async () => {
     // Otherwise the endpoint is a way to read any file on the machine.
     //
