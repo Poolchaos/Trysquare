@@ -193,7 +193,8 @@ describe("an error thrown by another copy of its module", () => {
   it("is placed for every name the handler holds, so no name drifts from its class", async () => {
     // The handler holds names as text, so one spelled unlike its class would
     // place nothing and say nothing. Walked from the handler's own table, so
-    // a name added there without a class here fails (D-141).
+    // a name added there without a class here fails (D-141); and each status
+    // is this test's own, not read back from the list it checks (D-142).
     const { handler, ERROR_STATUSES } = await import("@/server/api/respond");
     vi.resetModules();
     const projects = await import("@/server/db/repositories/projects");
@@ -203,32 +204,35 @@ describe("an error thrown by another copy of its module", () => {
     const reviews = await import("@/server/db/repositories/reviews");
     const machines = await import("@/lib/domain/state-machines");
     const manager = await import("@/server/jobs/manager");
-    const instances: Error[] = [
-      new reviews.ReviewNotFoundError("x"),
-      new projects.ProjectNotFoundError("x"),
-      new projects.LinkNotFoundError("x", "y"),
-      new rulesets.RulesetNotFoundError("x"),
-      new rulesets.RuleNotFoundError("x", "y"),
-      new findings.FindingNotFoundError("x"),
-      new models.ModelNotFoundError("x"),
-      new machines.IllegalTransitionError("review", "complete", "running", []),
-      new machines.InvalidCloneTransitionError("ready", "pending"),
-      new projects.CloneNotReadyError("x", "cloning"),
-      new manager.ReviewNotStartableError("x", "cancelled"),
-      new manager.ReviewAlreadyStartedError("x", "queued"),
+    const expected: [Error, 404 | 409][] = [
+      [new reviews.ReviewNotFoundError("x"), 404],
+      [new projects.ProjectNotFoundError("x"), 404],
+      [new projects.LinkNotFoundError("x", "y"), 404],
+      [new rulesets.RulesetNotFoundError("x"), 404],
+      [new rulesets.RuleNotFoundError("x", "y"), 404],
+      [new findings.FindingNotFoundError("x"), 404],
+      [new models.ModelNotFoundError("x"), 404],
+      [new machines.IllegalTransitionError("review", "complete", "running", []), 409],
+      [new machines.InvalidCloneTransitionError("ready", "pending"), 409],
+      [new projects.CloneNotReadyError("x", "cloning"), 409],
+      [new manager.ReviewNotStartableError("x", "cancelled"), 409],
+      [new manager.ReviewAlreadyStartedError("x", "queued"), 409],
     ];
-    const byName = new Map(instances.map((error) => [error.name, error]));
+    const byName = new Map(expected.map(([error]) => [error.name, error]));
     const names = ERROR_STATUSES.map(([name]) => name);
     expect(new Set(names).size, "a name the handler lists twice").toBe(names.length);
-    for (const [name, status] of ERROR_STATUSES) {
-      const error = byName.get(name);
-      expect(error, `no class here sets the name ${name}`).toBeDefined();
+    for (const name of names) {
+      expect(byName.get(name), `no class here sets the name ${name}`).toBeDefined();
+    }
+    expect(new Map(ERROR_STATUSES)).toEqual(
+      new Map(expected.map(([error, status]) => [error.name, status])),
+    );
+    for (const [error, status] of expected) {
       const response = await handler(async () => {
         throw error;
       });
-      expect(response.status, name).toBe(status);
+      expect(response.status, error.name).toBe(status);
     }
-    expect([...names].sort()).toEqual([...byName.keys()].sort());
   });
 });
 
