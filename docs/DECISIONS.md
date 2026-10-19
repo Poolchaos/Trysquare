@@ -3202,3 +3202,37 @@ verified evidence, in writing, here.
   11. There since 5.2, and one of 5.14's keyboard gaps: the new review
   form's Enter guard took Enter from links and the Advanced fold. Fixed
   88295d0.
+- 2026-10-19 D-145 REVIEW (the D-144 fixes and their record, 3cab415..e88223c,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Seven findings, two MEDIUM and five LOW, all dispositioned before
+  new work:
+  1. MEDIUM, there since the dependency fields: the dependency's suggested
+  branch was written once and kept, so after the branch under review moved
+  it stayed on the first one's name, the hint still saying it was the same
+  name. Fixed d921173.
+  2. MEDIUM, there before: a half of a review with no change, a branch
+  never committed to or one already merged, was invisible on the
+  pre-flight and ran, reading as clean; 423b320 caught only one branch
+  against itself. Fixed 6697fec: each half's files on the card, Start off
+  for an empty one, and the create route refusing it.
+  3. LOW: the dependency's tick outlived its link, so a restored link came
+  back ticked, and its pair outlived a refusal, with Start on. Fixed
+  13bc8e8; since d921173 a refusal after a good read cannot happen through
+  the screen's controls, so its part is by reading.
+  4. LOW: brokenLink was answered for a link to a directory that is there,
+  and for one to a file busy or refused. Fixed 5c88ff2.
+  5. LOW: the real-path test stood in the fallback too, so the walk never
+  ran. Fixed 84ea3fc, which says what the test still cannot tell apart on
+  a machine where the native call works.
+  6. LOW: error.constructor === undefined was flagged, and three forms of
+  class test the rule never sees. Fixed 3d4b76a, the forms named in the
+  rule's comment, as is the file-wide reading of names, which fails loud.
+  7. LOW, the record: row 5.14 put the Enter guard among U12's gaps, which
+  it is not, and said the dependency let go with its link before 13bc8e8
+  made it so; both corrected here. 47bd5b6's message says that after a
+  refusal the screen said only "Choose the dependency's branch", where the
+  card showed the refusal and only the line beside Start said that.
+  8a75e2a says it "still flags the four D-143 planted" where f1196f6
+  planted seven; the four were D-143's p4 file: an imported File, a
+  declared Headers, a getPrototypeOf comparison and a ["constructor"] one. af5a37d's "EISDIR walks the path" claimed a walk its
+  test never ran, until 84ea3fc.
