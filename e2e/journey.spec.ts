@@ -196,7 +196,9 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
 
     // The pre-flight is free and read-only, so it appears on its own once the
     // four decisions are made.
-    await expect(page.getByText("What this review will examine")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText("What this review will examine", { exact: true })).toBeVisible({
+      timeout: 60_000,
+    });
     await expect(page.getByText("Files changed")).toBeVisible();
     await expect(page.getByText("Merge base")).toBeVisible();
     await expect(page.getByText(/pinned again when the review starts/)).toBeVisible();

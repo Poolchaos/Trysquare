@@ -208,8 +208,11 @@ function NewReview() {
     ? fromBranch
     : "";
   const linkFrom = chosenLinkFrom ?? suggestedLinkFrom;
-  const [preflight, setPreflight] = useState<Preflight | null>(null);
-  const [preflightError, setPreflightError] = useState("");
+  const [preflightAnswer, setPreflightAnswer] = useState<{
+    key: string;
+    body: Preflight | null;
+    error: string;
+  } | null>(null);
 
   // One effect, one guarded async body. Everything this screen needs is
   // fetched together so the form does not appear a field at a time.
@@ -405,9 +408,31 @@ function NewReview() {
   const readyToPreflight =
     projectId !== "" && fromBranch !== "" && intoBranch !== "" && rulesetId !== "" && model !== "";
 
+  // What the pre-flight is asked about. An answer shows only while it is
+  // the answer to the question asked now: the one for the choices before
+  // stayed up while the next was read, its counts beside a Start that would
+  // review the new choices (5.14, audit U11).
+  const preflightKey = JSON.stringify([
+    projectId,
+    fromBranch,
+    intoBranch,
+    rulesetId,
+    model,
+    profileOverride,
+    included && linkFrom && linkIntoBranch ? [included, linkFrom, linkIntoBranch] : null,
+    // A Refresh asks again: a branch pushed to since keeps its name, and an
+    // answer from before it, "changes nothing" say, stood (D-146).
+    refreshCount,
+  ]);
+  const answered = preflightAnswer?.key === preflightKey ? preflightAnswer : null;
+  const preflight = answered?.body ?? null;
+  const preflightError = answered?.error ?? "";
+  const preflightPending = readyToPreflight && answered === null;
+
   useEffect(() => {
     if (!readyToPreflight) return;
     let cancelled = false;
+    const key = preflightKey;
     void (async () => {
       const sent = await send<Preflight>(
         "/api/reviews/preflight",
@@ -434,14 +459,18 @@ function NewReview() {
         "The pre-flight could not be run",
       );
       if (cancelled) return;
-      setPreflight(sent.ok ? sent.body : null);
-      setPreflightError(sent.ok ? "" : sent.error);
+      setPreflightAnswer({
+        key,
+        body: sent.ok ? sent.body : null,
+        error: sent.ok ? "" : sent.error,
+      });
     })();
     return () => {
       cancelled = true;
     };
   }, [
     readyToPreflight,
+    preflightKey,
     projectId,
     fromBranch,
     intoBranch,
@@ -1011,6 +1040,11 @@ function NewReview() {
             </Card>
           ) : null}
 
+          {preflightPending ? (
+            <p className="text-sm text-[var(--color-ink-muted)]">
+              Working out what this review will examine...
+            </p>
+          ) : null}
           {readyToPreflight && preflightError ? <Problem>{preflightError}</Problem> : null}
 
           {readyToPreflight && preflight ? (

@@ -49,7 +49,9 @@ async function fillANewReview(page: import("@playwright/test").Page): Promise<vo
   // three branches, and a wrong into-branch here would surface as the fake
   // CLI exiting over an unknown candidate, reading as an engine fault.
   await page.getByLabel("Compare against").selectOption("main");
-  await expect(page.getByText("What this review will examine")).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText("What this review will examine", { exact: true })).toBeVisible({
+    timeout: 60_000,
+  });
 }
 
 async function startAReview(page: import("@playwright/test").Page): Promise<void> {
@@ -410,6 +412,59 @@ test("Enter on the Advanced fold or a link in the new review form does what it s
   await page.getByRole("link", { name: "See which rules apply" }).focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/rulesets\/[A-Z0-9]+$/i, { timeout: 30_000 });
+});
+
+test("a pre-flight for choices since changed is not left on screen", async ({ page }) => {
+  // The card kept the last answer while the next was read, so the counts on
+  // screen were for a branch no longer chosen, beside a Start that would
+  // review the new one (5.14, audit U11).
+  await fillANewReview(page);
+  const card = page.getByText("What this review will examine", { exact: true });
+  await expect(card).toBeVisible();
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stopHolding = await answerOnce(page, "**/api/reviews/preflight", async (route) => {
+    await held;
+    await route.continue();
+  });
+  const into = page.getByLabel("Compare against");
+  const choices = await into.locator("option").allTextContents();
+  const other = choices.find((name) => name !== "main" && name !== "feature/rename-prefs");
+  expect(other, "a third branch to compare against").toBeDefined();
+  await into.selectOption(other!);
+  await expect(page.getByText("Working out what this review will examine...")).toBeVisible();
+  await expect(card).toBeHidden();
+  release();
+  await expect(card).toBeVisible({ timeout: 60_000 });
+  await stopHolding();
+});
+
+test("a Refresh asks the pre-flight again, so an empty half pushed to since is not still blocked", async ({
+  page,
+}) => {
+  // A branch just pushed with nothing on it was said to change nothing, with
+  // Start off; pushed to and refreshed, its name unchanged, the pre-flight
+  // was not asked again, and Start stayed off on an answer no longer true
+  // (D-146). The first answer is the route's own with the primary half
+  // emptied; the one after a Refresh is the route's own.
+  const emptied = await answerOnce(page, "**/api/reviews/preflight", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { pins: { primary: object } };
+    await route.fulfill({
+      response,
+      json: { ...body, pins: { ...body.pins, primary: { ...body.pins.primary, files: 0 } } },
+    });
+  });
+  await fillANewReview(page);
+  const start = page.getByRole("button", { name: "Start review" });
+  await expect(page.getByText(/feature\/rename-prefs changes nothing against main/)).toBeVisible();
+  await expect(start).toBeDisabled();
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(page.getByText(/changes nothing against/)).toHaveCount(0, { timeout: 60_000 });
+  await expect(start).toBeEnabled();
+  await emptied();
 });
 
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
