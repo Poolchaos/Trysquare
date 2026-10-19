@@ -384,6 +384,12 @@ test("a ticked dependency says what its branches are doing, and lets go with its
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.getByLabel(/Include shared-core/)).toHaveCount(0);
   await expect(start).toBeEnabled({ timeout: 60_000 });
+  // Restored, it comes back unticked: it came back ticked, its old branches
+  // shown without a read (D-145).
+  linked = true;
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(page.getByLabel(/Include shared-core/)).not.toBeChecked({ timeout: 60_000 });
+  await expect(page.getByText(/has no branches to review/)).toHaveCount(0);
   await page.unroute("**/api/projects/DEP123/branches", dependencyBranches);
   await page.unroute(`**/api/projects/${app.id}`, withLink);
 });

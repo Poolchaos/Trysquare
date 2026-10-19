@@ -251,7 +251,16 @@ function NewReview() {
       setProjectMissing(
         (!detail.ok && detail.status === 404) || (!branchList.ok && branchList.status === 404),
       );
-      if (detail.ok) setLinks(detail.body.links ?? []);
+      if (detail.ok) {
+        const linksNow = detail.body.links ?? [];
+        setLinks(linksNow);
+        // A link gone takes its tick with it: kept, the box came back ticked
+        // when the link was restored, with its old branches and no read
+        // (D-145).
+        setIncludeLink((ticked) =>
+          linksNow.some((link) => link.dependencyProjectId === ticked) ? ticked : "",
+        );
+      }
 
       // A refused list, for a clone not ready say, is neither a repository
       // with nothing pushed nor a list fetched a moment ago, which is what an
@@ -348,13 +357,23 @@ function NewReview() {
       // A refusal was dropped, and the dependency's branch fields simply never
       // appeared (D-134).
       setLinkProblem(sent.ok ? "" : sent.error);
-      if (!sent.ok) return;
+      if (!sent.ok) {
+        // No branches to choose from, so none chosen: kept, a refusal stood
+        // beside the old pair, and Start sent it (D-145).
+        setLinkBranches([]);
+        setLinkInto("");
+        return;
+      }
       const body = sent.body;
+      const listed = (name: string | null) =>
+        name !== null && body.branches.some((branch) => branch.name === name);
       // Suggested from these, never assumed: a dependency branch with the
       // same name as the one being reviewed is almost always the other half
-      // of the change, and almost always is not always.
+      // of the change, and almost always is not always. A choice the new list
+      // no longer has goes.
       setLinkBranches(body.branches);
-      setLinkInto((current) => current || body.defaultBranch);
+      setChosenLinkFrom((chosen) => (listed(chosen) ? chosen : null));
+      setLinkInto((current) => (listed(current) ? current : body.defaultBranch));
     })();
     return () => {
       cancelled = true;
@@ -490,7 +509,11 @@ function NewReview() {
 
   // A dependency ticked without both its branches was dropped from the
   // review it was ticked for, without a word (5.14, audit U11).
-  const linkIncomplete = included !== "" && (linkFrom === "" || linkIntoBranch === "");
+  // Not read, or refused, is incomplete too: Start stayed on beside a pair
+  // that was being read again, or that a refusal stood beside (D-145).
+  const linkIncomplete =
+    included !== "" &&
+    (!linkRead || linkProblem !== "" || linkFrom === "" || linkIntoBranch === "");
   const baseReady = fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetId !== "";
   // A half with no change ran and read as clean (D-145).
   const emptyHalves = preflight
