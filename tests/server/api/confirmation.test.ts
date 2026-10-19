@@ -738,6 +738,24 @@ describe("reading the code a finding is about", () => {
       ).json()) as { brokenLink?: boolean; readError?: string };
       expect(toDirectory.brokenLink).toBeUndefined();
       expect(toDirectory.readError).toMatch(/EISDIR/);
+
+      // Through a file, to nothing: ENOTDIR on Linux and macOS, ENOENT on
+      // Windows, and a link to nothing either way. On Linux and macOS it was
+      // a read error with a Try again that could never work (D-146).
+      rmSync(link, { force: true });
+      symlinkSync(
+        join(worktreeRootDir(dataDir, reviewId), "app", "README.md", "nothing"),
+        link,
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      const throughAFile = (await (
+        await routes.fileContext.GET(
+          new Request(`http://localhost/x?path=${encodeURIComponent(cited)}&line=1`),
+          params(reviewId),
+        )
+      ).json()) as { brokenLink?: boolean; readError?: string };
+      expect(throughAFile.readError).toBeUndefined();
+      expect(throughAFile.brokenLink).toBe(true);
     } finally {
       rmSync(link, { force: true });
       writeFileSync(patchPath, patch, "utf8");

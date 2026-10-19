@@ -116,10 +116,12 @@ export async function GET(
       // A link the change made to something not there: its hunk says where it
       // points, and there is nothing to read or try again (D-144). Only when
       // what it points at is missing: a link to a directory, or to a file
-      // busy or refused, was called a link to nothing (D-145).
+      // busy or refused, was called a link to nothing (D-145). ENOTDIR is
+      // missing too: a link through a file fails so on Linux and macOS, and
+      // ENOENT on Windows (D-146).
       if (
         hunk &&
-        (code === "ENOENT" || code === "ELOOP") &&
+        (code === "ENOENT" || code === "ENOTDIR" || code === "ELOOP") &&
         (await lstat(target).then(
           (stat) => stat.isSymbolicLink(),
           () => false,
