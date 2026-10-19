@@ -3090,3 +3090,30 @@ verified evidence, in writing, here.
   ruleset picker, as D-139 says. (e) Row 4.19 said the start route
   answers 409; in the built app it answered 500 from a6aab9a until
   e05cfed. The row now says so.
+- 2026-10-19 D-141 REVIEW (the D-140 fixes and their record, 6555d26..bce003a,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Seven findings, all LOW, all dispositioned before new work:
+  1. A file with no hunk whose checkout copy could not be read, busy,
+  refused or a directory, was answered 404, not found. 2. A deleted file
+  with no hunk pointed at a change above that was not there; and a file
+  cited by its name before a rename was read from that name, a read error
+  with a Try again that could never work. 3. The browser test for the
+  pane's Try again proved only that the message went. 1, the first half
+  of 2, and 3 fixed 4dafb5a, which also refuses a path that climbs out of
+  the checkout before any read: widening the read errors had turned it
+  into "could not be read", and the existing escape test caught that. The
+  rename fixed 892368e.
+  4. The check-style rules from 5057a5d read line by line, and missed an
+  instanceof Prettier wraps, a line that opens with a comment, constructor
+  and prototype comparisons, and a helper that calls the manager; and
+  flagged a string and a trailing comment naming a manager error. Fixed
+  8aef7be, which moves isNamed to src/lib/errors.ts so the
+  instrumentation, a caller of the manager, can use it.
+  5. The handler's names were checked against the test's own list, so a
+  name added misspelt or twice stayed green. Fixed bd194d1.
+  6. The id-route sweep took any not-found code, the generic one a guard
+  before the lookup would answer among them, and the links POST's unknown
+  dependency could answer for the path's id. Fixed e2e1ab7.
+  7. Row 4.19 put the 500's end at 5057a5d, where it ended at e05cfed, and
+  row 5.11 said the start route knows the refusals by name, which the
+  handler has done since 5057a5d. Both corrected here.
