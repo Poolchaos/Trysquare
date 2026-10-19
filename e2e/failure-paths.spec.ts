@@ -309,6 +309,135 @@ test("a half of the review with no change is said, and Start stays off", async (
   await page.unroute(`**/api/projects/${app.id}`, withLink);
 });
 
+test("a Refresh reads a ticked dependency's branches again", async ({ page, request }) => {
+  // Read once when ticked, they were never read again: a branch pushed to
+  // the dependency since, named like the one under review, was not offered
+  // or suggested until the box was unticked and ticked again (D-146).
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const withLink = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        links: [
+          {
+            id: "LINK123",
+            dependencyProjectId: "DEP123",
+            dependencyName: "shared-core",
+            packageName: "@acme/core",
+          },
+        ],
+      },
+    });
+  };
+  await page.route(`**/api/projects/${app.id}`, withLink);
+  const branch = (name: string) => ({
+    name,
+    commit: "a".repeat(40),
+    subject: name,
+    committedAt: "2026-10-01T00:00:00Z",
+    ahead: 0,
+    behind: 0,
+  });
+  let names = ["main", "release"];
+  const dependencyBranches = (route: Route) =>
+    route.fulfill({
+      status: 200,
+      json: { branches: names.map(branch), defaultBranch: "main" },
+    });
+  await page.route("**/api/projects/DEP123/branches", dependencyBranches);
+
+  await fillANewReview(page);
+  await page.getByLabel(/Include shared-core/).check();
+  const its = page.getByLabel("Its branch");
+  await expect(its).toHaveValue("");
+  names = ["main", "release", "feature/rename-prefs"];
+  // The project is read again too, through the route above; its answer is
+  // waited for, so no fetch is left running when the routes go.
+  const projectRead = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === `/api/projects/${app.id}`,
+  );
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(its).toHaveValue("feature/rename-prefs", { timeout: 60_000 });
+  await projectRead;
+  await page.unroute("**/api/projects/DEP123/branches", dependencyBranches);
+  await page.unroute(`**/api/projects/${app.id}`, withLink);
+});
+
+test("every reason Start is off is said beside it", async ({ page, request }) => {
+  // An empty half and a dependency with no branch chosen, and the line
+  // beside Start named the empty half alone (D-146). The pre-flight is the
+  // route's own with the primary half emptied.
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const withLink = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        links: [
+          {
+            id: "LINK123",
+            dependencyProjectId: "DEP123",
+            dependencyName: "shared-core",
+            packageName: "@acme/core",
+          },
+        ],
+      },
+    });
+  };
+  await page.route(`**/api/projects/${app.id}`, withLink);
+  const branch = (name: string) => ({
+    name,
+    commit: "a".repeat(40),
+    subject: name,
+    committedAt: "2026-10-01T00:00:00Z",
+    ahead: 0,
+    behind: 0,
+  });
+  const stopBranches = await answerOnce(page, "**/api/projects/DEP123/branches", (route) =>
+    route.fulfill({
+      status: 200,
+      json: { branches: [branch("main"), branch("release")], defaultBranch: "main" },
+    }),
+  );
+  const primaryEmpty = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { pins: { primary: object } };
+    await route.fulfill({
+      response,
+      json: { ...body, pins: { ...body.pins, primary: { ...body.pins.primary, files: 0 } } },
+    });
+  };
+  await page.route("**/api/reviews/preflight", primaryEmpty);
+  await fillANewReview(page);
+  // Ticking asks the pre-flight again; its answer is waited for, so no fetch
+  // is left running when the routes go, which failed the test after this.
+  const askedAgain = page.waitForResponse((response) =>
+    response.url().endsWith("/api/reviews/preflight"),
+  );
+  await page.getByLabel(/Include shared-core/).check();
+  await askedAgain;
+  await expect(
+    page.getByText(
+      "The pre-flight found a half of this review with no change: see above. Choose the dependency's branch, or untick it.",
+      { exact: true },
+    ),
+  ).toBeVisible({ timeout: 30_000 });
+  await stopBranches();
+  await page.unroute("**/api/reviews/preflight", primaryEmpty);
+  await page.unroute(`**/api/projects/${app.id}`, withLink);
+});
+
 test("a ticked dependency says what its branches are doing, and lets go with its link", async ({
   page,
   request,

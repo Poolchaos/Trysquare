@@ -142,6 +142,9 @@ function NewReview() {
     // The lines about the refs from last time go with the refs (D-139).
     setStale(null);
     setBranchesAsOf(null);
+    // A ticked dependency's branches are read again too, Start off meanwhile
+    // (D-146).
+    setLinkBranchesFor("");
     setRefreshCount((count) => count + 1);
   };
   const [linkProblem, setLinkProblem] = useState("");
@@ -381,7 +384,7 @@ function NewReview() {
     return () => {
       cancelled = true;
     };
-  }, [included, linkAttempt]);
+  }, [included, linkAttempt, refreshCount]);
 
   /**
    * The branch to compare against, never the branch under review.
@@ -644,6 +647,7 @@ function NewReview() {
                     setBranches(null);
                     setStale(null);
                     setBranchesAsOf(null);
+                    setLinkBranchesFor("");
                     setRefreshCount((count) => count + 1);
                   }}
                 >
@@ -1154,21 +1158,28 @@ function NewReview() {
                   Rulesets
                 </Link>
               </span>
-            ) : emptyHalves.length > 0 ? (
+            ) : emptyHalves.length > 0 || (baseReady && linkIncomplete) ? (
+              // Every reason Start is off, not the first alone: an empty half's
+              // line stood alone beside a dependency with no branch (D-146).
+              // The dependency's only when the rest is ready: beside a branch
+              // or a model not yet chosen it read as the only reason.
               <span className="text-sm text-[var(--color-ink-muted)]">
-                The pre-flight found a half of this review with no change: see above.
-              </span>
-            ) : baseReady && linkIncomplete ? (
-              // Only when the dependency is all that is missing: beside a
-              // branch or a model not yet chosen it read as the only reason.
-              <span className="text-sm text-[var(--color-ink-muted)]">
-                {!linkRead
-                  ? "Reading the dependency's branches..."
-                  : linkProblem
-                    ? "The dependency's branches could not be read: try again above, or untick it."
-                    : linkBranches.length < 2
-                      ? "The dependency has nothing to compare: untick it."
-                      : "Choose the dependency's branch, or untick it."}
+                {[
+                  ...(emptyHalves.length > 0
+                    ? ["The pre-flight found a half of this review with no change: see above."]
+                    : []),
+                  ...(baseReady && linkIncomplete
+                    ? [
+                        !linkRead
+                          ? "Reading the dependency's branches..."
+                          : linkProblem
+                            ? "The dependency's branches could not be read: try again above, or untick it."
+                            : linkBranches.length < 2
+                              ? "The dependency has nothing to compare: untick it."
+                              : "Choose the dependency's branch, or untick it.",
+                      ]
+                    : []),
+                ].join(" ")}
               </span>
             ) : (
               <span className="text-sm text-[var(--color-ink-muted)]">
