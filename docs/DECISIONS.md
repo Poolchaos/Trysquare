@@ -3172,3 +3172,33 @@ verified evidence, in writing, here.
   by name, which the instrumentation does not. Corrected in f1196f6.
   7. Row 5.11 said all its counts came from the browser gate, and
   3f06eb1's came from ./verify.sh alone. Corrected here, with f1196f6's.
+- 2026-10-19 D-144 REVIEW (the D-143 fixes, their record and 5.14's first
+  change, 33be9c1..3cab415, by a separate read-only reviewer; each finding
+  re-run here before it was fixed). Eleven findings, one MEDIUM and ten LOW,
+  all dispositioned before new work:
+  1. MEDIUM, there before: a ticked dependency could be compared against
+  its own branch, an empty half that reads as clean, and neither the create
+  route nor the pre-flight refused a branch compared against itself, the
+  primary's or the dependency's. Fixed 423b320.
+  2. 3cab415 left a dependency ticked when its link went, seen at a read
+  again, with Start off for good. 3. The line beside Start asked for a
+  branch while the dependency's branches were read, refused or absent, and
+  read as the only reason when another was missing. 4. 3cab415's test
+  proved the gate and not the outcome. 2, 3 and 4 fixed 47bd5b6.
+  5. A link the change made to a target not on this machine was a read
+  error with a Try again that could never work. 6. eff42db's realpath is
+  the native one, which throws EISDIR on Windows RAM and virtual disks that
+  bypass the Volume Mount Manager, as Vite's source records; there every
+  read would have been a read error. Not reproduced, there being no such
+  disk here, so D-143 item 2's "no case being found" stands only for this
+  machine. 5 and 6 fixed af5a37d, the fallback tested with the native call
+  stood in for.
+  7. f1196f6's rules missed a parameter or destructured name shadowing a
+  global. 8. They flagged fn.prototype === undefined. 9. A stale comment
+  sat above its replacement. 7, 8 and 9 fixed 8a75e2a.
+  10. Row 5.14 still read TODO after 3cab415, where earlier first changes
+  wrote their rows; and D-143 item 3 and row 5.11 left out the
+  ["constructor"] comparison f1196f6 closed. Both corrected here.
+  11. There since 5.2, and one of 5.14's keyboard gaps: the new review
+  form's Enter guard took Enter from links and the Advanced fold. Fixed
+  88295d0.
