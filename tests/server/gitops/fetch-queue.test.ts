@@ -13,7 +13,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { cloneBare, fetchAll } from "@/server/gitops/repo";
 
 let root: string;
@@ -57,6 +57,21 @@ describe("fetches into one clone", () => {
       const failed = results.filter((result) => result.status === "rejected");
       expect(failed.map((result) => String((result as PromiseRejectedResult).reason))).toEqual([]);
       expect(git(["rev-parse", "main"], clone)).toBe(git(["rev-parse", "main"], source));
+    }
+  }, 120_000);
+
+  it("wait for each other from another copy of the module", async () => {
+    // The built app has two: the job manager's, in the instrumentation
+    // bundle, fetches for a review's start, and the routes share another
+    // (review of the D-147 fixes, as D-139 found for the manager).
+    vi.resetModules();
+    const other = await import("@/server/gitops/repo");
+    expect(other.fetchAll).not.toBe(fetchAll);
+    for (let round = 0; round < 5; round += 1) {
+      commit(`moved again ${round}`);
+      const results = await Promise.allSettled([fetchAll(clone), other.fetchAll(clone)]);
+      const failed = results.filter((result) => result.status === "rejected");
+      expect(failed.map((result) => String((result as PromiseRejectedResult).reason))).toEqual([]);
     }
   }, 120_000);
 

@@ -35,15 +35,29 @@ export async function cloneBare(gitUrl: string, destination: string): Promise<vo
   await fetchAll(destination);
 }
 
-/** The last fetch asked for each clone, which the next one waits behind. */
-const fetches = new Map<string, Promise<void>>();
+/**
+ * The last fetch asked for each clone, which the next one waits behind.
+ *
+ * On globalThis rather than in a module-level constant: the built app holds
+ * two copies of this module, the job manager's in the instrumentation bundle
+ * and the routes', and a queue each let a review's fetch run beside a
+ * route's (review of the D-147 fixes).
+ */
+const FETCHES_KEY = Symbol.for("trysquare.gitops.fetches");
+
+interface FetchesHolder {
+  [FETCHES_KEY]?: Map<string, Promise<void>>;
+}
+
+const fetches = ((globalThis as FetchesHolder)[FETCHES_KEY] ??= new Map());
 
 /**
  * Fetches every branch into a clone, one fetch at a time per clone.
  *
  * Two at once into one bare clone, after a branch moved on the remote, failed
- * one of them with "cannot lock ref", and a Refresh on the new review screen
- * starts three (D-147). Each caller still gets a fetch that starts after it
+ * one of them with "cannot lock ref" (D-147). A Refresh on the new review
+ * screen starts two into a clone, the branch list's and the pre-flight's,
+ * and a review's start or resume can add a third. Each caller still gets a fetch that starts after it
  * asked, as pinning needs (D-27); a fetch that fails is passed on to its own
  * caller only.
  */
