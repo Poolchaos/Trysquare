@@ -5,7 +5,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
@@ -150,6 +150,45 @@ describe("the system config git is given", () => {
       expect(reads.filter((read) => read !== text)).toEqual([]);
     }, 60_000);
 
+    it("is never empty while a copy replaces other text there", async () => {
+      // Other text there each time, so every copy replaces it rather than
+      // leaving it alone, and the rename is what is under test: the test
+      // above it only ever met a file that already held its text (review of
+      // the D-149 fixes). Put there by a rename too, retried as Windows
+      // refuses one while the reader has the file open.
+      const system = await (await ownCopy()).systemGitConfig();
+      if (system.kind !== "standIn") return;
+      const text = await readFile(system.path, "utf8");
+      const stale = "# stale\n";
+      const putStale = async () => {
+        writeFileSync(`${system.path}.stale`, stale, "utf8");
+        for (;;) {
+          try {
+            renameSync(`${system.path}.stale`, system.path);
+            return;
+          } catch (error) {
+            if (!["EPERM", "EACCES", "EBUSY"].includes((error as NodeJS.ErrnoException).code ?? ""))
+              throw error;
+            await new Promise((resolve) => setTimeout(resolve, 5));
+          }
+        }
+      };
+      const reads: string[] = [];
+      let writing = true;
+      const reader = (async () => {
+        while (writing) reads.push(await readFile(system.path, "utf8"));
+      })();
+      for (let copy = 0; copy < 10; copy += 1) {
+        await putStale();
+        await (await ownCopy()).systemGitConfig();
+      }
+      writing = false;
+      await reader;
+      expect(reads.length).toBeGreaterThan(0);
+      expect(reads.filter((read) => read !== text && read !== stale)).toEqual([]);
+      expect(await readFile(system.path, "utf8")).toBe(text);
+    }, 60_000);
+
     it("is written when missing, and nothing is left beside it", async () => {
       const system = await (await ownCopy()).systemGitConfig();
       if (system.kind !== "standIn") return;
@@ -174,8 +213,8 @@ describe("the system config git is given", () => {
         return {
           ...actual,
           rename: async (from: string, to: string) => {
+            // The partial is left where it was, for writeStandIn to clear.
             await actual.writeFile(to, text, "utf8");
-            await actual.rm(from, { force: true });
             throw Object.assign(new Error(`EPERM: operation not permitted, rename`), {
               code: "EPERM",
             });
@@ -183,6 +222,9 @@ describe("the system config git is given", () => {
         };
       });
       expect(await (await ownCopy()).systemGitConfig()).toEqual(system);
+      expect(
+        readdirSync(dir).filter((entry) => entry.startsWith(`${basename(system.path)}.`)),
+      ).toEqual([]);
     });
 
     it("tries again after a refusal that clears, as Windows' do", async () => {
