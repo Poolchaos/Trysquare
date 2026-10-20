@@ -128,8 +128,10 @@ function plantedRun(effort: string): Promise<void> {
   };
 
   // Checked, not assumed: a missing install would otherwise read as a CLI
-  // that sent nothing.
-  const cli = resolveCli(undefined);
+  // that sent nothing. The real environment is asked for by name, which the
+  // suite's real-CLI guard lets through: this run's sign-in, config and API
+  // are all the stand-ins above, so it reaches no model and spends nothing.
+  const cli = resolveCli(undefined, realCliEnvironment());
   expect(realCliEnvironment().bundled).toContain(cli.command);
 
   const args = buildStageArgs({

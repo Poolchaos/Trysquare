@@ -20,6 +20,8 @@ export default defineConfig({
     // Let console output reach stdout. Vitest intercepts it by default, which
     // hides runtime errors a test logs from verify.sh's error-marker scan.
     disableConsoleIntercept: true,
+    // Refuses the real Claude Code CLI to every test that did not ask for it.
+    setupFiles: ["tests/helpers/no-real-cli.ts"],
   },
   resolve: {
     alias: {
