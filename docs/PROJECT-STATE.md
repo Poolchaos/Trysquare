@@ -82,6 +82,8 @@ model and no money, scoring the result against the fixture's manifest.
 - `TRYSQUARE_DATA` - the data root, default `~/.local/share/trysquare`. Holds
   `db.sqlite`, `projects/`, `runs/` and `exports/`.
 - `TRYSQUARE_CLAUDE_PATH` - the binary reviews run through. Unset, it is the
+  CLI path kept on Settings (the `claudePath` setting, read as each run
+  starts and each check runs, D-152), then the
   Claude Code CLI installed as a dependency (`@anthropic-ai/claude-code`
   2.1.301, D-92), then `claude` on PATH. Every run records which one it used
   as a run note. Resolved by

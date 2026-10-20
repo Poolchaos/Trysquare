@@ -34,6 +34,7 @@ import {
   type RunNote,
 } from "../db/repositories/reviews";
 import { SETTING_KEYS, readSettingOr } from "../db/repositories/settings";
+import { configuredClaudePath } from "../cli-path";
 import { listForReview, usageTotals } from "../db/repositories/stage-executions";
 import { DEFAULT_MODEL_CANDIDATES } from "../engine/probe";
 import { prepareAndRun, type PrepareAndRunOptions, type RunOutcome } from "../review/service";
@@ -45,6 +46,7 @@ const DEFAULT_MAX_CONCURRENT = 1;
 export interface ManagerInit {
   db: Db;
   dataDir?: string;
+  /** For tests: a path that wins over the configured one for every run. */
   claudePath?: string;
 }
 
@@ -112,7 +114,7 @@ export class JobManager {
   init(options: ManagerInit): void {
     this.db = options.db;
     this.dataDir = options.dataDir ?? resolveDataDir(process.env, homedir());
-    this.claudePath = options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH;
+    this.claudePath = options.claudePath;
 
     markOrphanedReviewsInterrupted(options.db);
     markOrphanedClonesFailed(options.db);
@@ -319,7 +321,9 @@ export class JobManager {
     const settled = prepareAndRun(db, reviewId, {
       ...options,
       dataDir: options.dataDir ?? this.dataDir,
-      claudePath: options.claudePath ?? this.claudePath,
+      // Asked as the run starts, so a path saved in Settings since the server
+      // started is the one it uses (D-152).
+      claudePath: options.claudePath ?? this.claudePath ?? configuredClaudePath(db),
       signal: controller.signal,
       onStageLifecycle: (event) => {
         announceDurable();

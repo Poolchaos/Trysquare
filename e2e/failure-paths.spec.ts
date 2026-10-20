@@ -2135,3 +2135,27 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
   await expect(status).toHaveCount(0);
   await stop();
 });
+
+test("a CLI path kept in Settings is saved, and the environment's is said to win", async ({
+  page,
+}) => {
+  // The path came only from TRYSQUARE_CLAUDE_PATH, which the suite's server
+  // is started with, pointing at the fake (MVP 6.1, D-152).
+  await page.goto("/settings");
+  const path = page.getByLabel("CLI path");
+  await expect(path).toHaveValue("");
+  await expect(page.getByText(/TRYSQUARE_CLAUDE_PATH is set to .*fake-claude\.mjs/)).toBeVisible();
+  await path.fill("  /opt/claude/bin/claude  ");
+  await path.blur();
+  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  await expect(path).toHaveValue("/opt/claude/bin/claude");
+  await page.reload();
+  await expect(page.getByLabel("CLI path")).toHaveValue("/opt/claude/bin/claude");
+  // The variable wins, so the check still asks the fake.
+  await page.getByRole("button", { name: "Check the CLI" }).click();
+  await expect(page.getByTestId("cli-status")).toContainText("fake-claude.mjs, 2.1.301");
+  // Left as it was found, for the tests after.
+  await page.getByLabel("CLI path").fill("");
+  await page.getByLabel("CLI path").blur();
+  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+});

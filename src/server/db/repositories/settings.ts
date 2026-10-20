@@ -44,4 +44,6 @@ export const SETTING_KEYS = {
   stageTimeoutMinutes: "stageTimeoutMinutes",
   /** USD-equivalent ceiling per engine call. Zero disables the ceiling. */
   stageMaxBudgetUsd: "stageMaxBudgetUsd",
+  /** The CLI reviews run through, the first setting that is not a number (6.1). */
+  claudePath: "claudePath",
 } as const;

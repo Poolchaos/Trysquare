@@ -19,8 +19,10 @@ review is the expensive action. Everything else, including the whole demo with
   else in this runbook works without it. `npm install` installs the Claude
   Code CLI the reviews run through (D-92); sign it in with
   `npm run claude -- auth login`. It shares the `~/.claude` sign-in of any
-  other Claude Code on the machine. `TRYSQUARE_CLAUDE_PATH` picks a
-  different CLI, which must be 2.1.301 or newer.
+  other Claude Code on the machine. A different CLI, which must be 2.1.301
+  or newer, is picked by the CLI path on Settings, or by
+  `TRYSQUARE_CLAUDE_PATH`, which wins over it (D-152); Check the CLI on
+  Settings says which CLI that is, its version and how it is signed in.
 - **Chromium**, only if you intend to run `./verify.sh --e2e`:
   `npx playwright install chromium`.
 
@@ -56,7 +58,7 @@ Two environment variables control where things live:
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `TRYSQUARE_DATA` | `~/.local/share/trysquare` | Data root: `db.sqlite`, `projects/`, `runs/`, `exports/`. |
-| `TRYSQUARE_CLAUDE_PATH` | the CLI `npm install` put in `node_modules`, then `claude` on PATH | The binary reviews run through. On Windows, point it at `claude.exe` or an npm `claude.cmd`; a `.mjs` or `.js` runs under Node. |
+| `TRYSQUARE_CLAUDE_PATH` | the CLI path on Settings, then the CLI `npm install` put in `node_modules`, then `claude` on PATH | The binary reviews run through, winning over the path on Settings (D-152). On Windows, point it at `claude.exe` or an npm `claude.cmd`; a `.mjs` or `.js` runs under Node. |
 
 Point `TRYSQUARE_DATA` at a scratch directory when you want a clean slate;
 nothing else in the app needs resetting.

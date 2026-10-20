@@ -10,12 +10,14 @@
 
 import { readCliStatus } from "@/server/engine/probe";
 import { handler, ok } from "@/server/api/respond";
+import { configuredClaudePath } from "@/server/cli-path";
+import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
 
 export function GET(): Promise<Response> {
   return handler(async () => {
-    const claudePath = process.env.TRYSQUARE_CLAUDE_PATH;
+    const claudePath = configuredClaudePath(runtime().db);
     return ok({
       cli: await readCliStatus(claudePath === undefined ? {} : { claudePath }),
     });

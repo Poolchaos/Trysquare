@@ -203,8 +203,8 @@ the `--fake` and it runs against a real model on your subscription.
 Two environment variables matter. `TRYSQUARE_DATA` is the data root, holding
 `db.sqlite`, `projects/`, `runs/` and `exports/`, and defaults to
 `~/.local/share/trysquare`. `TRYSQUARE_CLAUDE_PATH` is the binary reviews run
-through; unset, it is the CLI installed with the app, then `claude` on your
-PATH.
+through; unset, it is the CLI path kept on Settings, then the CLI installed
+with the app, then `claude` on your PATH.
 
 ## Development
 

@@ -58,7 +58,11 @@ interface SystemInfo {
 
 export default function SettingsPage() {
   const [models, setModels] = useState<Model[] | null>(null);
-  const [settings, setSettings] = useState<Record<string, number> | null>(null);
+  const [settings, setSettings] = useState<Record<string, number | string> | null>(null);
+  // The path the server was started with, which wins over the one kept here.
+  const [environmentPath, setEnvironmentPath] = useState<string | null>(null);
+  const [pathSaved, setPathSaved] = useState(false);
+  const [pathProblem, setPathProblem] = useState("");
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [cli, setCli] = useState<CliStatus | null>(null);
   const [cliProblem, setCliProblem] = useState("");
@@ -87,19 +91,20 @@ export default function SettingsPage() {
     void (async () => {
       const [modelList, settingList, systemInfo] = await Promise.all([
         send<{ models: Model[] }>("/api/models", {}, "The models could not be read"),
-        send<{ settings: Record<string, number> }>(
-          "/api/settings",
-          {},
-          "The settings could not be read",
-        ),
+        send<{
+          settings: Record<string, number | string>;
+          environment?: { claudePath: string | null };
+        }>("/api/settings", {}, "The settings could not be read"),
         send<SystemInfo>("/api/system", {}, "Where everything is kept could not be read"),
       ]);
       if (cancelled) return;
       const failed: Partial<Record<"models" | "settings" | "system", string>> = {};
       if (modelList.ok) setModels(modelList.body.models);
       else failed.models = modelList.error;
-      if (settingList.ok) setSettings(settingList.body.settings);
-      else failed.settings = settingList.error;
+      if (settingList.ok) {
+        setSettings(settingList.body.settings);
+        setEnvironmentPath(settingList.body.environment?.claudePath ?? null);
+      } else failed.settings = settingList.error;
       if (systemInfo.ok) setSystem(systemInfo.body);
       else failed.system = systemInfo.error;
       setReadErrors(failed);
@@ -134,7 +139,7 @@ export default function SettingsPage() {
       );
       return;
     }
-    const sent = await send<{ settings?: Record<string, number> }>(
+    const sent = await send<{ settings?: Record<string, number | string> }>(
       "/api/settings",
       { method: "PUT", body: JSON.stringify({ [field.key]: Number(input.value) }) },
       "That setting could not be saved",
@@ -145,6 +150,31 @@ export default function SettingsPage() {
     }
     setSettings(sent.body.settings ?? null);
     setSaved(true);
+  }
+
+  async function savePath(input: HTMLInputElement) {
+    const kept = String(settings?.claudePath ?? "");
+    if (input.value.trim() === kept) {
+      input.value = kept;
+      return;
+    }
+    setPathProblem("");
+    setPathSaved(false);
+    // Empty is a choice here, not a slip: it means the CLI npm install put in
+    // node_modules, then PATH.
+    const sent = await send<{ settings?: Record<string, number | string> }>(
+      "/api/settings",
+      { method: "PUT", body: JSON.stringify({ claudePath: input.value }) },
+      "The CLI path could not be saved",
+    );
+    if (!sent.ok) {
+      input.value = kept;
+      setPathProblem(sent.error);
+      return;
+    }
+    setSettings(sent.body.settings ?? null);
+    input.value = String(sent.body.settings?.claudePath ?? "");
+    setPathSaved(true);
   }
 
   async function probe(id: string) {
@@ -237,6 +267,30 @@ export default function SettingsPage() {
               Finds the CLI reviews run through and runs its own version and sign-in checks locally.
               Nothing is sent anywhere and nothing is spent.
             </p>
+            {settings === null ? null : (
+              <div className="mb-3 grid gap-1">
+                <Field
+                  label="CLI path"
+                  hint="Empty uses the CLI npm install put in node_modules, then claude on PATH. Saved when you leave the field; Check the CLI to see whether it runs."
+                >
+                  <Input
+                    defaultValue={String(settings.claudePath ?? "")}
+                    placeholder="The CLI installed with this app"
+                    spellCheck={false}
+                    onBlur={(event) => void savePath(event.currentTarget)}
+                  />
+                </Field>
+                {environmentPath === null ? null : (
+                  <p className="text-xs text-[var(--color-warning)]">
+                    TRYSQUARE_CLAUDE_PATH is set to{" "}
+                    <Mono className="break-all">{environmentPath}</Mono> for this server, and wins
+                    over the path here.
+                  </p>
+                )}
+                {pathSaved ? <p className="text-xs text-[var(--color-good)]">Saved.</p> : null}
+                {pathProblem === "" ? null : <Problem>{pathProblem}</Problem>}
+              </div>
+            )}
             {cli ? (
               <div className="mb-3 grid gap-1 text-sm" data-testid="cli-status">
                 {cli.state === "notFound" ? null : (

@@ -22,6 +22,7 @@ import { createProject, setCloneStatus } from "@/server/db/repositories/projects
 import {
   createReview,
   deleteReview,
+  readRunNotes,
   requireReview,
   transitionReview,
 } from "@/server/db/repositories/reviews";
@@ -506,5 +507,24 @@ describe("the run directory", () => {
     await manager.settled(reviewId);
 
     expect(existsSync(join(dataDir, "runs", reviewId, "bundle", "inventory.json"))).toBe(true);
+  }, 120_000);
+});
+
+describe("the CLI a run goes through", () => {
+  it("is the path saved in Settings, asked as the run starts, with no restart", async () => {
+    // The manager took its path once, when the server started, so a path
+    // saved in Settings after that went unused until a restart (6.1, D-152).
+    const fresh = new JobManager();
+    fresh.init({ db, dataDir });
+    writeSetting(db, SETTING_KEYS.claudePath, FAKE_CLI);
+    const reviewId = seedReview();
+    expect(fresh.start(reviewId, { ruleset: RULESET })).toBe("running");
+    await fresh.settled(reviewId);
+    const review = requireReview(db, reviewId);
+    expect(review.status).toBe("awaiting_confirmation");
+    expect(readRunNotes(review).map((note) => note.message)).toContainEqual(
+      expect.stringContaining(`Engine: ${FAKE_CLI} (2.1.301`),
+    );
+    await fresh.drain();
   }, 120_000);
 });

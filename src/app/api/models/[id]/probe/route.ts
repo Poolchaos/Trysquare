@@ -10,6 +10,7 @@
 import { recordProbeOutcome, requireModel } from "@/server/db/repositories/models";
 import { probeModel } from "@/server/engine/probe";
 import { handler, ok } from "@/server/api/respond";
+import { configuredClaudePath } from "@/server/cli-path";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export async function POST(
     const { id } = await context.params;
     const model = requireModel(db, id);
 
-    const claudePath = process.env.TRYSQUARE_CLAUDE_PATH;
+    const claudePath = configuredClaudePath(db);
     const outcome = await probeModel(model.id, claudePath === undefined ? {} : { claudePath });
 
     recordProbeOutcome(db, model.id, outcome);

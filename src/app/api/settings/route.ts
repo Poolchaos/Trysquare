@@ -10,6 +10,8 @@
 import { z } from "zod";
 import { SETTING_KEYS, readSettingOr, writeSettings } from "@/server/db/repositories/settings";
 import { handler, ok, readJson } from "@/server/api/respond";
+import { environmentClaudePath } from "@/server/cli-path";
+import { claudePathSchema } from "@/lib/settings/claude-path";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +21,7 @@ const CATALOGUE = {
   [SETTING_KEYS.maxConcurrentReviews]: { schema: z.number().int().positive(), fallback: 1 },
   [SETTING_KEYS.stageTimeoutMinutes]: { schema: z.number().int().positive(), fallback: 20 },
   [SETTING_KEYS.stageMaxBudgetUsd]: { schema: z.number().nonnegative(), fallback: 15 },
+  [SETTING_KEYS.claudePath]: { schema: claudePathSchema, fallback: "" },
 } as const;
 
 type Key = keyof typeof CATALOGUE;
@@ -27,12 +30,16 @@ export function GET(): Promise<Response> {
   return handler(async () => {
     const { db } = runtime();
     const settings = Object.fromEntries(
-      (Object.keys(CATALOGUE) as Key[]).map((key) => [
-        key,
-        readSettingOr(db, key, CATALOGUE[key].schema, CATALOGUE[key].fallback),
-      ]),
+      (Object.keys(CATALOGUE) as Key[]).map((key) => {
+        // Each key's own schema and fallback, which agree; widened only so one
+        // loop can read numbers and the path alike.
+        const entry: { schema: z.ZodType<unknown>; fallback: unknown } = CATALOGUE[key];
+        return [key, readSettingOr(db, key, entry.schema, entry.fallback)];
+      }),
     );
-    return ok({ settings });
+    // Not a setting, and not writable here: the path the server was started
+    // with, which wins over the one kept here, so the screen can say so.
+    return ok({ settings, environment: { claudePath: environmentClaudePath() ?? null } });
   });
 }
 

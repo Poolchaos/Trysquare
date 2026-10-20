@@ -3502,3 +3502,28 @@ verified evidence, in writing, here.
   closed, and the inbox was not changed. It is retired here, and the open
   lines filed since 2026-08-04, which sat under the Retired heading, are
   moved above it word for word, none re-verified.
+- 2026-10-20 D-152 DECIDED (MVP 6.1, taken under the maintainer's standing
+  instruction to proceed on recommendations; theirs to overturn): the CLI
+  path can be kept in Settings, the first setting that is not a number.
+  Which CLI a review runs through is, in order, TRYSQUARE_CLAUDE_PATH, then
+  the kept path, then the CLI npm install put in node_modules, then claude on
+  PATH. The variable wins because it is the choice of whoever started this
+  server, as TRYSQUARE_DATA is, and a test or a deployment that pins the CLI
+  by it must not be moved by a value in the database; Settings says when it
+  is set. The path is read as each run starts and each check runs, not once
+  at startup, so a saved path is the next run's. A path is refused holding a
+  control character, which in a run note would forge a line, and is not
+  judged otherwise: Check the CLI says whether it runs. Rejected: the kept
+  path winning over the variable, which would let a value saved from the
+  screen override the fake the browser suite pins; and checking the path on
+  save, which would start the CLI without a person asking for a check
+  (D-31). A cross-site request cannot set it: the request guard refuses
+  foreign origins before any route (src/proxy.ts).
+  FOUND the same day: proving 6.1's manager test on the code before its
+  fix, a run started with no CLI path of its own resolved the CLI in
+  node_modules, and one real stage ran on the maintainer's sign-in,
+  claude-fable-5, 30 assistant messages, 33,893 output tokens, 60 uncached
+  input, 171,462 cache-read and 104,435 cache-write tokens by its session
+  record, before the run failed. No unit test was kept from the real CLI.
+  c074998 refuses it to every unit test outside TRYSQUARE_REAL_CLI=1, at the
+  resolveCli the engine modules import; the experiment was not run again.
