@@ -7,6 +7,7 @@
  */
 
 import { rm } from "node:fs/promises";
+import { resolve } from "node:path";
 import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
 import { validateGitUrl } from "@/lib/git/url";
 import { git, gitSucceeds, toLines } from "./run";
@@ -34,8 +35,32 @@ export async function cloneBare(gitUrl: string, destination: string): Promise<vo
   await fetchAll(destination);
 }
 
-export async function fetchAll(repoDir: string): Promise<void> {
-  await git(["fetch", "--all", "--prune", "--quiet"], { cwd: repoDir, timeoutMs: 600_000 });
+/** The last fetch asked for each clone, which the next one waits behind. */
+const fetches = new Map<string, Promise<void>>();
+
+/**
+ * Fetches every branch into a clone, one fetch at a time per clone.
+ *
+ * Two at once into one bare clone, after a branch moved on the remote, failed
+ * one of them with "cannot lock ref", and a Refresh on the new review screen
+ * starts three (D-147). Each caller still gets a fetch that starts after it
+ * asked, as pinning needs (D-27); a fetch that fails is passed on to its own
+ * caller only.
+ */
+export function fetchAll(repoDir: string): Promise<void> {
+  const key = resolve(repoDir);
+  const fetched = (fetches.get(key) ?? Promise.resolve())
+    .catch(() => undefined)
+    .then(async () => {
+      await git(["fetch", "--all", "--prune", "--quiet"], { cwd: repoDir, timeoutMs: 600_000 });
+    });
+  fetches.set(key, fetched);
+  void fetched
+    .catch(() => undefined)
+    .then(() => {
+      if (fetches.get(key) === fetched) fetches.delete(key);
+    });
+  return fetched;
 }
 
 /**
