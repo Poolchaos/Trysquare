@@ -163,8 +163,26 @@ async function serverMidStage(
   const cliPid = Number(pidText);
   if (!Number.isInteger(cliPid) || cliPid <= 0) throw new Error(`The pid file held "${pidText}".`);
   launched.clis.push(cliPid);
+  // And until the server has the CLI's init line, the hang's only write: a
+  // signal before it left that write to go to a pipe with no reader, and an
+  // EPIPE to end the CLI, not the platform (review of the D-148 fixes).
+  await expect
+    .poll(
+      () =>
+        stageLogs(dataDir).some((path) =>
+          readFileSync(join(dataDir, path), "utf8").includes('"subtype":"init"'),
+        ),
+      { timeout: 60_000 },
+    )
+    .toBe(true);
   expect(isAlive(cliPid)).toBe(true);
   return { server, cliPid, dataDir, pidFile };
+}
+
+function stageLogs(dataDir: string): string[] {
+  return readdirSync(dataDir, { recursive: true, encoding: "utf8" }).filter((path) =>
+    path.endsWith(".log"),
+  );
 }
 
 /**
@@ -176,9 +194,7 @@ async function serverMidStage(
 function howItEnded(dataDir: string, pidFile: string): string {
   const ended = `${pidFile}.ended`;
   const note = existsSync(ended) ? readFileSync(ended, "utf8").trim() : "none, so a signal";
-  const logs = readdirSync(dataDir, { recursive: true, encoding: "utf8" }).filter((path) =>
-    path.endsWith(".log"),
-  );
+  const logs = stageLogs(dataDir);
   return [
     `The CLI is gone. Its note on how it ended: ${note}`,
     ...logs.map((path) => `${path}:\n${readFileSync(join(dataDir, path), "utf8").slice(-2_000)}`),
