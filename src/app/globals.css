@@ -203,10 +203,11 @@ body {
 
 /* A control hidden from sight, a branch or model radio, draws its focus on
    the label that stands for it: on the control itself the ring was clipped
-   away with it (5.14, audit U12). Inside the label, not outside: the branch
-   list scrolls, and clipped the ring drawn outside to two lines (review of
-   the D-147 fixes). */
+   away with it (5.14, audit U12). Outside the label: drawn inside, it lay
+   over the chosen row's border, the same colour, and only thickened it
+   (review of the D-148 fixes). The branch list, which scrolls and so clips,
+   is padded by the ring's reach. */
 label:has(> .sr-only:focus-visible) {
   outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }

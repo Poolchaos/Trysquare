@@ -844,11 +844,16 @@ test("a branch reached by the keyboard shows that it has the focus", async ({ pa
         box.right + reach <= list.right &&
         box.top - reach >= list.top &&
         box.bottom + reach <= list.bottom,
+      // And beyond the label's border: the focused row is the chosen one,
+      // whose border is the ring's colour, and a ring drawn over it only
+      // thickened it by a pixel (review of the D-148 fixes).
+      clearsBorder: style !== null && parseFloat(style.outlineOffset) >= 0,
     };
   });
   expect(focused.type).toBe("radio");
   expect(focused.outline).toBe("solid");
   expect(focused.inside).toBe(true);
+  expect(focused.clearsBorder).toBe(true);
 });
 
 test("the scan theater is a dialog the keyboard stays in", async ({ page }) => {
