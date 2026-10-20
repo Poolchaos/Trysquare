@@ -9,8 +9,8 @@
  */
 
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -109,6 +109,31 @@ function runGit(
   });
 }
 
+/**
+ * Puts the stand-in at its path without it ever being seen empty.
+ *
+ * Every copy of this module writes the same path, named for its text: the
+ * instrumentation bundle's and the routes', and other servers'. Rewritten in
+ * place, it was empty for a moment, and a git reading it then ran with no
+ * system config, a private HTTPS fetch with no credential helper (review of
+ * the D-148 fixes). A file already holding the text is left alone; otherwise
+ * it is written beside it and renamed into place. Windows refuses to replace
+ * a file another process has open, which is no failure when that file holds
+ * the same text.
+ */
+async function writeStandIn(path: string, text: string): Promise<void> {
+  const holds = async () => (await readFile(path, "utf8").catch(() => null)) === text;
+  if (await holds()) return;
+  const partial = `${path}.${process.pid}.${randomUUID()}.partial`;
+  await writeFile(partial, text, "utf8");
+  try {
+    await rename(partial, path);
+  } catch (error) {
+    await rm(partial, { force: true });
+    if (!(await holds())) throw error;
+  }
+}
+
 let systemConfig: Promise<SystemConfig> | undefined;
 
 /**
@@ -134,7 +159,7 @@ export function systemGitConfig(): Promise<SystemConfig> {
       tmpdir(),
       `trysquare-system-${createHash("sha256").update(text).digest("hex").slice(0, 12)}.gitconfig`,
     );
-    await writeFile(path, text, "utf8");
+    await writeStandIn(path, text);
 
     const standIn: SystemConfig = { kind: "standIn", path };
     const seen = await runGit(["config", "--system", "--list", "--show-origin"], gitEnv(standIn));
