@@ -131,11 +131,13 @@ Laws:
   read-only tools are the only guard (D-130). A
   checkout git already reports changed, because its `.gitattributes`
   normalises files committed otherwise, is held to what it reported at
-  checkout and to those files' content then (D-107). A file is accepted
-  into that baseline only when its bytes are what git's checkout filters
-  make of the commit; any other difference, such as two paths differing only
-  in case on a file system that cannot hold both, refuses the review before
-  any stage runs (D-110).
+  checkout and to those files' content then (D-107). Every tracked file is
+  checked at checkout, by its hash through git's clean filters against its
+  blob rather than by git status, which trusts a file's timestamps once the
+  index is newer than it (D-151). A file that differs is accepted only when
+  its bytes are what git's checkout filters make of the commit; any other
+  difference, such as two paths differing only in case on a file system that
+  cannot hold both, refuses the review before any stage runs (D-110).
 - Everything the AI must read that is not in the worktree (base-branch
   copies, diff, inventory) is materialised into `bundle/` by app code.
 

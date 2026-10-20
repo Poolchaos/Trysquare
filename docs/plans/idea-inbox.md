@@ -10,22 +10,6 @@ pulled deliberately.
   means storing a credential, which SECURITY.md says the app never does.
   Consider the no-credential route first (export the report and hand it to the
   user's own mail client) with real SMTP as a clearly labelled opt-in.
-
-## Retired
-
-Kept so the record of what was captured, and where it went, survives. Removing
-the line entirely would lose the trail.
-
-- 2026-07-31 Reasoning effort is per review (low/medium/high/max, default
-  high). BUILT in commit f91c208, the same commit that filed this line, so it
-  was a note rather than an idea. The fact about the CLI accepting exactly
-  four levels lives where it is needed, in the comment at
-  `src/lib/engine/command.ts`.
-- 2026-07-31 The new-review screen needs a text area for the author
-  description and a usage panel showing cached versus fresh tokens. BUILT in
-  commit 935145a. One detail in the original line was wrong: the usage panel
-  belongs on the review screen, not the new-review screen, because there is
-  nothing to count before a review has run.
 - 2026-08-04: retag unmigrated-consumer from rule 4 (index signature, which
   the Prefs interface does not have) to a rule that names the class, possibly
   a new rule 15.
@@ -57,11 +41,6 @@ the line entirely would lose the trail.
   where every other route's refusal of its input says "Invalid", and a
   missing path reads "expected string, received null" rather than its own
   "path is required" (found by the D-139 sweep of the id routes).
-- 2026-10-20: the D-107 test in tests/server/review/service.test.ts
-  ("completes, and says the checkout was already changed") failed once
-  under the fast gate's load, git reporting the CRLF checkout clean, and
-  passed alone and in every rerun (D-147). Not root-caused; find what makes
-  git see that file unchanged and make the premise deterministic.
 - 2026-10-20: the shutdown control in e2e/shutdown.spec.ts found its CLI
   gone two seconds after its server's SIGKILL, once, on macOS (CI run
   39420099693, D-148). Not root-caused; since 4aa31fa a recurrence says how
@@ -72,3 +51,24 @@ the line entirely would lose the trail.
   reviewer in a review round, once it is known to keep to one subagent;
   not /simplify, which applies its own changes; the third-party grill
   plugin only with the maintainer's OK.
+
+## Retired
+
+Kept so the record of what was captured, and where it went, survives. Removing
+the line entirely would lose the trail.
+
+- 2026-07-31 Reasoning effort is per review (low/medium/high/max, default
+  high). BUILT in commit f91c208, the same commit that filed this line, so it
+  was a note rather than an idea. The fact about the CLI accepting exactly
+  four levels lives where it is needed, in the comment at
+  `src/lib/engine/command.ts`.
+- 2026-07-31 The new-review screen needs a text area for the author
+  description and a usage panel showing cached versus fresh tokens. BUILT in
+  commit 935145a. One detail in the original line was wrong: the usage panel
+  belongs on the review screen, not the new-review screen, because there is
+  nothing to count before a review has run.
+- 2026-10-20: the D-107 test in tests/server/review/service.test.ts
+  ("completes, and says the checkout was already changed") failed once
+  under the fast gate's load, git reporting the CRLF checkout clean.
+  ROOT-CAUSED in D-150, git's racy-clean rule, and fixed in 9759785, which
+  ages the D-107 checkouts' index.

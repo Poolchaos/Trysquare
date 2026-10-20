@@ -3478,3 +3478,27 @@ verified evidence, in writing, here.
   did: no macOS runner, "The job was not acquired by Runner of type hosted
   even after multiple attempts", and no step ran. Its second attempt
   passed on all three.
+- 2026-10-20 D-151 REVIEW (the D-150 fixes and their record, b8f93a6..3054ebe,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Two findings, one MEDIUM and one LOW, both dispositioned before
+  new work:
+  1. MEDIUM, there since D-110: the baseline compared bytes only for the
+  paths git status named, and status trusts a file's timestamps once the
+  index is newer than it, as under load and in any large checkout, whose
+  files are written over many ticks. Two paths differing only in case and
+  of one size then read clean on Windows, the file holding the other's
+  bytes, and the review would have quoted the wrong bytes with no refusal.
+  The reviewer saw it with the test's own fixture, the index made newer,
+  and with plain git and 3,000 filler files, no aging, 3 checkouts of 3;
+  here the test with the newer index resolved with nothing named, 3 of 3.
+  D-150's "the app is right either way" held for D-107 alone. Fixed
+  7b4a586: every tracked regular file is hashed through git's clean
+  filters and compared with its blob, and a file that differs goes to the
+  D-110 check. Listing and hashing every tracked file of this machine's
+  working trees took 110 to 489 ms, the most for 3,436 files (3 MB). The
+  architecture doc's D-110 sentence said only what status named; the
+  correction belonged in 7b4a586 and is made here.
+  2. LOW, the record: D-150 and 3054ebe said the inbox's D-107 line was
+  closed, and the inbox was not changed. It is retired here, and the open
+  lines filed since 2026-08-04, which sat under the Retired heading, are
+  moved above it word for word, none re-verified.
