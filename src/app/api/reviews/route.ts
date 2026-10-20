@@ -27,7 +27,7 @@ import { effortRunsOn } from "@/lib/models/effort-support";
 import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
 import { resolveProfile } from "@/lib/review/profiles";
 import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
-import { created, handler, ok, readJson } from "@/server/api/respond";
+import { created, failed, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
 import { findingTallies } from "@/server/db/repositories/findings";
 import { runtime } from "@/server/runtime";
@@ -155,10 +155,19 @@ export function POST(request: Request): Promise<Response> {
         ? [{ ...linked, clonePath: dependency.clonePath, whose: `${dependency.name}'s ` }]
         : []),
     ]) {
-      const empty =
-        side.fromCommit === side.mergeBaseCommit ||
-        (await readChangeSet(side.clonePath, side.mergeBaseCommit, side.fromCommit)).files
-          .length === 0;
+      let empty = side.fromCommit === side.mergeBaseCommit;
+      if (!empty) {
+        try {
+          empty =
+            (await readChangeSet(side.clonePath, side.mergeBaseCommit, side.fromCommit)).files
+              .length === 0;
+        } catch (error) {
+          // A diff that disagrees with git's own list of changed files, or git
+          // refusing: the request's to fix, in git's words, as the pre-flight
+          // answers it, not the server failing (D-147).
+          return failed(error, 400);
+        }
+      }
       if (empty) {
         throw Response.json(
           {
