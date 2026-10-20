@@ -416,18 +416,23 @@ function NewReview() {
   // the answer to the question asked now: the one for the choices before
   // stayed up while the next was read, its counts beside a Start that would
   // review the new choices (5.14, audit U11).
-  const preflightKey = JSON.stringify([
+  // The request itself, made once: sent only when it changes, it was sent
+  // again for values that change nothing in it, the tick of a dependency
+  // with no branch chosen and that dependency's branches arriving (D-147).
+  const preflightBody = JSON.stringify({
     projectId,
     fromBranch,
     intoBranch,
     rulesetId,
     model,
-    profileOverride,
-    included && linkFrom && linkIntoBranch ? [included, linkFrom, linkIntoBranch] : null,
-    // A Refresh asks again: a branch pushed to since keeps its name, and an
-    // answer from before it, "changes nothing" say, stood (D-146).
-    refreshCount,
-  ]);
+    ...(profileOverride === "" ? {} : { profileId: profileOverride }),
+    ...(included && linkFrom && linkIntoBranch
+      ? { linked: { projectId: included, fromBranch: linkFrom, intoBranch: linkIntoBranch } }
+      : {}),
+  });
+  // A Refresh asks again: a branch pushed to since keeps its name, and an
+  // answer from before it, "changes nothing" say, stood (D-146).
+  const preflightKey = JSON.stringify([preflightBody, refreshCount]);
   const answered = preflightAnswer?.key === preflightKey ? preflightAnswer : null;
   const preflight = answered?.body ?? null;
   const preflightError = answered?.error ?? "";
@@ -440,26 +445,7 @@ function NewReview() {
     void (async () => {
       const sent = await send<Preflight>(
         "/api/reviews/preflight",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            projectId,
-            fromBranch,
-            intoBranch,
-            rulesetId,
-            model,
-            ...(profileOverride === "" ? {} : { profileId: profileOverride }),
-            ...(included && linkFrom && linkIntoBranch
-              ? {
-                  linked: {
-                    projectId: included,
-                    fromBranch: linkFrom,
-                    intoBranch: linkIntoBranch,
-                  },
-                }
-              : {}),
-          }),
-        },
+        { method: "POST", body: preflightBody },
         "The pre-flight could not be run",
       );
       if (cancelled) return;
@@ -472,19 +458,7 @@ function NewReview() {
     return () => {
       cancelled = true;
     };
-  }, [
-    readyToPreflight,
-    preflightKey,
-    projectId,
-    fromBranch,
-    intoBranch,
-    rulesetId,
-    model,
-    profileOverride,
-    included,
-    linkFrom,
-    linkIntoBranch,
-  ]);
+  }, [readyToPreflight, preflightKey, preflightBody]);
 
   async function start(event: React.FormEvent) {
     event.preventDefault();

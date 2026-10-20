@@ -35,9 +35,10 @@ export async function answerOnce(
  * failed: "Route is already handled!".
  *
  * A test that ended with one still fetching failed, its response disposed
- * under it, or failed the test after it (D-146): a pre-flight is asked again
- * whenever a choice it depends on settles, so how many are in flight at a
- * test's last line is not the test's to know.
+ * under it, or failed the test after it (D-146): an answer made by fetching
+ * takes as long as the server does, and a test's last line does not wait for
+ * the requests the screen sent before it. The ones that failed on macOS were
+ * pre-flights the screen sent again needlessly (D-147).
  */
 export async function routeUntilStopped(
   page: Page,

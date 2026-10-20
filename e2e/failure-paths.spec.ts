@@ -600,6 +600,65 @@ test("a Refresh asks the pre-flight again, so an empty half pushed to since is n
   await emptied();
 });
 
+test("ticking a dependency with no branch chosen asks the pre-flight nothing new", async ({
+  page,
+  request,
+}) => {
+  // The request does not change until the dependency has both branches, but
+  // the tick sent it again, and the dependency's branches arriving sent it a
+  // third time: each a fetch and a diff on the server, overlapping (D-147).
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const withLink = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        links: [
+          {
+            id: "LINK123",
+            dependencyProjectId: "DEP123",
+            dependencyName: "shared-core",
+            packageName: "@acme/core",
+          },
+        ],
+      },
+    });
+  };
+  const stopWithLink = await routeUntilStopped(page, `**/api/projects/${app.id}`, withLink);
+  const branch = (name: string) => ({
+    name,
+    commit: "a".repeat(40),
+    subject: name,
+    committedAt: "2026-10-01T00:00:00Z",
+    ahead: 0,
+    behind: 0,
+  });
+  const stopBranches = await answerOnce(page, "**/api/projects/DEP123/branches", (route) =>
+    route.fulfill({
+      status: 200,
+      json: { branches: [branch("main"), branch("release")], defaultBranch: "main" },
+    }),
+  );
+  await fillANewReview(page);
+  let asked = 0;
+  page.on("request", (sent) => {
+    if (new URL(sent.url()).pathname === "/api/reviews/preflight") asked += 1;
+  });
+  await page.getByLabel(/Include shared-core/).check();
+  await expect(page.getByLabel("Its branch")).toHaveValue("");
+  await expect(page.getByLabel("Compare against").nth(1)).toHaveValue("main");
+  // Long enough for a request the tick or the branches' arrival would send.
+  await page.waitForTimeout(1_500);
+  expect(asked).toBe(0);
+  await stopBranches();
+  await stopWithLink();
+});
+
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
   page,
 }) => {
