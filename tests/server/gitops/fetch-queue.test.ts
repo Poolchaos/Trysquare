@@ -135,10 +135,11 @@ describe("fetches into one clone", () => {
 
   it("never run two at once, however soon after one ends a caller asks", async () => {
     // The fetches are the test's to end, so a caller can ask at each
-    // microtask after the first ends, before the one queued behind it has
-    // begun. With the cleanup's guards dropped, the entry went in that gap
-    // and the caller began a fetch beside the queued one (review of the
-    // D-148 fixes).
+    // microtask after the first ends, one of which falls between the first
+    // fetch's cleanup and the start of the one queued behind it. With the
+    // cleanup no longer sparing an entry that has a fetch queued, the entry
+    // went in that gap and the caller began a fetch beside the queued one
+    // (review of the D-148 fixes).
     for (let offset = 0; offset < 8; offset += 1) {
       vi.resetModules();
       const ends: (() => void)[] = [];
@@ -168,9 +169,11 @@ describe("fetches into one clone", () => {
       try {
         const queued = await import("@/server/gitops/repo");
         // The third asks from the first caller's own continuation, which waits
-        // on the first fetch from before the second was asked for: it runs
-        // between the first fetch's cleanup and the next one's start, and
-        // whatever it queues lands between them, where nothing else can.
+        // on the first fetch from before the second was asked for. It runs
+        // before the first fetch's cleanup, so offset 0 finds the entry as it
+        // was; one microtask later, offset 1, lands between the cleanup and
+        // the queued fetch's start, which nothing outside a continuation like
+        // it can reach; from offset 2 the queued fetch has begun.
         let servedByLater = false;
         const first = queued.fetchAll(clone).then(async () => {
           for (let tick = 0; tick < offset; tick += 1) await Promise.resolve();
