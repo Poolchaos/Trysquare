@@ -57,3 +57,8 @@ the line entirely would lose the trail.
   where every other route's refusal of its input says "Invalid", and a
   missing path reads "expected string, received null" rather than its own
   "path is required" (found by the D-139 sweep of the id routes).
+- 2026-10-20: the D-107 test in tests/server/review/service.test.ts
+  ("completes, and says the checkout was already changed") failed once
+  under the fast gate's load, git reporting the CRLF checkout clean, and
+  passed alone and in every rerun (D-147). Not root-caused; find what makes
+  git see that file unchanged and make the premise deterministic.

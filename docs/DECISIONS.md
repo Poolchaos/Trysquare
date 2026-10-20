@@ -3285,3 +3285,60 @@ verified evidence, in writing, here.
   answer, "Route is already handled!", four times in six repeats of one
   test. After ebe2f5e that test passed six repeats of six here, 1058 and
   72 on Windows, and CI run 39401048625 passed on all three.
+- 2026-10-20 D-147 REVIEW (the D-146 fixes and their record, 92a4458..26f74d1,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Seven findings, one MEDIUM and six LOW, all dispositioned before
+  new work:
+  1. MEDIUM: since 53e0fec and ee76800 a Refresh on the new review screen
+  started up to three git fetches at once into one bare clone, the branch
+  list's, the pre-flight's and a ticked dependency's. The reviewer ran two
+  at once into a scratch bare clone after a branch moved on its remote,
+  and one failed with "cannot lock ref" in 10 rounds of 10; with nothing
+  moved, in none. The screen then said the remote could not be reached,
+  or put git's error where the pre-flight was. Fixed c35c2a3: fetchAll
+  queues per clone, each caller still getting a fetch that started after
+  it asked (D-27).
+  2. LOW, there before: the pre-flight effect sent an identical request
+  again when the dependency's state settled, twice per tick of a
+  dependency with no branch named like the one under review. Fixed
+  b659654, which sends it only when the request itself changes.
+  3. LOW: Start was on while the pre-flight for the choices on screen was
+  pending. Fixed with U11's third trap, 94bd28d.
+  4. LOW: the profile picker read the model's profile from the pre-flight,
+  hidden on every pending window since 53e0fec, and offered a decomposed
+  model "chunked". Fixed 6c53190, which reads it from the models list.
+  5. LOW: 1d65660's change-set read at create time let a diff git
+  disagrees with through as 500. Fixed fee33cb, which answers 400 as the
+  pre-flight does, by reading, no fixture making git's diff and its file
+  list disagree.
+  6. LOW, the record: 53e0fec's message says three tests matched by a
+  loose locator; two locators changed, fillANewReview's, which most
+  new-review tests use, and one in the journey. Its "fails on the build
+  before" lines cite :435 and :463, where the assertions are at :437 and
+  :465; ee76800's cite :361 and :423, comments, where the assertions are
+  at :366 and :431-432. The runs before were made on earlier versions of
+  those tests; by reading, the tests as committed still fail on the code
+  before them. The line references in the messages since all point at an
+  assertion in the file committed, checked here.
+  7. LOW, the record: row 5.14 left out ebe2f5e, which rewrote its tests'
+  routes, so a reader of the row never learned those tests failed CI at
+  225d7c3. Added to the row here.
+  D-146's "Not a D-105 occurrence: the cause is the test's" was half the
+  cause: the requests in flight on macOS were the screen's needless
+  re-sends of finding 2, which b659654 stops; the test's half is ebe2f5e.
+  b659654 was committed and pushed after its last gate, the fast one run
+  for a comment change to e2e/answer-once.ts, exited 1: the commands were
+  joined by ";", which did not stop on it. The full gate on the same code
+  bar that comment had exited 0 (1060 and 73). The failure was "completes,
+  and says the checkout was already changed" in
+  tests/server/review/service.test.ts, the D-107 repository, expected ''
+  to contain 'crlf.txt': git reported that checkout clean, once. Alone the
+  test passed 4 of 4, the whole file 6 of 6, git reported a fresh checkout
+  of that repository changed 20 times of 20, and the fast gate run again
+  exited 0 (1060). Not root-caused, so open: the inbox holds it. Since
+  then a gate and its commit are joined by "&&", so a failed gate stops
+  the commit.
+  The first gate of 3d3adf3 failed in the usage-limit browser test: the
+  new theater test armed the stall trigger and left it armed, so the run
+  after it stalled in its first stage. The test now clears it, and the
+  gate run again exited 0.
