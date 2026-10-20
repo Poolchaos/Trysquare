@@ -656,8 +656,11 @@ function NewReview() {
               <ul className="max-h-72 overflow-y-auto p-1">
                 {shown.map((branch) => (
                   <li key={branch.name}>
+                    {/* Relative, so the hidden radio is placed inside its label and
+                        focusing it scrolls the list to it: placed outside, arrow
+                        keys chose branches out of sight (review of the D-149 fixes). */}
                     <label
-                      className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 ${
+                      className={`relative flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 ${
                         fromBranch === branch.name
                           ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
                           : "border-transparent hover:bg-[var(--color-surface-sunken)]"
@@ -775,7 +778,7 @@ function NewReview() {
                 return (
                   <li key={row.id}>
                     <label
-                      className={`flex items-center gap-3 rounded-md border px-3 py-2 ${
+                      className={`relative flex items-center gap-3 rounded-md border px-3 py-2 ${
                         model === row.id
                           ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
                           : "border-transparent"

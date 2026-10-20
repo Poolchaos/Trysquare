@@ -856,6 +856,59 @@ test("a branch reached by the keyboard shows that it has the focus", async ({ pa
   expect(focused.clearsBorder).toBe(true);
 });
 
+test("a branch reached by the keyboard below the list's fold is scrolled into view", async ({
+  page,
+  request,
+}) => {
+  // The radio is positioned outside the label, so focusing it did not scroll
+  // the list: arrow keys chose branches out of sight, ring and all (review
+  // of the D-149 fixes). The route's own branches, with twenty more after.
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const stopMore = await routeUntilStopped(
+    page,
+    `**/api/projects/${app.id}/branches`,
+    async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as { branches: object[] };
+      const more = Array.from({ length: 20 }, (_, index) => ({
+        name: `zz/extra-${String(index + 1).padStart(2, "0")}`,
+        commit: "a".repeat(40),
+        subject: "extra",
+        committedAt: "2026-10-01T00:00:00Z",
+        ahead: 1,
+        behind: 0,
+      }));
+      await route.fulfill({ response, json: { ...body, branches: [...body.branches, ...more] } });
+    },
+  );
+  await fillANewReview(page);
+  await page.getByPlaceholder("Filter branches").focus();
+  for (let step = 0; step < 5; step += 1) {
+    await page.keyboard.press("Tab");
+    const onRadio = await page.evaluate(
+      () => (document.activeElement as HTMLInputElement | null)?.type === "radio",
+    );
+    if (onRadio) break;
+  }
+  for (let step = 0; step < 12; step += 1) await page.keyboard.press("ArrowDown");
+  const seen = await page.evaluate(() => {
+    const label = document.activeElement?.closest("label");
+    const box = label?.getBoundingClientRect();
+    const list = label?.closest("ul")?.getBoundingClientRect();
+    return {
+      name: label?.textContent ?? "",
+      inView:
+        box !== undefined && list !== undefined && box.top >= list.top && box.bottom <= list.bottom,
+    };
+  });
+  expect(seen.name).toContain("zz/extra-");
+  expect(seen.inView).toBe(true);
+  await stopMore();
+});
+
 test("the scan theater is a dialog the keyboard stays in", async ({ page }) => {
   // It covered the whole page, top bar too, but was a plain div: focus
   // stayed wherever it had been, Tab walked out into the page beneath, and
