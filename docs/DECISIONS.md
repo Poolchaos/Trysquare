@@ -3437,3 +3437,44 @@ verified evidence, in writing, here.
   gave the macOS job a runner, "The job was not acquired by Runner of type
   hosted even after multiple attempts", beside notices of macOS arm64
   capacity, and no step ran. Its second attempt passed on all three.
+- 2026-10-20 D-150 REVIEW (the D-149 fixes and their record, 670c8af..b8f93a6,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Six findings, one MEDIUM and five LOW, all dispositioned before
+  new work:
+  1. MEDIUM, there before, one of U12's gaps under row 5.14's DONE: the
+  branch list never scrolled to a focused radio, sr-only placing it
+  outside the unpositioned label, so the arrow keys chose branches out of
+  sight. Fixed d3e57c4: the labels are relative.
+  2. LOW: 7f2f1ac's stand-in could fail on a rename Windows refuses for a
+  moment, or on its partial's clean-up, and systemGitConfig kept the
+  failure, every git call's until a restart. Fixed 48ec996: refusals are
+  retried for up to two seconds, the clean-up cannot fail it, and a
+  failed build is not kept.
+  3. LOW: no test reached the rename: the empty-read test only met a file
+  already holding its text. Fixed c8aab20, whose variant puts other text
+  there before each copy writes; an in-place write then reads empty.
+  4. LOW: those tests removed and rewrote the machine's stand-in, which a
+  running server and other workers read. Fixed 93d26c8: they use their
+  own directory. Its message says the first test asserts the stand-in "is
+  there"; it asserts it is in that directory.
+  5. LOW, wording: the first caller's continuation lands between the
+  cleanup and the queued fetch's start only at offset 1, not as 8dd7fe6's
+  comments and message and D-149 item 2 put it. Corrected daccd92.
+  6. LOW: c02ea71's padding set the branch rows 4px in from the model
+  list's. Fixed ad6ba5b.
+  Root-caused while gating c8aab20, whose first fast gate failed in the
+  D-107 gitops test, as b659654's had in the service one (D-147): git's
+  racy-clean rule. Git trusts a file's timestamps once the index is newer
+  than the file, and compares content only while it is not; a checkout
+  writes both in one timestamp, and under load the index came a tick
+  later, so the CRLF checkout read clean. In a scratch repository, with
+  the index made newer, 10 checkouts of 10 read clean; aged, 10 of 10
+  read " M". The app is right either way, a clean read staying clean to
+  the end check and a stage's write making git compare; only the tests
+  depended on the timing. 9759785 ages the D-107 checkouts' index; with
+  the helper made to do what load did, four D-107 tests fail, the two
+  that failed for real among them. That closes the inbox's D-107 line.
+  CI run 39442272010 at ad6ba5b failed on its first attempt as 61d752c's
+  did: no macOS runner, "The job was not acquired by Runner of type hosted
+  even after multiple attempts", and no step ran. Its second attempt
+  passed on all three.

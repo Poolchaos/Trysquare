@@ -66,3 +66,9 @@ the line entirely would lose the trail.
   gone two seconds after its server's SIGKILL, once, on macOS (CI run
   39420099693, D-148). Not root-caused; since 4aa31fa a recurrence says how
   the CLI ended. Read that note when it comes, and fix the cause.
+- 2026-10-20: the maintainer passed on a colleague's note about Claude Code's
+  built-in skills. Proposed: /security-review once before anything goes
+  external, after 7.2; /code-review read-only (never --fix) as a second
+  reviewer in a review round, once it is known to keep to one subagent;
+  not /simplify, which applies its own changes; the third-party grill
+  plugin only with the maintainer's OK.
