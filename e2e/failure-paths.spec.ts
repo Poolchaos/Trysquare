@@ -828,13 +828,28 @@ test("a branch reached by the keyboard shows that it has the focus", async ({ pa
   const focused = await page.evaluate(() => {
     const active = document.activeElement as HTMLInputElement | null;
     const label = active?.closest("label");
+    // The ring's outer edge, against the scrolling list that clips it: drawn
+    // outside the label, the list cut it down to two lines, which the
+    // computed style alone still called solid (review of the D-147 fixes).
+    const style = label ? getComputedStyle(label) : null;
+    const reach = style ? parseFloat(style.outlineOffset) + parseFloat(style.outlineWidth) : 0;
+    const box = label?.getBoundingClientRect();
+    const list = label?.closest("ul")?.getBoundingClientRect();
     return {
       type: active?.type,
-      outline: label ? getComputedStyle(label).outlineStyle : "no label",
+      outline: style ? style.outlineStyle : "no label",
+      inside:
+        box !== undefined &&
+        list !== undefined &&
+        box.left - reach >= list.left &&
+        box.right + reach <= list.right &&
+        box.top - reach >= list.top &&
+        box.bottom + reach <= list.bottom,
     };
   });
   expect(focused.type).toBe("radio");
   expect(focused.outline).toBe("solid");
+  expect(focused.inside).toBe(true);
 });
 
 test("the scan theater is a dialog the keyboard stays in", async ({ page }) => {
