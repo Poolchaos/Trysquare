@@ -35,6 +35,8 @@ export interface GitRunOptions {
   timeoutMs?: number;
   /** Bytes of output to accept before treating the command as runaway. */
   maxBuffer?: number;
+  /** Written to git's stdin, which is then closed. */
+  input?: string;
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;
@@ -232,6 +234,11 @@ export async function gitWithStderr(
     child.on("error", (error) => {
       reject(new GitCommandError(args, null, String(error), false));
     });
+    if (options.input !== undefined) {
+      // An EPIPE here is git ending before it read, which its exit reports.
+      child.stdin?.on("error", () => {});
+      child.stdin?.end(options.input);
+    }
   });
 }
 

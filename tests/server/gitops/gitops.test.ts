@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { ageIndex } from "../../helpers/racy-checkout";
+import { ageIndex, freshenIndex } from "../../helpers/racy-checkout";
 import { parseUnifiedDiff } from "@/lib/git/diff";
 import { opaqueChanges } from "@/lib/git/opaque";
 import {
@@ -724,16 +724,24 @@ describe("review worktrees", () => {
       git(["commit", "-qm", "two configs"], origin);
       const clone = join(root, "case.git");
       await cloneBare(origin, clone);
-      const dir = join(root, "wt-case");
-      await addWorktree(clone, dir, await resolveCommit(clone, "main"));
-
-      const caseInsensitive = readFileSync(join(dir, "Config.ts"), "utf8").includes("lower");
-      if (caseInsensitive) {
-        await expect(worktreeBaseline(dir)).rejects.toThrow(/Config\.ts/);
-      } else {
-        expect((await worktreeBaseline(dir)).changes).toEqual([]);
+      // Whichever way git's timestamps fall, each on a checkout of its own,
+      // since a status that compares content marks the file to be compared
+      // ever after: with the index newer than the files, as load and any
+      // large checkout leave it, git trusted them and read Config.ts clean,
+      // the two files being one size, and the check only looked at what git
+      // named (review of the D-150 fixes).
+      for (const index of [ageIndex, freshenIndex]) {
+        const dir = join(root, `wt-case-${index.name}`);
+        await addWorktree(clone, dir, await resolveCommit(clone, "main"));
+        index(dir);
+        const caseInsensitive = readFileSync(join(dir, "Config.ts"), "utf8").includes("lower");
+        if (caseInsensitive) {
+          await expect(worktreeBaseline(dir), index.name).rejects.toThrow(/Config\.ts/);
+        } else {
+          expect((await worktreeBaseline(dir)).changes, index.name).toEqual([]);
+        }
+        await removeWorktree(clone, dir);
       }
-      await removeWorktree(clone, dir);
     });
   });
 

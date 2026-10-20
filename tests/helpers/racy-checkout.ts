@@ -14,11 +14,23 @@ import { utimesSync } from "node:fs";
  * 10 of 10 read ` M` (D-150).
  */
 export function ageIndex(worktreeDir: string): void {
-  const index = execFileSync(
-    "git",
-    ["rev-parse", "--path-format=absolute", "--git-path", "index"],
-    { cwd: worktreeDir, encoding: "utf8" },
-  ).trim();
   const long = new Date("2000-01-01T00:00:00Z");
-  utimesSync(index, long, long);
+  utimesSync(indexOf(worktreeDir), long, long);
+}
+
+/**
+ * The opposite: the index a minute newer than the files, as load leaves it,
+ * and as a large checkout does by itself, its files written over many
+ * ticks. Git then trusts every file's timestamps (D-151).
+ */
+export function freshenIndex(worktreeDir: string): void {
+  const later = new Date(Date.now() + 60_000);
+  utimesSync(indexOf(worktreeDir), later, later);
+}
+
+function indexOf(worktreeDir: string): string {
+  return execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-path", "index"], {
+    cwd: worktreeDir,
+    encoding: "utf8",
+  }).trim();
 }

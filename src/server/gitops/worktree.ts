@@ -135,8 +135,12 @@ export class CheckoutMismatchError extends Error {
 export async function worktreeBaseline(worktreeDir: string): Promise<WorktreeBaseline> {
   const changes = await worktreeChanges(worktreeDir);
   const contents = await contentsOfChanged(worktreeDir);
+  const checked = { ...contents };
+  for (const path of await trackedMismatches(worktreeDir)) {
+    if (!(path in checked)) checked[path] = await hashOnDisk(worktreeDir, path);
+  }
   const unexplained: string[] = [];
-  for (const [path, hash] of Object.entries(contents)) {
+  for (const [path, hash] of Object.entries(checked)) {
     const committed = await gitBytes(["cat-file", "--filters", `HEAD:${path}`], {
       cwd: worktreeDir,
     }).catch(() => null);
@@ -167,14 +171,57 @@ async function contentsOfChanged(worktreeDir: string): Promise<Record<string, st
     // A rename or copy is followed by its source path, which is not a file
     // in this checkout.
     if (entry[0] === "R" || entry[0] === "C") index += 1;
-    try {
-      const bytes = await readFile(insideRoot(worktreeDir, path));
-      contents[path] = createHash("sha256").update(bytes).digest("hex");
-    } catch {
-      contents[path] = null;
-    }
+    contents[path] = await hashOnDisk(worktreeDir, path);
   }
   return contents;
+}
+
+/** sha256 of a path's bytes in the worktree, or null for one not on disk. */
+async function hashOnDisk(worktreeDir: string, path: string): Promise<string | null> {
+  try {
+    const bytes = await readFile(insideRoot(worktreeDir, path));
+    return createHash("sha256").update(bytes).digest("hex");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Every tracked file whose bytes, through git's clean filters, are not its
+ * committed blob, found without git's stat cache.
+ *
+ * git status trusts a file's timestamps once the index is newer than it, as
+ * under load and in any large checkout, whose files are written over many
+ * ticks. It then read clean a file holding another's bytes, two paths that
+ * differ only in case and are one size, and the baseline, which checked only
+ * what status named, accepted a checkout of the wrong bytes (review of the
+ * D-150 fixes). Regular files only: a link's blob is where it points, and a
+ * submodule's is a commit.
+ */
+async function trackedMismatches(worktreeDir: string): Promise<string[]> {
+  const listed = await git(["ls-files", "--stage", "-z"], { cwd: worktreeDir });
+  const files: { path: string; blob: string }[] = [];
+  for (const entry of listed.split("\0")) {
+    const match = /^(100644|100755) ([0-9a-f]+) \d\t([\s\S]+)$/.exec(entry);
+    if (match) files.push({ path: match[3]!, blob: match[2]! });
+  }
+  // hash-object reads its paths a line at a time, so a path holding a line
+  // break cannot be given to it; such a path goes to the full check instead.
+  const listable = files.filter((file) => !/[\r\n]/.test(file.path));
+  const mismatched = files.filter((file) => /[\r\n]/.test(file.path)).map((file) => file.path);
+  if (listable.length > 0) {
+    const hashed = toLines(
+      await git(["hash-object", "--stdin-paths"], {
+        cwd: worktreeDir,
+        input: listable.map((file) => `${file.path}\n`).join(""),
+        timeoutMs: 600_000,
+      }),
+    );
+    listable.forEach((file, index) => {
+      if (hashed[index] !== file.blob) mismatched.push(file.path);
+    });
+  }
+  return mismatched;
 }
 
 /**
