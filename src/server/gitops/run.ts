@@ -117,22 +117,39 @@ function runGit(
  * place, it was empty for a moment, and a git reading it then ran with no
  * system config, a private HTTPS fetch with no credential helper (review of
  * the D-148 fixes). A file already holding the text is left alone; otherwise
- * it is written beside it and renamed into place. Windows refuses to replace
- * a file another process has open, which is no failure when that file holds
- * the same text.
+ * it is written beside it and renamed into place.
+ *
+ * Windows refuses a rename while another process has either file open: no
+ * failure when the file there holds the same text, as another writer's does,
+ * and otherwise tried again for a while, since antivirus and the indexer let
+ * go within moments; graceful-fs retries renames for the same reason.
  */
 async function writeStandIn(path: string, text: string): Promise<void> {
   const holds = async () => (await readFile(path, "utf8").catch(() => null)) === text;
   if (await holds()) return;
   const partial = `${path}.${process.pid}.${randomUUID()}.partial`;
   await writeFile(partial, text, "utf8");
-  try {
-    await rename(partial, path);
-  } catch (error) {
-    await rm(partial, { force: true });
-    if (!(await holds())) throw error;
+  const deadline = Date.now() + RENAME_RETRY_MS;
+  for (let wait = 10; ; wait = Math.min(wait * 2, 200)) {
+    try {
+      await rename(partial, path);
+      return;
+    } catch (error) {
+      const refused = RENAME_REFUSALS.has((error as NodeJS.ErrnoException).code ?? "");
+      const done = await holds();
+      if (done || !refused || Date.now() + wait > deadline) {
+        // Its own refusal is no reason to fail the stand-in.
+        await rm(partial, { force: true }).catch(() => undefined);
+        if (done) return;
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
   }
 }
+
+const RENAME_REFUSALS = new Set(["EPERM", "EACCES", "EBUSY"]);
+const RENAME_RETRY_MS = 2_000;
 
 let systemConfig: Promise<SystemConfig> | undefined;
 
@@ -141,10 +158,12 @@ let systemConfig: Promise<SystemConfig> | undefined;
  * read it: a git too old to know GIT_CONFIG_SYSTEM would silently read the
  * real file instead, autocrlf and all, so then system config is switched off
  * and private HTTPS repositories go without their helper rather than worktrees
- * going without their line endings.
+ * going without their line endings. One that fails is not kept: kept, its
+ * failure was every git call's until the server restarted (review of the
+ * D-149 fixes).
  */
 export function systemGitConfig(): Promise<SystemConfig> {
-  systemConfig ??= (async () => {
+  const built = (systemConfig ??= (async (): Promise<SystemConfig> => {
     const plain = { ...process.env, GIT_TERMINAL_PROMPT: "0", LC_ALL: "C", LANG: "C" };
     const read = await runGit(["config", "--system", "--get-all", "credential.helper"], plain);
     // Exit 1 is "no such key"; no system file says the same.
@@ -169,8 +188,11 @@ export function systemGitConfig(): Promise<SystemConfig> {
       .filter((line) => line !== "")
       .every((line) => normalise(line).startsWith(`file:${normalise(path)}`));
     return seen.code !== null && honoured ? standIn : { kind: "none" };
-  })();
-  return systemConfig;
+  })().catch((error: unknown) => {
+    systemConfig = undefined;
+    throw error;
+  }));
+  return built;
 }
 
 export async function git(args: readonly string[], options: GitRunOptions = {}): Promise<string> {

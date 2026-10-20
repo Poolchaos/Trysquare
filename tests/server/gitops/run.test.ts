@@ -184,5 +184,59 @@ describe("the system config git is given", () => {
       });
       expect(await (await ownCopy()).systemGitConfig()).toEqual(system);
     });
+
+    it("tries again after a refusal that clears, as Windows' do", async () => {
+      // Windows refuses a rename for a moment while antivirus or the indexer
+      // has a file open; the first refusal failed the stand-in, and the
+      // stand-in's failure is every git call's (review of the D-149 fixes).
+      const system = await (await ownCopy()).systemGitConfig();
+      if (system.kind !== "standIn") return;
+      const text = await readFile(system.path, "utf8");
+      rmSync(system.path);
+      let refusals = 0;
+      vi.doMock("node:fs/promises", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("node:fs/promises")>();
+        return {
+          ...actual,
+          rename: async (from: string, to: string) => {
+            if ((refusals += 1) <= 2) {
+              throw Object.assign(new Error("EPERM: operation not permitted, rename"), {
+                code: "EPERM",
+              });
+            }
+            return actual.rename(from, to);
+          },
+        };
+      });
+      expect(await (await ownCopy()).systemGitConfig()).toEqual(system);
+      expect(refusals).toBe(3);
+      expect(await readFile(system.path, "utf8")).toBe(text);
+    });
+
+    it("is built again on the next call after one that failed", async () => {
+      // The failure was kept for the life of the process, and every git call
+      // after it failed with it (review of the D-149 fixes).
+      const system = await (await ownCopy()).systemGitConfig();
+      if (system.kind !== "standIn") return;
+      rmSync(system.path);
+      let calls = 0;
+      vi.doMock("node:fs/promises", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("node:fs/promises")>();
+        return {
+          ...actual,
+          rename: async (from: string, to: string) => {
+            if ((calls += 1) === 1) {
+              throw Object.assign(new Error("ENOSPC: no space left on device, rename"), {
+                code: "ENOSPC",
+              });
+            }
+            return actual.rename(from, to);
+          },
+        };
+      });
+      const copy = await ownCopy();
+      await expect(copy.systemGitConfig()).rejects.toThrow("ENOSPC");
+      expect(await copy.systemGitConfig()).toEqual(system);
+    });
   });
 });
