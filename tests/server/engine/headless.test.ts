@@ -25,7 +25,6 @@ import {
   runStage,
   type StageRunOptions,
 } from "@/server/engine/headless";
-import { readAuthStatus } from "@/server/engine/probe";
 import { SHUTDOWN } from "@/lib/domain/shutdown";
 
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
@@ -484,17 +483,4 @@ describe("transcript failures", () => {
     expect(outcome.result.is_error).toBe(false);
     expect(outcome.transcriptError).toBeDefined();
   });
-});
-
-describe("reading the sign-in status", () => {
-  it("answers rather than throwing when the CLI prints something unexpected", async () => {
-    // This reads whatever binary TRYSQUARE_CLAUDE_PATH names. A status check
-    // whose whole job is to answer a question calmly must not throw because
-    // the thing it asked printed a stream of events instead of JSON.
-    process.env.FAKE_CLAUDE_SCENARIO = "success";
-    await expect(readAuthStatus({ claudePath: FAKE_CLI })).resolves.toEqual({
-      loggedIn: false,
-      usesSubscription: false,
-    });
-  }, 30_000);
 });

@@ -13,7 +13,7 @@ import { z } from "zod";
 import { PROBE_PROMPT, buildChildEnv, buildProbeArgs } from "@/lib/engine/command";
 import type { ReviewProfile } from "@/lib/domain/enums";
 import { contextWindowOf, resultEventSchema } from "@/lib/engine/events";
-import { resolveCli, type CliCommand } from "./cli";
+import { checkCliVersion, CliUnusableError, resolveCli, type CliCommand } from "./cli";
 
 const authStatusSchema = z
   .object({
@@ -24,13 +24,18 @@ const authStatusSchema = z
   })
   .passthrough();
 
-export interface AuthSummary {
-  loggedIn: boolean;
-  /** True when runs draw on a subscription rather than per-token billing. */
-  usesSubscription: boolean;
-  authMethod?: string;
-  subscriptionType?: string;
-}
+/**
+ * Which CLI reviews run through and whether it can, each answer its own.
+ * They all read "Not signed in." once, which sent a person to sign in to a
+ * CLI that was not there (MVP 6.1, audit E2).
+ */
+export type CliStatus =
+  | { state: "notFound"; message: string }
+  | { state: "cannotRun"; path: string; version?: string; message: string }
+  | { state: "signedOut"; path: string; version: string }
+  /** Signed in some other way than a subscription: a warning, not a block (D-92). */
+  | { state: "perToken"; path: string; version: string; authMethod: string }
+  | { state: "subscription"; path: string; version: string; subscriptionType?: string };
 
 interface CliOutcome {
   ok: boolean;
@@ -98,38 +103,75 @@ function runCli(
 }
 
 /**
- * Reads which credentials the CLI is using.
+ * Finds the CLI, asks its version and then which credentials it is using.
  *
- * The app shows this so a user knows whether a review draws on the plan they
- * already pay for or bills per token. The credentials themselves are never
- * read, copied, or logged.
+ * The app shows this so a user knows whether a review can run at all, and
+ * whether it draws on the plan they already pay for or bills per token. The
+ * credentials themselves are never read, copied, or logged. Every step costs
+ * nothing: `--version` and `auth status` run locally.
  */
-export async function readAuthStatus(
+export async function readCliStatus(
   options: { claudePath?: string; timeoutMs?: number } = {},
-): Promise<AuthSummary> {
-  const outcome = await runCli(["auth", "status"], options.timeoutMs ?? 30_000, options.claudePath);
-  if (!outcome.ok) return { loggedIn: false, usesSubscription: false };
-
-  // Parsed defensively: this reads whatever binary TRYSQUARE_CLAUDE_PATH
-  // names, and a CLI that printed something unexpected would otherwise throw
-  // out of a status check whose entire job is to answer a question calmly.
-  let raw: unknown;
+): Promise<CliStatus> {
+  let cli: CliCommand;
   try {
-    raw = JSON.parse(outcome.stdout.trim() || "{}");
-  } catch {
-    return { loggedIn: false, usesSubscription: false };
+    cli = resolveCli(options.claudePath);
+  } catch (error) {
+    if (error instanceof CliUnusableError) {
+      return { state: "cannotRun", path: error.path, message: error.message };
+    }
+    return { state: "notFound", message: (error as Error).message };
+  }
+  const path = cli.display;
+  let version: string;
+  try {
+    version = await checkCliVersion(cli, options.timeoutMs ?? 30_000);
+  } catch (error) {
+    return { state: "cannotRun", path, message: (error as Error).message };
   }
 
+  const outcome = await runCli(["auth", "status"], options.timeoutMs ?? 30_000, options.claudePath);
+  if (outcome.timedOut) {
+    return {
+      state: "cannotRun",
+      path,
+      version,
+      message: "`auth status` did not finish in time, so whether it is signed in is unknown.",
+    };
+  }
+  // Read before the exit code: signed out, the CLI exits 1 with its status
+  // on stdout (measured on 2.1.301). Parsed defensively, since this reads
+  // whatever binary the path names, and a status check whose whole job is to
+  // answer calmly must not throw on what it was told.
+  let raw: unknown;
+  try {
+    raw = JSON.parse(outcome.stdout.trim());
+  } catch {
+    raw = undefined;
+  }
   const parsed = authStatusSchema.safeParse(raw);
-  if (!parsed.success) return { loggedIn: false, usesSubscription: false };
-
+  if (!parsed.success) {
+    const said = (outcome.error || outcome.stdout).trim().slice(0, 200);
+    return {
+      state: "cannotRun",
+      path,
+      version,
+      message:
+        `\`auth status\` answered with something that is not its sign-in status` +
+        (said === "" ? "." : `: ${said}`),
+    };
+  }
   const status = parsed.data;
+  if (!status.loggedIn) return { state: "signedOut", path, version };
+  // A subscription sign-in reports claude.ai as its method; an API key
+  // reports something else, and that changes how the user is billed.
+  if (status.authMethod !== "claude.ai") {
+    return { state: "perToken", path, version, authMethod: status.authMethod ?? "unknown" };
+  }
   return {
-    loggedIn: status.loggedIn,
-    // A subscription login reports claude.ai as the auth method; an API key
-    // reports something else, and that changes how the user is billed.
-    usesSubscription: status.loggedIn && status.authMethod === "claude.ai",
-    ...(status.authMethod === undefined ? {} : { authMethod: status.authMethod }),
+    state: "subscription",
+    path,
+    version,
     ...(status.subscriptionType === undefined ? {} : { subscriptionType: status.subscriptionType }),
   };
 }

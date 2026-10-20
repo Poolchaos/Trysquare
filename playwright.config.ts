@@ -89,6 +89,13 @@ export default defineConfig({
       FAKE_CLAUDE_COUNTER: COUNTER_FILE,
       FAKE_CLAUDE_LIMIT_FILE: LIMIT_TRIGGER,
       FAKE_CLAUDE_STALL_FILE: STALL_TRIGGER,
+      // Signed in as the people using this are, through a subscription.
+      FAKE_CLAUDE_AUTH_STATUS: JSON.stringify({
+        loggedIn: true,
+        authMethod: "claude.ai",
+        apiProvider: "firstParty",
+        subscriptionType: "max",
+      }),
     },
   },
 });

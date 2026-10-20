@@ -33,6 +33,22 @@ if (args[0] === "--version") {
   process.exit(0);
 }
 
+// `auth status` as the real CLI answers it: its JSON on stdout, and exit 1
+// when signed out (measured on 2.1.301 with an empty config directory). From
+// FAKE_CLAUDE_AUTH_STATUS, so a test can play each sign-in; unset, the call
+// falls through to the scenario, as it always did.
+if (args[0] === "auth" && args[1] === "status" && process.env.FAKE_CLAUDE_AUTH_STATUS) {
+  const status = process.env.FAKE_CLAUDE_AUTH_STATUS;
+  let loggedIn = false;
+  try {
+    loggedIn = JSON.parse(status).loggedIn === true;
+  } catch {
+    loggedIn = false;
+  }
+  process.stdout.write(`${status}\n`);
+  process.exit(loggedIn ? 0 : 1);
+}
+
 /**
  * The prompt, read from stdin the way the real CLI takes it.
  *

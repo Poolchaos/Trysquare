@@ -23,12 +23,13 @@ interface Model {
   recommended: boolean;
 }
 
-interface Auth {
-  loggedIn: boolean;
-  usesSubscription: boolean;
-  authMethod?: string;
-  subscriptionType?: string;
-}
+/** As `readCliStatus` answers, one state each (MVP 6.1, audit E2). */
+type CliStatus =
+  | { state: "notFound"; message: string }
+  | { state: "cannotRun"; path: string; version?: string; message: string }
+  | { state: "signedOut"; path: string; version: string }
+  | { state: "perToken"; path: string; version: string; authMethod: string }
+  | { state: "subscription"; path: string; version: string; subscriptionType?: string };
 
 const FIELDS = [
   {
@@ -59,8 +60,9 @@ export default function SettingsPage() {
   const [models, setModels] = useState<Model[] | null>(null);
   const [settings, setSettings] = useState<Record<string, number> | null>(null);
   const [system, setSystem] = useState<SystemInfo | null>(null);
-  const [auth, setAuth] = useState<Auth | null>(null);
-  const [checkingAuth, setCheckingAuth] = useState(false);
+  const [cli, setCli] = useState<CliStatus | null>(null);
+  const [cliProblem, setCliProblem] = useState("");
+  const [checkingCli, setCheckingCli] = useState(false);
   const [probing, setProbing] = useState("");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -230,42 +232,76 @@ export default function SettingsPage() {
           </Card>
 
           <Card className="p-4">
-            <h2 className="mb-1 text-heading font-semibold">Sign-in</h2>
+            <h2 className="mb-1 text-heading font-semibold">Claude Code</h2>
             <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
-              Runs the CLI&apos;s own status check locally. Nothing is sent anywhere and nothing is
-              spent.
+              Finds the CLI reviews run through and runs its own version and sign-in checks locally.
+              Nothing is sent anywhere and nothing is spent.
             </p>
-            {auth ? (
-              <div className="mb-3 grid gap-1 text-sm">
-                <p>{auth.loggedIn ? "Signed in." : "Not signed in."}</p>
-                {auth.loggedIn ? (
-                  <p
-                    className={
-                      auth.usesSubscription
-                        ? "text-[var(--color-good)]"
-                        : "text-[var(--color-warning)]"
-                    }
-                  >
-                    {auth.usesSubscription
-                      ? `Runs draw on your ${auth.subscriptionType ?? "subscription"}, at no extra cost.`
-                      : "This sign-in bills per token rather than drawing on a subscription."}
+            {cli ? (
+              <div className="mb-3 grid gap-1 text-sm" data-testid="cli-status">
+                {cli.state === "notFound" ? null : (
+                  <p className="text-xs text-[var(--color-ink-muted)]">
+                    <Mono className="break-all">{cli.path}</Mono>
+                    {cli.version === undefined ? null : `, ${cli.version}`}
                   </p>
-                ) : null}
+                )}
+                {cli.state === "notFound" ? (
+                  <>
+                    <p className="text-[var(--color-critical)]">No Claude Code CLI was found.</p>
+                    <p className="text-xs break-words text-[var(--color-ink-muted)]">
+                      {cli.message}
+                    </p>
+                  </>
+                ) : cli.state === "cannotRun" ? (
+                  <>
+                    <p className="text-[var(--color-critical)]">The CLI cannot run reviews.</p>
+                    <p className="text-xs break-words text-[var(--color-ink-muted)]">
+                      {cli.message}
+                    </p>
+                  </>
+                ) : cli.state === "signedOut" ? (
+                  <p className="text-[var(--color-warning)]">Not signed in.</p>
+                ) : cli.state === "perToken" ? (
+                  <p className="text-[var(--color-warning)]">
+                    Signed in, but this sign-in ({cli.authMethod}) bills per token rather than
+                    drawing on a subscription. Reviews still run.
+                  </p>
+                ) : (
+                  <p className="text-[var(--color-good)]">
+                    Signed in. Runs draw on your {cli.subscriptionType ?? "subscription"}, at no
+                    extra cost.
+                  </p>
+                )}
               </div>
             ) : null}
+            {cliProblem === "" ? null : (
+              <div className="mb-3">
+                <Problem>{cliProblem}</Problem>
+              </div>
+            )}
             <Button
-              disabled={checkingAuth}
+              disabled={checkingCli}
               onClick={async () => {
-                setCheckingAuth(true);
+                setCheckingCli(true);
                 try {
-                  const response = await fetch("/api/auth");
-                  if (response.ok) setAuth(((await response.json()) as { auth: Auth }).auth);
+                  const sent = await send<{ cli: CliStatus }>(
+                    "/api/auth",
+                    { method: "GET" },
+                    "The CLI could not be checked",
+                  );
+                  if (sent.ok) {
+                    setCli(sent.body.cli);
+                    setCliProblem("");
+                  } else {
+                    setCli(null);
+                    setCliProblem(sent.error);
+                  }
                 } finally {
-                  setCheckingAuth(false);
+                  setCheckingCli(false);
                 }
               }}
             >
-              {checkingAuth ? "Checking..." : "Check sign-in"}
+              {checkingCli ? "Checking..." : "Check the CLI"}
             </Button>
           </Card>
         </div>

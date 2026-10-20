@@ -16,7 +16,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { READ_ONLY_TOOLS } from "@/lib/engine/command";
 import { contextWindowOf, usageOf } from "@/lib/engine/events";
 import { assertToolsAreReadOnly, runStage } from "@/server/engine/headless";
-import { probeModel, readAuthStatus } from "@/server/engine/probe";
+import { probeModel, readCliStatus } from "@/server/engine/probe";
 
 const ENABLED = process.env.TRYSQUARE_REAL_CLI === "1";
 
@@ -42,8 +42,8 @@ afterAll(() => {
 
 describe.skipIf(!ENABLED)("against the real CLI", () => {
   it("reports how the CLI is authenticated", async () => {
-    const auth = await readAuthStatus();
-    expect(auth.loggedIn).toBe(true);
+    const status = await readCliStatus();
+    expect(["subscription", "perToken"]).toContain(status.state);
   }, 60_000);
 
   it("never reports a real model as unavailable", async () => {

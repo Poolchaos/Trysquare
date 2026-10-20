@@ -2085,3 +2085,53 @@ test("the top bar says how many reviews are waiting on a person", async ({ page 
     "true",
   );
 });
+
+test("the CLI's check names the CLI, its version and how it is signed in", async ({ page }) => {
+  // Every way it could not answer read "Not signed in.", and it never said
+  // which CLI it asked (MVP 6.1, audit E2). The suite's fake is signed in
+  // through a subscription.
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Check the CLI" }).click();
+  const status = page.getByTestId("cli-status");
+  await expect(status).toContainText("fake-claude.mjs, 2.1.301 (Claude Code)");
+  await expect(status).toContainText("Runs draw on your max, at no extra cost.");
+});
+
+test("the CLI's check says each way it cannot run a review, and a check that failed", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  const status = page.getByTestId("cli-status");
+  const check = page.getByRole("button", { name: "Check the CLI" });
+  const answers: [object, string][] = [
+    [
+      { state: "notFound", message: 'Could not find "claude", the Claude Code CLI, on PATH.' },
+      "No Claude Code CLI was found.",
+    ],
+    [
+      { state: "cannotRun", path: "/opt/claude", message: "the file is not executable." },
+      "The CLI cannot run reviews.",
+    ],
+    [{ state: "signedOut", path: "/opt/claude", version: "2.1.301" }, "Not signed in."],
+    [
+      { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
+      "bills per token rather than drawing on a subscription. Reviews still run.",
+    ],
+  ];
+  for (const [cli, said] of answers) {
+    const stop = await answerOnce(page, "**/api/auth", (route) =>
+      route.fulfill({ status: 200, json: { cli } }),
+    );
+    await check.click();
+    await expect(status).toContainText(said);
+    await stop();
+  }
+  await expect(status).toContainText("/opt/claude, 2.1.301");
+  const stop = await answerOnce(page, "**/api/auth", (route) =>
+    route.fulfill({ status: 500, json: { error: "The server could not run the check." } }),
+  );
+  await check.click();
+  await expect(page.getByText("The server could not run the check.")).toBeVisible();
+  await expect(status).toHaveCount(0);
+  await stop();
+});
