@@ -687,7 +687,6 @@ test("the profile picker names the model's profile while a pre-flight is pending
   release();
   await answered;
   await stopHolding();
-  await page.getByTestId("profile-override").selectOption("");
 });
 
 test("a review the pre-flight says would refuse cannot be started", async ({ page }) => {
