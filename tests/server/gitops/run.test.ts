@@ -110,71 +110,79 @@ describe("the system config git is given", () => {
     }
   });
 
-  it("never leaves its stand-in empty while another copy writes it", async () => {
-    // Every copy of this module writes the same path, named for its text:
-    // the instrumentation bundle's and the routes', and other servers'.
-    // Rewritten in place it was empty for a moment, and a git reading it
-    // then ran with no system config, a private HTTPS fetch with no
-    // credential helper (review of the D-148 fixes).
-    const system = await systemGitConfig();
-    // Nothing is written on a machine whose git ignores the stand-in.
-    if (system.kind !== "standIn") return;
-    const text = await readFile(system.path, "utf8");
-    const reads: string[] = [];
-    let writing = true;
-    const reader = (async () => {
-      while (writing) reads.push(await readFile(system.path, "utf8"));
-    })();
-    for (let copy = 0; copy < 20; copy += 1) {
+  describe("the stand-in's file", () => {
+    // In this test's own directory: the machine's temp directory holds the
+    // stand-in a running server and every other test worker read, and these
+    // tests remove and rewrite it (review of the D-149 fixes).
+    async function ownCopy() {
       vi.resetModules();
-      await (await import("@/server/gitops/run")).systemGitConfig();
+      vi.doMock("node:os", async (importOriginal) => ({
+        ...(await importOriginal<typeof import("node:os")>()),
+        tmpdir: () => dir,
+      }));
+      return import("@/server/gitops/run");
     }
-    writing = false;
-    await reader;
-    expect(reads.length).toBeGreaterThan(0);
-    expect(reads.filter((read) => read !== text)).toEqual([]);
-  }, 60_000);
-
-  it("writes a missing stand-in by a rename, and leaves nothing beside it", async () => {
-    const system = await systemGitConfig();
-    if (system.kind !== "standIn") return;
-    const text = await readFile(system.path, "utf8");
-    rmSync(system.path);
-    vi.resetModules();
-    await (await import("@/server/gitops/run")).systemGitConfig();
-    expect(await readFile(system.path, "utf8")).toBe(text);
-    const name = basename(system.path);
-    expect(
-      readdirSync(dirname(system.path)).filter((entry) => entry.startsWith(`${name}.`)),
-    ).toEqual([]);
-  });
-
-  it("takes a rename Windows refuses for done when the file holds the text", async () => {
-    // Windows refuses to replace a file another process has open: another
-    // writer, in another copy or another server, put the same text there.
-    const system = await systemGitConfig();
-    if (system.kind !== "standIn") return;
-    const text = await readFile(system.path, "utf8");
-    rmSync(system.path);
-    vi.resetModules();
-    vi.doMock("node:fs/promises", async (importOriginal) => {
-      const actual = await importOriginal<typeof import("node:fs/promises")>();
-      return {
-        ...actual,
-        rename: async (from: string, to: string) => {
-          await actual.writeFile(to, text, "utf8");
-          await actual.rm(from, { force: true });
-          throw Object.assign(new Error(`EPERM: operation not permitted, rename`), {
-            code: "EPERM",
-          });
-        },
-      };
-    });
-    try {
-      const fresh = await (await import("@/server/gitops/run")).systemGitConfig();
-      expect(fresh).toEqual(system);
-    } finally {
+    afterEach(() => {
+      vi.doUnmock("node:os");
       vi.doUnmock("node:fs/promises");
-    }
+    });
+
+    it("is never empty while another copy writes it", async () => {
+      // Every copy of this module writes the same path, named for its text:
+      // the instrumentation bundle's and the routes', and other servers'.
+      // Rewritten in place it was empty for a moment, and a git reading it
+      // then ran with no system config, a private HTTPS fetch with no
+      // credential helper (review of the D-148 fixes).
+      const system = await (await ownCopy()).systemGitConfig();
+      // Nothing is written on a machine whose git ignores the stand-in.
+      if (system.kind !== "standIn") return;
+      expect(dirname(system.path)).toBe(dir);
+      const text = await readFile(system.path, "utf8");
+      const reads: string[] = [];
+      let writing = true;
+      const reader = (async () => {
+        while (writing) reads.push(await readFile(system.path, "utf8"));
+      })();
+      for (let copy = 0; copy < 20; copy += 1) await (await ownCopy()).systemGitConfig();
+      writing = false;
+      await reader;
+      expect(reads.length).toBeGreaterThan(0);
+      expect(reads.filter((read) => read !== text)).toEqual([]);
+    }, 60_000);
+
+    it("is written when missing, and nothing is left beside it", async () => {
+      const system = await (await ownCopy()).systemGitConfig();
+      if (system.kind !== "standIn") return;
+      const text = await readFile(system.path, "utf8");
+      rmSync(system.path);
+      await (await ownCopy()).systemGitConfig();
+      expect(await readFile(system.path, "utf8")).toBe(text);
+      expect(
+        readdirSync(dir).filter((entry) => entry.startsWith(`${basename(system.path)}.`)),
+      ).toEqual([]);
+    });
+
+    it("takes a rename Windows refuses for done when the file holds the text", async () => {
+      // Windows refuses to replace a file another process has open: another
+      // writer, in another copy or another server, put the same text there.
+      const system = await (await ownCopy()).systemGitConfig();
+      if (system.kind !== "standIn") return;
+      const text = await readFile(system.path, "utf8");
+      rmSync(system.path);
+      vi.doMock("node:fs/promises", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("node:fs/promises")>();
+        return {
+          ...actual,
+          rename: async (from: string, to: string) => {
+            await actual.writeFile(to, text, "utf8");
+            await actual.rm(from, { force: true });
+            throw Object.assign(new Error(`EPERM: operation not permitted, rename`), {
+              code: "EPERM",
+            });
+          },
+        };
+      });
+      expect(await (await ownCopy()).systemGitConfig()).toEqual(system);
+    });
   });
 });
