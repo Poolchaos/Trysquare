@@ -1640,205 +1640,219 @@ function ScanTheater({
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight });
   }, [live.length]);
 
+  // A modal dialog: the page beneath, top bar too, is out of reach of Tab
+  // and of a screen reader while a run is watched, and focus starts inside.
+  // It was a plain div covering the page (5.14, audit U12). Escape is the
+  // dialog's own cancel, which hides the view rather than closing it here.
+  const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") onMinimize();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onMinimize]);
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--color-surface)] px-8 py-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <svg viewBox="0 0 16 16" aria-hidden className="h-5 w-5 shrink-0">
-            <path
-              d="M2 2 L2 14 L14 14"
-              fill="none"
-              stroke="var(--color-accent)"
-              strokeWidth="2"
-              strokeLinecap="square"
-            />
-            <path d="M5 11 L11 11 L11 5" fill="none" stroke="currentColor" strokeWidth="1" />
-          </svg>
-          <Mono className="truncate text-heading">
-            {review.fromBranch} <span className="text-[var(--color-ink-faint)]">into</span>{" "}
-            {review.intoBranch}
-          </Mono>
-          <Badge tone={statusTone(review.status)}>
-            {snapshot.queued ? "queued" : statusLabel(review.status)}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-3">
-          {review.startedAt ? (
-            <span className="font-[family-name:var(--font-mono)] text-title font-semibold tabular-nums">
-              {elapsedSince(review.startedAt, now)}
-            </span>
-          ) : null}
-          <Button variant="quiet" onClick={onMinimize}>
-            Hide
-          </Button>
-          {confirmingCancel ? (
-            <>
-              <Button
-                variant="primary"
-                disabled={cancelling}
-                onClick={() => {
-                  setCancelling(true);
-                  void onCancel()
-                    .then((problem) => {
-                      setCancelProblem(problem);
-                      setConfirmingCancel(false);
-                    })
-                    .finally(() => setCancelling(false));
-                }}
-              >
-                Yes, cancel
-              </Button>
-              <Button
-                variant="quiet"
-                // Not while the cancel is on its way: taking it back then
-                // showed Cancel again over a review being cancelled anyway.
-                disabled={cancelling}
-                onClick={() => setConfirmingCancel(false)}
-              >
-                No, keep it
-              </Button>
-            </>
-          ) : (
-            <Button variant="quiet" onClick={() => setConfirmingCancel(true)}>
-              Cancel
+    <dialog
+      ref={dialogRef}
+      aria-label={`Watching the review of ${review.fromBranch} into ${review.intoBranch}`}
+      onCancel={(event) => {
+        event.preventDefault();
+        onMinimize();
+      }}
+      className="m-0 h-full max-h-none w-full max-w-none border-0 bg-[var(--color-surface)] p-0 text-[var(--color-ink)]"
+    >
+      <div className="flex h-full flex-col px-8 py-6">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <svg viewBox="0 0 16 16" aria-hidden className="h-5 w-5 shrink-0">
+              <path
+                d="M2 2 L2 14 L14 14"
+                fill="none"
+                stroke="var(--color-accent)"
+                strokeWidth="2"
+                strokeLinecap="square"
+              />
+              <path d="M5 11 L11 11 L11 5" fill="none" stroke="currentColor" strokeWidth="1" />
+            </svg>
+            <Mono className="truncate text-heading">
+              {review.fromBranch} <span className="text-[var(--color-ink-faint)]">into</span>{" "}
+              {review.intoBranch}
+            </Mono>
+            <Badge tone={statusTone(review.status)}>
+              {snapshot.queued ? "queued" : statusLabel(review.status)}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3">
+            {review.startedAt ? (
+              <span className="font-[family-name:var(--font-mono)] text-title font-semibold tabular-nums">
+                {elapsedSince(review.startedAt, now)}
+              </span>
+            ) : null}
+            <Button variant="quiet" onClick={onMinimize}>
+              Hide
             </Button>
+            {confirmingCancel ? (
+              <>
+                <Button
+                  variant="primary"
+                  disabled={cancelling}
+                  onClick={() => {
+                    setCancelling(true);
+                    void onCancel()
+                      .then((problem) => {
+                        setCancelProblem(problem);
+                        setConfirmingCancel(false);
+                      })
+                      .finally(() => setCancelling(false));
+                  }}
+                >
+                  Yes, cancel
+                </Button>
+                <Button
+                  variant="quiet"
+                  // Not while the cancel is on its way: taking it back then
+                  // showed Cancel again over a review being cancelled anyway.
+                  disabled={cancelling}
+                  onClick={() => setConfirmingCancel(false)}
+                >
+                  No, keep it
+                </Button>
+              </>
+            ) : (
+              <Button variant="quiet" onClick={() => setConfirmingCancel(true)}>
+                Cancel
+              </Button>
+            )}
+          </div>
+        </header>
+        {cancelProblem ? (
+          <div className="mt-3">
+            <Problem>{cancelProblem}</Problem>
+          </div>
+        ) : null}
+
+        {/* The pipeline as a ruled gauge: seven segments, filled as they land,
+          the live one glowing. */}
+        <div className="mt-5">
+          <div className="flex gap-1.5" aria-hidden>
+            {STAGES.map(([stage]) => {
+              const isDone = deterministicDone(stage, snapshot, done) || done.has(stage);
+              const isCurrent = stage === executing;
+              return (
+                <span
+                  key={stage}
+                  className={`h-1.5 flex-1 rounded-sm ${
+                    isCurrent
+                      ? "pulse bg-[var(--color-accent)]"
+                      : isDone
+                        ? "bg-[var(--color-accent)] opacity-60"
+                        : "gauge-track"
+                  }`}
+                />
+              );
+            })}
+          </div>
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <span className="font-[family-name:var(--font-mono)] text-title font-semibold">
+              {executing !== null && stageIndex !== -1
+                ? `${stageLabel(executing)}`
+                : snapshot.queued
+                  ? "Waiting for the running review"
+                  : "Preparing"}
+            </span>
+            {stageIndex !== -1 ? (
+              <span className="text-body text-[var(--color-ink-muted)]">
+                stage {stageIndex + 1} of {STAGES.length}
+                {/* A stage that divides its work says which division is in
+                  flight, so nine requests do not look like one long one. */}
+                {batch ? ` · request ${batch.number} of ${batch.count}` : ""}
+                {usual !== undefined ? ` · usually ${elapsedBetween(0, usual)} here` : ""}
+              </span>
+            ) : null}
+            {stageIndex !== -1 ? (
+              <span className="text-body text-[var(--color-ink-faint)]">
+                {STAGES[stageIndex]?.[2]}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        {streaming ? null : (
+          // Here too, where a run is watched: the feed below stops while the
+          // stream is down, and it used to stop without a word (5.12, U8).
+          <p className="mt-5 text-aside text-[var(--color-ink-muted)]">
+            The live stream dropped and is being opened again. The run itself is unaffected.
+          </p>
+        )}
+        {/* The work itself, streaming. This is the panel the whole mode exists
+          for: files being opened, stages turning over, the run narrating. */}
+        <div
+          ref={feedRef}
+          tabIndex={0}
+          role="log"
+          aria-label="Scan activity"
+          className="mt-5 min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-4 shadow-[inset_0_1px_0_0_var(--color-edge)]"
+        >
+          {live.length === 0 ? (
+            <p className="text-body text-[var(--color-ink-muted)]">
+              Fetching, pinning and checking out the change set...
+            </p>
+          ) : (
+            <ul className="grid gap-0.5 text-dense">
+              {live.slice(-120).map((entry, index) => (
+                <li key={index} className="leading-6 break-words">
+                  {entry.kind === "stage" ? (
+                    <span className="font-medium text-[var(--color-ink)]">
+                      {stageLabel(entry.stage)}{" "}
+                      <span className="font-normal text-[var(--color-ink-faint)]">
+                        {entry.phase}
+                      </span>
+                    </span>
+                  ) : entry.kind === "note" ? (
+                    <span className="block border-l-2 border-[var(--color-border-strong)] py-0.5 pl-2 text-[var(--color-ink-muted)]">
+                      {entry.message}
+                    </span>
+                  ) : (
+                    <span className="block overflow-hidden font-[family-name:var(--font-mono)] break-all text-[var(--color-ink-faint)]">
+                      {entry.detail}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-      </header>
-      {cancelProblem ? (
-        <div className="mt-3">
-          <Problem>{cancelProblem}</Problem>
-        </div>
-      ) : null}
 
-      {/* The pipeline as a ruled gauge: seven segments, filled as they land,
-          the live one glowing. */}
-      <div className="mt-5">
-        <div className="flex gap-1.5" aria-hidden>
-          {STAGES.map(([stage]) => {
-            const isDone = deterministicDone(stage, snapshot, done) || done.has(stage);
-            const isCurrent = stage === executing;
-            return (
-              <span
-                key={stage}
-                className={`h-1.5 flex-1 rounded-sm ${
-                  isCurrent
-                    ? "pulse bg-[var(--color-accent)]"
-                    : isDone
-                      ? "bg-[var(--color-accent)] opacity-60"
-                      : "gauge-track"
-                }`}
-              />
-            );
-          })}
-        </div>
-        <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <span className="font-[family-name:var(--font-mono)] text-title font-semibold">
-            {executing !== null && stageIndex !== -1
-              ? `${stageLabel(executing)}`
-              : snapshot.queued
-                ? "Waiting for the running review"
-                : "Preparing"}
-          </span>
-          {stageIndex !== -1 ? (
-            <span className="text-body text-[var(--color-ink-muted)]">
-              stage {stageIndex + 1} of {STAGES.length}
-              {/* A stage that divides its work says which division is in
-                  flight, so nine requests do not look like one long one. */}
-              {batch ? ` · request ${batch.number} of ${batch.count}` : ""}
-              {usual !== undefined ? ` · usually ${elapsedBetween(0, usual)} here` : ""}
-            </span>
-          ) : null}
-          {stageIndex !== -1 ? (
-            <span className="text-body text-[var(--color-ink-faint)]">
-              {STAGES[stageIndex]?.[2]}
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      {streaming ? null : (
-        // Here too, where a run is watched: the feed below stops while the
-        // stream is down, and it used to stop without a word (5.12, U8).
-        <p className="mt-5 text-aside text-[var(--color-ink-muted)]">
-          The live stream dropped and is being opened again. The run itself is unaffected.
-        </p>
-      )}
-      {/* The work itself, streaming. This is the panel the whole mode exists
-          for: files being opened, stages turning over, the run narrating. */}
-      <div
-        ref={feedRef}
-        tabIndex={0}
-        role="log"
-        aria-label="Scan activity"
-        className="mt-5 min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-4 shadow-[inset_0_1px_0_0_var(--color-edge)]"
-      >
-        {live.length === 0 ? (
-          <p className="text-body text-[var(--color-ink-muted)]">
-            Fetching, pinning and checking out the change set...
-          </p>
-        ) : (
-          <ul className="grid gap-0.5 text-dense">
-            {live.slice(-120).map((entry, index) => (
-              <li key={index} className="leading-6 break-words">
-                {entry.kind === "stage" ? (
-                  <span className="font-medium text-[var(--color-ink)]">
-                    {stageLabel(entry.stage)}{" "}
-                    <span className="font-normal text-[var(--color-ink-faint)]">{entry.phase}</span>
-                  </span>
-                ) : entry.kind === "note" ? (
-                  <span className="block border-l-2 border-[var(--color-border-strong)] py-0.5 pl-2 text-[var(--color-ink-muted)]">
-                    {entry.message}
-                  </span>
-                ) : (
-                  <span className="block overflow-hidden font-[family-name:var(--font-mono)] break-all text-[var(--color-ink-faint)]">
-                    {entry.detail}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <footer className="mt-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap gap-6">
-          <span className="text-dense text-[var(--color-ink-muted)]">
-            <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
-              ${review.costEquivalentUsd.toFixed(2)}
-            </span>{" "}
-            so far
-          </span>
-          {coverage.totalFiles > 0 ? (
+        <footer className="mt-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-6">
             <span className="text-dense text-[var(--color-ink-muted)]">
               <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
-                {coverage.totalFiles - coverage.pendingFiles}/{coverage.totalFiles}
+                ${review.costEquivalentUsd.toFixed(2)}
               </span>{" "}
-              files accounted for
+              so far
             </span>
-          ) : null}
-          {coverage.totalHunks > 0 ? (
-            <span className="text-dense text-[var(--color-ink-muted)]">
-              <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
-                {coverage.totalHunks - coverage.pendingHunks}/{coverage.totalHunks}
-              </span>{" "}
-              hunks
-            </span>
-          ) : null}
-        </div>
-        <span className="text-aside text-[var(--color-ink-faint)]">
-          Esc hides this view; the run keeps going either way.
-        </span>
-      </footer>
-    </div>
+            {coverage.totalFiles > 0 ? (
+              <span className="text-dense text-[var(--color-ink-muted)]">
+                <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
+                  {coverage.totalFiles - coverage.pendingFiles}/{coverage.totalFiles}
+                </span>{" "}
+                files accounted for
+              </span>
+            ) : null}
+            {coverage.totalHunks > 0 ? (
+              <span className="text-dense text-[var(--color-ink-muted)]">
+                <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
+                  {coverage.totalHunks - coverage.pendingHunks}/{coverage.totalHunks}
+                </span>{" "}
+                hunks
+              </span>
+            ) : null}
+          </div>
+          <span className="text-aside text-[var(--color-ink-faint)]">
+            Esc hides this view; the run keeps going either way.
+          </span>
+        </footer>
+      </div>
+    </dialog>
   );
 }
 

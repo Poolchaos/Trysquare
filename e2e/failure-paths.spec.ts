@@ -772,6 +772,37 @@ test("a branch reached by the keyboard shows that it has the focus", async ({ pa
   expect(focused.outline).toBe("solid");
 });
 
+test("the scan theater is a dialog the keyboard stays in", async ({ page }) => {
+  // It covered the whole page, top bar too, but was a plain div: focus
+  // stayed wherever it had been, Tab walked out into the page beneath, and
+  // a screen reader read what was hidden (5.14, audit U12).
+  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 30_000 }), "utf8");
+  await startAReview(page);
+  const theater = page.getByRole("dialog", {
+    name: "Watching the review of feature/rename-prefs into main",
+  });
+  await expect(theater).toBeVisible({ timeout: 60_000 });
+  await expect(theater.getByRole("button", { name: "Hide" })).toBeFocused();
+  for (let step = 0; step < 10; step += 1) {
+    await page.keyboard.press("Tab");
+    const outside = await page.evaluate(() => {
+      const active = document.activeElement;
+      return active !== null && active !== document.body && active.closest("dialog") === null;
+    });
+    expect(outside, `Tab ${step + 1} left the theater`).toBe(false);
+  }
+  await page.keyboard.press("Escape");
+  await expect(theater).toHaveCount(0);
+
+  // Cancelled, so it does not run on into the suites after.
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+  await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
+  // And the stall goes with it: left armed, the usage-limit test after this
+  // stalled in its first stage and never reached its limit.
+  rmSync(STALL_TRIGGER, { force: true });
+});
+
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
   page,
 }) => {
