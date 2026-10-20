@@ -746,6 +746,32 @@ test("Start waits for the pre-flight of the choices on screen", async ({ page })
   await expect(start).toBeEnabled({ timeout: 30_000 });
 });
 
+test("a branch reached by the keyboard shows that it has the focus", async ({ page }) => {
+  // The radios are hidden from sight and the label stands for them, so the
+  // focus ring drawn on the radio was clipped away with it: Tab moved into
+  // the list and nothing on screen said where (5.14, audit U12).
+  await fillANewReview(page);
+  await page.getByPlaceholder("Filter branches").focus();
+  // Past the Refresh link, into the list.
+  for (let step = 0; step < 5; step += 1) {
+    await page.keyboard.press("Tab");
+    const onRadio = await page.evaluate(
+      () => (document.activeElement as HTMLInputElement | null)?.type === "radio",
+    );
+    if (onRadio) break;
+  }
+  const focused = await page.evaluate(() => {
+    const active = document.activeElement as HTMLInputElement | null;
+    const label = active?.closest("label");
+    return {
+      type: active?.type,
+      outline: label ? getComputedStyle(label).outlineStyle : "no label",
+    };
+  });
+  expect(focused.type).toBe("radio");
+  expect(focused.outline).toBe("solid");
+});
+
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
   page,
 }) => {

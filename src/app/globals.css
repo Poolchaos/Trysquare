@@ -200,3 +200,11 @@ body {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* A control hidden from sight, a branch or model radio, draws its focus on
+   the label that stands for it: on the control itself the ring was clipped
+   away with it (5.14, audit U12). */
+label:has(> .sr-only:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
