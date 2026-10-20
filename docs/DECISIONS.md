@@ -3400,3 +3400,40 @@ verified evidence, in writing, here.
   nothing; CI run 39423284598 ran both on ubuntu and macOS, and they
   passed. Run outside the suite, a hang whose stdout reader had gone died
   of EPIPE in 42 ms; one way, not a finding. The inbox holds it.
+- 2026-10-20 D-149 REVIEW (the D-148 fixes and their record, 422c888..670c8af,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Seven findings, one MEDIUM and six LOW, all dispositioned before
+  new work:
+  1. MEDIUM: 70795aa's inset ring lay over the chosen row's border, the
+  ring's own colour, and the focused row is nearly always the chosen one;
+  the reviewer measured focus changing 756 pixels inset against 1,503
+  outside, on a label styled the same in Chromium. Fixed c02ea71: the ring
+  is outside again and the branch list padded by its reach; the test now
+  also requires it drawn beyond the border.
+  2. LOW: no test held the queue cleanup's guards. Fixed 8dd7fe6: a third
+  fetch asked for from the first caller's continuation, the one place a
+  caller can arrive between a fetch's cleanup and the next one's start;
+  with the cleanup no longer sparing an entry with a fetch queued, two
+  fetches ran at once at offset 1. The owner guard is kept, though no
+  order of events reaches it: the cleanup is registered before any fetch
+  can be queued behind its own, so it always finds its own entry.
+  3. LOW, there before: git's stand-in system config was rewritten in
+  place by every copy of the gitops module and by other servers, and a
+  reader read it empty, 3 runs of 3. Fixed 7f2f1ac: left alone when it
+  holds its text, otherwise written beside it and renamed into place.
+  4. LOW, the record: D-148 and 4aa31fa's message said the control's
+  failure was the first in "the 249 runs CI lists". The control came in
+  with 1d4bb04; counted with gh run list on 2026-10-20, 129 runs carried it
+  before e7c140e's, which was the 130th, and none of those failed it.
+  5. LOW, the record: D-148's EPIPE route needed a signal between the pid
+  file and the hang's only write, and the 42 ms EPIPE run was on Windows,
+  which D-148 and the inbox left out. The route is closed in 6eb073e: the
+  tests signal only once a stage log holds the CLI's init line.
+  6. LOW: 4aa31fa's SIGTERM test built its failure message on every run.
+  Fixed 61d752c.
+  7. LOW, the record: 08628ea's "four to six fetches" for three model
+  choices or two Refreshes was worked out by reading, not measured.
+  CI run 39429832430 at 61d752c failed on its first attempt: GitHub never
+  gave the macOS job a runner, "The job was not acquired by Runner of type
+  hosted even after multiple attempts", beside notices of macOS arm64
+  capacity, and no step ran. Its second attempt passed on all three.
