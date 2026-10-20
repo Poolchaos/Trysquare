@@ -62,3 +62,7 @@ the line entirely would lose the trail.
   under the fast gate's load, git reporting the CRLF checkout clean, and
   passed alone and in every rerun (D-147). Not root-caused; find what makes
   git see that file unchanged and make the premise deterministic.
+- 2026-10-20: the shutdown control in e2e/shutdown.spec.ts found its CLI
+  gone two seconds after its server's SIGKILL, once, on macOS (CI run
+  39420099693, D-148). Not root-caused; since 4aa31fa a recurrence says how
+  the CLI ended. Read that note when it comes, and fix the cause.

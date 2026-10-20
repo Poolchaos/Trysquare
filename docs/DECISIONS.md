@@ -3342,3 +3342,61 @@ verified evidence, in writing, here.
   new theater test armed the stall trigger and left it armed, so the run
   after it stalled in its first stage. The test now clears it, and the
   gate run again exited 0.
+- 2026-10-20 D-148 REVIEW (the D-147 fixes, 5.14's last changes and their
+  record, 26f74d1..422c888, by a separate read-only reviewer; each finding
+  re-run here before it was fixed). Nine findings, one MEDIUM and eight
+  LOW, all dispositioned before new work:
+  1. MEDIUM: c35c2a3's fetch queue was a module constant, and the built app
+  holds two copies of the gitops module, the job manager's in the
+  instrumentation bundle and the one the 27 route chunks share. A review's
+  start or resume still fetched beside the routes' fetches into the same
+  clone, the trap D-139 found for the manager. Fixed d2627bf: the queue is
+  on globalThis under a Symbol.for key, which the next build put in the
+  instrumentation chunk and the 27 route chunks. Its test loads the module
+  twice; on the code before, its first round failed with "cannot lock ref".
+  2. LOW: c35c2a3's test of a failed fetch never queued, its failing fetch
+  going into another path; with the catch that lets a queued fetch run
+  after a failure removed, it still passed. Fixed 606f7f2, which fails the
+  first fetch into the clone itself; the same mutation then fails it.
+  3. LOW: the queue ran every fetch asked for, those of pre-flights the
+  screen had dropped among them, and Start waited for the newest after
+  them all. Fixed 08628ea: callers asking while a fetch runs share the one
+  after it, which still starts after each asked (D-27); five asked at once
+  ran two fetches, where the code before ran five.
+  4. LOW: 94bd28d's refusal line stood alone ahead of the joined reasons,
+  D-146 item 4's class. Fixed e7c140e.
+  5. LOW: 127f96e's ring was drawn outside the label and the scrolling
+  branch list clipped it to two lines; its test read the computed style,
+  which said solid. Fixed 70795aa: drawn inside, the test checking the
+  ring's outer edge lies within the list.
+  6. LOW: the theater test disarmed the stall only on its last line, so a
+  failed assertion before it was said to fail the usage-limit test after.
+  Not reproduced: with a failure injected right after the arming, under
+  the hooks as they were, the usage-limit test passed, because Playwright
+  discards a worker after a failed test and runs afterAll, which disarms
+  both triggers. The fake CLI disarms a trigger when a call reads it, so
+  what is left is a test that passes having cancelled before any call,
+  which 3d3adf3's own disarm covers. No change.
+  7. LOW, there before: hiding the theater left the focus on the page.
+  Fixed 602ac46: Scan view takes it.
+  8. LOW, the record: c35c2a3's message, the comment above fetchAll, D-147
+  item 1 and row 5.14 said a Refresh starts three fetches into one clone.
+  It starts two into each, the branch list's and the pre-flight's into the
+  primary, the dependency's branch read and the pre-flight's into the
+  dependency; a review's start or resume can add a third. The comment was
+  corrected in d2627bf and the row here; D-147 item 1 and c35c2a3's
+  message stand corrected by this line.
+  9. LOW: 6c53190's test ended by setting the profile back, which sent a
+  pre-flight nothing waited for. Removed in 8f4ec29.
+  CI run 39420099693 at e7c140e failed on macOS in the shutdown control, "a
+  server killed outright leaves its stage's CLI running": the CLI was gone
+  two seconds after its server's SIGKILL. The first such failure in the 249
+  runs CI lists, and the change it ran on touches no process handling. The
+  run kept no stage log, so the cause is not known. 4aa31fa makes a
+  recurrence say why: the fake CLI notes beside its pid how it ended,
+  which a signal does not, the control's failure carries that note and
+  the stage logs, and the SIGTERM test now requires that a signal ended
+  its CLI, which closes a way it could have passed with the handler doing
+  nothing; CI run 39423284598 ran both on ubuntu and macOS, and they
+  passed. Run outside the suite, a hang whose stdout reader had gone died
+  of EPIPE in 42 ms; one way, not a finding. The inbox holds it.
