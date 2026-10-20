@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ageIndex } from "../../helpers/racy-checkout";
 import { parseUnifiedDiff } from "@/lib/git/diff";
 import { opaqueChanges } from "@/lib/git/opaque";
 import {
@@ -653,6 +654,7 @@ describe("review worktrees", () => {
     async function freshCheckout(name: string): Promise<string> {
       const dir = join(root, name);
       await addWorktree(normalisingClone, dir, await resolveCommit(normalisingClone, "main"));
+      ageIndex(dir);
       return dir;
     }
 

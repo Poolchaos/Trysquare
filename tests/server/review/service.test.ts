@@ -20,8 +20,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { basename, dirname, join } from "node:path";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import type { ReviewEffort } from "@/lib/domain/enums";
 import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
@@ -77,6 +77,22 @@ import {
   type SeededManifest,
 } from "../../helpers/ideal-answers";
 import { makeTestDb, type TestDb } from "../db/helpers";
+
+// The D-107 repository's checkout has its index aged the moment it is made,
+// before its baseline is read: under load git read it clean, and the test of
+// a checkout reported changed from the start met one that was not (D-150).
+vi.mock("@/server/gitops/worktree", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/server/gitops/worktree")>();
+  const { ageIndex } = await import("../../helpers/racy-checkout");
+  return {
+    ...actual,
+    addWorktree: async (...args: Parameters<typeof actual.addWorktree>) => {
+      const made = await actual.addWorktree(...args);
+      if (basename(args[1]) === "norm") ageIndex(args[1]);
+      return made;
+    },
+  };
+});
 
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
 
