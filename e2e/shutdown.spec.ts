@@ -15,7 +15,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
@@ -106,7 +106,9 @@ async function seed(dataDir: string): Promise<{ reviewId: string; rulesetId: str
  * that CLI's process id. Waits until the CLI has started, so the signal finds
  * a stage in flight rather than the preparation before it.
  */
-async function serverMidStage(port: number): Promise<{ server: ChildProcess; cliPid: number }> {
+async function serverMidStage(
+  port: number,
+): Promise<{ server: ChildProcess; cliPid: number; dataDir: string; pidFile: string }> {
   const dataDir = mkdtempSync(join(E2E_ROOT, "shutdown-"));
   const { reviewId, rulesetId } = await seed(dataDir);
   const pidFile = join(dataDir, "cli.pid");
@@ -162,7 +164,25 @@ async function serverMidStage(port: number): Promise<{ server: ChildProcess; cli
   if (!Number.isInteger(cliPid) || cliPid <= 0) throw new Error(`The pid file held "${pidText}".`);
   launched.clis.push(cliPid);
   expect(isAlive(cliPid)).toBe(true);
-  return { server, cliPid };
+  return { server, cliPid, dataDir, pidFile };
+}
+
+/**
+ * The fake CLI's note on how it ended, which it writes beside its pid unless
+ * a signal ended it, and the tail of each stage log, for a CLI found gone.
+ * The control found its CLI gone once on macOS with nothing kept to say why
+ * (CI run 39420099693).
+ */
+function howItEnded(dataDir: string, pidFile: string): string {
+  const ended = `${pidFile}.ended`;
+  const note = existsSync(ended) ? readFileSync(ended, "utf8").trim() : "none, so a signal";
+  const logs = readdirSync(dataDir, { recursive: true, encoding: "utf8" }).filter((path) =>
+    path.endsWith(".log"),
+  );
+  return [
+    `The CLI is gone. Its note on how it ended: ${note}`,
+    ...logs.map((path) => `${path}:\n${readFileSync(join(dataDir, path), "utf8").slice(-2_000)}`),
+  ].join("\n");
 }
 
 function exited(server: ChildProcess): Promise<void> {
@@ -174,18 +194,22 @@ test("a server killed outright leaves its stage's CLI running, which is what SIG
   // The control: nothing in the server runs on SIGKILL, so if the CLI outlives
   // this server, the test can see an orphan, and the SIGTERM test below
   // passing means the handler stopped it rather than the platform.
-  const { server, cliPid } = await serverMidStage(3101);
+  const { server, cliPid, dataDir, pidFile } = await serverMidStage(3101);
   server.kill("SIGKILL");
   await exited(server);
   await new Promise((resolve) => setTimeout(resolve, AFTER_EXIT_MS));
-  expect(isAlive(cliPid)).toBe(true);
+  const alive = isAlive(cliPid);
+  expect(alive, alive ? undefined : howItEnded(dataDir, pidFile)).toBe(true);
 });
 
 test("a server told to stop takes its stage's CLI down with it", async () => {
   // The same window as the control, so the two differ only in the signal: it
   // used to allow fifteen seconds here against the control's two.
-  const { server, cliPid } = await serverMidStage(3102);
+  const { server, cliPid, dataDir, pidFile } = await serverMidStage(3102);
   server.kill("SIGTERM");
   await exited(server);
   await expect.poll(() => isAlive(cliPid), { timeout: AFTER_EXIT_MS }).toBe(false);
+  // Ended by the handler's signal, not on its own: a CLI that exited or
+  // crashed by itself in the window would pass for a stopped one.
+  expect(existsSync(`${pidFile}.ended`), howItEnded(dataDir, pidFile)).toBe(false);
 });

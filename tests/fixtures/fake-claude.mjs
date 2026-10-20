@@ -12,7 +12,15 @@
  * exact argv and environment the engine used.
  */
 
-import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -68,6 +76,19 @@ if (process.env.FAKE_CLAUDE_PID_FILE) {
   const partial = `${process.env.FAKE_CLAUDE_PID_FILE}.partial`;
   writeFileSync(partial, String(process.pid));
   renameSync(partial, process.env.FAKE_CLAUDE_PID_FILE);
+
+  // How it ended, beside its pid, so a test that finds it gone can say why:
+  // an error nothing caught, a write to a pipe with no reader among them,
+  // then its exit code. A signal leaves no note. The shutdown control found
+  // its CLI gone once, with nothing to tell why (macOS CI run 39420099693).
+  const ended = `${process.env.FAKE_CLAUDE_PID_FILE}.ended`;
+  process.on("uncaughtException", (error) => {
+    const text = error instanceof Error ? error.stack : String(error);
+    appendFileSync(ended, `uncaught: ${text}\n`);
+    process.stderr.write(`${text}\n`);
+    process.exit(1);
+  });
+  process.on("exit", (code) => appendFileSync(ended, `exit code ${code}\n`));
 }
 const recordPath = process.env.FAKE_CLAUDE_RECORD;
 
