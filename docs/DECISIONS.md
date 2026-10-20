@@ -3234,5 +3234,54 @@ verified evidence, in writing, here.
   card showed the refusal and only the line beside Start said that.
   8a75e2a says it "still flags the four D-143 planted" where f1196f6
   planted seven; the four were D-143's p4 file: an imported File, a
-  declared Headers, a getPrototypeOf comparison and a ["constructor"] one. af5a37d's "EISDIR walks the path" claimed a walk its
-  test never ran, until 84ea3fc.
+  declared Headers, a getPrototypeOf comparison and a ["constructor"] one.
+  af5a37d's "EISDIR walks the path" claimed a walk its test never ran,
+  until 84ea3fc.
+- 2026-10-19 D-146 REVIEW (the D-145 fixes and their record, e88223c..92a4458,
+  by a separate read-only reviewer; each finding re-run here before it was
+  fixed). Nine findings, two MEDIUM and seven LOW, all dispositioned before
+  new work:
+  1. MEDIUM: 6697fec's empty-half block rested on a pre-flight a Refresh
+  did not ask again, so a branch pushed to since stayed blocked as
+  changing nothing. 3. LOW: the empty-half line named the choices now for
+  an answer about the choices before. Both are U11's second trap, the
+  stale pre-flight, and fixed with it, 53e0fec.
+  2. MEDIUM: the create route judged an empty half by commits, so a branch
+  whose commits add up to nothing, an empty commit or a commit and its
+  revert, ran a review of no change; the records said it refused every
+  empty half. 5. LOW: a dependency's refusal read as the primary's. 2 and
+  5 fixed 1d65660, which reads the change set the review would read.
+  4. LOW: the line beside Start gave one reason of two. 6. LOW: a ticked
+  dependency's branches were never read again on Refresh. 4 and 6 fixed
+  ee76800.
+  7. LOW: brokenLink missed ENOTDIR, Linux's and macOS's code for a link
+  through a file. Fixed 2546b57; that the route before failed there is by
+  reading, Windows giving ENOENT for the same link.
+  8. LOW: the check-style comment listed passed forms as if complete.
+  Fixed 225d7c3.
+  9. LOW, the record: (a) row 5.13 said all its counts came from the
+  browser gate, and 84ea3fc's came from ./verify.sh; corrected here. (b)
+  13bc8e8's message and two comments said a restored link came back with
+  "no read"; the restore read the branches again, while the stale mark
+  showed the old ones as read; the comments are corrected here. (c) A
+  comment said a refusal leaves "none chosen"; a branch chosen by hand
+  stays chosen, unsent; corrected here. (d) D-145 item 3's "since d921173
+  a refusal after a good read cannot happen" holds only since 13bc8e8,
+  and since ee76800 it can again, through Refresh, which 13bc8e8's
+  clearing covers. (e) 92a4458's message put both D-145 MEDIUMs on "a
+  dependency half"; its item 2 was about either half. (f) D-145 item 7
+  cited a reviewer's scratch file no reader can open, and left a line
+  unwrapped; the line is rewrapped here with its words unchanged.
+  The first gate of ee76800 failed in a test after the new ones,
+  "route.fetch: Test ended": a new test ended with its route handler
+  still fetching an answer. ee76800 made the new tests wait for one
+  response each, which was not enough: CI run 39317190548 at 225d7c3, a
+  comment-only commit, failed on macOS in the same test, "Response has
+  been disposed", a second pre-flight still being answered when it
+  ended. Not a D-105 occurrence: the cause is the test's. ebe2f5e routes
+  the 5.14 tests through a helper whose stop lets new requests through,
+  waits for every answer in flight, and only then removes the route;
+  removing it first made Playwright let the request through under its
+  answer, "Route is already handled!", four times in six repeats of one
+  test. After ebe2f5e that test passed six repeats of six here, 1058 and
+  72 on Windows, and CI run 39401048625 passed on all three.

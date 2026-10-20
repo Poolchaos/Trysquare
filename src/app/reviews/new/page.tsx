@@ -261,8 +261,8 @@ function NewReview() {
         const linksNow = detail.body.links ?? [];
         setLinks(linksNow);
         // A link gone takes its tick with it: kept, the box came back ticked
-        // when the link was restored, with its old branches and no read
-        // (D-145).
+        // when the link was restored, its old branches shown as read while
+        // they were read again (D-145, D-146).
         setIncludeLink((ticked) =>
           linksNow.some((link) => link.dependencyProjectId === ticked) ? ticked : "",
         );
@@ -364,8 +364,9 @@ function NewReview() {
       // appeared (D-134).
       setLinkProblem(sent.ok ? "" : sent.error);
       if (!sent.ok) {
-        // No branches to choose from, so none chosen: kept, a refusal stood
-        // beside the old pair, and Start sent it (D-145).
+        // No branches to choose from, so no pair: kept, a refusal stood beside
+        // the old pair, and Start sent it (D-145). A branch chosen by hand
+        // stays chosen, unsent with no list to stand in (D-146).
         setLinkBranches([]);
         setLinkInto("");
         return;
