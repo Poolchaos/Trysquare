@@ -76,10 +76,31 @@ describe("fetches into one clone", () => {
   }, 120_000);
 
   it("still fetch after one fails, and pass on that one's failure", async () => {
-    const elsewhere = join(root, "not-a-clone");
-    const first = fetchAll(elsewhere);
-    const second = fetchAll(clone);
-    await expect(first).rejects.toThrow();
-    await expect(second).resolves.toBeUndefined();
+    // The same clone, so the second waits behind the first: one into another
+    // clone never queued, and the test passed with the queue passing a
+    // failure on to every fetch behind it (review of the D-147 fixes).
+    vi.resetModules();
+    vi.doMock("@/server/gitops/run", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@/server/gitops/run")>();
+      let calls = 0;
+      return {
+        ...actual,
+        git: (...args: Parameters<typeof actual.git>) =>
+          (calls += 1) === 1
+            ? Promise.reject(new Error("the first fetch fails"))
+            : actual.git(...args),
+      };
+    });
+    try {
+      const queued = await import("@/server/gitops/repo");
+      commit("moved after a failure");
+      const first = queued.fetchAll(clone);
+      const second = queued.fetchAll(clone);
+      await expect(first).rejects.toThrow("the first fetch fails");
+      await expect(second).resolves.toBeUndefined();
+      expect(git(["rev-parse", "main"], clone)).toBe(git(["rev-parse", "main"], source));
+    } finally {
+      vi.doUnmock("@/server/gitops/run");
+    }
   }, 60_000);
 });
