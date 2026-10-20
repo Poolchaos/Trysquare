@@ -36,17 +36,23 @@ export async function cloneBare(gitUrl: string, destination: string): Promise<vo
 }
 
 /**
- * The last fetch asked for each clone, which the next one waits behind.
+ * Each clone's fetch in progress, and the one that runs after it, which every
+ * caller asking meanwhile shares.
  *
  * On globalThis rather than in a module-level constant: the built app holds
  * two copies of this module, the job manager's in the instrumentation bundle
  * and the routes', and a queue each let a review's fetch run beside a
  * route's (review of the D-147 fixes).
  */
-const FETCHES_KEY = Symbol.for("trysquare.gitops.fetches");
+const FETCHES_KEY = Symbol.for("trysquare.gitops.fetch-queue");
+
+interface FetchQueue {
+  running: Promise<void>;
+  next?: Promise<void>;
+}
 
 interface FetchesHolder {
-  [FETCHES_KEY]?: Map<string, Promise<void>>;
+  [FETCHES_KEY]?: Map<string, FetchQueue>;
 }
 
 const fetches = ((globalThis as FetchesHolder)[FETCHES_KEY] ??= new Map());
@@ -57,24 +63,36 @@ const fetches = ((globalThis as FetchesHolder)[FETCHES_KEY] ??= new Map());
  * Two at once into one bare clone, after a branch moved on the remote, failed
  * one of them with "cannot lock ref" (D-147). A Refresh on the new review
  * screen starts two into a clone, the branch list's and the pre-flight's,
- * and a review's start or resume can add a third. Each caller still gets a fetch that starts after it
- * asked, as pinning needs (D-27); a fetch that fails is passed on to its own
- * caller only.
+ * and a review's start or resume can add a third.
+ *
+ * A caller that asks while a fetch runs gets the fetch after it, which has
+ * not started, so it starts after the caller asked, as pinning needs (D-27).
+ * Callers asking meanwhile share that one: each queued its own, so a
+ * pre-flight the screen had dropped still made the newest wait behind it
+ * (review of the D-147 fixes). A failed fetch is passed on only to the
+ * callers that shared it.
  */
 export function fetchAll(repoDir: string): Promise<void> {
   const key = resolve(repoDir);
-  const fetched = (fetches.get(key) ?? Promise.resolve())
-    .catch(() => undefined)
-    .then(async () => {
-      await git(["fetch", "--all", "--prune", "--quiet"], { cwd: repoDir, timeoutMs: 600_000 });
-    });
-  fetches.set(key, fetched);
-  void fetched
+  const queue = fetches.get(key);
+  if (queue === undefined) return beginFetch(key, repoDir);
+  queue.next ??= queue.running.catch(() => undefined).then(() => beginFetch(key, repoDir));
+  return queue.next;
+}
+
+function beginFetch(key: string, repoDir: string): Promise<void> {
+  const running = git(["fetch", "--all", "--prune", "--quiet"], {
+    cwd: repoDir,
+    timeoutMs: 600_000,
+  }).then(() => undefined);
+  fetches.set(key, { running });
+  void running
     .catch(() => undefined)
     .then(() => {
-      if (fetches.get(key) === fetched) fetches.delete(key);
+      const queue = fetches.get(key);
+      if (queue?.running === running && queue.next === undefined) fetches.delete(key);
     });
-  return fetched;
+  return running;
 }
 
 /**

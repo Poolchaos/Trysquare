@@ -75,6 +75,35 @@ describe("fetches into one clone", () => {
     }
   }, 120_000);
 
+  it("asked for while one runs, share the one queued next", async () => {
+    // A pre-flight the screen has dropped still fetches, and each queued its
+    // own, so the last answer, which Start waits for, came after them all
+    // (review of the D-147 fixes). The one queued next has not started, so
+    // it still starts after each of them asked (D-27).
+    vi.resetModules();
+    let fetchesRun = 0;
+    vi.doMock("@/server/gitops/run", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@/server/gitops/run")>();
+      return {
+        ...actual,
+        git: (...args: Parameters<typeof actual.git>) => {
+          if (args[0][0] === "fetch") fetchesRun += 1;
+          return actual.git(...args);
+        },
+      };
+    });
+    try {
+      const queued = await import("@/server/gitops/repo");
+      commit("moved before five asks");
+      const asked = [1, 2, 3, 4, 5].map(() => queued.fetchAll(clone));
+      await Promise.all(asked);
+      expect(fetchesRun).toBe(2);
+      expect(git(["rev-parse", "main"], clone)).toBe(git(["rev-parse", "main"], source));
+    } finally {
+      vi.doUnmock("@/server/gitops/run");
+    }
+  }, 60_000);
+
   it("still fetch after one fails, and pass on that one's failure", async () => {
     // The same clone, so the second waits behind the first: one into another
     // clone never queued, and the test passed with the queue passing a
