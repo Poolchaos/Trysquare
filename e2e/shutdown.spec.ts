@@ -211,5 +211,6 @@ test("a server told to stop takes its stage's CLI down with it", async () => {
   await expect.poll(() => isAlive(cliPid), { timeout: AFTER_EXIT_MS }).toBe(false);
   // Ended by the handler's signal, not on its own: a CLI that exited or
   // crashed by itself in the window would pass for a stopped one.
-  expect(existsSync(`${pidFile}.ended`), howItEnded(dataDir, pidFile)).toBe(false);
+  const noted = existsSync(`${pidFile}.ended`);
+  expect(noted, noted ? howItEnded(dataDir, pidFile) : undefined).toBe(false);
 });
