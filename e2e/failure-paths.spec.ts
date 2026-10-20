@@ -690,6 +690,62 @@ test("the profile picker names the model's profile while a pre-flight is pending
   await page.getByTestId("profile-override").selectOption("");
 });
 
+test("a review the pre-flight says would refuse cannot be started", async ({ page }) => {
+  // The pre-flight said a sweep pattern could not run, so the run would stop
+  // at its sweep, and Start stayed on beside it (5.14, audit U11). The answer
+  // is the route's own, with one sweep problem added.
+  const refusing = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: { ...body, sweepProblems: ["(unclosed: the pattern is not valid"] },
+    });
+  };
+  const stopRefusing = await routeUntilStopped(page, "**/api/reviews/preflight", refusing);
+  await fillANewReview(page);
+  await expect(page.getByText(/would refuse to start: \(unclosed/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start review" })).toBeDisabled();
+  await expect(
+    page.getByText("The pre-flight says this review would refuse to start: see above."),
+  ).toBeVisible();
+  await stopRefusing();
+});
+
+test("Start waits for the pre-flight of the choices on screen", async ({ page }) => {
+  // On beside "Working out what this review will examine...", Start offered
+  // a review whose pre-flight had not said what it would examine, nor
+  // whether it would refuse (D-147).
+  await fillANewReview(page);
+  const start = page.getByRole("button", { name: "Start review" });
+  await expect(start).toBeEnabled();
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stopHolding = await answerOnce(page, "**/api/reviews/preflight", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(page.getByText("Working out what this review will examine...")).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(start).toBeDisabled();
+  await expect(
+    page.getByText("The pre-flight is still working out what this review will examine.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const answered = page.waitForResponse((response) =>
+    response.url().endsWith("/api/reviews/preflight"),
+  );
+  release();
+  await answered;
+  await stopHolding();
+  await expect(start).toBeEnabled({ timeout: 30_000 });
+});
+
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
   page,
 }) => {

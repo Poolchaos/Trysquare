@@ -537,7 +537,13 @@ function NewReview() {
           : []),
       ]
     : [];
-  const ready = baseReady && !linkIncomplete && emptyHalves.length === 0;
+  // Started anyway, the run stopped at its sweep, which will not pass a
+  // pattern it could not run (5.14, audit U11).
+  const wouldRefuse = preflight !== null && preflight.sweepProblems.length > 0;
+  // And not before the pre-flight for these choices has answered: on beside
+  // "Working out...", Start offered a review nothing had yet sized (D-147).
+  const ready =
+    baseReady && !linkIncomplete && emptyHalves.length === 0 && !wouldRefuse && !preflightPending;
 
   if (!projectId) {
     return (
@@ -1137,6 +1143,10 @@ function NewReview() {
                   Rulesets
                 </Link>
               </span>
+            ) : wouldRefuse ? (
+              <span className="text-sm text-[var(--color-ink-muted)]">
+                The pre-flight says this review would refuse to start: see above.
+              </span>
             ) : emptyHalves.length > 0 || (baseReady && linkIncomplete) ? (
               // Every reason Start is off, not the first alone: an empty half's
               // line stood alone beside a dependency with no branch (D-146).
@@ -1162,7 +1172,9 @@ function NewReview() {
               </span>
             ) : (
               <span className="text-sm text-[var(--color-ink-muted)]">
-                The commits are pinned when the review starts.
+                {baseReady && preflightPending
+                  ? "The pre-flight is still working out what this review will examine."
+                  : "The commits are pinned when the review starts."}
               </span>
             )}
           </div>
