@@ -848,12 +848,23 @@ test("a branch reached by the keyboard shows that it has the focus", async ({ pa
       // whose border is the ring's colour, and a ring drawn over it only
       // thickened it by a pixel (review of the D-148 fixes).
       clearsBorder: style !== null && parseFloat(style.outlineOffset) >= 0,
+      // The room made for the ring is not taken from the rows: padded alone,
+      // the list set them 4px in from the model list's, at the card's edge
+      // (review of the D-149 fixes).
+      rowsAlignedWithModels:
+        box !== undefined &&
+        Math.abs(
+          box.left -
+            (document.querySelector('[data-testid="model-picker"] label')?.getBoundingClientRect()
+              .left ?? NaN),
+        ) < 0.5,
     };
   });
   expect(focused.type).toBe("radio");
   expect(focused.outline).toBe("solid");
   expect(focused.inside).toBe(true);
   expect(focused.clearsBorder).toBe(true);
+  expect(focused.rowsAlignedWithModels).toBe(true);
 });
 
 test("a branch reached by the keyboard below the list's fold is scrolled into view", async ({

@@ -653,7 +653,7 @@ function NewReview() {
                 Fetching the latest branches...
               </p>
             ) : (
-              <ul className="max-h-72 overflow-y-auto p-1">
+              <ul className="-mx-1 max-h-72 overflow-y-auto p-1">
                 {shown.map((branch) => (
                   <li key={branch.name}>
                     {/* Relative, so the hidden radio is placed inside its label and
