@@ -137,6 +137,25 @@ export function ConfirmationQueue({
   // something the screen renders.
   const pendingG = useRef(false);
   const sectionRef = useRef<HTMLElement>(null);
+  const completeRef = useRef<HTMLButtonElement>(null);
+
+  // The last decision took the focused control with it and focus fell to the
+  // page, leaving the keyboard nowhere to go (5.14, audit U12). Complete
+  // review is where the work goes next; it takes the focus once the decision
+  // has settled and the button is on, unless the person has gone elsewhere.
+  const lastDecided = useRef(false);
+  const wereUndecided = useRef(undecided.length > 0);
+  useEffect(() => {
+    // A decision undone before the last one settled leaves nothing to move to.
+    if (undecided.length > 0) lastDecided.current = false;
+    else if (wereUndecided.current) lastDecided.current = true;
+    wereUndecided.current = undecided.length > 0;
+    if (!lastDecided.current || busy) return;
+    lastDecided.current = false;
+    if (document.activeElement === null || document.activeElement === document.body) {
+      completeRef.current?.focus();
+    }
+  }, [undecided.length, busy]);
 
   // A mouse click on one of the queue's buttons leaves no focus on it, so the
   // keyboard drives the queue after the mouse has been used: kept on a
@@ -379,6 +398,7 @@ export function ConfirmationQueue({
                 .join(", ") + " left to decide"}
         </p>
         <Button
+          ref={completeRef}
           variant="primary"
           onClick={() => void complete()}
           disabled={undecided.length > 0 || busy}

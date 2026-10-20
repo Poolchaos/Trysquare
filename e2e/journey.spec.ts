@@ -559,6 +559,9 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByRole("button", { name: "Complete review" })).toBeEnabled({
       timeout: 30_000,
     });
+    // Where the work goes next has the focus: it fell to the page with the
+    // last decision, and the keyboard had nowhere to go (5.14, audit U12).
+    await expect(page.getByRole("button", { name: "Complete review" })).toBeFocused();
 
     // Held for the report assertion below: every finding is decided now, and
     // exactly one of them was dismissed.

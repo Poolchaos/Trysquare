@@ -62,7 +62,7 @@ export function Select(props: React.ComponentPropsWithRef<"select">) {
 export function Button({
   variant = "secondary",
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+}: React.ComponentProps<"button"> & {
   variant?: "primary" | "secondary" | "quiet";
 }) {
   const styles = {
