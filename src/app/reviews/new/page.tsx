@@ -522,6 +522,10 @@ function NewReview() {
     included !== "" &&
     (!linkRead || linkProblem !== "" || linkFrom === "" || linkIntoBranch === "");
   const baseReady = fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetId !== "";
+  // The profile the chosen model is registered for, from the models read:
+  // taken from the pre-flight, it went whenever an answer was pending, and
+  // the downgrade list widened to profiles the server refuses (D-147).
+  const modelProfile = models.find((row) => row.id === model)?.profileId ?? null;
   // A half with no change ran and read as clean (D-145).
   const emptyHalves = preflight
     ? [
@@ -873,14 +877,14 @@ function NewReview() {
                 >
                   <option value="">
                     The model&apos;s own
-                    {preflight?.modelProfile ? ` (${preflight.modelProfile})` : ""}
+                    {modelProfile ? ` (${modelProfile})` : ""}
                   </option>
                   {["chunked", "decomposed"]
                     .filter((candidate) => {
                       // Only genuine downgrades are offered: the server refuses
                       // anything stronger than the model is registered for.
                       const rank = ["full-context", "chunked", "decomposed"];
-                      const base = preflight?.modelProfile ?? "full-context";
+                      const base = modelProfile ?? "full-context";
                       return rank.indexOf(candidate) > rank.indexOf(base);
                     })
                     .map((candidate) => (

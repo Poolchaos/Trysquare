@@ -659,6 +659,37 @@ test("ticking a dependency with no branch chosen asks the pre-flight nothing new
   await stopWithLink();
 });
 
+test("the profile picker names the model's profile while a pre-flight is pending", async ({
+  page,
+}) => {
+  // Read from the pre-flight, it went whenever an answer was pending, and
+  // the downgrade list widened to profiles the server refuses (D-147).
+  await fillANewReview(page);
+  await page.getByText("Advanced", { exact: true }).click();
+  const own = page.getByTestId("profile-override").locator("option").first();
+  await expect(own).toHaveText(/The model's own \([a-z-]+\)/);
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stopHolding = await answerOnce(page, "**/api/reviews/preflight", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.getByTestId("profile-override").selectOption("decomposed");
+  await expect(page.getByText("Working out what this review will examine...")).toBeVisible();
+  await expect(own).toHaveText(/The model's own \([a-z-]+\)/);
+  // Answered before the route goes: removed first, it let the held request
+  // through under the answer still being made.
+  const answered = page.waitForResponse((response) =>
+    response.url().endsWith("/api/reviews/preflight"),
+  );
+  release();
+  await answered;
+  await stopHolding();
+  await page.getByTestId("profile-override").selectOption("");
+});
+
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
   page,
 }) => {
