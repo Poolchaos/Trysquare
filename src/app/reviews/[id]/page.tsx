@@ -364,6 +364,13 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   // minimized, not a flag, so the next run (a new startedAt) opens on the
   // theater again without an effect having to reset anything.
   const [minimizedRun, setMinimizedRun] = useState<string | null>(null);
+  // Hidden, the theater took the focus with it and left it on the page, so
+  // Tab began again from the top (review of the D-147 fixes). It goes to
+  // Scan view, which brings the theater back.
+  const scanViewRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (minimizedRun !== null) scanViewRef.current?.focus();
+  }, [minimizedRun]);
   // Ticks only while something is running, so a finished review is not
   // re-rendered once a second forever.
   const [now, setNow] = useState(() => Date.now());
@@ -790,7 +797,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         actions={
           <>
             {snapshot.running ? (
-              <Button variant="quiet" onClick={() => setMinimizedRun(null)}>
+              <Button ref={scanViewRef} variant="quiet" onClick={() => setMinimizedRun(null)}>
                 Scan view
               </Button>
             ) : null}

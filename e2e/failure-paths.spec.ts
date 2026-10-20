@@ -872,6 +872,9 @@ test("the scan theater is a dialog the keyboard stays in", async ({ page }) => {
   }
   await page.keyboard.press("Escape");
   await expect(theater).toHaveCount(0);
+  // Hidden, it left the focus on the page, and Tab began again from the top
+  // (review of the D-147 fixes). Scan view brings the theater back.
+  await expect(page.getByRole("button", { name: "Scan view" })).toBeFocused();
 
   // Cancelled, so it does not run on into the suites after.
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
