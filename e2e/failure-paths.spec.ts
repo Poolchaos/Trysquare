@@ -712,6 +712,71 @@ test("a review the pre-flight says would refuse cannot be started", async ({ pag
   await stopRefusing();
 });
 
+test("a pre-flight that says it would refuse leaves the other reasons beside Start", async ({
+  page,
+  request,
+}) => {
+  // Its line stood alone beside a dependency with no branch chosen, the
+  // class of D-146's one reason of two (review of the D-147 fixes).
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const withLink = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        links: [
+          {
+            id: "LINK123",
+            dependencyProjectId: "DEP123",
+            dependencyName: "shared-core",
+            packageName: "@acme/core",
+          },
+        ],
+      },
+    });
+  };
+  const stopWithLink = await routeUntilStopped(page, `**/api/projects/${app.id}`, withLink);
+  const branch = (name: string) => ({
+    name,
+    commit: "a".repeat(40),
+    subject: name,
+    committedAt: "2026-10-01T00:00:00Z",
+    ahead: 0,
+    behind: 0,
+  });
+  const stopBranches = await answerOnce(page, "**/api/projects/DEP123/branches", (route) =>
+    route.fulfill({
+      status: 200,
+      json: { branches: [branch("main"), branch("release")], defaultBranch: "main" },
+    }),
+  );
+  const refusing = async (route: Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: { ...body, sweepProblems: ["(unclosed: the pattern is not valid"] },
+    });
+  };
+  const stopRefusing = await routeUntilStopped(page, "**/api/reviews/preflight", refusing);
+  await fillANewReview(page);
+  await page.getByLabel(/Include shared-core/).check();
+  await expect(
+    page.getByText(
+      "The pre-flight says this review would refuse to start: see above. Choose the dependency's branch, or untick it.",
+      { exact: true },
+    ),
+  ).toBeVisible({ timeout: 30_000 });
+  await stopBranches();
+  await stopRefusing();
+  await stopWithLink();
+});
+
 test("Start waits for the pre-flight of the choices on screen", async ({ page }) => {
   // On beside "Working out what this review will examine...", Start offered
   // a review whose pre-flight had not said what it would examine, nor

@@ -1143,17 +1143,17 @@ function NewReview() {
                   Rulesets
                 </Link>
               </span>
-            ) : wouldRefuse ? (
-              <span className="text-sm text-[var(--color-ink-muted)]">
-                The pre-flight says this review would refuse to start: see above.
-              </span>
-            ) : emptyHalves.length > 0 || (baseReady && linkIncomplete) ? (
+            ) : wouldRefuse || emptyHalves.length > 0 || (baseReady && linkIncomplete) ? (
               // Every reason Start is off, not the first alone: an empty half's
-              // line stood alone beside a dependency with no branch (D-146).
+              // line stood alone beside a dependency with no branch (D-146),
+              // and so did a refusal's (review of the D-147 fixes).
               // The dependency's only when the rest is ready: beside a branch
               // or a model not yet chosen it read as the only reason.
               <span className="text-sm text-[var(--color-ink-muted)]">
                 {[
+                  ...(wouldRefuse
+                    ? ["The pre-flight says this review would refuse to start: see above."]
+                    : []),
                   ...(emptyHalves.length > 0
                     ? ["The pre-flight found a half of this review with no change: see above."]
                     : []),
