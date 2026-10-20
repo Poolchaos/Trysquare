@@ -26,3 +26,36 @@ export async function answerOnce(
   await page.route(pattern, handler);
   return () => page.unroute(pattern, handler);
 }
+
+/**
+ * Answers every request matching `pattern` with `answer` until the returned
+ * function is called, which lets new requests through, waits for any answer
+ * still being made, and only then removes the route. Removed first, the route
+ * let a request still being answered through, and the answer's fulfill then
+ * failed: "Route is already handled!".
+ *
+ * A test that ended with one still fetching failed, its response disposed
+ * under it, or failed the test after it (D-146): a pre-flight is asked again
+ * whenever a choice it depends on settles, so how many are in flight at a
+ * test's last line is not the test's to know.
+ */
+export async function routeUntilStopped(
+  page: Page,
+  pattern: string,
+  answer: (route: Route) => Promise<void>,
+): Promise<() => Promise<void>> {
+  const answering = new Set<Promise<void>>();
+  let stopping = false;
+  const handler = (route: Route) => {
+    if (stopping) return route.fallback();
+    const answered = answer(route);
+    answering.add(answered);
+    return answered.finally(() => answering.delete(answered));
+  };
+  await page.route(pattern, handler);
+  return async () => {
+    stopping = true;
+    await Promise.all(answering);
+    await page.unroute(pattern, handler);
+  };
+}
