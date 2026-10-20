@@ -132,4 +132,65 @@ describe("fetches into one clone", () => {
       vi.doUnmock("@/server/gitops/run");
     }
   }, 60_000);
+
+  it("never run two at once, however soon after one ends a caller asks", async () => {
+    // The fetches are the test's to end, so a caller can ask at each
+    // microtask after the first ends, before the one queued behind it has
+    // begun. With the cleanup's guards dropped, the entry went in that gap
+    // and the caller began a fetch beside the queued one (review of the
+    // D-148 fixes).
+    for (let offset = 0; offset < 8; offset += 1) {
+      vi.resetModules();
+      const ends: (() => void)[] = [];
+      const ended: number[] = [];
+      let begun = 0;
+      let running = 0;
+      let most = 0;
+      vi.doMock("@/server/gitops/run", async (importOriginal) => {
+        const actual = await importOriginal<typeof import("@/server/gitops/run")>();
+        return {
+          ...actual,
+          git: (...args: Parameters<typeof actual.git>) => {
+            if (args[0][0] !== "fetch") return actual.git(...args);
+            const number = (begun += 1);
+            running += 1;
+            most = Math.max(most, running);
+            return new Promise<string>((resolve) =>
+              ends.push(() => {
+                running -= 1;
+                ended.push(number);
+                resolve("");
+              }),
+            );
+          },
+        };
+      });
+      try {
+        const queued = await import("@/server/gitops/repo");
+        // The third asks from the first caller's own continuation, which waits
+        // on the first fetch from before the second was asked for: it runs
+        // between the first fetch's cleanup and the next one's start, and
+        // whatever it queues lands between them, where nothing else can.
+        let servedByLater = false;
+        const first = queued.fetchAll(clone).then(async () => {
+          for (let tick = 0; tick < offset; tick += 1) await Promise.resolve();
+          const begunBefore = begun;
+          await queued.fetchAll(clone);
+          servedByLater = ended.some((number) => number > begunBefore);
+        });
+        const asked = [first, queued.fetchAll(clone)];
+        ends.shift()!();
+        let settled = false;
+        void Promise.all(asked).then(() => (settled = true));
+        while (!settled) {
+          await new Promise((resolve) => setImmediate(resolve));
+          ends.shift()?.();
+        }
+        expect({ offset, most }).toEqual({ offset, most: 1 });
+        expect({ offset, servedByLater }).toEqual({ offset, servedByLater: true });
+      } finally {
+        vi.doUnmock("@/server/gitops/run");
+      }
+    }
+  }, 60_000);
 });
