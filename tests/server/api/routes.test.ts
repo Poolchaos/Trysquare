@@ -906,7 +906,9 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
     process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: true, authMethod: "api_key" });
     try {
       expect(await notShown(await create(), "perToken", before)).toMatch(
-        /This review will cost API usage, billed per token/,
+        // Only what is so: a Resume never asks before it is pressed, so
+        // nothing changed and no check failed (review of the D-162 fixes).
+        /^This review will cost API usage, billed per token, which this page had not said yet. Read the notice, then press again.$/,
       );
       // Saying it may is not saying it will.
       await notShown(await create({ billingShown: "maybePerToken" }), "perToken", before);
@@ -924,7 +926,7 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
     });
     try {
       expect(await notShown(await create(), "maybePerToken", before)).toMatch(
-        /This review may cost API usage, billed per token/,
+        /^This review may cost API usage, billed per token, which this page had not said yet./,
       );
       expect((await create({ billingShown: "maybePerToken" })).status).toBe(201);
       expect((await create({ billingShown: "perToken" })).status).toBe(201);

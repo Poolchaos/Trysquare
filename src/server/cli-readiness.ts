@@ -68,9 +68,10 @@ export function billingNotShown(
   return Response.json(
     {
       error:
+        // No cause is guessed: a Resume asks nothing before it is pressed, so
+        // there nothing changed and no check failed (review of the D-162 fixes).
         `This review ${cli.state === "perToken" ? "will" : "may"} cost API usage, billed per ` +
-        "token, which this page had not said: the CLI's sign-in changed since it opened, or " +
-        "could not be checked. Read the notice, then start again.",
+        "token, which this page had not said yet. Read the notice, then press again.",
       code: "BillingNotShown",
       cli,
       signIn,

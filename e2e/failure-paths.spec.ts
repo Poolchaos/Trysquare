@@ -2423,7 +2423,8 @@ test("a sign-in billing per token that a page had not shown is refused, shown, t
     await route.fulfill({
       status: 409,
       json: {
-        error: "This review will cost API usage, billed per token, which this page had not said.",
+        error:
+          "This review will cost API usage, billed per token, which this page had not said yet. Read the notice, then press again.",
         code: "BillingNotShown",
         cli: { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
         signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
@@ -2464,7 +2465,7 @@ test("a sign-in billing per token that a page had not shown is refused, shown, t
             status: 409,
             json: {
               error:
-                "This review may cost API usage, billed per token, which this page had not said.",
+                "This review may cost API usage, billed per token, which this page had not said yet. Read the notice, then press again.",
               code: "BillingNotShown",
               cli: {
                 state: "maybePerToken",
