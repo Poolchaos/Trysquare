@@ -324,7 +324,7 @@ export default function SettingsPage() {
                 ) : cli.state === "perToken" ? (
                   <p className="text-[var(--color-warning)]">
                     {cli.authMethod === undefined
-                      ? "Signed in, but the CLI did not say how, so whether runs draw on a subscription or bill per token is not known. Reviews still run."
+                      ? "Signed in, but the CLI did not say how, so whether reviews draw on a subscription or bill per token is not known. Reviews still run."
                       : `Signed in, but this sign-in (${cli.authMethod}) bills per token rather than drawing on a subscription. Reviews still run.`}
                   </p>
                 ) : (

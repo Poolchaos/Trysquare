@@ -2119,6 +2119,11 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
       { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
       "bills per token rather than drawing on a subscription. Reviews still run.",
     ],
+    [
+      // No method named: how it bills is not claimed (review of the D-153 fixes).
+      { state: "perToken", path: "/opt/claude", version: "2.1.301" },
+      "the CLI did not say how, so whether reviews draw on a subscription or bill per token is not known.",
+    ],
   ];
   for (const [cli, said] of answers) {
     const stop = await answerOnce(page, "**/api/auth", (route) =>
@@ -2129,6 +2134,17 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
     await stop();
   }
   await expect(status).toContainText("/opt/claude, 2.1.301");
+  // A CLI that could not be found named none, so no path line is drawn.
+  const stopNoPath = await answerOnce(page, "**/api/auth", (route) =>
+    route.fulfill({
+      status: 200,
+      json: { cli: { state: "cannotRun", message: "the guard refused it." } },
+    }),
+  );
+  await check.click();
+  await expect(status).toContainText("the guard refused it.");
+  await expect(status).not.toContainText("/opt/claude");
+  await stopNoPath();
   const stop = await answerOnce(page, "**/api/auth", (route) =>
     route.fulfill({ status: 500, json: { error: "The server could not run the check." } }),
   );
