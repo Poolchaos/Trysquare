@@ -2121,8 +2121,23 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
     ],
     [
       // No method named: how it bills is not claimed (review of the D-153 fixes).
-      { state: "perToken", path: "/opt/claude", version: "2.1.301" },
-      "the CLI did not say how: unless it is your Claude subscription, reviews will cost API usage, billed per token.",
+      { state: "maybePerToken", path: "/opt/claude", version: "2.1.301" },
+      "the CLI did not say how: unless it is your Claude subscription, reviews may cost API usage, billed per token.",
+    ],
+    [
+      // Nor for a token with no source named, which may be a subscription's
+      // (review of D-161).
+      {
+        state: "maybePerToken",
+        path: "/opt/claude",
+        version: "2.1.301",
+        authMethod: "oauth_token",
+      },
+      "Signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other may cost API usage, billed per token.",
+    ],
+    [
+      { state: "maybePerToken", path: "/opt/claude", version: "2.1.301", authMethod: "newer" },
+      "Signed in (newer), a way this app does not know: unless it is your Claude subscription, reviews may cost API usage, billed per token.",
     ],
   ];
   for (const [cli, said] of answers) {
@@ -2272,4 +2287,29 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
   await expect(notice).toContainText("npm run claude -- auth login");
   await expect(page.getByRole("button", { name: "Start review" })).toBeEnabled();
   await stop();
+
+  // A token whose source the CLI does not name may be a subscription's, so
+  // the notice says it may cost, not that it will (review of D-161).
+  const stopToken = await routeUntilStopped(page, "**/api/auth", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        cli: {
+          state: "maybePerToken",
+          path: "/opt/claude",
+          version: "2.1.301",
+          authMethod: "oauth_token",
+        },
+        signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+      },
+    }),
+  );
+  await fillANewReview(page);
+  await expect(notice).toContainText("This review may cost API usage, billed per token.");
+  await expect(notice).toContainText("(oauth_token)");
+  await expect(notice).toContainText("claude setup-token");
+  await expect(notice).not.toContainText("will cost");
+  // A token set for the CLI wins over a sign-in, so none is offered.
+  await expect(notice).not.toContainText("auth login");
+  await stopToken();
 });

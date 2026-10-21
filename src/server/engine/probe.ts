@@ -30,6 +30,12 @@ const authStatusSchema = z
   })
   .passthrough();
 
+const PER_TOKEN_METHODS: ReadonlySet<string> = new Set([
+  "api_key",
+  "api_key_helper",
+  "third_party",
+]);
+
 /**
  * Which CLI reviews run through and whether it can, each answer its own.
  * They all read "Not signed in." once, which sent a person to sign in to a
@@ -42,10 +48,21 @@ export type CliStatus =
   | { state: "signedOut"; path: string; version: string; configDirectory?: string }
   /**
    * Signed in some other way than a subscription: a warning, not a block
-   * (D-92). No method when the CLI did not say one.
+   * (D-92).
    */
   | {
       state: "perToken";
+      path: string;
+      version: string;
+      authMethod: string;
+      configDirectory?: string;
+    }
+  /**
+   * Signed in a way that may be a subscription or may not. No method when the
+   * CLI did not say one.
+   */
+  | {
+      state: "maybePerToken";
       path: string;
       version: string;
       authMethod?: string;
@@ -192,11 +209,24 @@ export async function readCliStatus(
   const configDirectory =
     typeof status.configDirectory === "string" ? { configDirectory: status.configDirectory } : {};
   if (!status.loggedIn) return { state: "signedOut", path, version, ...configDirectory };
-  // A subscription sign-in reports claude.ai as its method; an API key
-  // reports something else, and that changes how the user is billed.
+  // A subscription sign-in reports claude.ai as its method, and a key or
+  // another provider one of these. 2.1.301 reports oauth_token for any other
+  // token, both one `claude setup-token` made ("requires Claude
+  // subscription") and a Console profile's, so that, a method unknown to
+  // this list, and none at all may or may not bill per token (review of
+  // D-161).
   if (status.authMethod !== "claude.ai") {
+    if (status.authMethod !== undefined && PER_TOKEN_METHODS.has(status.authMethod)) {
+      return {
+        state: "perToken",
+        path,
+        version,
+        authMethod: status.authMethod,
+        ...configDirectory,
+      };
+    }
     return {
-      state: "perToken",
+      state: "maybePerToken",
       path,
       version,
       ...(status.authMethod === undefined ? {} : { authMethod: status.authMethod }),

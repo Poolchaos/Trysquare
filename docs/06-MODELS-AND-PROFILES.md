@@ -33,14 +33,18 @@ Both checks are free, and each is an explicit action, as D-31 keeps every
 CLI call. The check names the CLI's path and version and tells apart a CLI
 not found, one that cannot run (with the real error: too old, not
 executable, an answer that is not its status, no answer in time), signed
-out, signed in some way that bills per token (a warning; reviews still run,
-D-92), and a subscription. ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN and the
-paid providers' selectors and keys (CLAUDE_CODE_USE_BEDROCK, _VERTEX,
-_FOUNDRY, _ANTHROPIC_AWS, _ANTHROPIC_GOOGLE_CLOUD, _MANTLE and _GATEWAY,
-AWS_BEARER_TOKEN_BEDROCK, ANTHROPIC_FOUNDRY_API_KEY, ANTHROPIC_AWS_API_KEY)
-are kept from every CLI the app starts, so reviews draw on the subscription
-sign-in by default; a key signed into the CLI itself is what is left to bill
-per token, and the app warns of it (D-161). ANTHROPIC_BASE_URL still passes:
+out, signed in some way that bills per token (a key, an `apiKeyHelper` or
+another provider: a warning; reviews still run, D-92), signed in some way
+that may (an `oauth_token`, which 2.1.301 reports both for a token
+`claude setup-token` made and for a Console profile, an unknown method, or
+none said: a warning that says "may"), and a subscription.
+ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN and the paid providers' selectors
+and keys (CLAUDE_CODE_USE_BEDROCK, _VERTEX, _FOUNDRY, _ANTHROPIC_AWS,
+_ANTHROPIC_GOOGLE_CLOUD, _MANTLE and _GATEWAY, AWS_BEARER_TOKEN_BEDROCK,
+ANTHROPIC_FOUNDRY_API_KEY, ANTHROPIC_AWS_API_KEY) are kept from every CLI
+the app starts, so reviews draw on the subscription sign-in by default;
+what is left to bill per token is how the CLI itself is signed in, and the
+app warns of it (D-161). ANTHROPIC_BASE_URL still passes:
 what it does beside a claude.ai sign-in is unmeasured. The app never reads,
 copies, or logs the credentials themselves.
 

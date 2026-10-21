@@ -43,7 +43,7 @@ afterAll(() => {
 describe.skipIf(!ENABLED)("against the real CLI", () => {
   it("reports how the CLI is authenticated", async () => {
     const status = await readCliStatus();
-    expect(["subscription", "perToken"]).toContain(status.state);
+    expect(["subscription", "perToken", "maybePerToken"]).toContain(status.state);
   }, 60_000);
 
   it("never reports a real model as unavailable", async () => {

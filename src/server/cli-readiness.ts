@@ -55,6 +55,7 @@ function refusalOf(cli: CliStatus, signIn: SignIn): string | null {
         "Then start the review again."
       );
     case "perToken":
+    case "maybePerToken":
     case "subscription":
       return null;
   }

@@ -275,9 +275,23 @@ export function POST(request: Request): Promise<Response> {
         kind: "note",
         // As strict as the notice beside Start (D-161).
         message:
-          "This review costs API usage, billed per token: the CLI is signed in" +
-          (cli.authMethod === undefined ? "" : ` (${cli.authMethod})`) +
-          " some other way than a Claude subscription.",
+          `This review costs API usage, billed per token: the CLI is signed in ` +
+          `(${cli.authMethod}) some other way than a Claude subscription.`,
+      });
+    }
+    if (cli?.state === "maybePerToken") {
+      appendRunNote(db, review.id, {
+        kind: "note",
+        message:
+          cli.authMethod === "oauth_token"
+            ? "This review may cost API usage, billed per token: the CLI is signed in with a " +
+              "token (oauth_token). One made by claude setup-token draws on a Claude " +
+              "subscription, and any other may not."
+            : "This review may cost API usage, billed per token: " +
+              (cli.authMethod === undefined
+                ? "the CLI did not say how it is signed in"
+                : `the CLI is signed in (${cli.authMethod}), a way this app does not know`) +
+              ", and unless that is a Claude subscription, it bills per token.",
       });
     }
     if (resolution.downgradedFrom !== null) {

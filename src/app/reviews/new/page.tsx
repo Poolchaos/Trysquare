@@ -222,7 +222,13 @@ function NewReview() {
   // is said before Start, while it can still be changed, not in a run note
   // on a review already billing (D-161). Anything else the CLI cannot do is
   // refused at Start, with its reason (MVP 6.2).
-  const [perToken, setPerToken] = useState<{ authMethod?: string; signIn?: SignIn } | null>(null);
+  const [perToken, setPerToken] = useState<{
+    surely: boolean;
+    why: string;
+    /** Whether signing in would help: a token set for the CLI wins over a sign-in. */
+    remedy: boolean;
+    signIn?: SignIn;
+  } | null>(null);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -231,9 +237,22 @@ function NewReview() {
         {},
         "The CLI could not be checked",
       );
-      if (cancelled || !sent.ok || sent.body.cli.state !== "perToken") return;
+      if (cancelled || !sent.ok) return;
+      const { state, authMethod } = sent.body.cli;
+      if (state !== "perToken" && state !== "maybePerToken") return;
+      const unknownWay =
+        authMethod === undefined
+          ? "The CLI did not say how it is signed in"
+          : `The CLI is signed in (${authMethod}), a way this app does not know`;
       setPerToken({
-        ...(sent.body.cli.authMethod === undefined ? {} : { authMethod: sent.body.cli.authMethod }),
+        surely: state === "perToken",
+        why:
+          state === "perToken"
+            ? `The CLI is signed in (${authMethod}) some other way than your Claude subscription, so a review draws on paid API usage rather than your plan's usage limits.`
+            : authMethod === "oauth_token"
+              ? "The CLI is signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other on paid API usage."
+              : `${unknownWay}: unless it is your Claude subscription, a review draws on paid API usage rather than your plan's usage limits.`,
+        remedy: authMethod !== "oauth_token",
         ...(sent.body.signIn === undefined ? {} : { signIn: sent.body.signIn }),
       });
     })();
@@ -1166,17 +1185,18 @@ function NewReview() {
               data-testid="per-token-notice"
               className="rounded-md border border-[var(--color-warning)] bg-[var(--color-warning-soft)] p-3 text-sm"
             >
-              <p className="font-medium">This review will cost API usage, billed per token.</p>
-              <p className="mt-1 text-xs">
-                The CLI is signed in
-                {perToken.authMethod === undefined ? "" : ` (${perToken.authMethod})`} some other
-                way than your Claude subscription, so a review draws on paid API usage rather than
-                your plan&apos;s usage limits.
-                {perToken.signIn === undefined
-                  ? " Sign it in with your Claude account to use the subscription."
-                  : ` To use the subscription, sign it in with your Claude account ${signInPlaceWords(perToken.signIn.place)}:`}
+              <p className="font-medium">
+                This review {perToken.surely ? "will" : "may"} cost API usage, billed per token.
               </p>
-              {perToken.signIn === undefined ? null : (
+              <p className="mt-1 text-xs">
+                {perToken.why}
+                {!perToken.remedy
+                  ? ""
+                  : perToken.signIn === undefined
+                    ? " Sign it in with your Claude account to use the subscription."
+                    : ` To use the subscription, sign it in with your Claude account ${signInPlaceWords(perToken.signIn.place)}:`}
+              </p>
+              {!perToken.remedy || perToken.signIn === undefined ? null : (
                 <p className="mt-1 text-xs">
                   <Mono className="break-all">{perToken.signIn.command}</Mono>
                 </p>

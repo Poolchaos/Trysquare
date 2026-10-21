@@ -29,7 +29,8 @@ type CliStatus =
   | { state: "notFound"; message: string }
   | { state: "cannotRun"; path?: string; version?: string; message: string }
   | { state: "signedOut"; path: string; version: string; configDirectory?: string }
-  | { state: "perToken"; path: string; version: string; authMethod?: string }
+  | { state: "perToken"; path: string; version: string; authMethod: string }
+  | { state: "maybePerToken"; path: string; version: string; authMethod?: string }
   | { state: "subscription"; path: string; version: string; subscriptionType?: string };
 
 /** "max" as the CLI reports it, "Max plan's" as a person reads it. */
@@ -344,16 +345,23 @@ export default function SettingsPage() {
                       </>
                     )}
                   </>
-                ) : cli.state === "perToken" ? (
+                ) : cli.state === "perToken" || cli.state === "maybePerToken" ? (
                   // As strict as the notice beside Start: reviews still run,
                   // and they cost API usage (D-161).
                   <>
                     <p className="font-medium text-[var(--color-warning)]">
-                      {cli.authMethod === undefined
-                        ? "Signed in, but the CLI did not say how: unless it is your Claude subscription, reviews will cost API usage, billed per token."
-                        : `Signed in (${cli.authMethod}) some other way than your Claude subscription: reviews will cost API usage, billed per token.`}
+                      {cli.state === "perToken"
+                        ? `Signed in (${cli.authMethod}) some other way than your Claude subscription: reviews will cost API usage, billed per token.`
+                        : cli.authMethod === "oauth_token"
+                          ? "Signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other may cost API usage, billed per token."
+                          : cli.authMethod === undefined
+                            ? "Signed in, but the CLI did not say how: unless it is your Claude subscription, reviews may cost API usage, billed per token."
+                            : `Signed in (${cli.authMethod}), a way this app does not know: unless it is your Claude subscription, reviews may cost API usage, billed per token.`}
                     </p>
-                    {signIn === null ? null : (
+                    {/* A token set for the CLI wins over a sign-in, so for one
+                        the sign-in command would change nothing. */}
+                    {signIn === null ||
+                    (cli.state === "maybePerToken" && cli.authMethod === "oauth_token") ? null : (
                       <>
                         <p className="text-xs text-[var(--color-ink-muted)]">
                           To use the subscription, sign it in with your Claude account{" "}

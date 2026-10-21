@@ -80,10 +80,25 @@ describe("the CLI's status", () => {
   it("does not say how a sign-in bills when the CLI did not say how it signed in", async () => {
     process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: true });
     expect(await readCliStatus({ claudePath: FAKE_CLI })).toEqual({
-      state: "perToken",
+      state: "maybePerToken",
       path: FAKE_CLI,
       version: "2.1.301 (Claude Code)",
     });
+  });
+
+  it("may bill per token, not surely, for a token the CLI names no source of", async () => {
+    // 2.1.301 reports oauth_token both for CLAUDE_CODE_OAUTH_TOKEN, which
+    // `claude setup-token` makes and which "requires Claude subscription",
+    // and for a Console profile (review of D-161).
+    for (const authMethod of ["oauth_token", "something_newer"]) {
+      process.env.FAKE_CLAUDE_AUTH_STATUS = signedIn({ authMethod });
+      expect(await readCliStatus({ claudePath: FAKE_CLI })).toEqual({
+        state: "maybePerToken",
+        path: FAKE_CLI,
+        version: "2.1.301 (Claude Code)",
+        authMethod,
+      });
+    }
   });
 
   it("is signed out when the CLI says so, though it exits 1 saying it", async () => {
@@ -110,14 +125,16 @@ describe("the CLI's status", () => {
     });
   });
 
-  it("bills per token when signed in another way than a subscription", async () => {
-    process.env.FAKE_CLAUDE_AUTH_STATUS = signedIn({ authMethod: "api_key" });
-    expect(await readCliStatus({ claudePath: FAKE_CLI })).toEqual({
-      state: "perToken",
-      path: FAKE_CLI,
-      version: "2.1.301 (Claude Code)",
-      authMethod: "api_key",
-    });
+  it("bills per token when signed in with a key or another provider", async () => {
+    for (const authMethod of ["api_key", "api_key_helper", "third_party"]) {
+      process.env.FAKE_CLAUDE_AUTH_STATUS = signedIn({ authMethod });
+      expect(await readCliStatus({ claudePath: FAKE_CLI })).toEqual({
+        state: "perToken",
+        path: FAKE_CLI,
+        version: "2.1.301 (Claude Code)",
+        authMethod,
+      });
+    }
   });
 
   it("draws on a subscription when signed in through claude.ai", async () => {

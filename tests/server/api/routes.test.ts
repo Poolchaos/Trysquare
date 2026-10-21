@@ -890,6 +890,26 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
     }
   }, 120_000);
 
+  it("says a token the CLI names no source of may bill per token, not that it does", async () => {
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({
+      loggedIn: true,
+      authMethod: "oauth_token",
+    });
+    try {
+      const response = await create();
+      expect(response.status).toBe(201);
+      const { review } = (await response.json()) as { review: { id: string } };
+      const detail = await routes.review.GET(new Request("http://localhost/x"), params(review.id));
+      const said = JSON.stringify(await detail.json());
+      expect(said).toMatch(
+        /This review may cost API usage, billed per token: the CLI is signed in with a token \(oauth_token\)/,
+      );
+      expect(said).not.toMatch(/This review costs API usage/);
+    } finally {
+      useSignedInFake();
+    }
+  }, 120_000);
+
   it("does not ask for an interactive review, which starts no CLI", async () => {
     process.env.TRYSQUARE_CLAUDE_PATH = "no-such-claude-anywhere";
     try {
