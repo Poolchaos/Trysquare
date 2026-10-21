@@ -14,6 +14,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 
@@ -36,15 +37,43 @@ const FORBIDDEN_PATHS = [
 const FORBIDDEN_CONTENT = [
   { pattern: /sally[-\s]?pos/i, why: "private product name" },
   { pattern: /pos-core/i, why: "private package name" },
-  // The maintainer's private POS working trees, by the names they sit under on
-  // their machine: one was named in a record of a measurement taken there
-  // (review of the D-154 fixes).
-  { pattern: /\bpos-app\b|pos-workspace|main app\/pos\b/i, why: "private working tree name" },
   { pattern: /popiadesk|peelgrims/i, why: "other private project names" },
   { pattern: /\bSAL-\d+\b/, why: "internal tracker identifier" },
   { pattern: /v2-app-location-/i, why: "internal deployed function identifier" },
   { pattern: /[a-z0-9._%+-]+@(?:proton|gmail|outlook|hotmail)\.[a-z]{2,}/i, why: "personal email" },
 ];
+
+/**
+ * Names that must not be published and must not be written here either, so
+ * they are kept as the sha256 of their words, lowercased and joined by one
+ * space. Each line is split into words at anything but a letter, digit or
+ * hyphen, so a slash, a backslash or spaces between them all read alike, and
+ * every run of one to three words is hashed and looked up. The maintainer's
+ * private working trees were once named by a literal pattern in this file,
+ * which this file's own exemption let through (reviews of the D-154 and
+ * D-155 fixes).
+ */
+const FORBIDDEN_HASHED = new Map([
+  ["ea86cfe70e64286053a80145909029fdd7a115debcade1be945a6770588844c2", "private working tree name"],
+  ["f8bfaff353fff3e6dca1733ca371960c1585d28d7e880cacf91b1757af7ccfbe", "private working tree name"],
+  ["e8a32f7a5f6d42e1e1c4a4ce73b6d2b60cecaf2e5d0e94c5936055272d508c9e", "private working tree name"],
+]);
+const HASHED_RUN = 3;
+
+function hashedNameIn(line) {
+  const words = line
+    .toLowerCase()
+    .split(/[^a-z0-9-]+/)
+    .filter(Boolean);
+  for (let start = 0; start < words.length; start += 1) {
+    for (let length = 1; length <= HASHED_RUN && start + length <= words.length; length += 1) {
+      const run = words.slice(start, start + length).join(" ");
+      const why = FORBIDDEN_HASHED.get(createHash("sha256").update(run).digest("hex"));
+      if (why !== undefined) return why;
+    }
+  }
+  return undefined;
+}
 
 /**
  * The real home directory leaks the machine's username, so it is forbidden.
@@ -132,6 +161,10 @@ for (const file of files) {
       if (pattern.test(line)) {
         violations.push(`${file}:${index + 1}: ${why}\n    ${line.trim().slice(0, 160)}`);
       }
+    }
+    const hashed = hashedNameIn(line);
+    if (hashed !== undefined) {
+      violations.push(`${file}:${index + 1}: ${hashed}\n    ${line.trim().slice(0, 160)}`);
     }
     const comparable = CASE_BLIND ? line.toLowerCase() : line;
     if (HOME_FORMS.some((form) => comparable.includes(form))) {
