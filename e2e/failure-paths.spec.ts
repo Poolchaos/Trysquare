@@ -2203,21 +2203,51 @@ test("Start refused for a CLI that cannot run says why, and stays on the form", 
   // review (MVP 6.2); the suite's own fake can, so the refusal is the route's
   // shape, answered here.
   await fillANewReview(page);
+  const signedOut = {
+    status: 409,
+    json: {
+      error:
+        "The Claude Code CLI at /opt/claude is not signed in, so the review cannot run. Sign it in from a terminal, in this project's directory, with the command below, then start the review again.",
+      code: "CliNotReady",
+      signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+    },
+  };
   const stop = await routeUntilStopped(page, "**/api/reviews", async (route) => {
     if (route.request().method() !== "POST") return route.fallback();
-    await route.fulfill({
-      status: 409,
-      json: {
-        error:
-          "The Claude Code CLI at /opt/claude is not signed in, so the review cannot run. Sign it in from a terminal, in this project's directory, with: npm run claude -- auth login Then start the review again.",
-        code: "CliNotReady",
-      },
-    });
+    await route.fulfill(signedOut);
   });
   await page.getByRole("button", { name: "Start review" }).click();
   await expect(page.getByText(/is not signed in, so the review cannot run/)).toBeVisible();
+  // On a line of its own, so it is copied without the sentence after it
+  // (review of D-161).
+  await expect(page.getByTestId("sign-in-command")).toHaveText("npm run claude -- auth login");
   await expect(page).toHaveURL(/\/reviews\/new/);
   await stop();
+
+  // And a draft's own Start, refused the same way: the real server makes the
+  // review, and its first start is refused for this test, leaving a draft.
+  const stopFirstStart = await answerOnce(page, "**/api/reviews/*/start", (route) =>
+    route.fulfill({ status: 500, json: { error: "Refused for this test.", code: "Test" } }),
+  );
+  const creation = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/reviews" && response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Start review" }).click();
+  const { review } = (await (await creation).json()) as { review: { id: string } };
+  await expect(page.getByText("Refused for this test.")).toBeVisible();
+  await stopFirstStart();
+  const stopStarts = await routeUntilStopped(page, "**/api/reviews/*/start", (route) =>
+    route.fulfill(signedOut),
+  );
+  await page.goto(`/reviews/${review.id}`);
+  const draftStart = page.getByRole("button", { name: "Start review" });
+  await expect(draftStart).toBeVisible({ timeout: 30_000 });
+  await draftStart.click();
+  await expect(page.getByText(/is not signed in, so the review cannot run/)).toBeVisible();
+  await expect(page.getByTestId("sign-in-command")).toHaveText("npm run claude -- auth login");
+  await stopStarts();
+  expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
 });
 
 test("a signed-out CLI's check shows the command that signs it in", async ({ page }) => {

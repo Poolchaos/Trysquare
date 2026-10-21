@@ -37,9 +37,16 @@ export async function cliReadiness(db: Db): Promise<CliReadiness> {
   return { cli, signIn, refusal: refusalOf(cli, signIn) };
 }
 
-/** The 409 a route answers for a CLI that cannot run a review. */
-export function cliNotReady(refusal: string): Response {
-  return Response.json({ error: refusal, code: "CliNotReady" }, { status: 409 });
+/**
+ * The 409 a route answers for a CLI that cannot run a review, with the
+ * command that signs it in apart from the words, for a page to set on a line
+ * of its own (review of D-161).
+ */
+export function cliNotReady({ cli, signIn, refusal }: CliReadiness): Response {
+  return Response.json(
+    { error: refusal, code: "CliNotReady", ...(cli.state === "signedOut" ? { signIn } : {}) },
+    { status: 409 },
+  );
 }
 
 /** How a page said a review bills, sent with its Create and Start. */
@@ -105,12 +112,12 @@ function refusalOf(cli: CliStatus, signIn: SignIn): string | null {
     case "cannotRun":
       return `The Claude Code CLI cannot run the review: ${cli.message} Check the CLI on Settings.`;
     case "signedOut":
-      // Said where to run it, as Settings says it, and the command set apart
-      // from the sentence (review of the 6.2 and 6.3 changes).
+      // Said where to run it, as Settings says it. The command itself is in
+      // the refusal's body, not run into these words (review of D-161).
       return (
         `The Claude Code CLI at ${cli.path} is not signed in, so the review cannot run. ` +
-        `Sign it in ${signInPlaceWords(signIn.place)} with: ${signIn.command} ` +
-        "Then start the review again."
+        `Sign it in ${signInPlaceWords(signIn.place)} with the command below, then start ` +
+        "the review again."
       );
     case "perToken":
     case "maybePerToken":

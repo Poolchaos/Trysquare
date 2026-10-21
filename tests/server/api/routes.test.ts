@@ -829,10 +829,15 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
 
   async function refused(response: Response, words: RegExp, before: number) {
     expect(response.status).toBe(409);
-    const body = (await response.json()) as { error: string; code: string };
+    const body = (await response.json()) as {
+      error: string;
+      code: string;
+      signIn?: { command: string };
+    };
     expect(body.code).toBe("CliNotReady");
     expect(body.error).toMatch(words);
     expect(await reviewCount()).toBe(before);
+    return body;
   }
 
   it("refuses, creating nothing, when no CLI is found", async () => {
@@ -864,12 +869,15 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
     process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: false, authMethod: "none" });
     try {
       // And with the command that signs it in, the fake's own, a script that
-      // runs under Node (MVP 6.3).
-      await refused(
+      // runs under Node (MVP 6.3), apart from the words: run into them, it
+      // was copied with "Then start the review again." (review of D-161).
+      const body = await refused(
         await create(),
-        /is not signed in.*Sign it in (in PowerShell|from a terminal) with: node '.*fake-claude\.mjs' auth login Then start the review again\./,
+        /is not signed in.*Sign it in (in PowerShell|from a terminal) with the command below, then start the review again\.$/,
         before,
       );
+      expect(body.error).not.toMatch(/auth login/);
+      expect(body.signIn?.command).toMatch(/^node '.*fake-claude\.mjs' auth login$/);
     } finally {
       useSignedInFake();
     }
@@ -977,9 +985,14 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
         params(review.id),
       );
       expect(response.status).toBe(409);
-      const body = (await response.json()) as { error: string; code: string };
+      const body = (await response.json()) as {
+        error: string;
+        code: string;
+        signIn?: { command: string };
+      };
       expect(body.code).toBe("CliNotReady");
-      expect(body.error).toMatch(/is not signed in.*Sign it in .* with: /);
+      expect(body.error).toMatch(/is not signed in.*Sign it in .* with the command below/);
+      expect(body.signIn?.command).toMatch(/auth login$/);
       const detail = (await (
         await routes.review.GET(new Request("http://localhost/x"), params(review.id))
       ).json()) as { review: { status: string } };

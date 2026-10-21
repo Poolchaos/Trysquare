@@ -133,7 +133,7 @@ export function POST(request: Request): Promise<Response> {
     // engine starts no CLI.
     const headless = (input.engineMode ?? "headless") === "headless";
     const readiness = headless ? await cliReadiness(db) : null;
-    if (readiness?.refusal) throw cliNotReady(readiness.refusal);
+    if (readiness?.refusal) throw cliNotReady(readiness);
     // Asked here as well as at Start, so a page refused for it leaves no draft.
     const unshown = readiness === null ? null : billingNotShown(readiness, input.billingShown);
     if (unshown !== null) throw unshown;

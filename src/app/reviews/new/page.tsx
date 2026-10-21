@@ -34,7 +34,7 @@ import {
 } from "@/components/ui";
 import { send } from "@/components/request";
 import { type SignIn } from "@/lib/engine/sign-in-command";
-import { BillingNotice, billingOf, type Billing } from "@/components/billing-notice";
+import { BillingNotice, billingOf, SignInLine, type Billing } from "@/components/billing-notice";
 
 interface Branch {
   name: string;
@@ -227,6 +227,7 @@ function NewReview() {
   // not show, so a check that failed, or a sign-in changed since, is shown
   // then (review of D-161).
   const [billing, setBilling] = useState<Billing | null>(null);
+  const [refusedSignIn, setRefusedSignIn] = useState<SignIn | null>(null);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -487,14 +488,19 @@ function NewReview() {
   }, [readyToPreflight, preflightKey, preflightBody]);
 
   type Refused = { error?: string; code?: string; cli?: { state?: unknown }; signIn?: SignIn };
-  /** A refusal for a billing sign-in this page had not shown shows it, for the next Start. */
+  /**
+   * A refusal for a billing sign-in this page had not shown shows it, for the
+   * next Start; one for a CLI signed out sets its sign-in command apart.
+   */
   function showRefusal(refused: Refused) {
     if (refused.code === "BillingNotShown") setBilling(billingOf(refused.cli, refused.signIn));
+    if (refused.code === "CliNotReady" && refused.signIn) setRefusedSignIn(refused.signIn);
   }
 
   async function start(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+    setRefusedSignIn(null);
     setStarting(true);
     try {
       const created = await fetch("/api/reviews", {
@@ -1172,6 +1178,7 @@ function NewReview() {
           ) : null}
 
           {error ? <Problem>{error}</Problem> : null}
+          {error && refusedSignIn ? <SignInLine signIn={refusedSignIn} /> : null}
 
           {/* An interactive review starts no CLI, so it bills nothing here. */}
           {billing === null || engineMode !== "headless" ? null : (

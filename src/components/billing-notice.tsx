@@ -29,6 +29,15 @@ export function billingOf(
   };
 }
 
+/** A sign-in command on a line of its own, so it is copied without the words around it. */
+export function SignInLine({ signIn }: { signIn: SignIn }) {
+  return (
+    <p className="text-xs" data-testid="sign-in-command">
+      <Mono className="break-all">{signIn.command}</Mono>
+    </p>
+  );
+}
+
 export function BillingNotice({ billing }: { billing: Billing }) {
   const { state, authMethod, signIn } = billing;
   const unknownWay =

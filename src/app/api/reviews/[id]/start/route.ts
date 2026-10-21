@@ -77,7 +77,7 @@ export async function POST(
     // (MVP 6.2, review of the 6.2 changes). The interactive engine starts no
     // CLI.
     const readiness = review.engineMode === "headless" ? await cliReadiness(db) : null;
-    if (readiness?.refusal) throw cliNotReady(readiness.refusal);
+    if (readiness?.refusal) throw cliNotReady(readiness);
     const unshown = readiness === null ? null : billingNotShown(readiness, input.billingShown);
     if (unshown !== null) throw unshown;
 
