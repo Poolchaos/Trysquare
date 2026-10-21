@@ -3604,3 +3604,31 @@ verified evidence, in writing, here.
   --stdin-paths over the regular files of a private working tree on the
   maintainer's Windows machine, the largest of six local repositories
   timed. The inbox line now says so.
+- 2026-10-21 D-155 REVIEW (the D-154 fixes and their record, 05a3450..e8f5540,
+  by a separate read-only reviewer told never to run anything that could
+  reach the real CLI; each finding re-run here before it was fixed). Seven
+  findings, one MEDIUM and six LOW, all dispositioned before new work:
+  1. MEDIUM: e8f5540 named one of the maintainer's private POS working
+  trees, with its size, in D-154 and the inbox, in this public repository.
+  Fixed deb96f3: both lines name no tree, D-154's changed in place against
+  the log's append-only rule because the identifier, not the decision, must
+  not stand; and check-no-private refuses those trees' names, failing on
+  exactly the two lines before they changed. The name remains in git history
+  at e8f5540. Asked on 2026-10-21, the maintainer chose to leave it: what
+  leaked is a folder name and a size, a force-push would not take it out of
+  GitHub's reach by commit hash, and it would move every hash since, which
+  this log and the plan cite.
+  2. LOW: 88fd6ab's no-path test could not fail: without the check that
+  hides the path line, React draws it empty, and no text tells that apart.
+  Fixed 69f03ad, which counts path lines; with the check removed it failed.
+  3. LOW: a8a99d7 skipped where no bundled CLI exists, though a review falls
+  back to claude on PATH. Fixed dca8608: skipped only where nothing resolves.
+  4. LOW: 993bbe9's not-found advice told a person whose TRYSQUARE_CLAUDE_PATH
+  named nothing to run npm install, and dropped the folders searched. Fixed
+  5822acd.
+  5. LOW: 82becb4's message and the link test said Linux and macOS CI run it;
+  CI's Windows runner, an administrator, does too (run 39555858217). The
+  comment is fixed in 1afac66 and the message stands corrected here.
+  6. LOW: one header line of the guard left at 100 columns. Fixed 1afac66.
+  7. LOW: a comment called a cannot-run answer "could not be found", fixed
+  with 69f03ad's rewrite; an import out of order, fixed in dca8608.
