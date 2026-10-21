@@ -20,13 +20,17 @@
 import { hash } from "node:crypto";
 
 const RUN = 3;
-const ESCAPES = /\\[nrtbfvsdw]/g;
-const URL_ESCAPES = /%[0-9a-f]{2}/g;
+// The escapes the first reading takes as separators: a string's or a
+// pattern's backslash escapes, \u and \x with their digits among them, and a
+// URL's %XX. In the second reading a backslash and a % are separators
+// alone, so a name after a Windows path's \ or inside a %VARIABLE% keeps the
+// letters an escape would have taken (reviews of the D-157 and 6.3 changes).
+const ESCAPES = /\\u[0-9a-f]{4}|\\x[0-9a-f]{2}|\\[nrtbfvsdw]|%[0-9a-f]{2}/g;
 
 function wordsOf(contents, escapesAreSeparators) {
   const words = [];
   contents.split("\n").forEach((line, index) => {
-    let text = line.toLowerCase().replace(URL_ESCAPES, " ");
+    let text = line.toLowerCase();
     if (escapesAreSeparators) text = text.replace(ESCAPES, " ");
     for (const word of text.split(/[^a-z0-9]+/)) if (word !== "") words.push({ word, line: index });
   });

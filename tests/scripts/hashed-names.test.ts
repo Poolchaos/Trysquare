@@ -16,6 +16,8 @@ const FORBIDDEN = new Map([
   [sha("kettle orbit"), "made-up tree"],
   [sha("nimbus vault"), "made-up tree"],
   [sha("tarn gable 9"), "made-up tree"],
+  // Begins with two hex letters, as a %XX escape would read them.
+  [sha("acme orbit"), "made-up tree"],
 ]);
 const found = (text: string) => hashedNamesIn(text, FORBIDDEN).length > 0;
 
@@ -49,6 +51,12 @@ describe("the leak gate's hashed names", () => {
     ["in a Windows path", String.raw`C:\Workspace\nimbus-vault\src`],
     ["in a Windows path in another case", String.raw`C:\Workspace\Nimbus-Vault`],
     ["in a JSON-escaped Windows path", String.raw`"C:\\Workspace\\tarn-gable-9"`],
+    // A % before two hex letters was read as a URL escape in both readings,
+    // and a \u or \x escape glued to the name (review of the 6.2 and 6.3
+    // changes).
+    ["in a Windows variable", "cd %ACME-ORBIT%"],
+    ["after a \\u escape", String.raw`"\u002facme-orbit"`],
+    ["after a \\x escape", String.raw`"\x2fkettle-orbit"`],
   ])("finds a name %s", (_, text) => {
     expect(found(text)).toBe(true);
   });
