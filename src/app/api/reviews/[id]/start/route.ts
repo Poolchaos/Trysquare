@@ -71,21 +71,32 @@ export async function POST(
       };
     }
 
+    // A review that cannot run, or a ruleset for one already running or in
+    // line, is refused by the manager and answered 409 by the handler: asked
+    // first, so such a press is answered for what it is, and one on a review
+    // already running or in line starts nothing, so it asks the CLI nothing
+    // and notes nothing (review of the D-162 fixes).
+    const options = ruleset ? [{ ruleset }] : [];
+    const judged = manager.judge(id, ...options);
+
     // Asked again as it starts, as at create: a Resume, a draft's own Start
     // and every review a restart left waiting come here, and a CLI that
     // signed out since failed them at their first stage with nothing said
     // (MVP 6.2, review of the 6.2 changes). The interactive engine starts no
     // CLI.
-    const readiness = review.engineMode === "headless" ? await cliReadiness(db) : null;
+    const readiness =
+      judged === "startable" && review.engineMode === "headless" ? await cliReadiness(db) : null;
     if (readiness?.refusal) throw cliNotReady(readiness);
     const unshown = readiness === null ? null : billingNotShown(readiness, input.billingShown);
     if (unshown !== null) throw unshown;
 
-    // A review that cannot run, or a ruleset for one already running or in
-    // line, is refused by the manager and answered 409 by the handler.
-    const state = manager.start(id, ...(ruleset ? [{ ruleset }] : []));
-    // Noted as each run starts, not once at create: a Resume bills too.
-    const note = readiness === null ? null : billingNote(readiness.cli);
+    const state = manager.start(id, ...options);
+    // Noted as each run starts, not once at create: a Resume bills too. Not
+    // when another press started it while the CLI was asked.
+    const note =
+      readiness === null || state === "already-running"
+        ? null
+        : billingNote(readiness.cli, state === "queued");
     if (note !== null) appendRunNote(db, id, { kind: "note", message: note });
     return ok({ state, snapshot: manager.snapshot(id) });
   });

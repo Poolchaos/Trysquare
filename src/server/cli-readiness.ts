@@ -80,25 +80,30 @@ export function billingNotShown(
   );
 }
 
-/** The run note for a review that started on a sign-in billing per token, or that may. */
-export function billingNote(cli: CliStatus): string | null {
+/**
+ * The run note for a review that started on a sign-in billing per token, or
+ * that may. One put in line says so: it may be cancelled before it runs, and
+ * the sign-in is not asked again as it leaves the queue.
+ */
+export function billingNote(cli: CliStatus, queued = false): string | null {
+  const when = queued ? " once it leaves the queue" : "";
   if (cli.state === "perToken") {
     // As strict as the notice beside Start (D-161).
     return (
-      `This review costs API usage, billed per token: the CLI is signed in ` +
+      `This review ${queued ? "will cost" : "costs"} API usage${when}, billed per token: the CLI is signed in ` +
       `(${cli.authMethod}) some other way than a Claude subscription.`
     );
   }
   if (cli.state !== "maybePerToken") return null;
   if (cli.authMethod === "oauth_token") {
     return (
-      "This review may cost API usage, billed per token: the CLI is signed in with a " +
+      `This review may cost API usage${when}, billed per token: the CLI is signed in with a ` +
       "token (oauth_token). One made by claude setup-token draws on a Claude " +
       "subscription, and any other may not."
     );
   }
   return (
-    "This review may cost API usage, billed per token: " +
+    `This review may cost API usage${when}, billed per token: ` +
     (cli.authMethod === undefined
       ? "the CLI did not say how it is signed in"
       : `the CLI is signed in (${cli.authMethod}), a way this app does not know`) +

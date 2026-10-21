@@ -1058,11 +1058,29 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
         params(review.id),
       );
       expect(started.status).toBe(200);
+      expect(((await started.json()) as { state: string }).state).toBe("running");
+      // A second press while it runs gets the manager's own answer, not a
+      // billing refusal, and writes no second note: nothing was started
+      // (review of the D-162 fixes).
+      const again = await startRoute.POST(
+        post(`http://localhost/api/reviews/${review.id}/start`, {}),
+        params(review.id),
+      );
+      expect(again.status).toBe(200);
+      expect(((await again.json()) as { state: string }).state).toBe("already-running");
       const { jobManager } = await import("@/server/jobs/manager");
       await jobManager().settled(review.id);
-      expect(await detail()).toMatch(
+      const said = await detail();
+      expect(said).toMatch(
         /This review costs API usage, billed per token: the CLI is signed in \(api_key\)/,
       );
+      // Counted in the row's own notes: the detail also carries them parsed.
+      const notes = JSON.parse(
+        (JSON.parse(said) as { review: { runNotes: string } }).review.runNotes,
+      ) as { message: string }[];
+      expect(
+        notes.filter((note) => note.message.startsWith("This review costs API usage")),
+      ).toHaveLength(1);
     } finally {
       useSignedInFake();
     }

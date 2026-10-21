@@ -150,10 +150,32 @@ export class JobManager {
    * work nobody was watching.
    */
   start(reviewId: string, options: PrepareAndRunOptions = {}): StartState {
-    const db = this.requireDb();
+    const judged = this.judge(reviewId, options);
+    if (judged !== "startable") return judged;
+
+    if (this.active.size >= this.maxConcurrent()) {
+      this.queue.push({ reviewId, options });
+      return "queued";
+    }
+
+    this.launch(reviewId, options);
+    return "running";
+  }
+
+  /**
+   * What start would answer, changing nothing: a refusal is thrown, a review
+   * already running or in line is said so, and anything else is startable. Asked
+   * by the start route before its CLI checks, so a press on a review that
+   * starts nothing is answered as such, not refused for billing (review of the
+   * D-162 fixes).
+   */
+  judge(
+    reviewId: string,
+    options: PrepareAndRunOptions = {},
+  ): "already-running" | "queued" | "startable" {
     // Reads the row so an unknown id fails here rather than inside a promise
     // nobody is awaiting.
-    const review = requireReview(db, reviewId);
+    const review = requireReview(this.requireDb(), reviewId);
 
     const started = this.active.has(reviewId)
       ? "running"
@@ -172,14 +194,7 @@ export class JobManager {
     const status = statusOf(review);
     if (!canTransitionReview(status, "running"))
       throw new ReviewNotStartableError(reviewId, status);
-
-    if (this.active.size >= this.maxConcurrent()) {
-      this.queue.push({ reviewId, options });
-      return "queued";
-    }
-
-    this.launch(reviewId, options);
-    return "running";
+    return "startable";
   }
 
   /** Same as start, which judges whether the review's status lets it run. */
