@@ -131,6 +131,14 @@ async function serverMidStage(
       TRYSQUARE_CLAUDE_PATH: FAKE_CLI,
       FAKE_CLAUDE_SCENARIO: "hang",
       FAKE_CLAUDE_PID_FILE: pidFile,
+      // Signed in, as the browser suite's server is: starting a review asks
+      // the CLI first (MVP 6.2), and with no status set the fake answers its
+      // scenario, here a hang, so the start was refused after 30 s.
+      FAKE_CLAUDE_AUTH_STATUS: JSON.stringify({
+        loggedIn: true,
+        authMethod: "claude.ai",
+        subscriptionType: "max",
+      }),
     },
     stdio: "ignore",
   });
