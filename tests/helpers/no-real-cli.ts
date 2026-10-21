@@ -21,6 +21,12 @@ import { isFakeCli } from "./fake-cli-rule";
 
 const TESTS_DIR = fileURLToPath(new URL("..", import.meta.url));
 
+// Every test file starts with no CLI path from the shell: exported there, as
+// the RUNBOOK allows, it won over the path the Settings tests keep, and they
+// failed for whoever had it set (review of the D-152 fixes). A test that
+// wants it sets its own.
+delete process.env.TRYSQUARE_CLAUDE_PATH;
+
 function inRealCliTest(): boolean {
   const testPath = (expect.getState().testPath ?? "").replace(/\\/g, "/");
   return testPath.endsWith("/tests/server/engine/real-cli.test.ts");
