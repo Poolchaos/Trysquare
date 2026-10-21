@@ -3786,3 +3786,15 @@ verified evidence, in writing, here.
   Fixed 2b0a128, which signs those servers' fake in; its run 39586380131
   passed on all three, the shutdown tests running on Linux and macOS. From
   here, a commit is pushed only once the one before it has passed CI.
+- 2026-10-21 D-161 DECIDED by the maintainer: reviews draw on the claude.ai
+  subscription sign-in the CLI shares with the editor's Claude Code, by
+  default and always; that is the point of the app. Asked whether a sign-in
+  that bills per token should be refused outright, the maintainer first
+  chose that, then settled on: keep D-92's warning, not a block, but default
+  to the subscription and notify strictly that a switch costs API usage. So
+  ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN are kept from every CLI the app
+  starts, which would otherwise take over from the sign-in and bill per
+  token without a word; a sign-in made with a key in the CLI itself is the
+  only way left to per-token billing, and the new-review screen says before
+  Start that such a review costs API usage, as Settings' check and the run
+  note do.

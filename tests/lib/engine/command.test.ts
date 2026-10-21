@@ -147,7 +147,19 @@ describe("the child environment", () => {
     }
     expect(isStrippedFromChild("PATH")).toBe(false);
     expect(isStrippedFromChild("HOME")).toBe(false);
-    expect(isStrippedFromChild("ANTHROPIC_API_KEY")).toBe(false);
+  });
+
+  it("keeps an API key from the CLI, so a review draws on the subscription sign-in (D-161)", () => {
+    // Set in the server's environment, a key took over from the sign-in the
+    // CLI shares with the editor's Claude Code, and reviews billed per token
+    // without a word. A sign-in made with a key in the CLI itself is the only
+    // way to per-token billing left, and the app warns of it.
+    for (const name of ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "anthropic_api_key"]) {
+      expect(isStrippedFromChild(name), name).toBe(true);
+    }
+    expect(buildChildEnv({ ANTHROPIC_API_KEY: "sk-ant-x", PATH: "/bin" })).not.toHaveProperty(
+      "ANTHROPIC_API_KEY",
+    );
   });
 
   it("passes a person's own Claude Code settings through (D-120)", () => {

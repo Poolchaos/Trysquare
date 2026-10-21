@@ -141,10 +141,15 @@ function plantedRun(effort: string): Promise<void> {
     outputFormat: "stream-json",
     effort,
   });
+  // The app's environment for the CLI, which keeps any API key from it
+  // (D-161), with the stand-in's key put back: the stand-in API is what it
+  // authenticates to, and nothing here is real.
+  const env: Record<string, string> = buildChildEnv(shell);
+  env.ANTHROPIC_API_KEY = shell.ANTHROPIC_API_KEY;
   return new Promise((resolve, reject) => {
     const child = spawn(cli.command, [...cli.prefixArgs, ...args], {
       cwd: repo,
-      env: buildChildEnv(shell) as NodeJS.ProcessEnv,
+      env: env as NodeJS.ProcessEnv,
       windowsHide: true,
     });
     child.stdin.end("Reply with exactly: ok");

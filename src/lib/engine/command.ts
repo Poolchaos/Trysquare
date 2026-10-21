@@ -170,6 +170,13 @@ const STRIPPED: ReadonlySet<string> = new Set([
   // (D-121, D-124).
   "CLAUDE_CODE_EFFORT_LEVEL",
   "CLAUDE_CODE_EXTRA_BODY",
+  // An API key in the server's environment, which the CLI would take over
+  // the sign-in it shares with the editor's Claude Code, billing a review per
+  // token without a word. Reviews draw on that subscription sign-in by
+  // default; a key signed into the CLI itself is the only way to per-token
+  // billing, and the app warns of it (D-161).
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
 ]);
 
 export function isStrippedFromChild(name: string): boolean {
