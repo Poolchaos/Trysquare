@@ -3569,3 +3569,38 @@ verified evidence, in writing, here.
   changed; the inbox holds measuring a large one.
   11. The record: 9942d36's CI run 39462852674 had no macOS runner on its
   first attempt and passed on all three on its second.
+- 2026-10-21 D-154 REVIEW (the D-153 fixes and their record, 9942d36..05a3450,
+  by a separate read-only reviewer told never to run anything that could
+  reach the real CLI; each finding re-run here before it was fixed). Eight
+  findings, all LOW, all dispositioned before new work:
+  1. runCliAttached, npm run claude's runner, resolved inside cli.ts past the
+  guard, as describeCli had, and runs the CLI with any arguments. Fixed
+  0b93fcd.
+  2. The fake rule was lexical and wide: a link in the temp directory to the
+  installed package's cli-wrapper.cjs passed by its name, and any shell
+  script there passed. Fixed 82becb4: only a .mjs, .js or .cjs that Node
+  runs, judged where it really leads.
+  3. npm run claude's words left out claude on PATH, its not-found error
+  pointed at Settings, which it never reads, and its comment said Settings
+  names a sign-in command 6.3 has yet to build. Fixed 993bbe9; 9c9cb79's
+  message stands corrected by this line.
+  4. e5aad77's Settings branches for a cannot-run with no path and a
+  sign-in with no method were never rendered under test, and the second
+  said "runs" beside a line saying "reviews". Fixed 88fd6ab.
+  5. The --version timeout check's `killed` was said to catch a kill for
+  output past execFile's buffer as well. Not reproduced: on Node 22.17.0 a
+  --version answer of 2 MiB fails with ERR_CHILD_PROCESS_STDIO_MAXBUFFER and
+  `killed` undefined, so it reads as an unreported version, not a timeout.
+  No change.
+  6. One lstat per tracked file, one after another: the reviewer measured
+  34.5 us a file against 7.9 us batched, about 3.5 s at 100,000 files,
+  small beside hash-object reading every byte. Called optional; not changed.
+  7. Five guard tests passed only because a real CLI is installed for the
+  guard to refuse. Fixed a8a99d7: they skip where none is.
+  8. The record: D-153 counted eleven findings as one HIGH, three MEDIUM and
+  seven LOW, and labelled only six LOW; its item 11, the CI record, is the
+  seventh. And its item 10 and the inbox gave "3,436 files (489 ms)" without
+  saying what was measured: git ls-files --stage and git hash-object
+  --stdin-paths over the regular files of the `main app/pos` working tree on
+  the maintainer's Windows machine, the largest of six local repositories
+  timed. The inbox line now says so.
