@@ -157,6 +157,15 @@ for (const screen of SCREENS) {
   test(`${screen.name} has no accessibility violations`, async ({ page }) => {
     await page.goto(screen.path);
     await expect(page.getByRole("heading", { name: screen.title, level: 1 })).toBeVisible();
+    // Settled before it is measured: Settings asks the CLI as it opens, its
+    // controls disabled until the answer, and axe flags a disabled button's
+    // faded text for contrast, though WCAG 1.4.3 exempts an inactive control
+    // (measured with the answer held; review of the D-163 fixes).
+    if (screen.path === "/settings") {
+      await expect(page.getByRole("button", { name: "Check the CLI" })).toBeEnabled({
+        timeout: 30_000,
+      });
+    }
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

@@ -2166,6 +2166,37 @@ async function openSettings(page: import("@playwright/test").Page): Promise<void
   });
 }
 
+test("Settings holds its probes and its check until the check it asks as it opens lands", async ({
+  page,
+}) => {
+  // A probe pressed before that answer spent with no notice, and a check
+  // pressed meanwhile could be overwritten by the older answer landing last
+  // (review of the D-163 fixes).
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stop = await answerOnce(page, "**/api/auth", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/settings");
+  const check = page.getByRole("button", { name: "Checking..." });
+  const probeAll = page.getByRole("button", { name: "Probe all" });
+  await expect(check).toBeDisabled();
+  await expect(probeAll).toBeDisabled();
+  for (const probe of await page.getByRole("button", { name: "Probe", exact: true }).all()) {
+    await expect(probe).toBeDisabled();
+  }
+  release();
+  await expect(page.getByTestId("cli-status")).toContainText("fake-claude.mjs", {
+    timeout: 30_000,
+  });
+  await expect(page.getByRole("button", { name: "Check the CLI" })).toBeEnabled();
+  await expect(probeAll).toBeEnabled();
+  await stop();
+});
+
 test("Settings says as it opens that probes would cost API usage, above the models", async ({
   page,
 }) => {

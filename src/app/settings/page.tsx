@@ -105,7 +105,9 @@ export default function SettingsPage() {
   const [cli, setCli] = useState<CliStatus | null>(null);
   const [cliProblem, setCliProblem] = useState("");
   const [signIn, setSignIn] = useState<SignIn | null>(null);
-  const [checkingCli, setCheckingCli] = useState(false);
+  // Checking from the start, since Settings asks as it opens: the button and
+  // the probes wait for that answer (review of the D-163 fixes).
+  const [checkingCli, setCheckingCli] = useState(true);
   const [probing, setProbing] = useState("");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -171,7 +173,9 @@ export default function SettingsPage() {
     let cancelled = false;
     void (async () => {
       const sent = await readCli();
-      if (!cancelled) showCli(sent, setCli, setSignIn, setCliProblem);
+      if (cancelled) return;
+      showCli(sent, setCli, setSignIn, setCliProblem);
+      setCheckingCli(false);
     })();
     return () => {
       cancelled = true;
@@ -489,7 +493,7 @@ export default function SettingsPage() {
             </p>
           </div>
           <Button
-            disabled={probing !== "" || (models?.length ?? 0) === 0}
+            disabled={probing !== "" || checkingCli || (models?.length ?? 0) === 0}
             onClick={() => void probeAll()}
           >
             {probing === "" ? "Probe all" : "Probing..."}
@@ -534,7 +538,10 @@ export default function SettingsPage() {
                     <Badge tone={model.availability === "available" ? "good" : "neutral"}>
                       {model.availability}
                     </Badge>
-                    <Button disabled={probing !== ""} onClick={() => void probe(model.id)}>
+                    <Button
+                      disabled={probing !== "" || checkingCli}
+                      onClick={() => void probe(model.id)}
+                    >
                       {probing === model.id ? "Probing..." : "Probe"}
                     </Button>
                   </span>
