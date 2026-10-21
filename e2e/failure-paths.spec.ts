@@ -2094,7 +2094,9 @@ test("the CLI's check names the CLI, its version and how it is signed in", async
   await page.getByRole("button", { name: "Check the CLI" }).click();
   const status = page.getByTestId("cli-status");
   await expect(status).toContainText("fake-claude.mjs, 2.1.301 (Claude Code)");
-  await expect(status).toContainText("Runs draw on your max, at no extra cost.");
+  await expect(status).toContainText(
+    "Reviews draw on your Max plan's usage limits rather than billing per token.",
+  );
 });
 
 test("the CLI's check says each way it cannot run a review, and a check that failed", async ({

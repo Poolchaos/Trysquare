@@ -31,6 +31,12 @@ type CliStatus =
   | { state: "perToken"; path: string; version: string; authMethod?: string }
   | { state: "subscription"; path: string; version: string; subscriptionType?: string };
 
+/** "max" as the CLI reports it, "Max plan's" as a person reads it. */
+function planName(subscriptionType: string | undefined): string {
+  if (subscriptionType === undefined || subscriptionType === "") return "subscription's";
+  return `${subscriptionType.charAt(0).toUpperCase()}${subscriptionType.slice(1)} plan's`;
+}
+
 const FIELDS = [
   {
     key: "maxConcurrentReviews",
@@ -323,8 +329,10 @@ export default function SettingsPage() {
                   </p>
                 ) : (
                   <p className="text-[var(--color-good)]">
-                    Signed in. Runs draw on your {cli.subscriptionType ?? "subscription"}, at no
-                    extra cost.
+                    {/* What the CLI's support article says of headless runs, and no more:
+                        they draw on the plan's usage limits (DECISIONS, 2026-07-30). */}
+                    Signed in. Reviews draw on your {planName(cli.subscriptionType)} usage limits
+                    rather than billing per token.
                   </p>
                 )}
               </div>
