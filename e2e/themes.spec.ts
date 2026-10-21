@@ -174,6 +174,35 @@ for (const screen of SCREENS) {
   });
 }
 
+test("the billing notice has no accessibility violations", async ({ page }) => {
+  // On its warning colours, in each theme: no page showed it while axe ran,
+  // since the suite's fake draws on a subscription (review of D-161).
+  await page.route("**/api/auth", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        cli: { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
+        signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+      },
+    }),
+  );
+  await page.goto("/settings");
+  await expect(page.getByTestId("per-token-notice")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("cli-status")).toContainText("Signed in (api_key)");
+
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(
+    results.violations.map(
+      (violation) =>
+        `${violation.id}: ${violation.help}\n` +
+        violation.nodes.map((node) => `    ${node.target.join(" ")}`).join("\n"),
+    ),
+    `the billing notice in ${test.info().project.name}`,
+  ).toEqual([]);
+});
+
 test("the confirmation queue has no accessibility violations", async ({ page }) => {
   // The densest screen in the app and the one a person spends longest in, so
   // it is checked on its own rather than only as part of the list above.

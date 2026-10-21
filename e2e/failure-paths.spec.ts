@@ -2387,8 +2387,14 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
 }) => {
   // Reviews draw on the subscription by default; a CLI signed in with a key
   // is told before Start that a review costs API usage (D-161). The suite's
-  // own fake is signed in through a subscription, which shows no notice.
+  // own fake is signed in through a subscription, which shows no notice:
+  // read once the check has answered, which "none yet" would also pass
+  // before (review of D-161).
+  const checked = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth" && response.ok(),
+  );
   await fillANewReview(page);
+  await checked;
   await expect(page.getByTestId("per-token-notice")).toHaveCount(0);
 
   const stop = await routeUntilStopped(page, "**/api/auth", (route) =>
