@@ -1606,6 +1606,49 @@ test("a dropped stream is said in the theater and opened again, and the feed goe
   page.off("request", countStreams);
 });
 
+test("a Start refused after the review was made starts that draft next, not a second", async ({
+  page,
+}) => {
+  // Pressed again, Start made another review each time, and the first was
+  // left a draft nobody had asked for (review of the D-162 fixes).
+  await fillANewReview(page);
+  const creates: string[] = [];
+  const starts: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (request.method() !== "POST") return;
+    if (path === "/api/reviews") creates.push(path);
+    if (path.endsWith("/start")) starts.push(path);
+  });
+  const stopRefusing = await routeUntilStopped(page, "**/api/reviews/*/start", (route) =>
+    route.fulfill({ status: 500, json: { error: "Refused for this test.", code: "Test" } }),
+  );
+  const creation = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/reviews" && response.request().method() === "POST",
+  );
+  const start = page.getByRole("button", { name: "Start review" });
+  await start.click();
+  const { review } = (await (await creation).json()) as { review: { id: string } };
+  await expect(page.getByText("Refused for this test.")).toBeVisible();
+  await expect(start).toBeEnabled();
+  await start.click();
+  await expect.poll(() => starts.length).toBe(2);
+  expect(creates).toHaveLength(1);
+  expect(starts).toEqual([`/api/reviews/${review.id}/start`, `/api/reviews/${review.id}/start`]);
+
+  // Changed choices are another review, so it is made afresh.
+  await page.getByLabel("What was this change meant to do? (optional)").fill("Another intent");
+  await start.click();
+  await expect.poll(() => creates.length).toBe(2);
+  await expect.poll(() => starts.length).toBe(3);
+  expect(starts[2]).not.toBe(`/api/reviews/${review.id}/start`);
+  await stopRefusing();
+  for (const path of new Set(starts)) {
+    expect((await page.request.delete(`/api/reviews/${path.split("/")[3]}`)).status()).toBe(200);
+  }
+});
+
 test("a review left as a draft can be started from its own screen", async ({ page }) => {
   // A review is created and then started, two requests. When the start
   // failed, the review was left a draft whose screen offered no way to start

@@ -228,6 +228,8 @@ function NewReview() {
   // then (review of D-161).
   const [billing, setBilling] = useState<Billing | null>(null);
   const [refusedSignIn, setRefusedSignIn] = useState<SignIn | null>(null);
+  /** The review a refused Start left, and the choices it was made with. */
+  const [draft, setDraft] = useState<{ id: string; key: string } | null>(null);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -502,38 +504,49 @@ function NewReview() {
     setError("");
     setRefusedSignIn(null);
     setStarting(true);
+    const choices = {
+      projectId,
+      fromBranch,
+      intoBranch,
+      model,
+      effort: chosenEffort,
+      ...(engineMode === "headless" ? {} : { engineMode }),
+      ...(profileOverride === "" ? {} : { profileId: profileOverride }),
+      ...(intent.trim() === "" ? {} : { intent }),
+      ...(included && linkFrom && linkIntoBranch
+        ? {
+            linked: {
+              projectId: included,
+              fromBranch: linkFrom,
+              intoBranch: linkIntoBranch,
+            },
+          }
+        : {}),
+    };
+    const key = JSON.stringify(choices);
     try {
-      const created = await fetch("/api/reviews", {
-        method: "POST",
-        body: JSON.stringify({
-          projectId,
-          fromBranch,
-          intoBranch,
-          model,
-          effort: chosenEffort,
-          ...(engineMode === "headless" ? {} : { engineMode }),
-          ...(profileOverride === "" ? {} : { profileId: profileOverride }),
-          ...(intent.trim() === "" ? {} : { intent }),
-          ...(included && linkFrom && linkIntoBranch
-            ? {
-                linked: {
-                  projectId: included,
-                  fromBranch: linkFrom,
-                  intoBranch: linkIntoBranch,
-                },
-              }
-            : {}),
-          ...(billing === null ? {} : { billingShown: billing.state }),
-        }),
-      });
-      const body = (await created.json()) as Refused & { review?: { id: string } };
-      if (!created.ok || !body.review) {
-        showRefusal(body);
-        setError(body.error ?? "The review could not be created.");
-        return;
+      // The draft a refused Start left, while the choices it was made with
+      // stand: made again, each press left another (review of the D-162
+      // fixes). The ruleset is the start's, not the review's.
+      let reviewId = draft?.key === key ? draft.id : null;
+      if (reviewId === null) {
+        const created = await fetch("/api/reviews", {
+          method: "POST",
+          body: JSON.stringify({
+            ...choices,
+            ...(billing === null ? {} : { billingShown: billing.state }),
+          }),
+        });
+        const body = (await created.json()) as Refused & { review?: { id: string } };
+        if (!created.ok || !body.review) {
+          showRefusal(body);
+          setError(body.error ?? "The review could not be created.");
+          return;
+        }
+        reviewId = body.review.id;
       }
 
-      const started = await fetch(`/api/reviews/${body.review.id}/start`, {
+      const started = await fetch(`/api/reviews/${reviewId}/start`, {
         method: "POST",
         body: JSON.stringify({
           rulesetId,
@@ -544,9 +557,10 @@ function NewReview() {
         const problem = (await started.json()) as Refused;
         showRefusal(problem);
         setError(problem.error ?? "The review was created but could not be started.");
+        setDraft({ id: reviewId, key });
         return;
       }
-      router.push(`/reviews/${body.review.id}`);
+      router.push(`/reviews/${reviewId}`);
     } catch (problem) {
       // Without this the button simply returned to idle, which reads as a
       // click that did not register rather than a request that failed.
