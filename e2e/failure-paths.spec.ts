@@ -1702,19 +1702,30 @@ test("an interactive review's own screen says its commands would cost, before St
   const { review } = (await made.json()) as { review: { id: string } };
   const notice = page.getByTestId("per-token-notice");
 
-  const stop = await routeUntilStopped(page, "**/api/auth", (route) =>
-    route.fulfill({
+  // Held until the check answers: pressed before, Start went ahead with
+  // nothing said (review of the D-165 fixes).
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stop = await routeUntilStopped(page, "**/api/auth", async (route) => {
+    await held;
+    await route.fulfill({
       status: 200,
       json: {
         cli: { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
         signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
       },
-    }),
-  );
-  await page.goto(`/reviews/${review.id}`);
-  await expect(page.getByRole("button", { name: "Start review" })).toBeVisible({
-    timeout: 30_000,
+    });
   });
+  await page.goto(`/reviews/${review.id}`);
+  const draftStart = page.getByRole("button", { name: "Start review" });
+  await expect(draftStart).toBeVisible({ timeout: 30_000 });
+  // The ruleset is read by then, so Start is off for the check alone.
+  await expect(page.getByLabel("Ruleset to start with")).not.toHaveValue("");
+  await expect(draftStart).toBeDisabled();
+  release();
+  await expect(draftStart).toBeEnabled();
   await expect(notice).toContainText(
     "The commands this review prints will cost API usage, billed per token.",
   );

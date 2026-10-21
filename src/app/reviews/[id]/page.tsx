@@ -686,7 +686,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     (snapshot.review.status === "draft" ||
       isResumableReview(snapshot.review.status as ReviewStatus));
   // The last answer whole, a failure included, so an older one never stands
-  // for it (review of the D-164 fixes).
+  // for it (review of the D-164 fixes); dropped when the review stops being
+  // startable, so coming back to it waits for a new one, and Start and
+  // Resume wait with it (review of the D-165 fixes).
   const [interactiveCheck, setInteractiveCheck] = useState<{
     billing: Billing | null;
     error: string;
@@ -709,8 +711,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     })();
     return () => {
       cancelled = true;
+      setInteractiveCheck(null);
     };
   }, [interactiveToStart]);
+  const awaitingCheck = interactiveToStart && interactiveCheck === null;
 
   if (!snapshot) {
     return (
@@ -931,7 +935,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 </Select>
                 <Button
                   variant="primary"
-                  disabled={draftRuleset === ""}
+                  disabled={draftRuleset === "" || awaitingCheck}
                   onClick={() => void start(draftRuleset)}
                 >
                   Start review
@@ -939,7 +943,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               </>
             ) : null}
             {isResumableReview(review.status as ReviewStatus) ? (
-              <Button variant="primary" onClick={() => void start()}>
+              <Button variant="primary" disabled={awaitingCheck} onClick={() => void start()}>
                 Resume
               </Button>
             ) : null}
