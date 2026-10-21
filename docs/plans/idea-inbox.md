@@ -56,6 +56,11 @@ pulled deliberately.
   489 ms, a private working tree on the maintainer's Windows machine
   (D-153, D-154); measure it on a large repository and size the
   ceiling, or make it scale with the file count.
+- 2026-10-21: the maintainer's call: whether check-no-private's remaining
+  literal markers (the private product, package and project names) move to
+  hashes as the working-tree names did (D-157): it would stop the gate's own
+  file naming them, at the cost of the patterns' reach and of a list no
+  reader can review, with history keeping every literal regardless.
 
 ## Retired
 

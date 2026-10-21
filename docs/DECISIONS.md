@@ -3668,3 +3668,44 @@ verified evidence, in writing, here.
   os_error 10055 (WSAENOBUFS). The saved TCP table held 69 TIME_WAIT, 11
   established and 24 listening, so not port exhaustion. Re-run once under
   D-105; the second attempt passed on all three.
+- 2026-10-21 D-157 REVIEW (the D-156 fixes and their record, 8e90039..c5c91ac,
+  by a separate read-only reviewer told never to run anything that could
+  reach the real CLI, nor to write or recover a private name; each finding
+  re-run here before it was fixed). Seven findings, one MEDIUM and six LOW,
+  all dispositioned before new work:
+  1. MEDIUM: 7da9231's word split, at anything but a letter, digit or
+  hyphen, missed a hyphenated name inside a longer hyphenated word, a
+  numbered copy or a Claude Code project folder's path, and any name glued
+  to a backslash escape, joined by an underscore, a dot or a URL's %20, or
+  split by a line wrap. Fixed 44903b4: each file is one stream of words split
+  at anything but a letter or digit, escapes are separators, and runs may
+  cross a line break. A staged twelve-line probe, its names written by a
+  scratch script and never committed: 9 violations from 44903b4, none from
+  7da9231, and none on three ordinary lines.
+  2. LOW: the gate still exempted its own file from every check. 3. LOW:
+  nothing checked that a hash still matched. Both fixed 334546d: the
+  exemption covers the literal list alone, a key that is not a sha256 stops
+  the gate, and a probe of the names kept in the gitignored docs/private/
+  must still match each hash; it now exists on the maintainer's machine.
+  4. LOW: the hashing made the gate slower and 7da9231 gave no figure from
+  before. Measured here, three runs each: 8e90039's gate 259 to 284 ms,
+  44903b4's 770 to 808 ms.
+  5. LOW, the record: D-156 and row 6.1 said 8e90039's re-run passed "on all
+  three"; GitHub re-ran the Windows job alone, its other two having passed
+  on the first attempt. And row 6.1's D-155 clause ran its findings on from
+  "7da9231 replaced", and gave ec54990's fix to afc119a. Both are reworded
+  in the row here; D-156's line stands corrected by this one.
+  6. LOW, the practice: 8e90039's Windows job failed at 07:40 and afc119a
+  was pushed at 07:43, before the D-105 re-run at 08:13. D-105 does not
+  forbid it, but a red main is stop-the-line. From here, a commit waits for
+  any pending D-105 re-run.
+  7. LOW: real-cli-present.ts took any non-empty CI for CI, where
+  playwright.config.ts asks for "true", and dropped the error it replaced.
+  Fixed 1ab6fab.
+  Asked of the maintainer, not decided here: whether the leak gate's
+  remaining literal markers, the private product, package and project
+  names, move to hashes too. The reviewer's account: it keeps the gate's
+  own file from naming them, but history keeps every literal already, the
+  product name is in most commits' author address, and hashing loses the
+  patterns' reach (joins, substrings, the tracker id's shape). The inbox
+  holds it.
