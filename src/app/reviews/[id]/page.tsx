@@ -485,13 +485,19 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           ),
         );
       }
-      if (sent.body.code === "CliNotReady" && sent.body.signIn !== undefined) {
-        setRefusedSignIn({ error: sent.error, signIn: sent.body.signIn as SignIn });
+      if (sent.body.code === "CliNotReady") {
+        // The sign-in a notice spoke of is gone (review of the D-162 fixes).
+        setBilling(null);
+        if (sent.body.signIn !== undefined) {
+          setRefusedSignIn({ error: sent.error, signIn: sent.body.signIn as SignIn });
+        }
       }
       setActionError(sent.error);
       await reload();
       return;
     }
+    // Said for this start; the next is asked afresh.
+    setBilling(null);
     watchAgain();
   }
 

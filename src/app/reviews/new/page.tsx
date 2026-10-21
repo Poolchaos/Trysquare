@@ -492,11 +492,16 @@ function NewReview() {
   type Refused = { error?: string; code?: string; cli?: { state?: unknown }; signIn?: SignIn };
   /**
    * A refusal for a billing sign-in this page had not shown shows it, for the
-   * next Start; one for a CLI signed out sets its sign-in command apart.
+   * next Start; one for a CLI that cannot run drops it, since the sign-in it
+   * spoke of is gone, and sets a signed-out CLI's command apart (review of the
+   * D-162 fixes).
    */
   function showRefusal(refused: Refused) {
     if (refused.code === "BillingNotShown") setBilling(billingOf(refused.cli, refused.signIn));
-    if (refused.code === "CliNotReady" && refused.signIn) setRefusedSignIn(refused.signIn);
+    if (refused.code === "CliNotReady") {
+      setBilling(null);
+      if (refused.signIn) setRefusedSignIn(refused.signIn);
+    }
   }
 
   async function start(event: React.FormEvent) {

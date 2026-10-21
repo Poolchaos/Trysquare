@@ -2472,6 +2472,91 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
   }
 });
 
+test("a billing notice follows the last answer, not the first", async ({ page }) => {
+  // Kept once shown, it stood beside a refusal for a CLI signed out since,
+  // whose own sign-in line it contradicted (review of the D-162 fixes).
+  const signedOut = {
+    status: 409,
+    json: {
+      error:
+        "The Claude Code CLI at /opt/claude is not signed in, so the review cannot run. Sign it in from a terminal, in this project's directory, with the command below, then start the review again.",
+      code: "CliNotReady",
+      signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+    },
+  };
+  const stopAuth = await routeUntilStopped(page, "**/api/auth", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        cli: { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
+        signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+      },
+    }),
+  );
+  await fillANewReview(page);
+  const notice = page.getByTestId("per-token-notice");
+  await expect(notice).toContainText("This review will cost API usage");
+  const refuseCreate = async (route: Route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    await route.fulfill(signedOut);
+  };
+  await page.route("**/api/reviews", refuseCreate);
+  const start = page.getByRole("button", { name: "Start review" });
+  await start.click();
+  await expect(page.getByTestId("sign-in-command")).toBeVisible();
+  await expect(notice).toHaveCount(0);
+  await page.unroute("**/api/reviews", refuseCreate);
+
+  // A draft, from the real server, whose first start is refused for this test.
+  await fillANewReview(page);
+  const stopFirst = await answerOnce(page, "**/api/reviews/*/start", (route) =>
+    route.fulfill({ status: 500, json: { error: "Refused for this test.", code: "Test" } }),
+  );
+  const creation = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/reviews" && response.request().method() === "POST",
+  );
+  await start.click();
+  const { review } = (await (await creation).json()) as { review: { id: string } };
+  await expect(page.getByText("Refused for this test.")).toBeVisible();
+  await stopFirst();
+  await stopAuth();
+
+  let pressed = 0;
+  const stopStarts = await routeUntilStopped(page, "**/api/reviews/*/start", async (route) => {
+    pressed += 1;
+    await route.fulfill(
+      pressed === 1
+        ? {
+            status: 409,
+            json: {
+              error:
+                "This review will cost API usage, billed per token, which this page had not said yet. Read the notice, then press again.",
+              code: "BillingNotShown",
+              cli: {
+                state: "perToken",
+                path: "/opt/claude",
+                version: "2.1.301",
+                authMethod: "api_key",
+              },
+              signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+            },
+          }
+        : signedOut,
+    );
+  });
+  await page.goto(`/reviews/${review.id}`);
+  const draftStart = page.getByRole("button", { name: "Start review" });
+  await expect(draftStart).toBeVisible({ timeout: 30_000 });
+  await draftStart.click();
+  await expect(notice).toContainText("This review will cost API usage");
+  await draftStart.click();
+  await expect(page.getByTestId("sign-in-command")).toBeVisible();
+  await expect(notice).toHaveCount(0);
+  await stopStarts();
+  expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
+});
+
 test("a sign-in billing per token that a page had not shown is refused, shown, then sent", async ({
   page,
 }) => {
