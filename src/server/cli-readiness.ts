@@ -87,6 +87,18 @@ export function billingNotShown(
  */
 export function billingNote(cli: CliStatus, queued = false): string | null {
   const when = queued ? " once it leaves the queue" : "";
+  if (
+    cli.state === "perToken" &&
+    (cli.authMethod === "api_key_helper" || cli.authMethod === "third_party")
+  ) {
+    // Only a setting gives these, and a review here reads none, so whether
+    // it applies is unmeasured (review of the D-163 fixes).
+    return (
+      `This review may cost API usage${when}, billed per token: the CLI is signed in ` +
+      `(${cli.authMethod}) by a setting in Claude Code settings, which a review here does ` +
+      "not read, so whether it applies is not yet measured."
+    );
+  }
   if (cli.state === "perToken") {
     // As strict as the notice beside Start (D-161).
     return (

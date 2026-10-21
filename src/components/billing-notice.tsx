@@ -39,20 +39,33 @@ export function billingOf(
  * from the CLI.
  */
 export function signInWouldHelp(authMethod: string | undefined): boolean {
-  return authMethod !== "oauth_token" && settingOverSignIn(authMethod) === null;
+  return authMethod !== "oauth_token" && settingOverSignIn(authMethod, null) === null;
 }
 
-/** The sentence naming the setting that wins, or null when none is known to. */
-export function settingOverSignIn(authMethod: string | undefined): string | null {
+/**
+ * The sentence naming the setting that wins, or null when none is known to.
+ * A headless review and a probe read no settings, so whether one applies to
+ * them is unmeasured (D-163 item 3) and said so; an interactive review's
+ * commands read the person's, so there it is not.
+ *
+ * @param reader What runs without reading settings, or null for what reads them.
+ */
+export function settingOverSignIn(
+  authMethod: string | undefined,
+  reader: "review" | "probe" | null,
+): string | null {
   const setting =
     authMethod === "api_key_helper"
       ? "an apiKeyHelper"
       : authMethod === "third_party"
         ? "another provider"
         : null;
-  return setting === null
-    ? null
-    : `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`;
+  if (setting === null) return null;
+  const read =
+    reader === null
+      ? ", which wins over a sign-in"
+      : `, which a ${reader} here does not read, so whether it applies is not yet measured; where it does, it wins over a sign-in`;
+  return `This is ${setting} set in your Claude Code settings${read}: remove it there to use the subscription.`;
 }
 
 /** A sign-in command on a line of its own, so it is copied without the words around it. */
@@ -77,18 +90,20 @@ export function BillingNotice({
 }) {
   const { state, authMethod, signIn } = billing;
   const one = what === "probe" ? "a probe" : what === "interactive" ? "each one" : "a review";
+  const remedy = signInWouldHelp(authMethod);
+  const setting = settingOverSignIn(authMethod, what === "interactive" ? null : what);
+  // Said as may where the setting behind it may not apply (review of the D-163 fixes).
+  const surely = state === "perToken" && !(setting !== null && what !== "interactive");
   const unknownWay =
     authMethod === undefined
       ? "The CLI did not say how it is signed in"
       : `The CLI is signed in (${authMethod}), a way this app does not know`;
   const why =
     state === "perToken"
-      ? `The CLI is signed in (${authMethod}) some other way than your Claude subscription, so ${one} draws on paid API usage rather than your plan's usage limits.`
+      ? `The CLI is signed in (${authMethod}) some other way than your Claude subscription, so ${one} ${surely ? "draws" : "may draw"} on paid API usage rather than your plan's usage limits.`
       : authMethod === "oauth_token"
         ? "The CLI is signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other may cost API usage."
         : `${unknownWay}: unless it is your Claude subscription, ${one} draws on paid API usage rather than your plan's usage limits.`;
-  const remedy = signInWouldHelp(authMethod);
-  const setting = settingOverSignIn(authMethod);
   return (
     <div
       role="alert"
@@ -101,7 +116,7 @@ export function BillingNotice({
           : what === "interactive"
             ? "The commands this review prints"
             : "This review"}{" "}
-        {state === "perToken" ? "will" : "may"} cost API usage, billed per token.
+        {surely ? "will" : "may"} cost API usage, billed per token.
       </p>
       <p className="mt-1 text-xs">
         {why}

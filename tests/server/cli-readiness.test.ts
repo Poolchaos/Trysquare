@@ -40,6 +40,15 @@ describe("the run note for a start that bills", () => {
     );
   });
 
+  it("says a setting's review may cost, since a review here reads no settings", () => {
+    // An apiKeyHelper or another provider can only come from the person's
+    // settings, which a headless review does not read (review of the D-163
+    // fixes).
+    expect(billingNote({ state: "perToken", ...base, authMethod: "api_key_helper" })).toBe(
+      "This review may cost API usage, billed per token: the CLI is signed in (api_key_helper) by a setting in Claude Code settings, which a review here does not read, so whether it applies is not yet measured.",
+    );
+  });
+
   it("says nothing of a subscription", () => {
     expect(billingNote({ state: "subscription", ...base, subscriptionType: "max" })).toBeNull();
   });

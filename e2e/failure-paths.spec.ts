@@ -2274,7 +2274,11 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
     ],
     [
       { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "third_party" },
-      "This is another provider set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.",
+      "Signed in (third_party) some other way than your Claude subscription: reviews may cost API usage, billed per token.",
+    ],
+    [
+      { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "third_party" },
+      "This is another provider set in your Claude Code settings, which a review here does not read, so whether it applies is not yet measured; where it does, it wins over a sign-in: remove it there to use the subscription.",
     ],
   ];
   for (const [cli, said] of answers) {
@@ -2519,10 +2523,22 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
     );
     await fillANewReview(page);
     await expect(notice).toContainText(`(${authMethod})`);
+    // A headless review reads no settings, so whether that one applies to
+    // it is unmeasured: said as may (review of the D-163 fixes).
+    await expect(notice).toContainText("This review may cost API usage, billed per token.");
     await expect(notice).toContainText(
-      `${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
+      `This is ${setting} set in your Claude Code settings, which a review here does not read, so whether it applies is not yet measured; where it does, it wins over a sign-in: remove it there to use the subscription.`,
     );
     await expect(notice).not.toContainText("auth login");
+    // An interactive review's commands read them, so there it will.
+    await page.getByText("Advanced", { exact: true }).click();
+    await page.getByTestId("engine-mode").selectOption("interactive");
+    await expect(notice).toContainText(
+      "The commands this review prints will cost API usage, billed per token.",
+    );
+    await expect(notice).toContainText(
+      `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
+    );
     await stopSetting();
   }
 });
