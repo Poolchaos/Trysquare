@@ -67,14 +67,14 @@ describe("a page's Start, by the billing it showed", () => {
     expect(billingNotShown(readiness(maybe), "perToken")).toBeNull();
   });
 
-  it("says may, not will, of a setting that may not apply to a review", () => {
-    // As the notice beside it says (review of the D-164 fixes).
+  it("says may, not will, of a setting that may not apply to a review", async () => {
+    // As the notice beside it says (review of the D-164 fixes); refused at
+    // all first, or the words were never read (review of the D-165 fixes).
     const helper: CliStatus = { state: "perToken", ...base, authMethod: "api_key_helper" };
-    return billingNotShown(readiness(helper), undefined)
-      ?.json()
-      .then((body: { error: string }) => {
-        expect(body.error).toMatch(/^This review may cost API usage, billed per token/);
-      });
+    const refused = billingNotShown(readiness(helper), undefined);
+    expect(refused).not.toBeNull();
+    const body = (await refused!.json()) as { error: string };
+    expect(body.error).toMatch(/^This review may cost API usage, billed per token/);
   });
 
   it("asks nothing of a subscription", () => {

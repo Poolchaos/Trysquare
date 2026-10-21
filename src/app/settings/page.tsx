@@ -348,7 +348,7 @@ export default function SettingsPage() {
               <div className="mb-3 grid gap-1">
                 <Field
                   label="CLI path"
-                  hint="Empty uses the CLI npm install put in node_modules, then claude on PATH. Saved when you leave the field; Check the CLI to see whether it runs."
+                  hint="Empty uses the CLI npm install put in node_modules, then claude on PATH. Saved when you leave the field, and checked again once saved."
                 >
                   <Input
                     defaultValue={String(settings.claudePath ?? "")}

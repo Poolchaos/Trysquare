@@ -127,8 +127,8 @@ async function main(): Promise<number> {
   runMigrations(db);
 
   // One CLI for the check, the probe and the review: TRYSQUARE_CLAUDE_PATH's,
-  // else the bundled CLI, since the demo's own data directory holds no path
-  // from Settings. Checked by the bundled CLI and run by the variable's, the
+  // else the bundled CLI, else claude on PATH, since the demo's own data
+  // directory holds no path from Settings. Checked by the bundled CLI and run by the variable's, the
   // check vouched for a CLI the review never used (review of the D-163 fixes).
   const claudePath = options.fake ? join(FIXTURES, "fake-claude.mjs") : configuredClaudePath(db);
   const onPath = claudePath === undefined ? {} : { claudePath };
