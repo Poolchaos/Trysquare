@@ -8,7 +8,7 @@
  * someone's usage while they were not looking.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
 import { Badge, Button, Card, Empty, Field, Input, Mono, Problem } from "@/components/ui";
 import { send } from "@/components/request";
@@ -157,13 +157,18 @@ export default function SettingsPage() {
 
   const probeBilling = billingOf(cli ?? undefined, undefined);
 
+  // Only the latest check's answer is shown, and only it ends the hold: one
+  // asked as Settings opened, landing after one a saved path asked, took the
+  // card and released the probes with it (review of the D-165 fixes).
+  const latestCheck = useRef(0);
+
   async function checkCli() {
+    const asked = ++latestCheck.current;
     setCheckingCli(true);
-    try {
-      showCli(await readCli(), setCli, setSignIn, setCliProblem);
-    } finally {
-      setCheckingCli(false);
-    }
+    const sent = await readCli();
+    if (asked !== latestCheck.current) return;
+    showCli(sent, setCli, setSignIn, setCliProblem);
+    setCheckingCli(false);
   }
 
   // Asked as Settings opens, since it is free: a probe below is a real call,
@@ -171,9 +176,10 @@ export default function SettingsPage() {
   // only once Check the CLI was pressed (review of D-161).
   useEffect(() => {
     let cancelled = false;
+    const asked = ++latestCheck.current;
     void (async () => {
       const sent = await readCli();
-      if (cancelled) return;
+      if (cancelled || asked !== latestCheck.current) return;
       showCli(sent, setCli, setSignIn, setCliProblem);
       setCheckingCli(false);
     })();

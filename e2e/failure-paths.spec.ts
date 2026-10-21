@@ -2251,6 +2251,54 @@ async function openSettings(page: import("@playwright/test").Page): Promise<void
   });
 }
 
+test("Settings keeps the latest check's answer, not the one that lands last", async ({ page }) => {
+  // The check a saved path asks could answer before the one Settings asked
+  // as it opened, and that older answer, landing last, took the card, the
+  // probes' notice and their hold with it (review of the D-165 fixes).
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let asked = 0;
+  const stop = await routeUntilStopped(page, "**/api/auth", async (route) => {
+    asked += 1;
+    if (asked === 1) {
+      await held;
+      await route.fulfill({
+        status: 200,
+        json: { cli: { state: "cannotRun", path: "/old/claude", message: "no answer in time." } },
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      json: {
+        cli: { state: "perToken", path: "/new/claude", version: "2.1.301", authMethod: "api_key" },
+      },
+    });
+  });
+  await page.goto("/settings");
+  const path = page.getByLabel("CLI path");
+  await expect(path).toHaveValue("", { timeout: 30_000 });
+  await path.fill("/new/claude");
+  await path.blur();
+  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  const notice = page.getByTestId("per-token-notice");
+  await expect(notice).toContainText("A probe will cost API usage");
+  release();
+  await expect.poll(() => asked).toBe(2);
+  // The older answer, landed now, changes nothing.
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  await expect(notice).toContainText("A probe will cost API usage");
+  await expect(page.getByTestId("cli-status")).toContainText("/new/claude");
+  await stop();
+  await path.fill("");
+  await path.blur();
+  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+});
+
 test("Settings holds its probes and its check until the check it asks as it opens lands", async ({
   page,
 }) => {
