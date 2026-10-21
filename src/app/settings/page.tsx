@@ -12,7 +12,12 @@ import { useEffect, useState } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
 import { Badge, Button, Card, Empty, Field, Input, Mono, Problem } from "@/components/ui";
 import { send } from "@/components/request";
-import { BillingNotice, billingOf } from "@/components/billing-notice";
+import {
+  BillingNotice,
+  billingOf,
+  settingOverSignIn,
+  signInWouldHelp,
+} from "@/components/billing-notice";
 import { signInPlaceWords, type SignIn } from "@/lib/engine/sign-in-command";
 
 interface Model {
@@ -408,10 +413,10 @@ export default function SettingsPage() {
                             ? "Signed in, but the CLI did not say how: unless it is your Claude subscription, reviews may cost API usage, billed per token."
                             : `Signed in (${cli.authMethod}), a way this app does not know: unless it is your Claude subscription, reviews may cost API usage, billed per token.`}
                     </p>
-                    {/* A token set for the CLI wins over a sign-in, so for one
-                        the sign-in command would change nothing. */}
-                    {signIn === null ||
-                    (cli.state === "maybePerToken" && cli.authMethod === "oauth_token") ? null : (
+                    {settingOverSignIn(cli.authMethod) === null ? null : (
+                      <p className="text-xs">{settingOverSignIn(cli.authMethod)}</p>
+                    )}
+                    {signIn === null || !signInWouldHelp(cli.authMethod) ? null : (
                       <>
                         <p className="text-xs text-[var(--color-ink-muted)]">
                           To use the subscription, sign it in with your Claude account{" "}

@@ -2182,6 +2182,10 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
       { state: "maybePerToken", path: "/opt/claude", version: "2.1.301", authMethod: "newer" },
       "Signed in (newer), a way this app does not know: unless it is your Claude subscription, reviews may cost API usage, billed per token.",
     ],
+    [
+      { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "third_party" },
+      "This is another provider set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.",
+    ],
   ];
   for (const [cli, said] of answers) {
     const stop = await answerOnce(page, "**/api/auth", (route) =>
@@ -2398,6 +2402,31 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
   // A token set for the CLI wins over a sign-in, so none is offered.
   await expect(notice).not.toContainText("auth login");
   await stopToken();
+
+  // So do an apiKeyHelper and another provider, both set in the person's
+  // Claude Code settings, so the setting is named instead (review of the
+  // D-162 fixes).
+  for (const [authMethod, setting] of [
+    ["api_key_helper", "an apiKeyHelper"],
+    ["third_party", "another provider"],
+  ] as const) {
+    const stopSetting = await routeUntilStopped(page, "**/api/auth", (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          cli: { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod },
+          signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+        },
+      }),
+    );
+    await fillANewReview(page);
+    await expect(notice).toContainText(`(${authMethod})`);
+    await expect(notice).toContainText(
+      `${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
+    );
+    await expect(notice).not.toContainText("auth login");
+    await stopSetting();
+  }
 });
 
 test("a sign-in billing per token that a page had not shown is refused, shown, then sent", async ({

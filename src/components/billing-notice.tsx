@@ -30,6 +30,31 @@ export function billingOf(
   };
 }
 
+/**
+ * What a sign-in cannot override, by the method the CLI reports: the 2.1.301
+ * binary takes a token set for it, an apiKeyHelper and another provider
+ * before its claude.ai sign-in, so for these the sign-in command would change
+ * nothing (review of the D-162 fixes). The last two can only come from the
+ * person's Claude Code settings, since the app keeps the provider variables
+ * from the CLI.
+ */
+export function signInWouldHelp(authMethod: string | undefined): boolean {
+  return authMethod !== "oauth_token" && settingOverSignIn(authMethod) === null;
+}
+
+/** The sentence naming the setting that wins, or null when none is known to. */
+export function settingOverSignIn(authMethod: string | undefined): string | null {
+  const setting =
+    authMethod === "api_key_helper"
+      ? "an apiKeyHelper"
+      : authMethod === "third_party"
+        ? "another provider"
+        : null;
+  return setting === null
+    ? null
+    : `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`;
+}
+
 /** A sign-in command on a line of its own, so it is copied without the words around it. */
 export function SignInLine({ signIn }: { signIn: SignIn }) {
   return (
@@ -62,8 +87,8 @@ export function BillingNotice({
       : authMethod === "oauth_token"
         ? "The CLI is signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other on paid API usage."
         : `${unknownWay}: unless it is your Claude subscription, ${one} draws on paid API usage rather than your plan's usage limits.`;
-  // A token set for the CLI wins over a sign-in, so signing in would change nothing.
-  const remedy = authMethod !== "oauth_token";
+  const remedy = signInWouldHelp(authMethod);
+  const setting = settingOverSignIn(authMethod);
   return (
     <div
       role="alert"
@@ -84,6 +109,7 @@ export function BillingNotice({
         {what === "interactive"
           ? " They run in your own terminal, and a key set in that terminal bills per token too."
           : ""}
+        {setting === null ? "" : ` ${setting}`}
         {!remedy
           ? ""
           : signIn === undefined

@@ -91,4 +91,8 @@ the line entirely would lose the trail.
   settings loaded, and reviews run with `--setting-sources ""`, so the
   check can name an apiKeyHelper or a provider a settings file sets
   that no review uses, or miss one. Unmeasured; read from the 2.1.301
-  binary's auth-method code only.
+  binary's auth-method code only. So the notice's "will cost" for those
+  two may not hold for a headless review or a probe, which read no
+  settings, though it does for an interactive review's commands, which
+  read the person's. `auth status` takes only --json and --text; whether
+  a --setting-sources before it reaches it needs the real CLI run.
