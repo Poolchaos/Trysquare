@@ -49,11 +49,13 @@ export async function DELETE(): Promise<Response> {
     let reviews = 0;
     try {
       // Checked first, so a refusal takes nothing out of the queue.
-      const ending = all.find((review) => manager.isRunning(review.id));
+      const ending = all.find(
+        (review) => manager.isRunning(review.id) || manager.isBeingDeleted(review.id),
+      );
       if (ending) {
         throw Response.json(
           {
-            error: `Review ${ending.id} is still ending its run. Try again in a moment.`,
+            error: `Review ${ending.id} is still ending its run, or being deleted. Try again in a moment.`,
             code: "ReviewStillRunning",
           },
           { status: 409 },

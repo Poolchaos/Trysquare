@@ -226,6 +226,9 @@ describe("deciding what runs now", () => {
     expect(manager.isQueued(second)).toBe(false);
 
     expect(manager.beginDelete(idle, { evenQueued: false })).toBe(true);
+    // A second delete of it is refused, or the first to finish released the
+    // other's claim (review of the D-166 fixes).
+    expect(manager.beginDelete(idle, { evenQueued: true })).toBe(false);
     expect(() => manager.judge(idle)).toThrow(ReviewBeingDeletedError);
     expect(() => start(idle)).toThrow(ReviewBeingDeletedError);
     manager.endDelete(idle);

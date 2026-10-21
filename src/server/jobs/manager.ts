@@ -160,13 +160,20 @@ export class JobManager {
    * row alone let through (review of the D-165 fixes).
    */
   beginDelete(reviewId: string, options: { evenQueued: boolean }): boolean {
-    if (this.active.has(reviewId)) return false;
+    // Claimed once only: a second delete's claim, released as it finished,
+    // freed the review while the first still removed it (review of the
+    // D-166 fixes).
+    if (this.active.has(reviewId) || this.deleting.has(reviewId)) return false;
     if (this.isQueued(reviewId)) {
       if (!options.evenQueued) return false;
       this.dequeue(reviewId);
     }
     this.deleting.add(reviewId);
     return true;
+  }
+
+  isBeingDeleted(reviewId: string): boolean {
+    return this.deleting.has(reviewId);
   }
 
   endDelete(reviewId: string): void {

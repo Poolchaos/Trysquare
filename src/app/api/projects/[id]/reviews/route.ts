@@ -49,11 +49,13 @@ export async function DELETE(
     const claimed: string[] = [];
     try {
       // Checked first, so a refusal takes nothing out of the queue.
-      const ending = rows.find((row) => manager.isRunning(row.id));
+      const ending = rows.find(
+        (row) => manager.isRunning(row.id) || manager.isBeingDeleted(row.id),
+      );
       if (ending) {
         throw Response.json(
           {
-            error: `Review ${ending.id} is still ending its run. Try again in a moment.`,
+            error: `Review ${ending.id} is still ending its run, or being deleted. Try again in a moment.`,
             code: "ReviewStillRunning",
           },
           { status: 409 },

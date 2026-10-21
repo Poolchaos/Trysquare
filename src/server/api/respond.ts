@@ -109,8 +109,8 @@ export const ERROR_STATUSES: readonly (readonly [name: string, status: 404 | 409
   ["IllegalTransitionError", 409],
   ["InvalidCloneTransitionError", 409],
   ["CloneNotReadyError", 409],
-  // The job manager's: a review that cannot run, and a ruleset for one that
-  // is already running or in line.
+  // The job manager's: a review that cannot run, a ruleset for one that is
+  // already running or in line, and one being deleted.
   ["ReviewNotStartableError", 409],
   ["ReviewAlreadyStartedError", 409],
   ["ReviewBeingDeletedError", 409],

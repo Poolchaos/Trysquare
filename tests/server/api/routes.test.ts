@@ -674,6 +674,37 @@ describe("deleting a project", () => {
     );
     expect(refused.status).toBe(409);
 
+    // Refused, removing nothing, while one of them is being deleted, or its
+    // run is still ending, its row already saying so (reviews of the D-165
+    // and D-166 fixes); the manager's answer stands in for the second.
+    const { jobManager } = await import("@/server/jobs/manager");
+    const { review: made } = (await review.json()) as { review: { id: string } };
+    const exists = async () =>
+      (await routes.review.GET(new Request("http://localhost/x"), params(made.id))).status === 200;
+    expect(jobManager().beginDelete(made.id, { evenQueued: true })).toBe(true);
+    try {
+      const held = await routes.projectReviews.DELETE(
+        new Request("http://localhost"),
+        params(project.id),
+      );
+      expect(held.status).toBe(409);
+      expect(await exists()).toBe(true);
+    } finally {
+      jobManager().endDelete(made.id);
+    }
+    const ending = vi.spyOn(jobManager(), "isRunning").mockReturnValue(true);
+    try {
+      const held = await routes.projectReviews.DELETE(
+        new Request("http://localhost"),
+        params(project.id),
+      );
+      expect(held.status).toBe(409);
+      expect(((await held.json()) as { code: string }).code).toBe("ReviewStillRunning");
+      expect(await exists()).toBe(true);
+    } finally {
+      ending.mockRestore();
+    }
+
     const cleared = await routes.projectReviews.DELETE(
       new Request("http://localhost"),
       params(project.id),

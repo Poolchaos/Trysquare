@@ -76,7 +76,9 @@ export async function DELETE(
         ? notUnstarted
         : Response.json(
             {
-              error: "This review is still running; cancel it first.",
+              error:
+                "This review is still running, ending its run or being deleted. Cancel it, " +
+                "or try again in a moment.",
               code: "ReviewStillRunningError",
             },
             { status: 409 },
