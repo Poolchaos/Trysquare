@@ -9,12 +9,11 @@
  * out (measured on 2.1.301).
  */
 
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readCliStatus } from "@/server/engine/probe";
-import { realCliEnvironment } from "@/server/engine/cli";
+import { realCliPresent } from "../../helpers/real-cli-present";
 
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
 
@@ -53,9 +52,8 @@ describe("the CLI's status", () => {
     expect(status.state === "cannotRun" && status.message).toMatch(/2\.1\.71/);
   });
 
-  // Needs the real CLI npm install put in node_modules, for the suite's guard
-  // to refuse: without one, finding it fails first, as not found.
-  it.skipIf(!realCliEnvironment().bundled.some((path) => existsSync(path)))(
+  // Needs a real CLI for the suite's guard to refuse (realCliPresent).
+  it.skipIf(!realCliPresent())(
     "cannot run when finding it failed some other way, and says how",
     async () => {
       // Every failure but a refused file read as "not found": in this suite the

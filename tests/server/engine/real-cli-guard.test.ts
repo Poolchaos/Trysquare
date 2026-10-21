@@ -7,18 +7,13 @@
 
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { existsSync } from "node:fs";
-import { describeCli, realCliEnvironment, resolveCli, runCliAttached } from "@/server/engine/cli";
+import { describeCli, resolveCli, runCliAttached } from "@/server/engine/cli";
+import { realCliPresent } from "../../helpers/real-cli-present";
 
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
 
-/**
- * The refusals below need a real CLI for the guard to refuse: without one,
- * finding it fails first, for another reason (review of the D-153 fixes).
- * npm install puts one in node_modules, so it is there wherever the suite
- * runs; a machine without it skips them rather than failing.
- */
-const noRealCli = !realCliEnvironment().bundled.some((path) => existsSync(path));
+/** The refusals below need a real CLI to refuse. */
+const noRealCli = !realCliPresent();
 
 describe("the real-CLI guard", () => {
   it.skipIf(noRealCli)("refuses the CLI npm install put in node_modules", () => {
