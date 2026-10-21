@@ -2268,11 +2268,16 @@ test("Settings holds its probes and its check until the check it asks as it open
   await page.goto("/settings");
   const check = page.getByRole("button", { name: "Checking..." });
   const probeAll = page.getByRole("button", { name: "Probe all" });
-  await expect(check).toBeDisabled();
-  await expect(probeAll).toBeDisabled();
-  for (const probe of await page.getByRole("button", { name: "Probe", exact: true }).all()) {
+  const probes = page.getByRole("button", { name: "Probe", exact: true });
+  // The models read first, so a probe is off for the check, not for an empty
+  // list, which also turns Probe all off (review of the D-164 fixes).
+  await expect(probes.first()).toBeVisible({ timeout: 30_000 });
+  expect(await probes.count()).toBeGreaterThan(0);
+  for (const probe of await probes.all()) {
     await expect(probe).toBeDisabled();
   }
+  await expect(probeAll).toBeDisabled();
+  await expect(check).toBeDisabled();
   release();
   await expect(page.getByTestId("cli-status")).toContainText("fake-claude.mjs", {
     timeout: 30_000,

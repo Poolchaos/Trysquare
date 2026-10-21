@@ -126,8 +126,9 @@ async function main(): Promise<number> {
   const db = createDb(dbPath(dataDir));
   runMigrations(db);
 
-  // One CLI for the check, the probe and the review, found as the app finds
-  // it: checked by the bundled CLI and run by TRYSQUARE_CLAUDE_PATH's, the
+  // One CLI for the check, the probe and the review: TRYSQUARE_CLAUDE_PATH's,
+  // else the bundled CLI, since the demo's own data directory holds no path
+  // from Settings. Checked by the bundled CLI and run by the variable's, the
   // check vouched for a CLI the review never used (review of the D-163 fixes).
   const claudePath = options.fake ? join(FIXTURES, "fake-claude.mjs") : configuredClaudePath(db);
   const onPath = claudePath === undefined ? {} : { claudePath };
