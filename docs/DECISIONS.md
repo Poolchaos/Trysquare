@@ -3744,3 +3744,45 @@ verified evidence, in writing, here.
   Settings' check shows it when the CLI is signed out, and the refusal to
   create a review for a signed-out CLI (MVP 6.2) names it. Nothing stores a
   token. Rejected: (b), the server spawning `auth login`.
+- 2026-10-21 D-160 REVIEW (b62bbf0, the D-158 record and MVP 6.2 and 6.3,
+  e8dab46..70c9f34, by a separate read-only reviewer told never to run
+  anything that could reach the real CLI, nor to read docs/private/ or
+  write a private name; each finding re-run here before it was fixed).
+  Eleven findings, one MEDIUM and ten LOW, dispositioned before new work:
+  1. MEDIUM: 470a4a9 checked the CLI at create alone, so a Resume, a
+  draft's own Start and every review a restart left waiting started
+  whatever the CLI's state. Fixed 883ef7d: src/server/cli-readiness.ts is
+  asked by the create and start routes both.
+  2. LOW: the check ran last, after the fetch. Fixed 883ef7d: first.
+  3. LOW: a sign-in that bills per token is warned of in a run note after
+  the review has started. Not changed: showing it before Start is a choice
+  between a passive warning and an acknowledgement, and D-92 is "a warning,
+  not a block"; the inbox asks the maintainer.
+  4. LOW: the sign-in command named a configured path as typed, though a
+  relative path or a bare name resolves from the server's directory and
+  PATH. 5. LOW: its Windows form was PowerShell's, said as "a terminal", and
+  double-quoted so a shell expanded it. 6. LOW: neither command said where
+  the sign-in lives, the config directory. 7. LOW: the refusal did not say
+  where to run it. 8. LOW: an answer with no command left an instruction
+  over nothing. All fixed bdfd1b1: the command is built from the resolved
+  path, single-quoted for its shell, with where to run it, in PowerShell
+  on Windows; the check says where the sign-in it read is kept; Settings
+  and the refusal say the same. D-159's `node "<path>"` and `& "<path>"`
+  stand corrected by this line: the quotes are single, and the path is the
+  one the CLI resolved to.
+  9. LOW: the matcher read a % before two hex letters as a URL escape in
+  both readings, and glued \u and \x escapes to the name after them. Fixed
+  8162b19, with three tests over made-up names.
+  10. LOW: the 6.2 browser test's mocked refusal had gone stale in 70c9f34.
+  Its words are the route's current ones since bdfd1b1.
+  11. LOW: confirmation.test.ts set and deleted the CLI path the shared
+  helper owns. Fixed 069320a.
+  Main was red from 883ef7d to 069320a: the shutdown tests, which only
+  Linux and macOS run, start their review through the start route on
+  servers whose fake had no sign-in status, so 883ef7d's check waited out
+  the fake's hang, called the CLI unable to run and refused the start, in
+  CI runs 39582703657, 39583851614, 39584192055 and 39584516206. bdfd1b1,
+  8162b19 and 069320a were pushed without 883ef7d's run having been read.
+  Fixed 2b0a128, which signs those servers' fake in; its run 39586380131
+  passed on all three, the shutdown tests running on Linux and macOS. From
+  here, a commit is pushed only once the one before it has passed CI.

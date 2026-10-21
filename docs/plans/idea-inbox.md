@@ -61,6 +61,11 @@ pulled deliberately.
   hashes as the working-tree names did (D-157): it would stop the gate's own
   file naming them, at the cost of the patterns' reach and of a list no
   reader can review, with history keeping every literal regardless.
+- 2026-10-21: the maintainer's call: whether the new-review screen shows,
+  before Start, that the CLI's sign-in bills per token, and whether that is
+  a passive line or a step to acknowledge (D-160 item 3). Today it is a run
+  note on the review once created, which D-92's "a warning, not a block"
+  allows.
 
 ## Retired
 
