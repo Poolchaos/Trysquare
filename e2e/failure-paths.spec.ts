@@ -1606,46 +1606,62 @@ test("a dropped stream is said in the theater and opened again, and the feed goe
   page.off("request", countStreams);
 });
 
-test("a Start refused after the review was made starts that draft next, not a second", async ({
+test("a Start refused after the review was made leaves no second draft at the next", async ({
   page,
 }) => {
   // Pressed again, Start made another review each time, and the first was
-  // left a draft nobody had asked for (review of the D-162 fixes).
+  // left a draft nobody had asked for (review of the D-162 fixes). Started
+  // again instead, it ran on the branch tips pinned at the first press, and
+  // a draft started or cancelled elsewhere was pressed at for ever (review of
+  // the D-163 fixes). So the next press removes the draft it left, if it is
+  // still one, and makes the review afresh, pinned to the tips as they are.
   await fillANewReview(page);
   const creates: string[] = [];
-  const starts: string[] = [];
+  const deletes: string[] = [];
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
-    if (request.method() !== "POST") return;
-    if (path === "/api/reviews") creates.push(path);
-    if (path.endsWith("/start")) starts.push(path);
+    if (request.method() === "POST" && path === "/api/reviews") creates.push(path);
+    if (request.method() === "DELETE") deletes.push(path);
   });
   const stopRefusing = await routeUntilStopped(page, "**/api/reviews/*/start", (route) =>
     route.fulfill({ status: 500, json: { error: "Refused for this test.", code: "Test" } }),
   );
-  const creation = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === "/api/reviews" && response.request().method() === "POST",
-  );
+  const made = async () => {
+    const creation = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/reviews" &&
+        response.request().method() === "POST",
+    );
+    await start.click();
+    const { review } = (await (await creation).json()) as { review: { id: string } };
+    await expect(page.getByText("Refused for this test.")).toBeVisible();
+    await expect(start).toBeEnabled();
+    return review.id;
+  };
   const start = page.getByRole("button", { name: "Start review" });
-  await start.click();
-  const { review } = (await (await creation).json()) as { review: { id: string } };
-  await expect(page.getByText("Refused for this test.")).toBeVisible();
-  await expect(start).toBeEnabled();
-  await start.click();
-  await expect.poll(() => starts.length).toBe(2);
-  expect(creates).toHaveLength(1);
-  expect(starts).toEqual([`/api/reviews/${review.id}/start`, `/api/reviews/${review.id}/start`]);
+  const first = await made();
+  const second = await made();
+  expect(second).not.toBe(first);
+  expect(creates).toHaveLength(2);
+  expect(deletes).toEqual([`/api/reviews/${first}`]);
+  expect((await page.request.get(`/api/reviews/${first}`)).status()).toBe(404);
 
-  // Changed choices are another review, so it is made afresh.
-  await page.getByLabel("What was this change meant to do? (optional)").fill("Another intent");
-  await start.click();
-  await expect.poll(() => creates.length).toBe(2);
-  await expect.poll(() => starts.length).toBe(3);
-  expect(starts[2]).not.toBe(`/api/reviews/${review.id}/start`);
+  // One no longer a draft, started elsewhere here, is not removed.
+  const stopReading = await routeUntilStopped(page, `**/api/reviews/${second}`, async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const response = await route.fetch();
+    const body = (await response.json()) as { review: Record<string, unknown> };
+    await route.fulfill({
+      response,
+      json: { ...body, review: { ...body.review, status: "running" } },
+    });
+  });
+  const third = await made();
+  expect(deletes).toEqual([`/api/reviews/${first}`]);
+  await stopReading();
   await stopRefusing();
-  for (const path of new Set(starts)) {
-    expect((await page.request.delete(`/api/reviews/${path.split("/")[3]}`)).status()).toBe(200);
+  for (const id of [second, third]) {
+    expect((await page.request.delete(`/api/reviews/${id}`)).status()).toBe(200);
   }
 });
 

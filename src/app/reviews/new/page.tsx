@@ -228,8 +228,8 @@ function NewReview() {
   // then (review of D-161).
   const [billing, setBilling] = useState<Billing | null>(null);
   const [refusedSignIn, setRefusedSignIn] = useState<SignIn | null>(null);
-  /** The review a refused Start left, and the choices it was made with. */
-  const [draft, setDraft] = useState<{ id: string; key: string } | null>(null);
+  /** The review a refused Start left, removed at the next press if still a draft. */
+  const [draft, setDraft] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -528,28 +528,38 @@ function NewReview() {
           }
         : {}),
     };
-    const key = JSON.stringify(choices);
     try {
-      // The draft a refused Start left, while the choices it was made with
-      // stand: made again, each press left another (review of the D-162
-      // fixes). The ruleset is the start's, not the review's.
-      let reviewId = draft?.key === key ? draft.id : null;
-      if (reviewId === null) {
-        const created = await fetch("/api/reviews", {
-          method: "POST",
-          body: JSON.stringify({
-            ...choices,
-            ...(billing === null ? {} : { billingShown: billing.state }),
-          }),
-        });
-        const body = (await created.json()) as Refused & { review?: { id: string } };
-        if (!created.ok || !body.review) {
-          showRefusal(body);
-          setError(body.error ?? "The review could not be created.");
-          return;
+      // The draft a refused Start left is removed while it is still one:
+      // kept, each press left another (review of the D-162 fixes), and
+      // started again, it ran on the branch tips pinned at its first press,
+      // or was pressed at for ever once started or cancelled elsewhere
+      // (review of the D-163 fixes). Made afresh, the review is pinned to
+      // the tips as they are now. One that is no longer a draft is left.
+      if (draft !== null) {
+        const read = await send<{ review: { status: string } }>(
+          `/api/reviews/${draft}`,
+          {},
+          "The review left before could not be read",
+        );
+        if (read.ok && read.body.review.status === "draft") {
+          await send(`/api/reviews/${draft}`, { method: "DELETE" }, "It could not be removed");
         }
-        reviewId = body.review.id;
+        setDraft(null);
       }
+      const created = await fetch("/api/reviews", {
+        method: "POST",
+        body: JSON.stringify({
+          ...choices,
+          ...(billing === null ? {} : { billingShown: billing.state }),
+        }),
+      });
+      const body = (await created.json()) as Refused & { review?: { id: string } };
+      if (!created.ok || !body.review) {
+        showRefusal(body);
+        setError(body.error ?? "The review could not be created.");
+        return;
+      }
+      const reviewId = body.review.id;
 
       const started = await fetch(`/api/reviews/${reviewId}/start`, {
         method: "POST",
@@ -562,7 +572,7 @@ function NewReview() {
         const problem = (await started.json()) as Refused;
         showRefusal(problem);
         setError(problem.error ?? "The review was created but could not be started.");
-        setDraft({ id: reviewId, key });
+        setDraft(reviewId);
         return;
       }
       router.push(`/reviews/${reviewId}`);
