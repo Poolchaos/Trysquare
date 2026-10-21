@@ -2807,18 +2807,21 @@ test("a billing notice follows the last answer, not the first", async ({ page })
   await draftStart.click();
   await expect(draftStart).toHaveCount(0, { timeout: 30_000 });
   await stopStarts();
-  // Let the run end before it is removed.
+  // Let the run end before it is removed: its row, and the manager, which
+  // refuses a delete while it still holds the run, its row already saying
+  // it ended (review of the D-165 fixes).
   await expect
     .poll(
-      async () =>
-        (
-          (await (await page.request.get(`/api/reviews/${review.id}`)).json()) as {
-            review: { status: string };
-          }
-        ).review.status,
+      async () => {
+        const read = (await (await page.request.get(`/api/reviews/${review.id}`)).json()) as {
+          review: { status: string };
+          running: boolean;
+        };
+        return read.running ? "held" : read.review.status;
+      },
       { timeout: 60_000 },
     )
-    .not.toMatch(/^(draft|running|verifying)$/);
+    .not.toMatch(/^(held|draft|running|verifying)$/);
   // Read once the run has ended and the screen has settled on it.
   await expect(page.getByRole("button", { name: "Start review" })).toHaveCount(0);
   await expect(notice).toHaveCount(0);
