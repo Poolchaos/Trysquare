@@ -14,9 +14,9 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { hash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
+import { hashedNamesIn } from "./lib/hashed-names.mjs";
 
 /**
  * Paths that must never be published, however they got staged. Naming these
@@ -46,25 +46,18 @@ const FORBIDDEN_CONTENT = [
 /**
  * Names that must not be published and must not be written here either, so
  * they are kept as the sha256 of their words, lowercased and joined by one
- * space. The maintainer's private working trees were once named by a literal
- * pattern in this file, which this file's own exemption let through (reviews
- * of the D-154 and D-155 fixes).
- *
- * A file is read as one stream of words, split at anything but a letter or
- * digit, so hyphens, slashes, backslashes, underscores, dots and spaces all
- * read alike, a name inside a longer hyphenated word is still found, and a
- * name a line wrap splits is found across it. A backslash escape (\n, \t, \b
- * and the like, in a string or a pattern) is a separator: read as a letter,
- * it glued itself to the word after it; so is a URL's %20 and the like.
- * Every run of one to three words is hashed and looked up (review of the
- * D-156 fixes).
+ * space; scripts/lib/hashed-names.mjs says how a file is read for them. The
+ * maintainer's private working trees were once named by a literal pattern in
+ * this file, which this file's own exemption let through (reviews of the
+ * D-154 and D-155 fixes). Two or more words each: a name of one word would
+ * stop the gate on every use of that word, so the probe check below refuses
+ * one (review of the D-157 fixes).
  */
 const FORBIDDEN_HASHED = new Map([
   ["89c5769c84f1e5a050f6aacde3d8e2eb91bc82b32ecb2280ed8beae918cf4242", "private working tree name"],
   ["bb1849bfd3e2f298d45e4f82aaf7fef14fc2f4a2187261c8c86a5f359a7d80fb", "private working tree name"],
   ["e8a32f7a5f6d42e1e1c4a4ce73b6d2b60cecaf2e5d0e94c5936055272d508c9e", "private working tree name"],
 ]);
-const HASHED_RUN = 3;
 
 // A mistyped hash matches nothing and says nothing, and a gate that silently
 // finds nothing is worse than none (review of the D-156 fixes).
@@ -85,35 +78,6 @@ const HASHED_PROBE = "docs/private/hashed-names-probe.txt";
 
 /** Each run's matching hash, or null, worked out once: most runs recur across the tree. */
 const hashedAnswers = new Map();
-
-/** Every run of words in a file that is a hashed name, with the line it starts on. */
-function hashedNamesIn(contents) {
-  const words = [];
-  contents.split("\n").forEach((line, index) => {
-    const text = line
-      .toLowerCase()
-      .replace(/\\[nrtbfv]/g, " ")
-      .replace(/%[0-9a-f]{2}/g, " ");
-    for (const word of text.split(/[^a-z0-9]+/)) if (word !== "") words.push({ word, line: index });
-  });
-  const found = [];
-  for (let start = 0; start < words.length; start += 1) {
-    let run = "";
-    for (let length = 1; length <= HASHED_RUN && start + length <= words.length; length += 1) {
-      run = length === 1 ? words[start].word : `${run} ${words[start + length - 1].word}`;
-      let digest = hashedAnswers.get(run);
-      if (digest === undefined) {
-        const candidate = hash("sha256", run);
-        digest = FORBIDDEN_HASHED.has(candidate) ? candidate : null;
-        hashedAnswers.set(run, digest);
-      }
-      if (digest !== null) {
-        found.push({ line: words[start].line, why: FORBIDDEN_HASHED.get(digest), digest });
-      }
-    }
-  }
-  return found;
-}
 
 /**
  * The real home directory leaks the machine's username, so it is forbidden.
@@ -201,7 +165,7 @@ for (const file of files) {
   }
 
   const lines = contents.split("\n");
-  for (const { line, why } of hashedNamesIn(contents)) {
+  for (const { line, why } of hashedNamesIn(contents, FORBIDDEN_HASHED, hashedAnswers)) {
     violations.push(`${file}:${line + 1}: ${why}\n    ${lines[line].trim().slice(0, 160)}`);
   }
   lines.forEach((line, index) => {
@@ -220,12 +184,15 @@ for (const file of files) {
 }
 
 if (existsSync(HASHED_PROBE)) {
-  const matched = new Set(
-    hashedNamesIn(readFileSync(HASHED_PROBE, "utf8")).map((hit) => hit.digest),
-  );
+  const hits = hashedNamesIn(readFileSync(HASHED_PROBE, "utf8"), FORBIDDEN_HASHED, hashedAnswers);
   for (const digest of FORBIDDEN_HASHED.keys()) {
-    if (!matched.has(digest)) {
+    const own = hits.filter((hit) => hit.digest === digest);
+    if (own.length === 0) {
       violations.push(`${HASHED_PROBE}: hash ${digest.slice(0, 12)}... no longer finds its name`);
+    } else if (own.some((hit) => hit.words === 1)) {
+      violations.push(
+        `${HASHED_PROBE}: hash ${digest.slice(0, 12)}... is one word, which every use of it would trip`,
+      );
     }
   }
 }
