@@ -33,6 +33,7 @@ import type { ReviewEngine } from "./adapter";
 import { MINIMUM_CLI_VERSION, resolveCli, type CliCommand } from "./cli";
 import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
 import { READ_ONLY_TOOLS } from "@/lib/engine/command";
+import { posixQuote, powershellQuote } from "@/lib/engine/shell-quote";
 
 export interface InteractiveEngineOptions {
   /** Where the prompt and answer files live: the review's bundle directory. */
@@ -168,15 +169,6 @@ export function launchArgsFor(input: {
     `Read ${input.files.prompt} and answer the question in it exactly as it asks.`,
   ];
 }
-
-const posixQuote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
-/**
- * PowerShell also ends a single-quoted string at the typographic quotes
- * U+2018 to U+201B, so each is doubled like the ASCII one (an apostrophe in
- * a name such as D'Angelo, typed on a phone, broke the command; measured).
- */
-const powershellQuote = (value: string) =>
-  `'${value.replace(/['\u2018\u2019\u201A\u201B]/g, "$&$&")}'`;
 
 /**
  * The command to paste, for both shells a person here is likely to have open.
