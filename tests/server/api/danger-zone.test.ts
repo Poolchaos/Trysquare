@@ -12,6 +12,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, beforeAll, expect, it } from "vitest";
+import { useSignedInFake } from "../../helpers/signed-in-fake";
 import { cloneBare } from "@/server/gitops/repo";
 import { buildFixture, type SeededFixture } from "../../helpers/seeded-fixture";
 
@@ -44,7 +45,11 @@ async function cloneSettled(id: string): Promise<void> {
   throw new Error("the clone never finished");
 }
 
+// Creating a review asks the CLI whether it can run one (MVP 6.2).
+let restoreCli: () => void;
+
 beforeAll(async () => {
+  restoreCli = useSignedInFake();
   fixture = await buildFixture();
   dataDir = mkdtempSync(join(tmpdir(), "trysquare-danger-"));
   process.env.TRYSQUARE_DATA = dataDir;
@@ -59,6 +64,7 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
+  restoreCli();
   fixture?.cleanup();
   // The runtime holds the database open, and Windows will not delete it.
   (await import("@/server/runtime")).closeRuntime();

@@ -21,6 +21,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { useSignedInFake } from "../../helpers/signed-in-fake";
 import { bundleDir, worktreeRootDir } from "@/lib/paths";
 import {
   answerSequence,
@@ -72,7 +73,11 @@ async function snapshot(): Promise<{ review: { status: string }; findings: Findi
   return (await response.json()) as { review: { status: string }; findings: Finding[] };
 }
 
+// Creating a review asks the CLI whether it can run one (MVP 6.2).
+let restoreCli: () => void;
+
 beforeAll(async () => {
+  restoreCli = useSignedInFake();
   fixture = await buildFixture();
   dataDir = mkdtempSync(join(tmpdir(), "trysquare-confirm-"));
   process.env.TRYSQUARE_DATA = dataDir;
@@ -156,6 +161,7 @@ beforeAll(async () => {
 }, 240_000);
 
 afterAll(async () => {
+  restoreCli();
   fixture?.cleanup();
   // The runtime holds the database open, and Windows will not delete it.
   (await import("@/server/runtime")).closeRuntime();

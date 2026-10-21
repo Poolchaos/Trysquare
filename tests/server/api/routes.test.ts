@@ -11,6 +11,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { useSignedInFake } from "../../helpers/signed-in-fake";
 import { cloneBare } from "@/server/gitops/repo";
 import { buildFixture, type SeededFixture } from "../../helpers/seeded-fixture";
 
@@ -39,7 +40,11 @@ const post = (url: string, body: unknown) =>
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
 
+// Creating a review asks the CLI whether it can run one (MVP 6.2).
+let restoreCli: () => void;
+
 beforeAll(async () => {
+  restoreCli = useSignedInFake();
   fixture = await buildFixture();
   dataDir = mkdtempSync(join(tmpdir(), "trysquare-api-"));
   // Set before the runtime module is first imported, because it resolves the
@@ -72,6 +77,7 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
+  restoreCli();
   fixture?.cleanup();
   // The runtime holds the database open, and Windows will not delete it.
   (await import("@/server/runtime")).closeRuntime();
@@ -801,5 +807,89 @@ describe("looking before you pay", () => {
     );
     expect(response.status).toBe(400);
     expect(((await response.json()) as { error: string }).error).toMatch(/no-such-branch/);
+  }, 120_000);
+});
+
+describe("creating a review asks the CLI first (MVP 6.2)", () => {
+  // Before, a review the CLI could not run was created and started, and
+  // failed at its first stage, or never, signed out, with nothing said
+  // until it did.
+  const create = (extra: Record<string, unknown> = {}) =>
+    routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+        ...extra,
+      }),
+    );
+  const reviewCount = async () =>
+    ((await (await routes.reviews.GET()).json()) as { reviews: unknown[] }).reviews.length;
+
+  async function refused(response: Response, words: RegExp, before: number) {
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { error: string; code: string };
+    expect(body.code).toBe("CliNotReady");
+    expect(body.error).toMatch(words);
+    expect(await reviewCount()).toBe(before);
+  }
+
+  it("refuses, creating nothing, when no CLI is found", async () => {
+    const before = await reviewCount();
+    process.env.TRYSQUARE_CLAUDE_PATH = "no-such-claude-anywhere";
+    try {
+      await refused(
+        await create(),
+        /No Claude Code CLI was found.*no-such-claude-anywhere/,
+        before,
+      );
+    } finally {
+      useSignedInFake();
+    }
+  }, 120_000);
+
+  it("refuses, creating nothing, when the CLI cannot run", async () => {
+    const before = await reviewCount();
+    process.env.TRYSQUARE_CLAUDE_PATH = join(dataDir, "no-such-claude.mjs");
+    try {
+      await refused(await create(), /cannot run the review.*no such file/, before);
+    } finally {
+      useSignedInFake();
+    }
+  }, 120_000);
+
+  it("refuses, creating nothing, when the CLI is signed out", async () => {
+    const before = await reviewCount();
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: false, authMethod: "none" });
+    try {
+      await refused(await create(), /is not signed in/, before);
+    } finally {
+      useSignedInFake();
+    }
+  }, 120_000);
+
+  it("creates one signed in to bill per token, and says so on the run", async () => {
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: true, authMethod: "api_key" });
+    try {
+      const response = await create();
+      expect(response.status).toBe(201);
+      const { review } = (await response.json()) as { review: { id: string } };
+      const detail = await routes.review.GET(new Request("http://localhost/x"), params(review.id));
+      expect(JSON.stringify(await detail.json())).toMatch(
+        /\(api_key\), so this review may bill per token/,
+      );
+    } finally {
+      useSignedInFake();
+    }
+  }, 120_000);
+
+  it("does not ask for an interactive review, which starts no CLI", async () => {
+    process.env.TRYSQUARE_CLAUDE_PATH = "no-such-claude-anywhere";
+    try {
+      expect((await create({ engineMode: "interactive" })).status).toBe(201);
+    } finally {
+      useSignedInFake();
+    }
   }, 120_000);
 });

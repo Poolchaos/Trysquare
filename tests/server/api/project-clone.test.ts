@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { useSignedInFake } from "../../helpers/signed-in-fake";
 
 let dataDir: string;
 let root: string;
@@ -28,7 +29,11 @@ const params = (id: string) => ({ params: Promise.resolve({ id }) });
 const post = (body: unknown) =>
   new Request("http://localhost/x", { method: "POST", body: JSON.stringify(body) });
 
+// Creating a review asks the CLI whether it can run one (MVP 6.2).
+let restoreCli: () => void;
+
 beforeAll(async () => {
+  restoreCli = useSignedInFake();
   dataDir = mkdtempSync(join(tmpdir(), "trysquare-clone-api-"));
   root = mkdtempSync(join(tmpdir(), "trysquare-clone-src-"));
   // Set before the runtime module is first imported, because it resolves the
@@ -46,6 +51,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  restoreCli();
   (await import("@/server/runtime")).closeRuntime();
   rmSync(dataDir, { recursive: true, force: true });
   rmSync(root, { recursive: true, force: true });

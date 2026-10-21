@@ -2180,3 +2180,27 @@ test("a CLI path kept in Settings is saved, and the environment's is said to win
   await page.getByLabel("CLI path").blur();
   await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
 });
+
+test("Start refused for a CLI that cannot run says why, and stays on the form", async ({
+  page,
+}) => {
+  // Creating a review asks the CLI first and refuses one that cannot run a
+  // review (MVP 6.2); the suite's own fake can, so the refusal is the route's
+  // shape, answered here.
+  await fillANewReview(page);
+  const stop = await routeUntilStopped(page, "**/api/reviews", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    await route.fulfill({
+      status: 409,
+      json: {
+        error:
+          "The Claude Code CLI at /opt/claude is not signed in, so the review cannot run. Sign it in, then start the review again.",
+        code: "CliNotReady",
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Start review" }).click();
+  await expect(page.getByText(/is not signed in, so the review cannot run/)).toBeVisible();
+  await expect(page).toHaveURL(/\/reviews\/new/);
+  await stop();
+});
