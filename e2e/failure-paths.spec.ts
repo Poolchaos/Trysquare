@@ -2134,7 +2134,10 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
     await stop();
   }
   await expect(status).toContainText("/opt/claude, 2.1.301");
-  // A CLI that could not be found named none, so no path line is drawn.
+  await expect(page.getByTestId("cli-path")).toHaveCount(1);
+  // Finding the CLI failed before it named a path, so no path line is drawn:
+  // without the check, an empty one was, which no text could tell apart
+  // (review of the D-154 fixes).
   const stopNoPath = await answerOnce(page, "**/api/auth", (route) =>
     route.fulfill({
       status: 200,
@@ -2143,7 +2146,7 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
   );
   await check.click();
   await expect(status).toContainText("the guard refused it.");
-  await expect(status).not.toContainText("/opt/claude");
+  await expect(page.getByTestId("cli-path")).toHaveCount(0);
   await stopNoPath();
   const stop = await answerOnce(page, "**/api/auth", (route) =>
     route.fulfill({ status: 500, json: { error: "The server could not run the check." } }),

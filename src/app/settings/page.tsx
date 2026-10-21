@@ -300,7 +300,7 @@ export default function SettingsPage() {
             {cli ? (
               <div className="mb-3 grid gap-1 text-sm" data-testid="cli-status">
                 {cli.state === "notFound" || cli.path === undefined ? null : (
-                  <p className="text-xs text-[var(--color-ink-muted)]">
+                  <p className="text-xs text-[var(--color-ink-muted)]" data-testid="cli-path">
                     <Mono className="break-all">{cli.path}</Mono>
                     {cli.version === undefined ? null : `, ${cli.version}`}
                   </p>
