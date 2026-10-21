@@ -38,6 +38,7 @@ import {
 import { createReview, requireReview } from "@/server/db/repositories/reviews";
 import { cloneBare, diffText, mergeBase, resolveBranch } from "@/server/gitops/repo";
 import { probeModel, readCliStatus } from "@/server/engine/probe";
+import { configuredClaudePath } from "@/server/cli-path";
 import { demoRefusal, describeSignIn } from "./lib/demo-billing";
 import { JobManager } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
@@ -125,12 +126,16 @@ async function main(): Promise<number> {
   const db = createDb(dbPath(dataDir));
   runMigrations(db);
 
-  const claudePath = options.fake ? join(FIXTURES, "fake-claude.mjs") : undefined;
+  // One CLI for the check, the probe and the review, found as the app finds
+  // it: checked by the bundled CLI and run by TRYSQUARE_CLAUDE_PATH's, the
+  // check vouched for a CLI the review never used (review of the D-163 fixes).
+  const claudePath = options.fake ? join(FIXTURES, "fake-claude.mjs") : configuredClaudePath(db);
+  const onPath = claudePath === undefined ? {} : { claudePath };
   const manager = new JobManager();
-  manager.init({ db, dataDir, ...(claudePath === undefined ? {} : { claudePath }) });
+  manager.init({ db, dataDir, ...onPath });
 
   if (!options.fake) {
-    const cli = await readCliStatus();
+    const cli = await readCliStatus(onPath);
     log(`CLI      ${describeSignIn(cli)}`);
     const refusal = demoRefusal(cli, options.perToken);
     if (refusal !== null) {
@@ -140,7 +145,7 @@ async function main(): Promise<number> {
       return 1;
     }
     log(`Probing ${options.model}...`);
-    const probe = await probeModel(options.model);
+    const probe = await probeModel(options.model, onPath);
     if (probe.status !== "available") {
       log(`The model is not usable: ${probe.error}`);
       log("Nothing was spent. Pass --fake to run the demo without a model.");
