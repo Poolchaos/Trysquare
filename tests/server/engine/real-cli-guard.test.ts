@@ -7,37 +7,52 @@
 
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { describeCli, resolveCli, runCliAttached } from "@/server/engine/cli";
+import { existsSync } from "node:fs";
+import { describeCli, realCliEnvironment, resolveCli, runCliAttached } from "@/server/engine/cli";
 
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
 
+/**
+ * The refusals below need a real CLI for the guard to refuse: without one,
+ * finding it fails first, for another reason (review of the D-153 fixes).
+ * npm install puts one in node_modules, so it is there wherever the suite
+ * runs; a machine without it skips them rather than failing.
+ */
+const noRealCli = !realCliEnvironment().bundled.some((path) => existsSync(path));
+
 describe("the real-CLI guard", () => {
-  it("refuses the CLI npm install put in node_modules", () => {
+  it.skipIf(noRealCli)("refuses the CLI npm install put in node_modules", () => {
     expect(() => resolveCli(undefined)).toThrow(/not a fake/);
     expect(() => resolveCli("  ")).toThrow(/not a fake/);
   });
 
-  it("refuses it in any test but the real-CLI one, whatever the shell says", () => {
-    // The variable exported in a shell let every test of a run reach the real
-    // CLI, not only the one that asks for it (review of the D-152 fixes).
-    const before = process.env.TRYSQUARE_REAL_CLI;
-    process.env.TRYSQUARE_REAL_CLI = "1";
-    try {
-      expect(() => resolveCli(undefined)).toThrow(/not a fake/);
-    } finally {
-      if (before === undefined) delete process.env.TRYSQUARE_REAL_CLI;
-      else process.env.TRYSQUARE_REAL_CLI = before;
-    }
-  });
+  it.skipIf(noRealCli)(
+    "refuses it in any test but the real-CLI one, whatever the shell says",
+    () => {
+      // The variable exported in a shell let every test of a run reach the real
+      // CLI, not only the one that asks for it (review of the D-152 fixes).
+      const before = process.env.TRYSQUARE_REAL_CLI;
+      process.env.TRYSQUARE_REAL_CLI = "1";
+      try {
+        expect(() => resolveCli(undefined)).toThrow(/not a fake/);
+      } finally {
+        if (before === undefined) delete process.env.TRYSQUARE_REAL_CLI;
+        else process.env.TRYSQUARE_REAL_CLI = before;
+      }
+    },
+  );
 
-  it("names no real CLI in a run's engine note, and starts none to ask its version", async () => {
-    // describeCli resolved inside its own module, past the guard, and started
-    // the real CLI for its version: free, but started (review of the D-152
-    // fixes).
-    expect(await describeCli(undefined)).toMatch(/^none usable \(.*not a fake/);
-  });
+  it.skipIf(noRealCli)(
+    "names no real CLI in a run's engine note, and starts none to ask its version",
+    async () => {
+      // describeCli resolved inside its own module, past the guard, and started
+      // the real CLI for its version: free, but started (review of the D-152
+      // fixes).
+      expect(await describeCli(undefined)).toMatch(/^none usable \(.*not a fake/);
+    },
+  );
 
-  it("refuses the real CLI to npm run claude's runner too", () => {
+  it.skipIf(noRealCli)("refuses the real CLI to npm run claude's runner too", () => {
     // It resolved inside its own module, past the guard, and then runs the CLI
     // attached, with whatever it is given (review of the D-153 fixes). Asked
     // for --version only, so a guard that did not hold starts nothing that

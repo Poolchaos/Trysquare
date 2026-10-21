@@ -9,10 +9,12 @@
  * out (measured on 2.1.301).
  */
 
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readCliStatus } from "@/server/engine/probe";
+import { realCliEnvironment } from "@/server/engine/cli";
 
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
 
@@ -51,15 +53,20 @@ describe("the CLI's status", () => {
     expect(status.state === "cannotRun" && status.message).toMatch(/2\.1\.71/);
   });
 
-  it("cannot run when finding it failed some other way, and says how", async () => {
-    // Every failure but a refused file read as "not found": in this suite the
-    // real-CLI guard's own refusal did, so a test of a path that should have
-    // been used passed on the bundled CLI being found instead (review of the
-    // 6.1 changes).
-    const status = await readCliStatus();
-    expect(status.state).toBe("cannotRun");
-    expect(status.state === "cannotRun" && status.message).toMatch(/not a fake/);
-  });
+  // Needs the real CLI npm install put in node_modules, for the suite's guard
+  // to refuse: without one, finding it fails first, as not found.
+  it.skipIf(!realCliEnvironment().bundled.some((path) => existsSync(path)))(
+    "cannot run when finding it failed some other way, and says how",
+    async () => {
+      // Every failure but a refused file read as "not found": in this suite the
+      // real-CLI guard's own refusal did, so a test of a path that should have
+      // been used passed on the bundled CLI being found instead (review of the
+      // 6.1 changes).
+      const status = await readCliStatus();
+      expect(status.state).toBe("cannotRun");
+      expect(status.state === "cannotRun" && status.message).toMatch(/not a fake/);
+    },
+  );
 
   it("cannot run when it does not say its version in time, and says so", async () => {
     vi.resetModules();
