@@ -57,7 +57,8 @@ describe("the real-CLI guard's rule", () => {
         symlinkSync(target, link, "file");
       } catch {
         // Windows makes a file link only with Developer Mode or as an
-        // administrator; Linux and macOS CI run this.
+        // administrator. CI runs this on all three, its Windows runner as an
+        // administrator; a Windows machine without either skips it.
         context.skip();
       }
       expect(isFakeCli(link, true, join(root, "tests"), tmpdir())).toBe(false);

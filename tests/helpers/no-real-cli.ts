@@ -8,10 +8,10 @@
  * find their CLI through `resolveCli` as they import it, and cli.ts's own
  * describeCli and runCliAttached through the one inside it, so all three are
  * wrapped here: a CLI that is not a fake (tests/helpers/fake-cli-rule.ts) is
- * refused before anything is started. A test that hands in its own CLI environment resolves nothing
- * real and is left alone. TRYSQUARE_REAL_CLI=1 opens the guard to the
- * real-CLI test alone: exported in a shell, it opened it to every test of
- * the run (review of the D-152 fixes).
+ * refused before anything is started. A test that hands in its own CLI
+ * environment resolves nothing real and is left alone. TRYSQUARE_REAL_CLI=1
+ * opens the guard to the real-CLI test alone: exported in a shell, it opened
+ * it to every test of the run (review of the D-152 fixes).
  */
 
 import { tmpdir } from "node:os";
