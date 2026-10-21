@@ -178,12 +178,17 @@ describe("the system config git is given", () => {
       const reader = (async () => {
         while (writing) reads.push(await readFile(system.path, "utf8"));
       })();
-      for (let copy = 0; copy < 10; copy += 1) {
-        await putStale();
-        await (await ownCopy()).systemGitConfig();
+      try {
+        for (let copy = 0; copy < 10; copy += 1) {
+          await putStale();
+          await (await ownCopy()).systemGitConfig();
+        }
+      } finally {
+        // Left reading after a failure, it read on into the next test, which
+        // removes the file, and failed there instead.
+        writing = false;
+        await reader;
       }
-      writing = false;
-      await reader;
       expect(reads.length).toBeGreaterThan(0);
       expect(reads.filter((read) => read !== text && read !== stale)).toEqual([]);
       expect(await readFile(system.path, "utf8")).toBe(text);

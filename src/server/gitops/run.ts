@@ -124,7 +124,11 @@ function runGit(
  * Windows refuses a rename while another process has either file open: no
  * failure when the file there holds the same text, as another writer's does,
  * and otherwise tried again for a while, since antivirus and the indexer let
- * go within moments; graceful-fs retries renames for the same reason.
+ * go within moments; graceful-fs retries renames for the same reason. Tried
+ * often rather than backing off: each reader holds the file for moments, and
+ * waits growing to 200ms gave about 15 tries in the window, which a reader
+ * opening it again and again outlasted in 3 of 8 runs under full CPU load
+ * (2026-10-21).
  */
 async function writeStandIn(path: string, text: string): Promise<void> {
   const holds = async () => (await readFile(path, "utf8").catch(() => null)) === text;
@@ -132,26 +136,27 @@ async function writeStandIn(path: string, text: string): Promise<void> {
   const partial = `${path}.${process.pid}.${randomUUID()}.partial`;
   await writeFile(partial, text, "utf8");
   const deadline = Date.now() + RENAME_RETRY_MS;
-  for (let wait = 10; ; wait = Math.min(wait * 2, 200)) {
+  for (;;) {
     try {
       await rename(partial, path);
       return;
     } catch (error) {
       const refused = RENAME_REFUSALS.has((error as NodeJS.ErrnoException).code ?? "");
       const done = await holds();
-      if (done || !refused || Date.now() + wait > deadline) {
+      if (done || !refused || Date.now() + RENAME_RETRY_WAIT_MS > deadline) {
         // Its own refusal is no reason to fail the stand-in.
         await rm(partial, { force: true }).catch(() => undefined);
         if (done) return;
         throw error;
       }
-      await new Promise((resolve) => setTimeout(resolve, wait));
+      await new Promise((resolve) => setTimeout(resolve, RENAME_RETRY_WAIT_MS));
     }
   }
 }
 
 const RENAME_REFUSALS = new Set(["EPERM", "EACCES", "EBUSY"]);
 const RENAME_RETRY_MS = 2_000;
+const RENAME_RETRY_WAIT_MS = 5;
 
 let systemConfig: Promise<SystemConfig> | undefined;
 
