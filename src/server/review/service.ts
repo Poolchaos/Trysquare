@@ -171,6 +171,11 @@ export interface StageLifecycleEvent {
 export interface PrepareAndRunOptions {
   /** Defaults to the configured data directory. Tests pass a temporary one. */
   dataDir?: string | undefined;
+  /**
+   * The CLI, as the caller resolved it: the manager passes configuredClaudePath
+   * (D-152). Not looked up again here, so there is one order, not two.
+   * Undefined is the CLI npm install put in node_modules, then PATH.
+   */
   claudePath?: string | undefined;
   signal?: AbortSignal | undefined;
   onEvent?: ((stage: ReviewStage, event: EngineEvent) => void) | undefined;
@@ -263,7 +268,7 @@ export async function prepareAndRun(
     kind: "note",
     message: interactive
       ? `Engine: interactive, answered in your own session, model ${review.model}.`
-      : `Engine: ${await describeCli(options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH)}, ` +
+      : `Engine: ${await describeCli(options.claudePath)}, ` +
         `model ${review.model}, effort ${review.effort}.`,
   });
 
@@ -551,7 +556,7 @@ function buildRunner(
           rules: snapshot.rules,
           timeoutMs: timeoutMinutes * 60_000,
           // The CLI the printed command runs, resolved as a headless stage's.
-          claudePath: options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH,
+          claudePath: options.claudePath,
           ...(options.signal === undefined ? {} : { signal: options.signal }),
           ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
         })
@@ -564,9 +569,7 @@ function buildRunner(
           directives: snapshot.directives,
           rules: snapshot.rules,
           ...(budget > 0 ? { maxBudgetUsd: budget } : {}),
-          ...((options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH)
-            ? { claudePath: options.claudePath ?? process.env.TRYSQUARE_CLAUDE_PATH }
-            : {}),
+          ...(options.claudePath ? { claudePath: options.claudePath } : {}),
           ...(options.signal === undefined ? {} : { signal: options.signal }),
           ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
           onStageComplete: (info) => built.wrapper?.noteAttempt(info),
