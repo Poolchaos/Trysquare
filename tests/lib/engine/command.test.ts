@@ -162,14 +162,33 @@ describe("the child environment", () => {
     );
   });
 
+  it("keeps the paid providers from the CLI, whatever its sign-in (D-161)", () => {
+    // Each of these sends a review to another provider, billed per token,
+    // and wins over the subscription sign-in, so signing in again could not
+    // help; the 2.1.301 binary reads them all (review of the D-160 fixes).
+    for (const name of [
+      "CLAUDE_CODE_USE_BEDROCK",
+      "CLAUDE_CODE_USE_VERTEX",
+      "CLAUDE_CODE_USE_FOUNDRY",
+      "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+      "CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD",
+      "CLAUDE_CODE_USE_MANTLE",
+      "CLAUDE_CODE_USE_GATEWAY",
+      "AWS_BEARER_TOKEN_BEDROCK",
+      "ANTHROPIC_FOUNDRY_API_KEY",
+      "ANTHROPIC_AWS_API_KEY",
+    ]) {
+      expect(isStrippedFromChild(name), name).toBe(true);
+    }
+  });
+
   it("passes a person's own Claude Code settings through (D-120)", () => {
     // Every CLAUDE_CODE_ variable used to be stripped, so a headless
     // subscription sign-in or a Git Bash at a custom path never reached the
-    // review's CLI.
+    // review's CLI. A paid provider's selector no longer passes (D-161).
     for (const name of [
       "CLAUDE_CODE_OAUTH_TOKEN",
       "CLAUDE_CODE_GIT_BASH_PATH",
-      "CLAUDE_CODE_USE_BEDROCK",
       "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
     ]) {
       expect(isStrippedFromChild(name), name).toBe(false);

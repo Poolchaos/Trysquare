@@ -173,10 +173,25 @@ const STRIPPED: ReadonlySet<string> = new Set([
   // An API key in the server's environment, which the CLI would take over
   // the sign-in it shares with the editor's Claude Code, billing a review per
   // token without a word. Reviews draw on that subscription sign-in by
-  // default; a key signed into the CLI itself is the only way to per-token
-  // billing, and the app warns of it (D-161).
+  // default (D-161).
   "ANTHROPIC_API_KEY",
   "ANTHROPIC_AUTH_TOKEN",
+  // And the paid providers, each of which sends a review elsewhere, billed
+  // per token, winning over the sign-in, so no sign-in could undo it; with
+  // the keys they take. All read by the 2.1.301 binary (review of the D-160
+  // fixes). This narrows D-120's "every other variable passes": a key
+  // signed into the CLI itself is the way to per-token billing left, and the
+  // app warns of it.
+  "CLAUDE_CODE_USE_BEDROCK",
+  "CLAUDE_CODE_USE_VERTEX",
+  "CLAUDE_CODE_USE_FOUNDRY",
+  "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+  "CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD",
+  "CLAUDE_CODE_USE_MANTLE",
+  "CLAUDE_CODE_USE_GATEWAY",
+  "AWS_BEARER_TOKEN_BEDROCK",
+  "ANTHROPIC_FOUNDRY_API_KEY",
+  "ANTHROPIC_AWS_API_KEY",
 ]);
 
 export function isStrippedFromChild(name: string): boolean {

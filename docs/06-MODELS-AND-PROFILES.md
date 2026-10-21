@@ -34,10 +34,15 @@ CLI call. The check names the CLI's path and version and tells apart a CLI
 not found, one that cannot run (with the real error: too old, not
 executable, an answer that is not its status, no answer in time), signed
 out, signed in some way that bills per token (a warning; reviews still run,
-D-92), and a subscription. ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN are
-kept from every CLI the app starts, so reviews draw on the subscription
-sign-in by default, and only a key signed into the CLI itself bills per token
-(D-161). The app never reads, copies, or logs the credentials themselves.
+D-92), and a subscription. ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN and the
+paid providers' selectors and keys (CLAUDE_CODE_USE_BEDROCK, _VERTEX,
+_FOUNDRY, _ANTHROPIC_AWS, _ANTHROPIC_GOOGLE_CLOUD, _MANTLE and _GATEWAY,
+AWS_BEARER_TOKEN_BEDROCK, ANTHROPIC_FOUNDRY_API_KEY, ANTHROPIC_AWS_API_KEY)
+are kept from every CLI the app starts, so reviews draw on the subscription
+sign-in by default; a key signed into the CLI itself is what is left to bill
+per token, and the app warns of it (D-161). ANTHROPIC_BASE_URL still passes:
+what it does beside a claude.ai sign-in is unmeasured. The app never reads,
+copies, or logs the credentials themselves.
 
 **A spawned `claude` process must not inherit the parent shell's Claude Code
 session variables.** A review is an independent program that may have been
