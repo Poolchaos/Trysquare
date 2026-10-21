@@ -7,7 +7,7 @@
 
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { describeCli, resolveCli } from "@/server/engine/cli";
+import { describeCli, resolveCli, runCliAttached } from "@/server/engine/cli";
 
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
 
@@ -35,6 +35,14 @@ describe("the real-CLI guard", () => {
     // the real CLI for its version: free, but started (review of the D-152
     // fixes).
     expect(await describeCli(undefined)).toMatch(/^none usable \(.*not a fake/);
+  });
+
+  it("refuses the real CLI to npm run claude's runner too", () => {
+    // It resolved inside its own module, past the guard, and then runs the CLI
+    // attached, with whatever it is given (review of the D-153 fixes). Asked
+    // for --version only, so a guard that did not hold starts nothing that
+    // spends.
+    expect(() => runCliAttached(["--version"], undefined)).toThrow(/not a fake/);
   });
 
   it("lets the fake through", () => {
