@@ -3601,6 +3601,6 @@ verified evidence, in writing, here.
   seven LOW, and labelled only six LOW; its item 11, the CI record, is the
   seventh. And its item 10 and the inbox gave "3,436 files (489 ms)" without
   saying what was measured: git ls-files --stage and git hash-object
-  --stdin-paths over the regular files of the `main app/pos` working tree on
-  the maintainer's Windows machine, the largest of six local repositories
+  --stdin-paths over the regular files of a private working tree on the
+  maintainer's Windows machine, the largest of six local repositories
   timed. The inbox line now says so.

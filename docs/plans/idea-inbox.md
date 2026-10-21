@@ -53,8 +53,8 @@ pulled deliberately.
   plugin only with the maintainer's OK.
 - 2026-10-21: the checkout's check of every tracked file (7b4a586) has a
   600 s ceiling on git hash-object, measured only up to 3,436 files in
-  489 ms, the `main app/pos` working tree on the maintainer's Windows
-  machine (D-153, D-154); measure it on a large repository and size the
+  489 ms, a private working tree on the maintainer's Windows machine
+  (D-153, D-154); measure it on a large repository and size the
   ceiling, or make it scale with the file count.
 
 ## Retired

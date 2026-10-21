@@ -36,6 +36,10 @@ const FORBIDDEN_PATHS = [
 const FORBIDDEN_CONTENT = [
   { pattern: /sally[-\s]?pos/i, why: "private product name" },
   { pattern: /pos-core/i, why: "private package name" },
+  // The maintainer's private POS working trees, by the names they sit under on
+  // their machine: one was named in a record of a measurement taken there
+  // (review of the D-154 fixes).
+  { pattern: /\bpos-app\b|pos-workspace|main app\/pos\b/i, why: "private working tree name" },
   { pattern: /popiadesk|peelgrims/i, why: "other private project names" },
   { pattern: /\bSAL-\d+\b/, why: "internal tracker identifier" },
   { pattern: /v2-app-location-/i, why: "internal deployed function identifier" },
