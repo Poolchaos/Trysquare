@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
 import { Badge, Button, Card, Empty, Field, Input, Mono, Problem } from "@/components/ui";
 import { send } from "@/components/request";
+import { BillingNotice, billingOf } from "@/components/billing-notice";
 import { signInPlaceWords, type SignIn } from "@/lib/engine/sign-in-command";
 
 interface Model {
@@ -32,6 +33,30 @@ type CliStatus =
   | { state: "perToken"; path: string; version: string; authMethod: string }
   | { state: "maybePerToken"; path: string; version: string; authMethod?: string }
   | { state: "subscription"; path: string; version: string; subscriptionType?: string };
+
+const readCli = () =>
+  send<{ cli: CliStatus; signIn?: SignIn }>(
+    "/api/auth",
+    { method: "GET" },
+    "The CLI could not be checked",
+  );
+
+function showCli(
+  sent: Awaited<ReturnType<typeof readCli>>,
+  setCli: (cli: CliStatus | null) => void,
+  setSignIn: (signIn: SignIn | null) => void,
+  setCliProblem: (problem: string) => void,
+) {
+  if (sent.ok) {
+    setCli(sent.body.cli);
+    // An answer without one draws no command rather than failing the card.
+    setSignIn(sent.body.signIn ?? null);
+    setCliProblem("");
+  } else {
+    setCli(null);
+    setCliProblem(sent.error);
+  }
+}
 
 /** "max" as the CLI reports it, "Max plan's" as a person reads it. */
 function planName(subscriptionType: string | undefined): string {
@@ -122,6 +147,31 @@ export default function SettingsPage() {
       cancelled = true;
     };
   }, [loadAttempt]);
+
+  const probeBilling = billingOf(cli ?? undefined, undefined);
+
+  async function checkCli() {
+    setCheckingCli(true);
+    try {
+      showCli(await readCli(), setCli, setSignIn, setCliProblem);
+    } finally {
+      setCheckingCli(false);
+    }
+  }
+
+  // Asked as Settings opens, since it is free: a probe below is a real call,
+  // and under a sign-in billing per token it costs API usage, which was said
+  // only once Check the CLI was pressed (review of D-161).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const sent = await readCli();
+      if (!cancelled) showCli(sent, setCli, setSignIn, setCliProblem);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function save(field: (typeof FIELDS)[number], input: HTMLInputElement) {
     setError("");
@@ -388,31 +438,7 @@ export default function SettingsPage() {
                 <Problem>{cliProblem}</Problem>
               </div>
             )}
-            <Button
-              disabled={checkingCli}
-              onClick={async () => {
-                setCheckingCli(true);
-                try {
-                  const sent = await send<{ cli: CliStatus; signIn?: SignIn }>(
-                    "/api/auth",
-                    { method: "GET" },
-                    "The CLI could not be checked",
-                  );
-                  if (sent.ok) {
-                    setCli(sent.body.cli);
-                    // An answer without one draws no command rather than
-                    // failing the card.
-                    setSignIn(sent.body.signIn ?? null);
-                    setCliProblem("");
-                  } else {
-                    setCli(null);
-                    setCliProblem(sent.error);
-                  }
-                } finally {
-                  setCheckingCli(false);
-                }
-              }}
-            >
+            <Button disabled={checkingCli} onClick={() => void checkCli()}>
               {checkingCli ? "Checking..." : "Check the CLI"}
             </Button>
           </Card>
@@ -441,6 +467,13 @@ export default function SettingsPage() {
             </>
           )}
         </Card>
+
+        {/* The sign-in command is on the Claude Code card above, not again here. */}
+        {probeBilling === null ? null : (
+          <div className="mt-8">
+            <BillingNotice billing={probeBilling} what="probe" />
+          </div>
+        )}
 
         <div className="mt-8 mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>

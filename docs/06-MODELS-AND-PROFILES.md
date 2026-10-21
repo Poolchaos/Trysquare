@@ -24,16 +24,17 @@ is named.
 Signed out, 2.1.301 prints `{"loggedIn":false,"authMethod":"none",...}` and
 exits 1 (measured 2026-10-20 with an empty config directory), so the status
 is read from stdout before the exit code. The app reads this only when
-someone presses Check the CLI on Settings, opens the new-review screen,
-which says before Start that a sign-in billing per token makes a review
-cost API usage (D-161), or creates or starts a review that runs headless,
+someone opens Settings, which says above Models that a sign-in billing per
+token makes a probe cost API usage, or presses Check the CLI there; opens
+the new-review screen, which says the same of a review before Start
+(D-161); or creates or starts a review that runs headless,
 which is refused with the reason when the CLI is not found, cannot run or
 is signed out (MVP 6.2), and, when it bills per token or may, until the
 page has said so: each page sends what it showed with Create and Start,
 and one refused shows the notice for the next (review of D-161). Never at
 startup or on a timer.
-Both checks are free, and each is an explicit action, as D-31 keeps every
-CLI call. The check names the CLI's path and version and tells apart a CLI
+Both checks are free, so they run as those screens open; D-31 keeps every
+call that spends to an explicit action. The check names the CLI's path and version and tells apart a CLI
 not found, one that cannot run (with the real error: too old, not
 executable, an answer that is not its status, no answer in time), signed
 out, signed in some way that bills per token (a key, an `apiKeyHelper` or

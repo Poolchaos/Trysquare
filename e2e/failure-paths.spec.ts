@@ -2099,10 +2099,53 @@ test("the CLI's check names the CLI, its version and how it is signed in", async
   );
 });
 
+/** Settings, once the check it runs as it opens has landed, so a check mocked after is the next. */
+async function openSettings(page: import("@playwright/test").Page): Promise<void> {
+  await page.goto("/settings");
+  await expect(page.getByTestId("cli-status")).toContainText("fake-claude.mjs", {
+    timeout: 30_000,
+  });
+}
+
+test("Settings says as it opens that probes would cost API usage, above the models", async ({
+  page,
+}) => {
+  // A probe is a real call, and under a sign-in billing per token it costs
+  // API usage, which Settings said only once Check the CLI was pressed
+  // (review of D-161). The check is free, so it runs as Settings opens.
+  const stop = await routeUntilStopped(page, "**/api/auth", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        cli: { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
+        signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+      },
+    }),
+  );
+  await page.goto("/settings");
+  const notice = page.getByTestId("per-token-notice");
+  await expect(notice).toContainText("A probe will cost API usage, billed per token.");
+  await expect(notice).toContainText("so a probe draws on paid API usage");
+  await expect(page.getByTestId("cli-status")).toContainText("Signed in (api_key)");
+  const models = page.getByRole("heading", { name: "Models", level: 2 });
+  expect(
+    await notice.evaluate(
+      (shown, heading) =>
+        (shown.compareDocumentPosition(heading as Node) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+      await models.elementHandle(),
+    ),
+  ).toBe(true);
+  await stop();
+
+  // The suite's fake draws on a subscription, which says nothing of cost.
+  await openSettings(page);
+  await expect(notice).toHaveCount(0);
+});
+
 test("the CLI's check says each way it cannot run a review, and a check that failed", async ({
   page,
 }) => {
-  await page.goto("/settings");
+  await openSettings(page);
   const status = page.getByTestId("cli-status");
   const check = page.getByRole("button", { name: "Check the CLI" });
   const answers: [object, string][] = [
@@ -2252,7 +2295,7 @@ test("Start refused for a CLI that cannot run says why, and stays on the form", 
 
 test("a signed-out CLI's check shows the command that signs it in", async ({ page }) => {
   // Shown for the person to run, never run by the app (MVP 6.3, D-159).
-  await page.goto("/settings");
+  await openSettings(page);
   const stop = await answerOnce(page, "**/api/auth", (route) =>
     route.fulfill({
       status: 200,

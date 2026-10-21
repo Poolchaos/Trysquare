@@ -3,7 +3,8 @@
 /**
  * Said before a review that bills per token, or may, is started (D-161): on
  * the new-review screen as it opens, and on any page whose Start or Resume
- * the server refused because the page had not said it (review of D-161).
+ * the server refused because the page had not said it (review of D-161). And
+ * on Settings as it opens, of the probes there, each a real call.
  */
 
 import { Mono } from "@/components/ui";
@@ -38,18 +39,26 @@ export function SignInLine({ signIn }: { signIn: SignIn }) {
   );
 }
 
-export function BillingNotice({ billing }: { billing: Billing }) {
+export function BillingNotice({
+  billing,
+  what = "review",
+}: {
+  billing: Billing;
+  /** What would cost: a review, or on Settings, a model's probe. */
+  what?: "review" | "probe";
+}) {
   const { state, authMethod, signIn } = billing;
+  const one = what === "probe" ? "a probe" : "a review";
   const unknownWay =
     authMethod === undefined
       ? "The CLI did not say how it is signed in"
       : `The CLI is signed in (${authMethod}), a way this app does not know`;
   const why =
     state === "perToken"
-      ? `The CLI is signed in (${authMethod}) some other way than your Claude subscription, so a review draws on paid API usage rather than your plan's usage limits.`
+      ? `The CLI is signed in (${authMethod}) some other way than your Claude subscription, so ${one} draws on paid API usage rather than your plan's usage limits.`
       : authMethod === "oauth_token"
         ? "The CLI is signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other on paid API usage."
-        : `${unknownWay}: unless it is your Claude subscription, a review draws on paid API usage rather than your plan's usage limits.`;
+        : `${unknownWay}: unless it is your Claude subscription, ${one} draws on paid API usage rather than your plan's usage limits.`;
   // A token set for the CLI wins over a sign-in, so signing in would change nothing.
   const remedy = authMethod !== "oauth_token";
   return (
@@ -59,7 +68,8 @@ export function BillingNotice({ billing }: { billing: Billing }) {
       className="rounded-md border border-[var(--color-warning)] bg-[var(--color-warning-soft)] p-3 text-sm"
     >
       <p className="font-medium">
-        This review {state === "perToken" ? "will" : "may"} cost API usage, billed per token.
+        {what === "probe" ? "A probe" : "This review"} {state === "perToken" ? "will" : "may"} cost
+        API usage, billed per token.
       </p>
       <p className="mt-1 text-xs">
         {why}
