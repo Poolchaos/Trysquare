@@ -3709,3 +3709,24 @@ verified evidence, in writing, here.
   product name is in most commits' author address, and hashing loses the
   patterns' reach (joins, substrings, the tracker id's shape). The inbox
   holds it.
+- 2026-10-21 D-158 REVIEW (the D-157 fixes and their record, c5c91ac..e8dab46,
+  by a separate read-only reviewer told never to run anything that could
+  reach the real CLI, nor to read docs/private/ or write a private name; each
+  finding re-run here before it was fixed). Four findings, one MEDIUM and
+  three LOW, all fixed in b62bbf0:
+  1. MEDIUM: 44903b4 read a backslash and the letter after it as an escape,
+  so a Windows path to a folder whose name began with n, r, t, b, f or v
+  lost that letter and its name passed, undoing D-156's fix for pasted
+  Windows paths. Checked here against the names hashed now: none begins so,
+  so none could have leaked this way; a future one could. The matcher now
+  reads each file twice, escapes as separators and a backslash as one with
+  the next letter kept, and takes both readings' finds.
+  2. LOW: a pattern's \s, \d and \w still glued to the next word, so a name
+  written as the gate's own product pattern is, joined by [-\s]?, passed.
+  They are separators in the first reading now.
+  3. LOW: a hashed name of one word would trip the gate on every use of the
+  word. The probe check refuses one.
+  4. LOW: the matcher had no repeatable test; 44903b4's probe was staged and
+  removed. It is its own module, scripts/lib/hashed-names.mjs, with twenty
+  unit tests over made-up names; five failed on the matcher before.
+  The gate runs in 969 to 988 ms here.
