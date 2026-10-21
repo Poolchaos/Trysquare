@@ -9,7 +9,9 @@
  *
  * `--fake` routes every model call through the test double, which makes the
  * whole demo free and deterministic. That mode proves the plumbing. It proves
- * nothing about review quality, which is what the real run is for.
+ * nothing about review quality, which is what the real run is for. The real
+ * run says how the CLI is signed in first, and stops, having spent nothing,
+ * when that bills per token or may, unless `--per-token` says it may spend.
  *
  *   npm run demo:fixture -- --fake
  *   npm run demo:fixture -- --model claude-fable-5[1m]
@@ -35,7 +37,8 @@ import {
 } from "@/server/db/repositories/projects";
 import { createReview, requireReview } from "@/server/db/repositories/reviews";
 import { cloneBare, diffText, mergeBase, resolveBranch } from "@/server/gitops/repo";
-import { probeModel } from "@/server/engine/probe";
+import { probeModel, readCliStatus } from "@/server/engine/probe";
+import { demoRefusal, describeSignIn } from "./lib/demo-billing";
 import { JobManager } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
 
@@ -50,6 +53,7 @@ interface Options {
   model: string;
   fake: boolean;
   keep: boolean;
+  perToken: boolean;
 }
 
 function parseArgs(argv: readonly string[]): Options {
@@ -58,6 +62,7 @@ function parseArgs(argv: readonly string[]): Options {
     model: modelAt === -1 ? DEFAULT_MODEL : (argv[modelAt + 1] ?? DEFAULT_MODEL),
     fake: argv.includes("--fake"),
     keep: argv.includes("--keep"),
+    perToken: argv.includes("--per-token"),
   };
 }
 
@@ -125,6 +130,15 @@ async function main(): Promise<number> {
   manager.init({ db, dataDir, ...(claudePath === undefined ? {} : { claudePath }) });
 
   if (!options.fake) {
+    const cli = await readCliStatus();
+    log(`CLI      ${describeSignIn(cli)}`);
+    const refusal = demoRefusal(cli, options.perToken);
+    if (refusal !== null) {
+      log(refusal);
+      db.$client.close();
+      if (!options.keep) rmSync(dataDir, { recursive: true, force: true });
+      return 1;
+    }
     log(`Probing ${options.model}...`);
     const probe = await probeModel(options.model);
     if (probe.status !== "available") {

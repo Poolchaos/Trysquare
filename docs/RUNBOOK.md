@@ -170,7 +170,9 @@ silently used the real CLI:
 - Pressing Probe on the Settings screen, or a probe control in the model
   picker. Each probe is a real call, which is why nothing probes on a timer or
   at startup.
-- `npm run demo:fixture` **without** `--fake`.
+- `npm run demo:fixture` **without** `--fake`. It says how the CLI is signed
+  in first, and stops, having spent nothing, when that bills per token or
+  may, unless `--per-token` is passed.
 
 Checking sign-in on Settings runs the CLI's own auth status and spends
 nothing. Pre-flight is git and arithmetic only. The entire test suite runs
