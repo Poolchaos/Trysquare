@@ -31,9 +31,7 @@ import { created, failed, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
 import { findingTallies } from "@/server/db/repositories/findings";
 import { runtime } from "@/server/runtime";
-import { configuredClaudePath } from "@/server/cli-path";
-import { readCliStatus, type CliStatus } from "@/server/engine/probe";
-import { signInCommand } from "@/lib/engine/sign-in-command";
+import { cliNotReady, cliReadiness } from "@/server/cli-readiness";
 import { listProjects } from "@/server/db/repositories/projects";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
 
@@ -121,6 +119,15 @@ export function POST(request: Request): Promise<Response> {
         { status: 400 },
       );
     }
+
+    // The free checks, before anything is fetched: a review the CLI cannot
+    // run is refused with the reason, creating nothing, rather than started
+    // and failed at its first stage (MVP 6.2). Asked first, not last, so a
+    // refusal waits on no fetch (review of the 6.2 changes). The interactive
+    // engine starts no CLI.
+    const headless = (input.engineMode ?? "headless") === "headless";
+    const readiness = headless ? await cliReadiness(db) : null;
+    if (readiness?.refusal) throw cliNotReady(readiness.refusal);
 
     // Fetched immediately before pinning, so the commits recorded are the tips
     // the remotes have now rather than whatever the last clone left behind.
@@ -228,19 +235,6 @@ export function POST(request: Request): Promise<Response> {
       throw Response.json({ error: resolution.message, code: resolution.code }, { status: 400 });
     }
 
-    // The free checks, run as Start is pressed and last, so a review the CLI
-    // cannot run is refused here with the reason rather than created and
-    // failed at its first stage (MVP 6.2). A sign-in that bills per token is
-    // a warning, not a block (D-92); the interactive engine starts no CLI.
-    const headless = (input.engineMode ?? "headless") === "headless";
-    const claudePath = configuredClaudePath(db);
-    const cli = headless ? await readCliStatus(withClaudePath(claudePath)) : null;
-    const refusal =
-      cli === null ? null : cliRefusal(cli, signInCommand(claudePath, process.platform));
-    if (refusal !== null) {
-      throw Response.json({ error: refusal, code: "CliNotReady" }, { status: 409 });
-    }
-
     const review = createReview(db, {
       projectId: project.id,
       fromBranch: input.fromBranch,
@@ -275,6 +269,7 @@ export function POST(request: Request): Promise<Response> {
           "so the usage recorded here stays at zero.",
       });
     }
+    const cli = readiness?.cli;
     if (cli?.state === "perToken") {
       appendRunNote(db, review.id, {
         kind: "note",
@@ -303,26 +298,4 @@ async function pin(repoDir: string, fromBranch: string, intoBranch: string) {
     intoCommit: await resolveBranch(repoDir, intoBranch),
     mergeBaseCommit: await mergeBase(repoDir, intoBranch, fromBranch),
   };
-}
-
-function withClaudePath(claudePath: string | undefined): { claudePath?: string } {
-  return claudePath === undefined ? {} : { claudePath };
-}
-
-/** Why the CLI cannot run a review, in words a person can act on, or null when it can. */
-function cliRefusal(cli: CliStatus, signIn: string): string | null {
-  switch (cli.state) {
-    case "notFound":
-      return `No Claude Code CLI was found, so the review cannot run. ${cli.message}`;
-    case "cannotRun":
-      return `The Claude Code CLI cannot run the review: ${cli.message} Check the CLI on Settings.`;
-    case "signedOut":
-      return (
-        `The Claude Code CLI at ${cli.path} is not signed in, so the review cannot run. ` +
-        `Sign it in with ${signIn}, then start the review again.`
-      );
-    case "perToken":
-    case "subscription":
-      return null;
-  }
 }

@@ -11,6 +11,7 @@ import { hasReviewSnapshot, loadRuleset, requireRuleset } from "@/server/db/repo
 import { requireReview } from "@/server/db/repositories/reviews";
 import { handler, ok, readOptionalJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
+import { cliNotReady, cliReadiness } from "@/server/cli-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export async function POST(
     // request had named none (5.8, A8).
     const input = await readOptionalJson(request, body);
 
-    requireReview(db, id);
+    const review = requireReview(db, id);
 
     // A resumed review already carries its frozen ruleset and must not be
     // handed a different one.
@@ -59,6 +60,16 @@ export async function POST(
         name: row.name,
         tier: rulesetTierSchema.parse(row.tier),
       };
+    }
+
+    // Asked again as it starts, as at create: a Resume, a draft's own Start
+    // and every review a restart left waiting come here, and a CLI that
+    // signed out since failed them at their first stage with nothing said
+    // (MVP 6.2, review of the 6.2 changes). The interactive engine starts no
+    // CLI.
+    if (review.engineMode === "headless") {
+      const { refusal } = await cliReadiness(db);
+      if (refusal !== null) throw cliNotReady(refusal);
     }
 
     // A review that cannot run, or a ruleset for one already running or in

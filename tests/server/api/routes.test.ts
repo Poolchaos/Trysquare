@@ -899,3 +899,79 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
     }
   }, 120_000);
 });
+
+describe("starting a review asks the CLI again (MVP 6.2)", () => {
+  // Asked at create alone, a review whose CLI signed out since was started,
+  // by a Resume, a draft's Start or a restart's leftovers, into a failure at
+  // its first stage (review of the 6.2 changes).
+  const lastFetched = async () =>
+    (
+      (await (
+        await routes.project.GET(new Request("http://localhost"), params(projectId))
+      ).json()) as { project: { lastFetchedAt: string | null } }
+    ).project.lastFetchedAt;
+
+  it("refuses, starting nothing, a review whose CLI signed out since it was made", async () => {
+    const startRoute = await import("@/app/api/reviews/[id]/start/route");
+    const created = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { review } = (await created.json()) as { review: { id: string } };
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "Start check protocol",
+        tier: "global",
+        markdown,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: false, authMethod: "none" });
+    try {
+      const response = await startRoute.POST(
+        post(`http://localhost/api/reviews/${review.id}/start`, { rulesetId }),
+        params(review.id),
+      );
+      expect(response.status).toBe(409);
+      const body = (await response.json()) as { error: string; code: string };
+      expect(body.code).toBe("CliNotReady");
+      expect(body.error).toMatch(/is not signed in.*Sign it in with/);
+      const detail = (await (
+        await routes.review.GET(new Request("http://localhost/x"), params(review.id))
+      ).json()) as { review: { status: string } };
+      expect(detail.review.status).toBe("draft");
+    } finally {
+      useSignedInFake();
+    }
+  }, 120_000);
+
+  it("refuses at create before anything is fetched", async () => {
+    // Asked last, a refusal waited on a fetch of every project first, and
+    // recorded it (review of the 6.2 changes).
+    const before = await lastFetched();
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: false, authMethod: "none" });
+    try {
+      const response = await routes.reviews.POST(
+        post("http://localhost/api/reviews", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          model: "claude-fable-5[1m]",
+        }),
+      );
+      expect(response.status).toBe(409);
+      expect(await lastFetched()).toBe(before);
+    } finally {
+      useSignedInFake();
+    }
+  }, 120_000);
+});
