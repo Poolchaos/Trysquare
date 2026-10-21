@@ -3798,3 +3798,262 @@ verified evidence, in writing, here.
   only way left to per-token billing, and the new-review screen says before
   Start that such a review costs API usage, as Settings' check and the run
   note do.
+- 2026-10-21 D-162 REVIEW (70c9f34..dd51866, the D-160 fixes and D-161,
+  by a separate read-only reviewer told never to run anything that could
+  reach the real CLI, nor to read docs/private/ or write a private name;
+  each finding read again here before it was fixed). Ten findings, three
+  MEDIUM and seven LOW, dispositioned before new work:
+  1. MEDIUM: the notice before Start could be skipped: Start went ahead
+  before the check answered, a check that failed showed nothing, a sign-in
+  could change after the page opened, and a Resume or a draft's Start
+  showed no notice at all. Fixed 34ebb52: each page sends what it showed
+  with Create and Start, both routes answer 409 BillingNotShown until it
+  has shown a sign-in that bills per token, or may, and the page shows the
+  notice from that answer; the run note moved to the start. Its words were
+  corrected by 16012f1 and its staleness by 7a8aba8 (D-163 items 2 and 6).
+  2. MEDIUM: the paid providers' selectors and keys passed to the CLI,
+  winning over the sign-in. Fixed 87d9d84: ten more names are kept back,
+  each found in the 2.1.301 binary. D-120's "every other variable passes"
+  stands narrowed by that commit and this line.
+  3. MEDIUM: an oauth_token sign-in, which 2.1.301 reports both for a
+  token `claude setup-token` made and for a Console profile, and a sign-in
+  naming no method, were said to bill per token. Fixed 3f4c658: a state of
+  their own, maybePerToken, said "may", as is a method the app does not
+  know.
+  4. LOW: probes and the real demo spent under such a sign-in with no word.
+  Fixed 3746db3, Settings asking as it opens and saying it above Models,
+  and a5ed582, the real demo stopping before it spends unless told it may.
+  5. LOW: the notice showed for an Interactive review. e91b95c hid it,
+  which D-163 found wrong: 07a5f86 words it for the commands such a review
+  prints, which run this same CLI.
+  6. LOW: the start route asked the CLI before the manager judged the
+  review. Fixed 2cb5541 (D-163 item 4).
+  7. LOW: the signed-out refusal ran its command into the next sentence.
+  Fixed 1cdb34a: the command is in the body and on its own line.
+  8. LOW: PowerShell ends a single-quoted string at U+2018 to U+201B too.
+  Fixed 803cda2, each measured on PowerShell 5.1.26100; one module since
+  78b1ebb.
+  9. LOW: the browser test's no-notice check could pass before the check
+  answered, and axe never ran with the notice showing. Fixed 499938c.
+  10. LOW: stale records, fixed by the commit that writes this entry: the
+  inbox's D-160 item 3 line, which D-161 decided, is retired; MVP row 6.2's
+  "a run note, not a block" is corrected there; PROJECT-STATE's "never the
+  API" is said as D-161 has it; the models doc's "each is an explicit
+  action" was corrected in 3746db3. D-161 and 08d1291 called a key signed
+  into the CLI the only way left to per-token billing, which stands
+  corrected by this line: a token given the CLI in CLAUDE_CODE_OAUTH_TOKEN
+  passes and wins over its sign-in, and ANTHROPIC_BASE_URL passes, what it
+  does beside a claude.ai sign-in unmeasured. D-161 also described the
+  notice before Start that dd51866 then built. The inbox line 34ebb52 added
+  had landed under Retired, at the file's end; the same commit moves it to
+  the open list.
+  Found in the round besides: the gate failed once in the stand-in
+  gitconfig's rename test, Windows refusing the rename for the whole two
+  seconds while the test's reader held the file. Under full CPU load it
+  failed 3 of 8 runs, alone 12 of 12 passed; trying every 5ms rather than
+  backing off to 200ms, 12 of 12 passed under the same load (d5e0226).
+- 2026-10-21 D-163 REVIEW (dd51866..803cda2, the D-162 fixes so far, by a
+  separate read-only reviewer under D-162's rules, reading the commits
+  rather than the working tree; each finding read again here before it was
+  fixed). Eleven findings, three MEDIUM and eight LOW, dispositioned before
+  new work:
+  1. MEDIUM: e91b95c hid the notice for an Interactive review, whose
+  printed commands run this same CLI, with the person's user settings, in
+  their own terminal, where nothing is kept from the environment. Fixed
+  07a5f86: the notice is worded for those commands.
+  2. MEDIUM: the BillingNotShown refusal always blamed a changed or failed
+  check, though a review's own screen asks nothing before Resume. Fixed
+  16012f1: it says only what is so.
+  3. MEDIUM: the notice offered the Claude sign-in for an apiKeyHelper and
+  another provider, which the 2.1.301 binary takes before it. Fixed
+  5daa0a6: the setting is named instead. Still open, in the idea inbox:
+  the check reads the person's settings and a headless review or a probe
+  reads none, so "will cost" for those two is unmeasured there.
+  4. LOW: the start route asked the CLI and wrote its note whatever the
+  manager answered, so a second press noted again, and a review that could
+  not start was refused for billing. Fixed 2cb5541: the manager's judgement
+  comes first, and only a run begun is noted. Still open, in the idea
+  inbox: a review in line is not asked again as it leaves the queue.
+  5. LOW: a refused Start after Create made a second review at the next
+  press. Fixed f470510.
+  6. LOW: a notice once shown stayed beside a later signed-out refusal.
+  Fixed 7a8aba8.
+  7. LOW: the run note's "may" branches were untested since 34ebb52.
+  Fixed 1b0f961, with the billing rule.
+  8. LOW: five passages stale. Fixed 91ea3af.
+  9. LOW: three phrasings of an oauth_token's billing disagreed in
+  strength. Fixed 1b0f961: each says "may".
+  10. LOW: the PowerShell quoting was implemented twice. Fixed 78b1ebb.
+  11. LOW: the probe route spends with no billing check. Not changed: a
+  probe is pressed on Settings, which says it above Models as it opens
+  since 3746db3; a check that failed there says so instead, and the
+  inbox keeps the route.
+  The reviewer also found CLAUDE_CODE_GATEWAY_TOKEN still passing,
+  probably inert without its selector, which is kept back; unverified.
+- 2026-10-21 D-164 REVIEW (803cda2..a5ed582, the D-163 fixes and the rest
+  of D-162's, by a
+  separate read-only reviewer under D-162's rules, reading the commits;
+  each finding read again here before it was fixed). Ten findings, three
+  MEDIUM and seven LOW, dispositioned before new work:
+  1. MEDIUM: the real demo checked and probed the bundled CLI while its
+  review ran on the one TRYSQUARE_CLAUDE_PATH names. Fixed 2750cbf: all
+  three take configuredClaudePath. Driven with the variable set to the
+  fake signed in with a key, the demo refused before any probe.
+  2. MEDIUM: a draft f470510 reused ran on the branch tips pinned at its
+  first press, only creating a review fetching and pinning. 3. MEDIUM: a
+  draft started, cancelled or deleted elsewhere was pressed at for ever.
+  Both fixed 1fa44e3, which reverses f470510's reuse (D-163 item 5): the
+  next press removes the draft it left, if still a draft, and makes the
+  review afresh.
+  4. LOW: two presses that both put a review in line both noted it.
+  Fixed 8ee196e: the route judges again after the CLI answers.
+  5. LOW: a check pressed while Settings' own was in flight could be
+  overwritten by the older answer. 6. LOW: Probe was pressable before that
+  answer. Both fixed 8ad8a27: Settings starts as checking, its button and
+  probes off until the first answer. The themes suite then measured
+  Settings with its controls off, and axe flagged their faded text, the
+  native disabled attribute present, though WCAG 1.4.3 exempts an inactive
+  control: it measures Settings once settled. The probe route itself still
+  asks nothing, in the idea inbox.
+  7. LOW: 2cb5541's and 7a8aba8's claims untested, and judge untested.
+  Fixed c865329; judge is 2cb5541's, so its test has no code before it to
+  fail on.
+  8. LOW: "will cost" said for an apiKeyHelper or another provider, which
+  only a settings file gives and a headless review or a probe does not
+  read. Fixed 1e6404f: "may" for those, with why; "will" for an
+  interactive review's commands, which read the person's settings.
+  9. LOW: an interactive review's own screen said nothing of its commands'
+  cost before Start or Resume. Fixed 5067c6b.
+  10. LOW: 78b1ebb's message gave "28 of 28 in the two files" without the
+  command. It was `npx vitest run tests/lib/engine/sign-in-command.test.ts
+  tests/server/engine/interactive.test.ts`, which printed "Tests 28 passed
+  (28)": 6 and 22, by its verbose reporter, rerun for this entry.
+  CI run 39624092957, 91ea3af's, stayed "in progress" for over half an
+  hour after all three of its verify jobs had passed; the pushes after it
+  were judged by the jobs' conclusions, each passing on all three.
+- 2026-10-21 D-165 REVIEW (a5ed582..5067c6b, the D-164 fixes, by a
+  separate read-only reviewer under D-162's rules, reading the commits;
+  each finding read again here before it was fixed). Eleven findings, one
+  HIGH and ten LOW, dispositioned before new work:
+  1. HIGH: 1fa44e3 removed a review someone had just put in line. The
+  new-review screen read the draft it left and removed it when its status
+  said draft, which a queued review keeps (D-137), as does one launched a
+  moment ago. Fixed e3b0d3c: DELETE with ?unstarted=1 removes only a draft
+  the manager neither runs nor holds, judged by the server, and every
+  delete is refused while the manager runs the review. 1fa44e3 to 5067c6b
+  had not been pushed; they went out with e3b0d3c in one push, once
+  2750cbf had passed, so 1fa44e3 never stood on main alone, and they have
+  no CI run of their own, each having passed `./verify.sh --e2e` here.
+  2. LOW: a failed removal was silent and the draft forgotten. Fixed
+  e3b0d3c: said, and the draft kept for the next press.
+  3. LOW: the billing refusal said "will" and the demo "would" for an
+  apiKeyHelper or another provider, beside a notice saying "may". 8. LOW:
+  Settings said reviews "may" while the notice said an interactive
+  review's commands "will". 9. LOW: those commands read user settings
+  only (`--setting-sources user`), and the check may have found the
+  setting in a project's, so "will" was not established there either.
+  All three fixed 6c5801b: every reader says may for those two, with what
+  each reads. D-164 item 8's "will" for an interactive review's commands
+  stands corrected by this line.
+  4. LOW: the Settings test's probe checks could pass on an empty list.
+  10. LOW: the demo's comment said it finds the CLI as the app does,
+  though its own data directory holds no Settings path. Both fixed
+  ce2b988.
+  5. LOW: a browser test's absence check could pass before the answer was
+  applied. 6. LOW: an interactive review's failed check was silent, and an
+  older answer outlived it. Both fixed f971302.
+  7. LOW: saving a CLI path on Settings checked nothing again. Fixed
+  8044551.
+  11. LOW: the models doc and the inbox cited D-164 before any entry
+  existed. Fixed by the commit that writes this entry, with D-162 to
+  D-165.
+- 2026-10-21 D-166 REVIEW (5067c6b..ce2b988, the D-165 fixes, by a
+  separate read-only reviewer under D-162's rules, reading the commits;
+  each finding read again here before it was fixed). Ten findings, two
+  MEDIUM and eight LOW, dispositioned before new work:
+  1. MEDIUM: Settings' check after a saved path could overlap the one it
+  asks as it opens, and an older answer landing last took the card and
+  released the probes. Fixed 4695d42: only the latest check is shown, and
+  only it ends the hold.
+  2. MEDIUM: an interactive review's Start and Resume went ahead while its
+  check was still asked, and an earlier answer stood when it came back to
+  startable. Fixed c2d0855; the return to startable is not driven by a
+  test.
+  3. LOW: every delete checked and then awaited the removal of files
+  before the row, so a start landing between ran on a review going from
+  under it. 4. LOW: e3b0d3c gave the wrong window for refusing a run's
+  delete; the real one is a run cancelled or failed whose row says so
+  while its worktrees are still being removed. 5. LOW: that refusal was
+  untested. 8. LOW: the project's and the data wipe's deletes checked the
+  stored status alone. All fixed e568069: the job manager claims a review
+  for its delete, refusing one it runs, and starts nothing claimed
+  (ReviewBeingDeletedError); all three deletes hold their claims. The gate
+  then failed once, a browser test's delete after a real run refused 409:
+  it waited for the row alone, while the manager still held the run. That
+  race is older than e568069, the review's delete having refused while the
+  manager held a run since e3b0d3c; ba7b869 waits for the manager too, and
+  939b3a9 does the same for the cancel test, which ba7b869 had missed.
+  6. LOW: a may-cost test passed with nothing asserted when nothing was
+  refused. 9. LOW: Settings' path hint and the demo's comment out of date.
+  Both fixed daa0689, which was committed while its gate was red, the
+  commit chained on a command that succeeded whatever the gate did; the
+  red was ba7b869's test, and the gate with both passed.
+  7. LOW: a dropped request's reason ran into the next sentence. Fixed
+  d8febe9.
+  10. LOW: the two-frame wait standing for "the answer was applied", and
+  nothing driving a second check within one interactive review's page.
+  Not changed: the two-frame wait is kept, and the second check is
+  recorded here as untested.
+  e568069 to ba7b869 went out in one push, once c2d0855 had passed, so
+  e568069 never stood on main without ba7b869's test fix; they have no CI
+  run of their own, each but daa0689 having passed `./verify.sh --e2e`
+  here, and daa0689 with ba7b869.
+- 2026-10-21 D-167 REVIEW (ce2b988..ba7b869, the D-166 fixes, by a
+  separate read-only reviewer under D-162's rules, reading the commits;
+  each finding read again here before it was fixed). Five findings, one
+  MEDIUM and four LOW, dispositioned before new work:
+  1. MEDIUM: 4695d42's test waited on a count already reached, so it could
+  pass on code that let a stale answer take the card. 3. LOW: the cancel
+  test ended on the row's status while the manager might still hold the
+  run, and the next test deletes it; ba7b869 had called its own test the
+  only one deleting after a real run. Both fixed 939b3a9; with 4695d42's
+  guard taken out, the first now fails.
+  2. LOW: a second delete of the same review could claim it again and
+  release the first's claim. 5. LOW: the review's delete told a run still
+  ending to be cancelled, and the error table's comment left out the new
+  error. Both fixed cc03307, with tests of a project's delete refused while
+  a review is claimed or ending: the claimed case failed on the code
+  before, and the ending case tests e568069's refusal, which was there
+  already, though cc03307's message said each failed. The data wipe's
+  refusal was left untested for a reason that was wrong, D-168 item 1.
+  4. LOW: ba7b869's and e568069's messages blamed e568069 for a race older
+  than it. Corrected in D-166 above, which had not yet been committed.
+- 2026-10-21 D-168 REVIEW (ba7b869..cc03307, the D-167 fixes, and these
+  records before they were committed, by a separate read-only reviewer
+  under D-162's rules). Six findings, one MEDIUM and five LOW:
+  1. MEDIUM: the data wipe's refusal while a review is claimed or ending
+  was untested, for the wrong reason: tests/server/api/danger-zone.test.ts
+  runs wipes in a suite of its own. Fixed 7507b57; its claimed case failed
+  on the code before.
+  2. LOW: row 6.2 still called ba7b869's test the only one deleting after
+  a real run. 3. LOW: cc03307's message said each of its cases failed on
+  the code before, which its ending case could not have. 4. LOW: D-163's
+  and D-164's ranges did not say what they held. 5. LOW: row 6.1 put
+  499938c, a D-162 fix, under D-163. 6. LOW: two edited lines in
+  PROJECT-STATE and the inbox ran past the column. All fixed in the commit
+  that writes this entry.
+- 2026-10-21 D-169 DECIDED by the maintainer, asked together:
+  1. The real CLI's `auth status` may be run on this machine to measure
+  whether a headless review, which passes `--setting-sources ""`, reads an
+  apiKeyHelper or provider the check reports: `auth status` alone, which
+  calls no model and spends nothing. Until measured, the "may cost"
+  wording stands (D-165).
+  2. 4.2, 7.3 and 7.4, which spend usage, wait: 7.1 and 7.2 come first,
+  and the maintainer is asked again before anything spends.
+  3. The leak gate's remaining literal markers, the private product,
+  package and project names, move to hashes as the working-tree names did
+  (D-157), so the gate's own file in a public repository stops naming
+  them; the cost, exact names only and a list no reader can review, is
+  accepted.
+  4. Claude Code's /security-review runs once after 7.2, and /code-review
+  runs read-only, never with --fix; neither /simplify nor the grill plugin.

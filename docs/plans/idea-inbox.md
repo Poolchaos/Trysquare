@@ -50,7 +50,9 @@ pulled deliberately.
   external, after 7.2; /code-review read-only (never --fix) as a second
   reviewer in a review round, once it is known to keep to one subagent;
   not /simplify, which applies its own changes; the third-party grill
-  plugin only with the maintainer's OK.
+  plugin only with the maintainer's OK. DECIDED in D-169: /security-review
+  after 7.2 and /code-review read-only, as proposed; neither /simplify nor
+  grill.
 - 2026-10-21: the checkout's check of every tracked file (7b4a586) has a
   600 s ceiling on git hash-object, measured only up to 3,436 files in
   489 ms, a private working tree on the maintainer's Windows machine
@@ -61,11 +63,23 @@ pulled deliberately.
   hashes as the working-tree names did (D-157): it would stop the gate's own
   file naming them, at the cost of the patterns' reach and of a list no
   reader can review, with history keeping every literal regardless.
-- 2026-10-21: the maintainer's call: whether the new-review screen shows,
-  before Start, that the CLI's sign-in bills per token, and whether that is
-  a passive line or a step to acknowledge (D-160 item 3). Today it is a run
-  note on the review once created, which D-92's "a warning, not a block"
-  allows.
+  DECIDED in D-169: they move to hashes; not built yet.
+- 2026-10-21: the CLI's check runs `auth status` with the person's
+  settings loaded, and reviews run with `--setting-sources ""`, so the
+  check can name an apiKeyHelper or a provider a settings file sets
+  that no review uses, or miss one. Unmeasured; read from the 2.1.301
+  binary's auth-method code only. So for those two every reader says may
+  cost: a headless review and a probe, which read no settings, and an
+  interactive review's commands, which read user settings only (D-164
+  item 8, D-165 items 3, 8 and 9), until it is measured. `auth status`
+  takes only --json and --text; whether a --setting-sources before it
+  reaches it needs the real CLI run.
+- 2026-10-21: a review put in line is asked about the CLI as it is queued,
+  not again as it leaves the queue, whose launch is synchronous, so a
+  sign-in changed while it waits runs unchecked (D-163 item 4).
+- 2026-10-21: the probe route asks nothing of the CLI's billing; Settings
+  says it above Models as it opens, unless that check failed (D-163
+  item 11).
 
 ## Retired
 
@@ -87,12 +101,8 @@ the line entirely would lose the trail.
   under the fast gate's load, git reporting the CRLF checkout clean.
   ROOT-CAUSED in D-150, git's racy-clean rule, and fixed in 9759785, which
   ages the D-107 checkouts' index.
-- 2026-10-21: the CLI's check runs `auth status` with the person's
-  settings loaded, and reviews run with `--setting-sources ""`, so the
-  check can name an apiKeyHelper or a provider a settings file sets
-  that no review uses, or miss one. Unmeasured; read from the 2.1.301
-  binary's auth-method code only. So for those two the notice, Settings
-  and the run note say a headless review or a probe may cost, which read
-  no settings, and an interactive review's commands will, which read the
-  person's (D-164 item 8), until it is measured. `auth status` takes only --json and --text; whether
-  a --setting-sources before it reaches it needs the real CLI run.
+- 2026-10-21 The maintainer's call: whether the new-review screen shows,
+  before Start, that the CLI's sign-in bills per token, and as a passive line
+  or a step to acknowledge (D-160 item 3). DECIDED in D-161: a strict notice
+  before Start, not a block; built in dd51866, and made a refusal until shown
+  by 34ebb52 (D-162).

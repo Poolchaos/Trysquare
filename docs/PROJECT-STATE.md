@@ -179,8 +179,12 @@ own now (D-75, D-81).
 ## External services
 
 None. Reviews run through the local Claude Code CLI, installed with the app
-(D-92), on the user's Claude subscription, never the API; see
-`06-MODELS-AND-PROFILES.md`. The CLI is Anthropic's, "All rights reserved.
-Use is subject to the Legal Agreements" at
+(D-92), on the claude.ai subscription sign-in it shares with the editor's
+Claude Code, by default: API keys and paid providers in the server's
+environment are kept from it, a sign-in that bills per token, or may, is
+said on Settings and before Start, and a review on one starts only once
+its page has said so (D-161, D-162); see `06-MODELS-AND-PROFILES.md`.
+The CLI is Anthropic's, "All rights reserved. Use is subject to the Legal
+Agreements" at
 <https://code.claude.com/docs/en/legal-and-compliance>, and each user
 downloads it from npm under those terms.
