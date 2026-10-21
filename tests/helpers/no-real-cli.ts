@@ -13,9 +13,9 @@
  * resolves nothing real; two hand in the real one on purpose:
  * stand-in-api.test.ts, whose CLI talks only to a local stand-in API with a
  * stand-in sign-in, and real-cli-present.ts, which resolves only (review of
- * the D-155 fixes). TRYSQUARE_REAL_CLI=1
- * opens the guard to the real-CLI test alone: exported in a shell, it opened
- * it to every test of the run (review of the D-152 fixes).
+ * the D-155 fixes). TRYSQUARE_REAL_CLI=1 opens the guard to the real-CLI
+ * test alone: exported in a shell, it opened it to every test of the run
+ * (review of the D-152 fixes).
  */
 
 import { tmpdir } from "node:os";
