@@ -28,22 +28,34 @@ function inRealCliTest(): boolean {
 
 vi.mock("@/server/engine/cli", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/server/engine/cli")>();
+  const resolveCli = (...args: Parameters<typeof actual.resolveCli>) => {
+    const found = actual.resolveCli(...args);
+    if (args[1] !== undefined) return found;
+    if (process.env.TRYSQUARE_REAL_CLI === "1" && inRealCliTest()) return found;
+    const program =
+      found.command === process.execPath && found.prefixArgs[0] !== undefined
+        ? found.prefixArgs[0]
+        : found.command;
+    if (isFakeCli(program, TESTS_DIR, tmpdir())) return found;
+    throw new Error(
+      `A unit test reached ${found.display}, which is not a fake. Point the test at ` +
+        "tests/fixtures/fake-claude.mjs, or run it with TRYSQUARE_REAL_CLI=1 to spend " +
+        "real usage on purpose.",
+    );
+  };
   return {
     ...actual,
-    resolveCli: (...args: Parameters<typeof actual.resolveCli>) => {
-      const found = actual.resolveCli(...args);
-      if (args[1] !== undefined) return found;
-      if (process.env.TRYSQUARE_REAL_CLI === "1" && inRealCliTest()) return found;
-      const program =
-        found.command === process.execPath && found.prefixArgs[0] !== undefined
-          ? found.prefixArgs[0]
-          : found.command;
-      if (isFakeCli(program, TESTS_DIR, tmpdir())) return found;
-      throw new Error(
-        `A unit test reached ${found.display}, which is not a fake. Point the test at ` +
-          "tests/fixtures/fake-claude.mjs, or run it with TRYSQUARE_REAL_CLI=1 to spend " +
-          "real usage on purpose.",
-      );
+    resolveCli,
+    // It resolves inside its own module, past the wrap above, and then starts
+    // the CLI for its version: free, but started (review of the D-152 fixes).
+    // Its CLI is put to the same test first.
+    describeCli: async (configured: string | undefined) => {
+      try {
+        resolveCli(configured);
+      } catch (error) {
+        return `none usable (${(error as Error).message})`;
+      }
+      return actual.describeCli(configured);
     },
   };
 });

@@ -7,7 +7,7 @@
 
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { resolveCli } from "@/server/engine/cli";
+import { describeCli, resolveCli } from "@/server/engine/cli";
 
 const FAKE_CLI = fileURLToPath(new URL("../../fixtures/fake-claude.mjs", import.meta.url));
 
@@ -28,6 +28,13 @@ describe("the real-CLI guard", () => {
       if (before === undefined) delete process.env.TRYSQUARE_REAL_CLI;
       else process.env.TRYSQUARE_REAL_CLI = before;
     }
+  });
+
+  it("names no real CLI in a run's engine note, and starts none to ask its version", async () => {
+    // describeCli resolved inside its own module, past the guard, and started
+    // the real CLI for its version: free, but started (review of the D-152
+    // fixes).
+    expect(await describeCli(undefined)).toMatch(/^none usable \(.*not a fake/);
   });
 
   it("lets the fake through", () => {
