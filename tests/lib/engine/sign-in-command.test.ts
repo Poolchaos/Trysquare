@@ -49,6 +49,21 @@ describe("the sign-in command", () => {
     );
   });
 
+  it("doubles each quote PowerShell ends a quoted string at, the curly ones too", () => {
+    // Each of these ended a single-quoted string in PowerShell 5.1.26100,
+    // and doubled, stood for itself (measured 2026-10-21; review of D-161).
+    // A POSIX shell treats them as letters.
+    for (const code of [0x2018, 0x2019, 0x201a, 0x201b]) {
+      const quote = String.fromCodePoint(code);
+      expect(signInCommand(`C:\\it${quote}s\\claude.exe`, "win32").command).toBe(
+        `& 'C:\\it${quote}${quote}s\\claude.exe' auth login`,
+      );
+      expect(signInCommand(`/opt/it${quote}s/claude`, "linux").command).toBe(
+        `'/opt/it${quote}s/claude' auth login`,
+      );
+    }
+  });
+
   it("says where to run it", () => {
     expect(signInPlaceWords("projectDirectory")).toBe(
       "from a terminal, in this project's directory",

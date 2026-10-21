@@ -31,10 +31,11 @@ export function signInCommand(claudePath: string | undefined, platform: string):
     return { command: "npm run claude -- auth login", place: "projectDirectory" };
   }
   const windows = platform === "win32";
-  // PowerShell doubles a single quote inside single quotes; a POSIX shell
-  // closes the quote, escapes one and opens it again.
+  // PowerShell doubles a single quote inside single quotes, and takes the
+  // four curly ones for it too (measured on 5.1.26100); a POSIX shell closes
+  // the quote, escapes one and opens it again.
   const quoted = windows
-    ? `'${claudePath.replace(/'/g, "''")}'`
+    ? `'${claudePath.replace(/['\u2018-\u201b]/g, (quote) => quote + quote)}'`
     : `'${claudePath.replace(/'/g, "'\\''")}'`;
   const place = windows ? "powerShell" : "terminal";
   if (NODE_SCRIPT.test(claudePath)) return { command: `node ${quoted} auth login`, place };
