@@ -85,7 +85,7 @@ export function BillingNotice({
     state === "perToken"
       ? `The CLI is signed in (${authMethod}) some other way than your Claude subscription, so ${one} draws on paid API usage rather than your plan's usage limits.`
       : authMethod === "oauth_token"
-        ? "The CLI is signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other on paid API usage."
+        ? "The CLI is signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other may cost API usage."
         : `${unknownWay}: unless it is your Claude subscription, ${one} draws on paid API usage rather than your plan's usage limits.`;
   const remedy = signInWouldHelp(authMethod);
   const setting = settingOverSignIn(authMethod);

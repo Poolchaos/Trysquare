@@ -99,7 +99,7 @@ export function billingNote(cli: CliStatus, queued = false): string | null {
     return (
       `This review may cost API usage${when}, billed per token: the CLI is signed in with a ` +
       "token (oauth_token). One made by claude setup-token draws on a Claude " +
-      "subscription, and any other may not."
+      "subscription, and any other may cost API usage."
     );
   }
   return (

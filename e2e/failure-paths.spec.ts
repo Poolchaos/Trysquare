@@ -2441,6 +2441,8 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
   await expect(notice).toContainText("This review may cost API usage, billed per token.");
   await expect(notice).toContainText("(oauth_token)");
   await expect(notice).toContainText("claude setup-token");
+  // As hedged as Settings and the run note (review of the D-162 fixes).
+  await expect(notice).toContainText("and any other may cost API usage.");
   await expect(notice).not.toContainText("will cost");
   // A token set for the CLI wins over a sign-in, so none is offered.
   await expect(notice).not.toContainText("auth login");
