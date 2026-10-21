@@ -11,7 +11,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -176,6 +176,14 @@ async function contentsOfChanged(worktreeDir: string): Promise<Record<string, st
   return contents;
 }
 
+async function isFileOnDisk(worktreeDir: string, path: string): Promise<boolean> {
+  try {
+    return (await lstat(insideRoot(worktreeDir, path))).isFile();
+  } catch {
+    return false;
+  }
+}
+
 /** sha256 of a path's bytes in the worktree, or null for one not on disk. */
 async function hashOnDisk(worktreeDir: string, path: string): Promise<string | null> {
   try {
@@ -205,10 +213,23 @@ async function trackedMismatches(worktreeDir: string): Promise<string[]> {
     const match = /^(100644|100755) ([0-9a-f]+) \d\t([\s\S]+)$/.exec(entry);
     if (match) files.push({ path: match[3]!, blob: match[2]! });
   }
-  // hash-object reads its paths a line at a time, so a path holding a line
-  // break cannot be given to it; such a path goes to the full check instead.
-  const listable = files.filter((file) => !/[\r\n]/.test(file.path));
-  const mismatched = files.filter((file) => /[\r\n]/.test(file.path)).map((file) => file.path);
+  // Given to hash-object only what it can read as given. It reads its paths a
+  // line at a time, so not one holding a line break; it unquotes one starting
+  // with a double quote, so not that either; and a path not on disk as a
+  // file, which a case-folding file system leaves out of a checkout, failed
+  // the whole baseline with git's error instead of a refusal that says why
+  // (review of the 6.1 changes). Each goes to the full check, which reads
+  // the file itself and refuses one that is not there.
+  const listable: typeof files = [];
+  const mismatched: string[] = [];
+  for (const file of files) {
+    const readable =
+      !/[\r\n]/.test(file.path) &&
+      !file.path.startsWith('"') &&
+      (await isFileOnDisk(worktreeDir, file.path));
+    if (readable) listable.push(file);
+    else mismatched.push(file.path);
+  }
   if (listable.length > 0) {
     const hashed = toLines(
       await git(["hash-object", "--stdin-paths"], {

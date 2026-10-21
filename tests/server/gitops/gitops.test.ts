@@ -703,6 +703,56 @@ describe("review worktrees", () => {
       await removeWorktree(cloneDir, dir);
     });
 
+    it("refuses a file a case-folding file system left out, naming it, not failing in git", async () => {
+      // A file foo and a folder FOO: on Windows and default macOS the folder
+      // cannot be made, so FOO/bar.txt is not on disk. The check of every
+      // tracked file gave git hash-object a path it could not open, and the
+      // review failed with git's own error instead of the refusal that says
+      // why (review of the 6.1 changes).
+      const origin = join(root, "fold-origin");
+      execFileSync("git", ["init", "-q", "-b", "main", origin]);
+      const blob = (text: string) => git(["hash-object", "-w", "--stdin"], origin, text).trim();
+      git(["update-index", "--add", "--cacheinfo", `100644,${blob("a file\n")},foo`], origin);
+      git(
+        ["update-index", "--add", "--cacheinfo", `100644,${blob("in a folder\n")},FOO/bar.txt`],
+        origin,
+      );
+      git(["commit", "-qm", "a file and a folder of one name"], origin);
+      const clone = join(root, "fold.git");
+      await cloneBare(origin, clone);
+      const dir = join(root, "wt-fold");
+      await addWorktree(clone, dir, await resolveCommit(clone, "main"));
+      if (existsSync(join(dir, "FOO", "bar.txt"))) {
+        // A case-sensitive file system holds both: nothing to refuse.
+        expect((await worktreeBaseline(dir)).changes).toEqual([]);
+      } else {
+        await expect(worktreeBaseline(dir)).rejects.toThrow(CheckoutMismatchError);
+        await expect(worktreeBaseline(dir)).rejects.toThrow(/FOO\/bar\.txt/);
+      }
+      await removeWorktree(clone, dir);
+    });
+
+    it.skipIf(process.platform === "win32")(
+      "accepts a file whose name starts with a double quote",
+      async () => {
+        // hash-object unquotes a path starting with one, so it was asked for
+        // a file that is not there and every review of such a repository
+        // failed in git (review of the 6.1 changes). Windows cannot hold the
+        // name at all.
+        const origin = join(root, "quote-origin");
+        execFileSync("git", ["init", "-q", "-b", "main", origin]);
+        writeFileSync(join(origin, '"quoted".txt'), "text\n");
+        git(["add", "--", '"quoted".txt'], origin);
+        git(["commit", "-qm", "a quoted name"], origin);
+        const clone = join(root, "quote.git");
+        await cloneBare(origin, clone);
+        const dir = join(root, "wt-quote");
+        await addWorktree(clone, dir, await resolveCommit(clone, "main"));
+        expect((await worktreeBaseline(dir)).changes).toEqual([]);
+        await removeWorktree(clone, dir);
+      },
+    );
+
     it("refuses two paths differing only in case where the file system cannot hold both", async () => {
       // One checks out over the other on Windows and default macOS, so the
       // file named Config.ts holds config.ts's bytes. On a case-sensitive
