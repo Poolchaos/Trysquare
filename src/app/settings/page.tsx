@@ -243,6 +243,9 @@ export default function SettingsPage() {
     setSettings(sent.body.settings ?? null);
     input.value = String(sent.body.settings?.claudePath ?? "");
     setPathSaved(true);
+    // Checked again, so the card and the probes' notice speak of the CLI a
+    // probe now uses, the probes held meanwhile (review of the D-164 fixes).
+    await checkCli();
   }
 
   async function probe(id: string) {

@@ -2407,9 +2407,19 @@ test("a CLI path kept in Settings is saved, and the environment's is said to win
   const path = page.getByLabel("CLI path");
   await expect(path).toHaveValue("");
   await expect(page.getByText(/TRYSQUARE_CLAUDE_PATH is set to .*fake-claude\.mjs/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check the CLI" })).toBeEnabled({
+    timeout: 30_000,
+  });
+  // A path saved is checked again, so the card and the probes' notice speak
+  // of the CLI a probe now uses (review of the D-164 fixes).
+  const rechecked = page.waitForRequest(
+    (request) => new URL(request.url()).pathname === "/api/auth",
+    { timeout: 10_000 },
+  );
   await path.fill("  /opt/claude/bin/claude  ");
   await path.blur();
   await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  await rechecked;
   await expect(path).toHaveValue("/opt/claude/bin/claude");
   await page.reload();
   await expect(page.getByLabel("CLI path")).toHaveValue("/opt/claude/bin/claude");
