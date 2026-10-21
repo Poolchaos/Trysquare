@@ -11,18 +11,30 @@
  * command, which Settings will name (MVP 6.3).
  */
 
+import { delimiter } from "node:path";
 import { CliNotFoundError, runCliAttached } from "@/server/engine/cli";
 
+const configured = process.env.TRYSQUARE_CLAUDE_PATH?.trim() || undefined;
+
 try {
-  process.exit(runCliAttached(process.argv.slice(2), process.env.TRYSQUARE_CLAUDE_PATH));
+  process.exit(runCliAttached(process.argv.slice(2), configured));
 } catch (error) {
-  // The error's own advice names the CLI path on Settings, which this script
-  // never reads (review of the D-153 fixes).
-  console.error(
-    error instanceof CliNotFoundError
-      ? `Could not find "${error.command}", the Claude Code CLI. Run npm install, which ` +
-          "installs it, or set TRYSQUARE_CLAUDE_PATH to its full path for this command."
-      : (error as Error).message,
-  );
+  if (error instanceof CliNotFoundError) {
+    // In this script's own words: the error's advice names the CLI path on
+    // Settings, which this script never reads, and npm install does not help
+    // while the variable names something else (reviews of the D-153 and
+    // D-154 fixes).
+    const searched =
+      error.searched.length === 0 ? "(PATH is empty)" : error.searched.join(delimiter);
+    console.error(
+      configured === undefined
+        ? 'Could not find the Claude Code CLI: npm install puts it in node_modules, and "claude" ' +
+            `is not on PATH either. Run npm install. Searched: ${searched}`
+        : `TRYSQUARE_CLAUDE_PATH names "${error.command}", which is not on PATH. Give its ` +
+            `full path, or unset it to use the CLI installed with the app. Searched: ${searched}`,
+    );
+  } else {
+    console.error((error as Error).message);
+  }
   process.exit(1);
 }
