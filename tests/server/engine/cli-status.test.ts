@@ -51,6 +51,36 @@ describe("the CLI's status", () => {
     expect(status.state === "cannotRun" && status.message).toMatch(/2\.1\.71/);
   });
 
+  it("cannot run when finding it failed some other way, and says how", async () => {
+    // Every failure but a refused file read as "not found": in this suite the
+    // real-CLI guard's own refusal did, so a test of a path that should have
+    // been used passed on the bundled CLI being found instead (review of the
+    // 6.1 changes).
+    const status = await readCliStatus();
+    expect(status.state).toBe("cannotRun");
+    expect(status.state === "cannotRun" && status.message).toMatch(/not a fake/);
+  });
+
+  it("cannot run when it does not say its version in time, and says so", async () => {
+    vi.resetModules();
+    const { readCliStatus: fresh } = await import("@/server/engine/probe");
+    process.env.FAKE_CLAUDE_VERSION = "hang";
+    const status = await fresh({ claudePath: FAKE_CLI, timeoutMs: 1_500 });
+    expect(status).toMatchObject({ state: "cannotRun", path: FAKE_CLI });
+    expect(status.state === "cannotRun" && status.message).toMatch(
+      /did not answer `--version` in time/,
+    );
+  }, 30_000);
+
+  it("does not say how a sign-in bills when the CLI did not say how it signed in", async () => {
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: true });
+    expect(await readCliStatus({ claudePath: FAKE_CLI })).toEqual({
+      state: "perToken",
+      path: FAKE_CLI,
+      version: "2.1.301 (Claude Code)",
+    });
+  });
+
   it("is signed out when the CLI says so, though it exits 1 saying it", async () => {
     process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: false, authMethod: "none" });
     expect(await readCliStatus({ claudePath: FAKE_CLI })).toEqual({

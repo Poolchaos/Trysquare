@@ -26,9 +26,9 @@ interface Model {
 /** As `readCliStatus` answers, one state each (MVP 6.1, audit E2). */
 type CliStatus =
   | { state: "notFound"; message: string }
-  | { state: "cannotRun"; path: string; version?: string; message: string }
+  | { state: "cannotRun"; path?: string; version?: string; message: string }
   | { state: "signedOut"; path: string; version: string }
-  | { state: "perToken"; path: string; version: string; authMethod: string }
+  | { state: "perToken"; path: string; version: string; authMethod?: string }
   | { state: "subscription"; path: string; version: string; subscriptionType?: string };
 
 const FIELDS = [
@@ -293,7 +293,7 @@ export default function SettingsPage() {
             )}
             {cli ? (
               <div className="mb-3 grid gap-1 text-sm" data-testid="cli-status">
-                {cli.state === "notFound" ? null : (
+                {cli.state === "notFound" || cli.path === undefined ? null : (
                   <p className="text-xs text-[var(--color-ink-muted)]">
                     <Mono className="break-all">{cli.path}</Mono>
                     {cli.version === undefined ? null : `, ${cli.version}`}
@@ -317,8 +317,9 @@ export default function SettingsPage() {
                   <p className="text-[var(--color-warning)]">Not signed in.</p>
                 ) : cli.state === "perToken" ? (
                   <p className="text-[var(--color-warning)]">
-                    Signed in, but this sign-in ({cli.authMethod}) bills per token rather than
-                    drawing on a subscription. Reviews still run.
+                    {cli.authMethod === undefined
+                      ? "Signed in, but the CLI did not say how, so whether runs draw on a subscription or bill per token is not known. Reviews still run."
+                      : `Signed in, but this sign-in (${cli.authMethod}) bills per token rather than drawing on a subscription. Reviews still run.`}
                   </p>
                 ) : (
                   <p className="text-[var(--color-good)]">

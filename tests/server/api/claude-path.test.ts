@@ -56,9 +56,14 @@ async function read(): Promise<{
   return (await routes.settings.GET()).json();
 }
 
-async function cliState(): Promise<{ state: string; path?: string }> {
-  return ((await (await routes.auth.GET()).json()) as { cli: { state: string; path?: string } })
-    .cli;
+interface Answered {
+  state: string;
+  path?: string;
+  message?: string;
+}
+
+async function cliState(): Promise<Answered> {
+  return ((await (await routes.auth.GET()).json()) as { cli: Answered }).cli;
 }
 
 describe("the CLI path kept in Settings", () => {
@@ -96,6 +101,12 @@ describe("the CLI path kept in Settings", () => {
   it("gives way to TRYSQUARE_CLAUDE_PATH", async () => {
     await save({ claudePath: FAKE_CLI });
     process.env.TRYSQUARE_CLAUDE_PATH = "no-such-claude-anywhere";
-    expect((await cliState()).state).toBe("notFound");
+    // The name asked for, not merely some CLI not found: the bundled one
+    // refused by the suite's guard once passed for this (review of the 6.1
+    // changes).
+    expect(await cliState()).toMatchObject({
+      state: "notFound",
+      message: expect.stringMatching(/no-such-claude-anywhere/),
+    });
   }, 30_000);
 });

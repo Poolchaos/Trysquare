@@ -13,7 +13,13 @@ import { z } from "zod";
 import { PROBE_PROMPT, buildChildEnv, buildProbeArgs } from "@/lib/engine/command";
 import type { ReviewProfile } from "@/lib/domain/enums";
 import { contextWindowOf, resultEventSchema } from "@/lib/engine/events";
-import { checkCliVersion, CliUnusableError, resolveCli, type CliCommand } from "./cli";
+import {
+  checkCliVersion,
+  CliNotFoundError,
+  CliUnusableError,
+  resolveCli,
+  type CliCommand,
+} from "./cli";
 
 const authStatusSchema = z
   .object({
@@ -31,10 +37,14 @@ const authStatusSchema = z
  */
 export type CliStatus =
   | { state: "notFound"; message: string }
-  | { state: "cannotRun"; path: string; version?: string; message: string }
+  /** No path when finding the CLI failed before naming one. */
+  | { state: "cannotRun"; path?: string; version?: string; message: string }
   | { state: "signedOut"; path: string; version: string }
-  /** Signed in some other way than a subscription: a warning, not a block (D-92). */
-  | { state: "perToken"; path: string; version: string; authMethod: string }
+  /**
+   * Signed in some other way than a subscription: a warning, not a block
+   * (D-92). No method when the CLI did not say one.
+   */
+  | { state: "perToken"; path: string; version: string; authMethod?: string }
   | { state: "subscription"; path: string; version: string; subscriptionType?: string };
 
 interface CliOutcome {
@@ -120,7 +130,9 @@ export async function readCliStatus(
     if (error instanceof CliUnusableError) {
       return { state: "cannotRun", path: error.path, message: error.message };
     }
-    return { state: "notFound", message: (error as Error).message };
+    if (error instanceof CliNotFoundError) return { state: "notFound", message: error.message };
+    // Any other failure is not a CLI that was looked for and missing.
+    return { state: "cannotRun", message: (error as Error).message };
   }
   const path = cli.display;
   let version: string;
@@ -166,7 +178,12 @@ export async function readCliStatus(
   // A subscription sign-in reports claude.ai as its method; an API key
   // reports something else, and that changes how the user is billed.
   if (status.authMethod !== "claude.ai") {
-    return { state: "perToken", path, version, authMethod: status.authMethod ?? "unknown" };
+    return {
+      state: "perToken",
+      path,
+      version,
+      ...(status.authMethod === undefined ? {} : { authMethod: status.authMethod }),
+    };
   }
   return {
     state: "subscription",

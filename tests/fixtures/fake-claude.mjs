@@ -29,7 +29,12 @@ const args = process.argv.slice(2);
 // Answered before stdin is read, as the real CLI answers without waiting for
 // input. FAKE_CLAUDE_VERSION lets a test play an older CLI.
 if (args[0] === "--version") {
-  process.stdout.write(`${process.env.FAKE_CLAUDE_VERSION ?? "2.1.301"} (Claude Code)\n`);
+  // "hang" plays a CLI that never answers, for the check's own timeout.
+  if (process.env.FAKE_CLAUDE_VERSION === "hang") {
+    await new Promise((resolve) => setTimeout(resolve, 60_000));
+  } else {
+    process.stdout.write(`${process.env.FAKE_CLAUDE_VERSION ?? "2.1.301"} (Claude Code)\n`);
+  }
   process.exit(0);
 }
 

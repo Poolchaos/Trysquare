@@ -155,6 +155,17 @@ export function checkCliVersion(cli: CliCommand, timeoutMs = 30_000): Promise<st
           windowsHide: true,
         },
         (error, stdout, stderr) => {
+          if (error && (error as NodeJS.ErrnoException & { killed?: boolean }).killed === true) {
+            // Out of time, which "did not report a version" read as a CLI that
+            // answered wrongly (review of the 6.1 changes).
+            reject(
+              new CliUnusableError(
+                cli.display,
+                `it did not answer \`--version\` in time (${timeoutMs / 1000}s).`,
+              ),
+            );
+            return;
+          }
           if (error) {
             reject(unreadable((stderr || error.message).trim().slice(0, 300)));
             return;
