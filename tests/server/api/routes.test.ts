@@ -1086,6 +1086,78 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
     }
   }, 240_000);
 
+  it("notes a review put in line once, though two presses put it there", async () => {
+    // Both judged startable before the CLI was asked, and both noted it,
+    // the second press having started nothing (review of the D-163 fixes).
+    const startRoute = await import("@/app/api/reviews/[id]/start/route");
+    const { jobManager } = await import("@/server/jobs/manager");
+    const draft = async () => {
+      const made = await routes.reviews.POST(
+        post("http://localhost/api/reviews", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          model: "claude-fable-5[1m]",
+        }),
+      );
+      return ((await made.json()) as { review: { id: string } }).review.id;
+    };
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "Queue check protocol",
+        tier: "global",
+        markdown,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+    const holding = await draft();
+    const waiting = await draft();
+    const press = (id: string, body: Record<string, unknown>) =>
+      startRoute.POST(
+        post(`http://localhost/api/reviews/${id}/start`, { ...body, billingShown: "perToken" }),
+        params(id),
+      );
+
+    // A review failed at a stage, which a Resume, sending no ruleset, takes
+    // up again; and the one slot held by a stage that does not end.
+    try {
+      process.env.FAKE_CLAUDE_SCENARIO = "error-result";
+      expect((await press(waiting, { rulesetId })).status).toBe(200);
+      await jobManager().settled(waiting);
+      process.env.FAKE_CLAUDE_SCENARIO = "hang";
+      process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({
+        loggedIn: true,
+        authMethod: "api_key",
+      });
+      expect(
+        ((await (await press(holding, { rulesetId })).json()) as { state: string }).state,
+      ).toBe("running");
+      const answers = await Promise.all([press(waiting, {}), press(waiting, {})]);
+      for (const answer of answers) {
+        expect(((await answer.json()) as { state: string }).state).toBe("queued");
+      }
+      const notes = JSON.parse(
+        (
+          (await (
+            await routes.review.GET(new Request("http://localhost/x"), params(waiting))
+          ).json()) as { review: { runNotes: string } }
+        ).review.runNotes,
+      ) as { message: string }[];
+      expect(
+        notes.filter((note) => note.message.includes("once it leaves the queue")),
+      ).toHaveLength(1);
+    } finally {
+      jobManager().cancel(waiting);
+      jobManager().cancel(holding);
+      await jobManager().settled(holding);
+      delete process.env.FAKE_CLAUDE_SCENARIO;
+      useSignedInFake();
+    }
+  }, 240_000);
+
   it("refuses at create before anything is fetched", async () => {
     // Asked last, a refusal waited on a fetch of every project first, and
     // recorded it (review of the 6.2 changes).

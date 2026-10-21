@@ -90,13 +90,15 @@ export async function POST(
     const unshown = readiness === null ? null : billingNotShown(readiness, input.billingShown);
     if (unshown !== null) throw unshown;
 
+    // Judged again after the CLI was asked, with nothing awaited before the
+    // start: another press may have started it or put it in line meanwhile,
+    // and "queued" alone does not say which press did (review of the D-163
+    // fixes).
+    const startsNow = manager.judge(id, ...options) === "startable";
     const state = manager.start(id, ...options);
-    // Noted as each run starts, not once at create: a Resume bills too. Not
-    // when another press started it while the CLI was asked.
+    // Noted as each run starts, not once at create: a Resume bills too.
     const note =
-      readiness === null || state === "already-running"
-        ? null
-        : billingNote(readiness.cli, state === "queued");
+      readiness === null || !startsNow ? null : billingNote(readiness.cli, state === "queued");
     if (note !== null) appendRunNote(db, id, { kind: "note", message: note });
     return ok({ state, snapshot: manager.snapshot(id) });
   });
