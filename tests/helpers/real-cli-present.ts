@@ -27,10 +27,13 @@ export function realCliPresent(): boolean {
     return true;
   } catch (error) {
     if (!(error instanceof CliNotFoundError || error instanceof CliUnusableError)) throw error;
-    if (process.env.CI) {
+    // As playwright.config.ts reads it: GitHub sets CI to "true", and a shell's
+    // CI=false or CI=0 is not CI (review of the D-156 fixes).
+    if (process.env.CI === "true") {
       throw new Error(
         `No real CLI resolved on CI, where npm ci installs one, so the guard's refusals ` +
           `would all be skipped: ${(error as Error).message}`,
+        { cause: error },
       );
     }
     return false;
