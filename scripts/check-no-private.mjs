@@ -14,7 +14,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { hash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 
@@ -46,33 +46,53 @@ const FORBIDDEN_CONTENT = [
 /**
  * Names that must not be published and must not be written here either, so
  * they are kept as the sha256 of their words, lowercased and joined by one
- * space. Each line is split into words at anything but a letter, digit or
- * hyphen, so a slash, a backslash or spaces between them all read alike, and
- * every run of one to three words is hashed and looked up. The maintainer's
- * private working trees were once named by a literal pattern in this file,
- * which this file's own exemption let through (reviews of the D-154 and
- * D-155 fixes).
+ * space. The maintainer's private working trees were once named by a literal
+ * pattern in this file, which this file's own exemption let through (reviews
+ * of the D-154 and D-155 fixes).
+ *
+ * A file is read as one stream of words, split at anything but a letter or
+ * digit, so hyphens, slashes, backslashes, underscores, dots and spaces all
+ * read alike, a name inside a longer hyphenated word is still found, and a
+ * name a line wrap splits is found across it. A backslash escape (\n, \t, \b
+ * and the like, in a string or a pattern) is a separator: read as a letter,
+ * it glued itself to the word after it; so is a URL's %20 and the like.
+ * Every run of one to three words is hashed and looked up (review of the
+ * D-156 fixes).
  */
 const FORBIDDEN_HASHED = new Map([
-  ["ea86cfe70e64286053a80145909029fdd7a115debcade1be945a6770588844c2", "private working tree name"],
-  ["f8bfaff353fff3e6dca1733ca371960c1585d28d7e880cacf91b1757af7ccfbe", "private working tree name"],
+  ["89c5769c84f1e5a050f6aacde3d8e2eb91bc82b32ecb2280ed8beae918cf4242", "private working tree name"],
+  ["bb1849bfd3e2f298d45e4f82aaf7fef14fc2f4a2187261c8c86a5f359a7d80fb", "private working tree name"],
   ["e8a32f7a5f6d42e1e1c4a4ce73b6d2b60cecaf2e5d0e94c5936055272d508c9e", "private working tree name"],
 ]);
 const HASHED_RUN = 3;
 
-function hashedNameIn(line) {
-  const words = line
-    .toLowerCase()
-    .split(/[^a-z0-9-]+/)
-    .filter(Boolean);
+/** Each run's answer, hashed once: most runs recur across the tree. */
+const hashedAnswers = new Map();
+
+/** Every run of words in a file that is a hashed name, with the line it starts on. */
+function hashedNamesIn(contents) {
+  const words = [];
+  contents.split("\n").forEach((line, index) => {
+    const text = line
+      .toLowerCase()
+      .replace(/\\[nrtbfv]/g, " ")
+      .replace(/%[0-9a-f]{2}/g, " ");
+    for (const word of text.split(/[^a-z0-9]+/)) if (word !== "") words.push({ word, line: index });
+  });
+  const found = [];
   for (let start = 0; start < words.length; start += 1) {
+    let run = "";
     for (let length = 1; length <= HASHED_RUN && start + length <= words.length; length += 1) {
-      const run = words.slice(start, start + length).join(" ");
-      const why = FORBIDDEN_HASHED.get(createHash("sha256").update(run).digest("hex"));
-      if (why !== undefined) return why;
+      run = length === 1 ? words[start].word : `${run} ${words[start + length - 1].word}`;
+      let why = hashedAnswers.get(run);
+      if (why === undefined) {
+        why = FORBIDDEN_HASHED.get(hash("sha256", run)) ?? null;
+        hashedAnswers.set(run, why);
+      }
+      if (why !== null) found.push({ line: words[start].line, why });
     }
   }
-  return undefined;
+  return found;
 }
 
 /**
@@ -156,15 +176,15 @@ for (const file of files) {
     continue;
   }
 
-  contents.split("\n").forEach((line, index) => {
+  const lines = contents.split("\n");
+  for (const { line, why } of hashedNamesIn(contents)) {
+    violations.push(`${file}:${line + 1}: ${why}\n    ${lines[line].trim().slice(0, 160)}`);
+  }
+  lines.forEach((line, index) => {
     for (const { pattern, why } of FORBIDDEN_CONTENT) {
       if (pattern.test(line)) {
         violations.push(`${file}:${index + 1}: ${why}\n    ${line.trim().slice(0, 160)}`);
       }
-    }
-    const hashed = hashedNameIn(line);
-    if (hashed !== undefined) {
-      violations.push(`${file}:${index + 1}: ${hashed}\n    ${line.trim().slice(0, 160)}`);
     }
     const comparable = CASE_BLIND ? line.toLowerCase() : line;
     if (HOME_FORMS.some((form) => comparable.includes(form))) {
