@@ -87,3 +87,8 @@ the line entirely would lose the trail.
   under the fast gate's load, git reporting the CRLF checkout clean.
   ROOT-CAUSED in D-150, git's racy-clean rule, and fixed in 9759785, which
   ages the D-107 checkouts' index.
+- 2026-10-21: the CLI's check runs `auth status` with the person's
+  settings loaded, and reviews run with `--setting-sources ""`, so the
+  check can name an apiKeyHelper or a provider a settings file sets
+  that no review uses, or miss one. Unmeasured; read from the 2.1.301
+  binary's auth-method code only.

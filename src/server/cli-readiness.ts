@@ -7,9 +7,11 @@
  * create alone, a review that failed because its CLI signed out was resumed
  * into the same failure with nothing said first (review of the 6.2 changes).
  * The checks are free: `--version` and `auth status` run locally. A sign-in
- * that bills per token is a warning, not a block (D-92).
+ * that bills per token is a warning, not a block (D-92), though one the page
+ * has not shown is refused until it has (review of D-161).
  */
 
+import { z } from "zod";
 import type { Db } from "./db/client";
 import { configuredClaudePath } from "./cli-path";
 import { readCliStatus, type CliStatus } from "./engine/probe";
@@ -38,6 +40,62 @@ export async function cliReadiness(db: Db): Promise<CliReadiness> {
 /** The 409 a route answers for a CLI that cannot run a review. */
 export function cliNotReady(refusal: string): Response {
   return Response.json({ error: refusal, code: "CliNotReady" }, { status: 409 });
+}
+
+/** How a page said a review bills, sent with its Create and Start. */
+export const billingShownSchema = z.enum(["perToken", "maybePerToken"]).optional();
+
+/**
+ * The 409 for a sign-in that bills per token, or may, which the page did not
+ * say: Start pressed before its check answered, a check that failed, a page
+ * with no notice of its own, such as a Resume, or a sign-in changed since the
+ * page opened (review of D-161). Its body carries what the page needs to say
+ * it. A page that said "may" has not said "will". Null when it said as much.
+ */
+export function billingNotShown(
+  { cli, signIn }: CliReadiness,
+  shown: z.infer<typeof billingShownSchema>,
+): Response | null {
+  if (cli.state !== "perToken" && cli.state !== "maybePerToken") return null;
+  if (shown === "perToken" || shown === cli.state) return null;
+  return Response.json(
+    {
+      error:
+        `This review ${cli.state === "perToken" ? "will" : "may"} cost API usage, billed per ` +
+        "token, which this page had not said: the CLI's sign-in changed since it opened, or " +
+        "could not be checked. Read the notice, then start again.",
+      code: "BillingNotShown",
+      cli,
+      signIn,
+    },
+    { status: 409 },
+  );
+}
+
+/** The run note for a review that started on a sign-in billing per token, or that may. */
+export function billingNote(cli: CliStatus): string | null {
+  if (cli.state === "perToken") {
+    // As strict as the notice beside Start (D-161).
+    return (
+      `This review costs API usage, billed per token: the CLI is signed in ` +
+      `(${cli.authMethod}) some other way than a Claude subscription.`
+    );
+  }
+  if (cli.state !== "maybePerToken") return null;
+  if (cli.authMethod === "oauth_token") {
+    return (
+      "This review may cost API usage, billed per token: the CLI is signed in with a " +
+      "token (oauth_token). One made by claude setup-token draws on a Claude " +
+      "subscription, and any other may not."
+    );
+  }
+  return (
+    "This review may cost API usage, billed per token: " +
+    (cli.authMethod === undefined
+      ? "the CLI did not say how it is signed in"
+      : `the CLI is signed in (${cli.authMethod}), a way this app does not know`) +
+    ", and unless that is a Claude subscription, it bills per token."
+  );
 }
 
 function refusalOf(cli: CliStatus, signIn: SignIn): string | null {

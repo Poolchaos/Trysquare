@@ -31,7 +31,12 @@ import { created, failed, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
 import { findingTallies } from "@/server/db/repositories/findings";
 import { runtime } from "@/server/runtime";
-import { cliNotReady, cliReadiness } from "@/server/cli-readiness";
+import {
+  billingNotShown,
+  billingShownSchema,
+  cliNotReady,
+  cliReadiness,
+} from "@/server/cli-readiness";
 import { listProjects } from "@/server/db/repositories/projects";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
 
@@ -55,6 +60,7 @@ const body = z
     engineMode: engineModeSchema.optional(),
     effort: reviewEffortSchema.default("high"),
     intent: z.string().optional(),
+    billingShown: billingShownSchema,
     linked: z
       .object({
         projectId: z.string().min(1),
@@ -128,6 +134,9 @@ export function POST(request: Request): Promise<Response> {
     const headless = (input.engineMode ?? "headless") === "headless";
     const readiness = headless ? await cliReadiness(db) : null;
     if (readiness?.refusal) throw cliNotReady(readiness.refusal);
+    // Asked here as well as at Start, so a page refused for it leaves no draft.
+    const unshown = readiness === null ? null : billingNotShown(readiness, input.billingShown);
+    if (unshown !== null) throw unshown;
 
     // Fetched immediately before pinning, so the commits recorded are the tips
     // the remotes have now rather than whatever the last clone left behind.
@@ -267,31 +276,6 @@ export function POST(request: Request): Promise<Response> {
           "Interactive engine: each stage's prompt is written to the bundle and this app " +
           "waits for you to save the answer beside it. Tokens are spent in your own session, " +
           "so the usage recorded here stays at zero.",
-      });
-    }
-    const cli = readiness?.cli;
-    if (cli?.state === "perToken") {
-      appendRunNote(db, review.id, {
-        kind: "note",
-        // As strict as the notice beside Start (D-161).
-        message:
-          `This review costs API usage, billed per token: the CLI is signed in ` +
-          `(${cli.authMethod}) some other way than a Claude subscription.`,
-      });
-    }
-    if (cli?.state === "maybePerToken") {
-      appendRunNote(db, review.id, {
-        kind: "note",
-        message:
-          cli.authMethod === "oauth_token"
-            ? "This review may cost API usage, billed per token: the CLI is signed in with a " +
-              "token (oauth_token). One made by claude setup-token draws on a Claude " +
-              "subscription, and any other may not."
-            : "This review may cost API usage, billed per token: " +
-              (cli.authMethod === undefined
-                ? "the CLI did not say how it is signed in"
-                : `the CLI is signed in (${cli.authMethod}), a way this app does not know`) +
-              ", and unless that is a Claude subscription, it bills per token.",
       });
     }
     if (resolution.downgradedFrom !== null) {

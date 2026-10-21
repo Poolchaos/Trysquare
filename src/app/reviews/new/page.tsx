@@ -33,7 +33,8 @@ import {
   Textarea,
 } from "@/components/ui";
 import { send } from "@/components/request";
-import { signInPlaceWords, type SignIn } from "@/lib/engine/sign-in-command";
+import { type SignIn } from "@/lib/engine/sign-in-command";
+import { BillingNotice, billingOf, type Billing } from "@/components/billing-notice";
 
 interface Branch {
   name: string;
@@ -221,14 +222,11 @@ function NewReview() {
   // Asked once as the screen opens, and free: a sign-in that bills per token
   // is said before Start, while it can still be changed, not in a run note
   // on a review already billing (D-161). Anything else the CLI cannot do is
-  // refused at Start, with its reason (MVP 6.2).
-  const [perToken, setPerToken] = useState<{
-    surely: boolean;
-    why: string;
-    /** Whether signing in would help: a token set for the CLI wins over a sign-in. */
-    remedy: boolean;
-    signIn?: SignIn;
-  } | null>(null);
+  // refused at Start, with its reason (MVP 6.2). What was shown is sent with
+  // Create and Start, and the server refuses a billing sign-in this page did
+  // not show, so a check that failed, or a sign-in changed since, is shown
+  // then (review of D-161).
+  const [billing, setBilling] = useState<Billing | null>(null);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -238,23 +236,7 @@ function NewReview() {
         "The CLI could not be checked",
       );
       if (cancelled || !sent.ok) return;
-      const { state, authMethod } = sent.body.cli;
-      if (state !== "perToken" && state !== "maybePerToken") return;
-      const unknownWay =
-        authMethod === undefined
-          ? "The CLI did not say how it is signed in"
-          : `The CLI is signed in (${authMethod}), a way this app does not know`;
-      setPerToken({
-        surely: state === "perToken",
-        why:
-          state === "perToken"
-            ? `The CLI is signed in (${authMethod}) some other way than your Claude subscription, so a review draws on paid API usage rather than your plan's usage limits.`
-            : authMethod === "oauth_token"
-              ? "The CLI is signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other on paid API usage."
-              : `${unknownWay}: unless it is your Claude subscription, a review draws on paid API usage rather than your plan's usage limits.`,
-        remedy: authMethod !== "oauth_token",
-        ...(sent.body.signIn === undefined ? {} : { signIn: sent.body.signIn }),
-      });
+      setBilling(billingOf(sent.body.cli, sent.body.signIn));
     })();
     return () => {
       cancelled = true;
@@ -504,6 +486,12 @@ function NewReview() {
     };
   }, [readyToPreflight, preflightKey, preflightBody]);
 
+  type Refused = { error?: string; code?: string; cli?: { state?: unknown }; signIn?: SignIn };
+  /** A refusal for a billing sign-in this page had not shown shows it, for the next Start. */
+  function showRefusal(refused: Refused) {
+    if (refused.code === "BillingNotShown") setBilling(billingOf(refused.cli, refused.signIn));
+  }
+
   async function start(event: React.FormEvent) {
     event.preventDefault();
     setError("");
@@ -529,20 +517,26 @@ function NewReview() {
                 },
               }
             : {}),
+          ...(billing === null ? {} : { billingShown: billing.state }),
         }),
       });
-      const body = (await created.json()) as { review?: { id: string }; error?: string };
+      const body = (await created.json()) as Refused & { review?: { id: string } };
       if (!created.ok || !body.review) {
+        showRefusal(body);
         setError(body.error ?? "The review could not be created.");
         return;
       }
 
       const started = await fetch(`/api/reviews/${body.review.id}/start`, {
         method: "POST",
-        body: JSON.stringify({ rulesetId }),
+        body: JSON.stringify({
+          rulesetId,
+          ...(billing === null ? {} : { billingShown: billing.state }),
+        }),
       });
       if (!started.ok) {
-        const problem = (await started.json()) as { error?: string };
+        const problem = (await started.json()) as Refused;
+        showRefusal(problem);
         setError(problem.error ?? "The review was created but could not be started.");
         return;
       }
@@ -1179,30 +1173,7 @@ function NewReview() {
 
           {error ? <Problem>{error}</Problem> : null}
 
-          {perToken === null ? null : (
-            <div
-              role="alert"
-              data-testid="per-token-notice"
-              className="rounded-md border border-[var(--color-warning)] bg-[var(--color-warning-soft)] p-3 text-sm"
-            >
-              <p className="font-medium">
-                This review {perToken.surely ? "will" : "may"} cost API usage, billed per token.
-              </p>
-              <p className="mt-1 text-xs">
-                {perToken.why}
-                {!perToken.remedy
-                  ? ""
-                  : perToken.signIn === undefined
-                    ? " Sign it in with your Claude account to use the subscription."
-                    : ` To use the subscription, sign it in with your Claude account ${signInPlaceWords(perToken.signIn.place)}:`}
-              </p>
-              {!perToken.remedy || perToken.signIn === undefined ? null : (
-                <p className="mt-1 text-xs">
-                  <Mono className="break-all">{perToken.signIn.command}</Mono>
-                </p>
-              )}
-            </div>
-          )}
+          {billing === null ? null : <BillingNotice billing={billing} />}
 
           <div className="flex items-center gap-3">
             <Button type="submit" variant="primary" disabled={!ready || starting}>

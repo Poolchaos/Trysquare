@@ -28,7 +28,10 @@ someone presses Check the CLI on Settings, opens the new-review screen,
 which says before Start that a sign-in billing per token makes a review
 cost API usage (D-161), or creates or starts a review that runs headless,
 which is refused with the reason when the CLI is not found, cannot run or
-is signed out (MVP 6.2); never at startup or on a timer.
+is signed out (MVP 6.2), and, when it bills per token or may, until the
+page has said so: each page sends what it showed with Create and Start,
+and one refused shows the notice for the next (review of D-161). Never at
+startup or on a timer.
 Both checks are free, and each is an explicit action, as D-31 keeps every
 CLI call. The check names the CLI's path and version and tells apart a CLI
 not found, one that cannot run (with the real error: too old, not

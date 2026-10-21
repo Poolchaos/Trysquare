@@ -875,36 +875,51 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
     }
   }, 120_000);
 
-  it("creates one signed in to bill per token, and says so on the run", async () => {
+  async function notShown(response: Response, state: string, before: number) {
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as {
+      code: string;
+      error: string;
+      cli: { state: string };
+      signIn: { command: string };
+    };
+    expect(body.code).toBe("BillingNotShown");
+    expect(body.cli.state).toBe(state);
+    expect(body.signIn.command).not.toBe("");
+    expect(await reviewCount()).toBe(before);
+    return body.error;
+  }
+
+  it("refuses, creating nothing, a sign-in billing per token the page did not say", async () => {
+    // The page may not have shown the notice: Start pressed before the
+    // check answered, a check that failed, or a sign-in changed since
+    // (review of D-161).
+    const before = await reviewCount();
     process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: true, authMethod: "api_key" });
     try {
-      const response = await create();
-      expect(response.status).toBe(201);
-      const { review } = (await response.json()) as { review: { id: string } };
-      const detail = await routes.review.GET(new Request("http://localhost/x"), params(review.id));
-      expect(JSON.stringify(await detail.json())).toMatch(
-        /This review costs API usage, billed per token: the CLI is signed in \(api_key\)/,
+      expect(await notShown(await create(), "perToken", before)).toMatch(
+        /This review will cost API usage, billed per token/,
       );
+      // Saying it may is not saying it will.
+      await notShown(await create({ billingShown: "maybePerToken" }), "perToken", before);
+      expect((await create({ billingShown: "perToken" })).status).toBe(201);
     } finally {
       useSignedInFake();
     }
   }, 120_000);
 
-  it("says a token the CLI names no source of may bill per token, not that it does", async () => {
+  it("refuses, creating nothing, a sign-in that may bill per token the page did not say", async () => {
+    const before = await reviewCount();
     process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({
       loggedIn: true,
       authMethod: "oauth_token",
     });
     try {
-      const response = await create();
-      expect(response.status).toBe(201);
-      const { review } = (await response.json()) as { review: { id: string } };
-      const detail = await routes.review.GET(new Request("http://localhost/x"), params(review.id));
-      const said = JSON.stringify(await detail.json());
-      expect(said).toMatch(
-        /This review may cost API usage, billed per token: the CLI is signed in with a token \(oauth_token\)/,
+      expect(await notShown(await create(), "maybePerToken", before)).toMatch(
+        /This review may cost API usage, billed per token/,
       );
-      expect(said).not.toMatch(/This review costs API usage/);
+      expect((await create({ billingShown: "maybePerToken" })).status).toBe(201);
+      expect((await create({ billingShown: "perToken" })).status).toBe(201);
     } finally {
       useSignedInFake();
     }
@@ -973,6 +988,70 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
       useSignedInFake();
     }
   }, 120_000);
+
+  it("refuses a start the sign-in now bills for unless the page said so, then notes it", async () => {
+    // A Resume or a draft's Start shows no notice of its own until refused,
+    // and a sign-in can change after a page opens (review of D-161).
+    const startRoute = await import("@/app/api/reviews/[id]/start/route");
+    const created = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { review } = (await created.json()) as { review: { id: string } };
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "Billing check protocol",
+        tier: "global",
+        markdown,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+    const detail = async () =>
+      JSON.stringify(
+        await (
+          await routes.review.GET(new Request("http://localhost/x"), params(review.id))
+        ).json(),
+      );
+    // Created on a subscription, so no note yet.
+    expect(await detail()).not.toMatch(/cost API usage/);
+
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: true, authMethod: "api_key" });
+    try {
+      const refused = await startRoute.POST(
+        post(`http://localhost/api/reviews/${review.id}/start`, { rulesetId }),
+        params(review.id),
+      );
+      expect(refused.status).toBe(409);
+      const body = (await refused.json()) as { code: string; cli: { state: string } };
+      expect(body.code).toBe("BillingNotShown");
+      expect(body.cli.state).toBe("perToken");
+      expect(await detail()).toMatch(/"status":"draft"/);
+
+      const started = await startRoute.POST(
+        post(`http://localhost/api/reviews/${review.id}/start`, {
+          rulesetId,
+          billingShown: "perToken",
+        }),
+        params(review.id),
+      );
+      expect(started.status).toBe(200);
+      const { jobManager } = await import("@/server/jobs/manager");
+      await jobManager().settled(review.id);
+      expect(await detail()).toMatch(
+        /This review costs API usage, billed per token: the CLI is signed in \(api_key\)/,
+      );
+    } finally {
+      useSignedInFake();
+    }
+  }, 240_000);
 
   it("refuses at create before anything is fetched", async () => {
     // Asked last, a refusal waited on a fetch of every project first, and

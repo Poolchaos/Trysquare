@@ -8,14 +8,23 @@
 import { z } from "zod";
 import { rulesetTierSchema } from "@/lib/domain/enums";
 import { hasReviewSnapshot, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
-import { requireReview } from "@/server/db/repositories/reviews";
+import { appendRunNote, requireReview } from "@/server/db/repositories/reviews";
 import { handler, ok, readOptionalJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
-import { cliNotReady, cliReadiness } from "@/server/cli-readiness";
+import {
+  billingNote,
+  billingNotShown,
+  billingShownSchema,
+  cliNotReady,
+  cliReadiness,
+} from "@/server/cli-readiness";
 
 export const dynamic = "force-dynamic";
 
-const body = z.object({ rulesetId: z.string().min(1).optional() });
+const body = z.object({
+  rulesetId: z.string().min(1).optional(),
+  billingShown: billingShownSchema,
+});
 
 export async function POST(
   request: Request,
@@ -67,14 +76,17 @@ export async function POST(
     // signed out since failed them at their first stage with nothing said
     // (MVP 6.2, review of the 6.2 changes). The interactive engine starts no
     // CLI.
-    if (review.engineMode === "headless") {
-      const { refusal } = await cliReadiness(db);
-      if (refusal !== null) throw cliNotReady(refusal);
-    }
+    const readiness = review.engineMode === "headless" ? await cliReadiness(db) : null;
+    if (readiness?.refusal) throw cliNotReady(readiness.refusal);
+    const unshown = readiness === null ? null : billingNotShown(readiness, input.billingShown);
+    if (unshown !== null) throw unshown;
 
     // A review that cannot run, or a ruleset for one already running or in
     // line, is refused by the manager and answered 409 by the handler.
     const state = manager.start(id, ...(ruleset ? [{ ruleset }] : []));
+    // Noted as each run starts, not once at create: a Resume bills too.
+    const note = readiness === null ? null : billingNote(readiness.cli);
+    if (note !== null) appendRunNote(db, id, { kind: "note", message: note });
     return ok({ state, snapshot: manager.snapshot(id) });
   });
 }

@@ -35,6 +35,8 @@ import {
   statusTone,
 } from "@/components/ui";
 import { send } from "@/components/request";
+import { BillingNotice, billingOf, type Billing } from "@/components/billing-notice";
+import type { SignIn } from "@/lib/engine/sign-in-command";
 
 /**
  * The whole pipeline, not only the stages that call a model.
@@ -384,6 +386,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [confirmingCancelFor, setConfirmingCancelFor] = useState<string | null>(null);
   const [cancellingHere, setCancellingHere] = useState(false);
   const [actionError, setActionError] = useState("");
+  // Shown once the server refuses a Start or Resume for a sign-in billing per
+  // token this page had not said, and sent with the next (review of D-161).
+  const [billing, setBilling] = useState<Billing | null>(null);
   // A draft is a review the new-review screen made and then could not start.
   // Nothing is frozen onto it yet, so starting it takes a ruleset; its screen
   // used to offer only Resume, which a draft is not (5.11, U7).
@@ -459,11 +464,22 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       `/api/reviews/${id}/start`,
       {
         method: "POST",
-        ...(rulesetId === undefined ? {} : { body: JSON.stringify({ rulesetId }) }),
+        body: JSON.stringify({
+          ...(rulesetId === undefined ? {} : { rulesetId }),
+          ...(billing === null ? {} : { billingShown: billing.state }),
+        }),
       },
       `The review could not be ${rulesetId === undefined ? "resumed" : "started"}`,
     );
     if (!sent.ok) {
+      if (sent.body.code === "BillingNotShown") {
+        setBilling(
+          billingOf(
+            sent.body.cli as { state?: unknown } | undefined,
+            sent.body.signIn as SignIn | undefined,
+          ),
+        );
+      }
       setActionError(sent.error);
       await reload();
       return;
@@ -959,6 +975,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       />
       <PageBody>
         {actionError ? <Problem>{actionError}</Problem> : null}
+        {billing === null ? null : <BillingNotice billing={billing} />}
         {review.pausedReason ? (
           <Problem>
             {review.pausedReason}

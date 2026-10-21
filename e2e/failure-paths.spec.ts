@@ -2313,3 +2313,97 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
   await expect(notice).not.toContainText("auth login");
   await stopToken();
 });
+
+test("a sign-in billing per token that a page had not shown is refused, shown, then sent", async ({
+  page,
+}) => {
+  // A check that failed showed no notice, and Start went ahead; a Resume or a
+  // draft's Start showed none at all (review of D-161). The server refuses
+  // either, and the page shows what it was told and says it showed it next.
+  const stopAuth = await routeUntilStopped(page, "**/api/auth", (route) =>
+    route.fulfill({ status: 500, json: { error: "Refused for this test: the check." } }),
+  );
+  await fillANewReview(page);
+  const notice = page.getByTestId("per-token-notice");
+  await expect(notice).toHaveCount(0);
+
+  const creates: unknown[] = [];
+  let refuseCreate = true;
+  const answerCreate = async (route: Route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    creates.push(route.request().postDataJSON());
+    if (!refuseCreate) return route.fallback();
+    refuseCreate = false;
+    await route.fulfill({
+      status: 409,
+      json: {
+        error: "This review will cost API usage, billed per token, which this page had not said.",
+        code: "BillingNotShown",
+        cli: { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
+        signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+      },
+    });
+  };
+  await page.route("**/api/reviews", answerCreate);
+  const start = page.getByRole("button", { name: "Start review" });
+  await start.click();
+  await expect(notice).toContainText("This review will cost API usage, billed per token.");
+  await expect(page.getByText("which this page had not said")).toBeVisible();
+  expect(creates[0]).not.toHaveProperty("billingShown");
+
+  // Said now, so the next Start says it was: the real server makes the
+  // review, and its start is refused for this test, leaving a draft.
+  const stopStart = await answerOnce(page, "**/api/reviews/*/start", (route) =>
+    route.fulfill({ status: 500, json: { error: "Refused for this test.", code: "Test" } }),
+  );
+  const creation = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/reviews" && response.request().method() === "POST",
+  );
+  await start.click();
+  const { review } = (await (await creation).json()) as { review: { id: string } };
+  expect(creates[1]).toMatchObject({ billingShown: "perToken" });
+  await expect(page.getByText("Refused for this test.")).toBeVisible();
+  await stopStart();
+  await page.unroute("**/api/reviews", answerCreate);
+  await stopAuth();
+
+  // The draft's own Start, on a page with no notice until refused.
+  const starts: unknown[] = [];
+  const stopStarts = await routeUntilStopped(page, "**/api/reviews/*/start", async (route) => {
+    starts.push(route.request().postDataJSON());
+    await route.fulfill(
+      starts.length === 1
+        ? {
+            status: 409,
+            json: {
+              error:
+                "This review may cost API usage, billed per token, which this page had not said.",
+              code: "BillingNotShown",
+              cli: {
+                state: "maybePerToken",
+                path: "/opt/claude",
+                version: "2.1.301",
+                authMethod: "oauth_token",
+              },
+              signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+            },
+          }
+        : { status: 500, json: { error: "Refused for this test, again.", code: "Test" } },
+    );
+  });
+  await page.goto(`/reviews/${review.id}`);
+  const draftStart = page.getByRole("button", { name: "Start review" });
+  await expect(draftStart).toBeVisible({ timeout: 30_000 });
+  await expect(notice).toHaveCount(0);
+  await draftStart.click();
+  await expect(notice).toContainText("This review may cost API usage, billed per token.");
+  await expect(notice).toContainText("claude setup-token");
+  expect(starts[0]).not.toHaveProperty("billingShown");
+  await draftStart.click();
+  await expect(page.getByText("Refused for this test, again.")).toBeVisible();
+  expect(starts[1]).toMatchObject({ billingShown: "maybePerToken" });
+  await stopStarts();
+  // Not left for the suites after this to find.
+  expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
+});
