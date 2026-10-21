@@ -32,7 +32,7 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
-import { send } from "@/components/request";
+import { asSentence, send } from "@/components/request";
 import { type SignIn } from "@/lib/engine/sign-in-command";
 import { BillingNotice, billingOf, SignInLine, type Billing } from "@/components/billing-notice";
 
@@ -548,7 +548,7 @@ function NewReview() {
         const leftAlone =
           !removed.ok && (removed.status === 404 || removed.body.code === "NotAnUnstartedDraft");
         if (!removed.ok && !leftAlone) {
-          setError(`${removed.error} Press Start again to try again.`);
+          setError(`${asSentence(removed.error)} Press Start again to try again.`);
           return;
         }
         setDraft(null);

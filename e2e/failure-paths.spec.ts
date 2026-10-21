@@ -1672,6 +1672,19 @@ test("a Start refused after the review was made leaves no second draft at the ne
   ).toBeVisible();
   expect(creates).toHaveLength(3);
   await stopFailing();
+
+  // A dropped request says its reason with no full stop of its own, so one
+  // is added before the next sentence (review of the D-165 fixes).
+  const stopDropping = await routeUntilStopped(
+    page,
+    `**/api/reviews/${third}?unstarted=1`,
+    (route) => (route.request().method() === "DELETE" ? route.abort("failed") : route.fallback()),
+  );
+  await start.click();
+  await expect(
+    page.getByText(/could not be removed: .+\. Press Start again to try again\.$/),
+  ).toBeVisible();
+  await stopDropping();
   await stopRefusing();
   for (const id of [second, third]) {
     expect((await page.request.delete(`/api/reviews/${id}`)).status()).toBe(200);

@@ -36,3 +36,11 @@ export async function send<T>(url: string, init: RequestInit, failure: string): 
   }
   return { ok: true, status: response.status, body: body as T };
 }
+
+/**
+ * A message closed as a sentence, so another can follow it: a dropped
+ * request's reason ends with none of its own (review of the D-165 fixes).
+ */
+export function asSentence(message: string): string {
+  return /[.!?]$/.test(message) ? message : `${message}.`;
+}

@@ -34,7 +34,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
-import { send } from "@/components/request";
+import { asSentence, send } from "@/components/request";
 import { BillingNotice, billingOf, SignInLine, type Billing } from "@/components/billing-notice";
 import type { SignIn } from "@/lib/engine/sign-in-command";
 
@@ -1037,8 +1037,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         {billing === null ? null : <BillingNotice billing={billing} />}
         {interactiveToStart && interactiveCheck?.error ? (
           <Problem>
-            {interactiveCheck.error} Whether the commands this review prints would cost API usage is
-            not known.
+            {asSentence(interactiveCheck.error)} Whether the commands this review prints would cost
+            API usage is not known.
           </Problem>
         ) : null}
         {interactiveToStart && interactiveCheck?.billing ? (
