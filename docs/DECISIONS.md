@@ -3632,3 +3632,39 @@ verified evidence, in writing, here.
   6. LOW: one header line of the guard left at 100 columns. Fixed 1afac66.
   7. LOW: a comment called a cannot-run answer "could not be found", fixed
   with 69f03ad's rewrite; an import out of order, fixed in dca8608.
+- 2026-10-21 D-156 REVIEW (the D-155 fixes and their record, e8f5540..8e90039,
+  by a separate read-only reviewer told never to run anything that could
+  reach the real CLI, nor to write a private name into its report; each
+  finding re-run here before it was fixed). Five findings, one MEDIUM and
+  four LOW, all dispositioned before new work:
+  1. MEDIUM: deb96f3, meant to keep one private working-tree name out of
+  this public repository, wrote three such names into the leak gate's own
+  pattern, two of them published for the first time; the gate exempts its
+  own file. Row 6.1's "now named by none" and D-155's account of what leaked
+  were therefore untrue from deb96f3 on. Fixed 7da9231: the gate holds those
+  names only as sha256 hashes of their words, and no tracked file names
+  them. The two names remain in history at deb96f3. The maintainer, having
+  left the choice to this session, has history left as it is, for D-155's
+  reasons and one more: the gate has always held the private product and
+  package names as literal patterns, by its design. The maintainer can
+  overrule; nothing has been rewritten.
+  2. LOW: the folder pattern matched only a forward slash, so a path pasted
+  from Windows passed. 3. LOW: one name matched inside longer words. Both
+  fixed by 7da9231's splitting of each line into words: a staged probe,
+  never committed, failed on the slash and backslash forms and both
+  hyphenated names in another case, 4 violations, and not on
+  "repos-workspace" or a lone "pos".
+  4. LOW: dca8608's helper turned any error into a skip, so a broken guard
+  could skip all five refusals on every runner with the gate green. Fixed
+  ec54990: only a CLI not found or not runnable skips, and never on CI.
+  5. LOW: the guard's header said a test handing in its own environment
+  resolves nothing real; two hand in the real one on purpose. Fixed ec54990,
+  reflowed in afc119a.
+  A D-105 occurrence: CI run 39562134166 at 8e90039, a record commit,
+  failed on Windows alone in the dark theme's detail-screens test, /projects
+  left on "Loading..." because one of its script chunks was refused with
+  net::ERR_NO_BUFFER_SPACE, so the page never hydrated and never asked for
+  its list. Chromium's network log names the call: one TCP_CONNECT_ATTEMPT,
+  os_error 10055 (WSAENOBUFS). The saved TCP table held 69 TIME_WAIT, 11
+  established and 24 listening, so not port exhaustion. Re-run once under
+  D-105; the second attempt passed on all three.
