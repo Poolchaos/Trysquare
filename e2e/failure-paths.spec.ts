@@ -2596,14 +2596,16 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
       `This is ${setting} set in your Claude Code settings, which a review here does not read, so whether it applies is not yet measured; where it does, it wins over a sign-in: remove it there to use the subscription.`,
     );
     await expect(notice).not.toContainText("auth login");
-    // An interactive review's commands read them, so there it will.
+    // An interactive review's commands read the person's user settings
+    // only, so there too it may, as the check may have found it elsewhere
+    // (review of the D-164 fixes).
     await page.getByText("Advanced", { exact: true }).click();
     await page.getByTestId("engine-mode").selectOption("interactive");
     await expect(notice).toContainText(
-      "The commands this review prints will cost API usage, billed per token.",
+      "The commands this review prints may cost API usage, billed per token.",
     );
     await expect(notice).toContainText(
-      `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
+      `This is ${setting} set in your Claude Code settings; the commands this review prints read your user settings only, so it applies if it is set there, and then wins over a sign-in: remove it there to use the subscription.`,
     );
     await stopSetting();
   }

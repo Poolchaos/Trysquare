@@ -29,6 +29,10 @@ describe("the real demo's look at the CLI", () => {
       /^The CLI is signed in \(oauth_token\) in a way that may not be a Claude subscription, so this demo may cost API usage, billed per token\. Nothing was spent\./,
     );
     expect(describeSignIn(token)).toBe("/opt/claude, 2.1.301, signed in (oauth_token)");
+    // A setting that a review may not read is said as may (review of the
+    // D-164 fixes).
+    const helper: CliStatus = { state: "perToken", ...base, authMethod: "api_key_helper" };
+    expect(demoRefusal(helper, false)).toMatch(/so this demo may cost API usage, billed per token/);
   });
 
   it("refuses a CLI that cannot run, whatever it is told", () => {

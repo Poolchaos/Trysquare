@@ -39,20 +39,21 @@ export function billingOf(
  * from the CLI.
  */
 export function signInWouldHelp(authMethod: string | undefined): boolean {
-  return authMethod !== "oauth_token" && settingOverSignIn(authMethod, null) === null;
+  return authMethod !== "oauth_token" && settingOverSignIn(authMethod, "review") === null;
 }
 
 /**
  * The sentence naming the setting that wins, or null when none is known to.
  * A headless review and a probe read no settings, so whether one applies to
- * them is unmeasured (D-163 item 3) and said so; an interactive review's
- * commands read the person's, so there it is not.
+ * them is unmeasured (D-163 item 3); an interactive review's commands read
+ * the person's user settings only, and the check may have found it in a
+ * project's (review of the D-164 fixes). Each is said so.
  *
- * @param reader What runs without reading settings, or null for what reads them.
+ * @param reader What would cost.
  */
 export function settingOverSignIn(
   authMethod: string | undefined,
-  reader: "review" | "probe" | null,
+  reader: "review" | "probe" | "interactive",
 ): string | null {
   const setting =
     authMethod === "api_key_helper"
@@ -62,8 +63,8 @@ export function settingOverSignIn(
         : null;
   if (setting === null) return null;
   const read =
-    reader === null
-      ? ", which wins over a sign-in"
+    reader === "interactive"
+      ? "; the commands this review prints read your user settings only, so it applies if it is set there, and then wins over a sign-in"
       : `, which a ${reader} here does not read, so whether it applies is not yet measured; where it does, it wins over a sign-in`;
   return `This is ${setting} set in your Claude Code settings${read}: remove it there to use the subscription.`;
 }
@@ -91,9 +92,10 @@ export function BillingNotice({
   const { state, authMethod, signIn } = billing;
   const one = what === "probe" ? "a probe" : what === "interactive" ? "each one" : "a review";
   const remedy = signInWouldHelp(authMethod);
-  const setting = settingOverSignIn(authMethod, what === "interactive" ? null : what);
-  // Said as may where the setting behind it may not apply (review of the D-163 fixes).
-  const surely = state === "perToken" && !(setting !== null && what !== "interactive");
+  const setting = settingOverSignIn(authMethod, what);
+  // Said as may where the setting behind it may not apply (reviews of the
+  // D-163 and D-164 fixes).
+  const surely = state === "perToken" && setting === null;
   const unknownWay =
     authMethod === undefined
       ? "The CLI did not say how it is signed in"

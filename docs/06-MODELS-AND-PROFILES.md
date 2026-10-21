@@ -39,8 +39,9 @@ not found, one that cannot run (with the real error: too old, not
 executable, an answer that is not its status, no answer in time), signed
 out, signed in some way that bills per token (a key, an `apiKeyHelper` or
 another provider: a warning; reviews still run, D-92; the last two come only
-from a settings file, which a headless review and a probe do not read, so
-for them it says may, D-164), signed in some way
+from a settings file, which a headless review and a probe do not read and
+an interactive review's commands read only at user level, so for them it
+says may, D-164, D-165), signed in some way
 that may (an `oauth_token`, which 2.1.301 reports both for a token
 `claude setup-token` made and for a Console profile, an unknown method, or
 none said: a warning that says "may"), and a subscription.

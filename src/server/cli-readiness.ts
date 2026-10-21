@@ -70,7 +70,7 @@ export function billingNotShown(
       error:
         // No cause is guessed: a Resume asks nothing before it is pressed, so
         // there nothing changed and no check failed (review of the D-162 fixes).
-        `This review ${cli.state === "perToken" ? "will" : "may"} cost API usage, billed per ` +
+        `This review ${billsSurely(cli) ? "will" : "may"} cost API usage, billed per ` +
         "token, which this page had not said yet. Read the notice, then press again.",
       code: "BillingNotShown",
       cli,
@@ -81,16 +81,24 @@ export function billingNotShown(
 }
 
 /**
+ * Whether a review will bill per token, not only may: a key does, but an
+ * apiKeyHelper or another provider comes only from a settings file, which a
+ * review here does not read (review of the D-164 fixes).
+ */
+function billsSurely(cli: CliStatus): boolean {
+  return cli.state === "perToken" && !SETTING_METHODS.has(cli.authMethod);
+}
+
+const SETTING_METHODS: ReadonlySet<string> = new Set(["api_key_helper", "third_party"]);
+
+/**
  * The run note for a review that started on a sign-in billing per token, or
  * that may. One put in line says so: it may be cancelled before it runs, and
  * the sign-in is not asked again as it leaves the queue.
  */
 export function billingNote(cli: CliStatus, queued = false): string | null {
   const when = queued ? " once it leaves the queue" : "";
-  if (
-    cli.state === "perToken" &&
-    (cli.authMethod === "api_key_helper" || cli.authMethod === "third_party")
-  ) {
+  if (cli.state === "perToken" && !billsSurely(cli)) {
     // Only a setting gives these, and a review here reads none, so whether
     // it applies is unmeasured (review of the D-163 fixes).
     return (

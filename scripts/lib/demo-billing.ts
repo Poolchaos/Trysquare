@@ -27,6 +27,8 @@ export function describeSignIn(cli: CliStatus): string {
   }
 }
 
+const SETTING_METHODS: ReadonlySet<string> = new Set(["api_key_helper", "third_party"]);
+
 /** Why the demo stops before spending, or null when it may go on. */
 export function demoRefusal(cli: CliStatus, perTokenAllowed: boolean): string | null {
   const free = "Nothing was spent. Pass --fake to run it free.";
@@ -41,9 +43,12 @@ export function demoRefusal(cli: CliStatus, perTokenAllowed: boolean): string | 
     case "perToken":
     case "maybePerToken": {
       if (perTokenAllowed) return null;
+      // A setting gives an apiKeyHelper or another provider, and a review
+      // here reads none, so for those it may (review of the D-164 fixes).
+      const setting = cli.state === "perToken" && SETTING_METHODS.has(cli.authMethod);
       const how =
         cli.state === "perToken"
-          ? `signed in (${cli.authMethod}) some other way than a Claude subscription, so this demo would cost`
+          ? `signed in (${cli.authMethod}) some other way than a Claude subscription, so this demo ${setting ? "may" : "would"} cost`
           : `signed in${cli.authMethod === undefined ? "" : ` (${cli.authMethod})`} in a way that may not be a Claude subscription, so this demo may cost`;
       return (
         `The CLI is ${how} API usage, billed per token. Nothing was spent. ` +

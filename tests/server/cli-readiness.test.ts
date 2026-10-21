@@ -67,6 +67,16 @@ describe("a page's Start, by the billing it showed", () => {
     expect(billingNotShown(readiness(maybe), "perToken")).toBeNull();
   });
 
+  it("says may, not will, of a setting that may not apply to a review", () => {
+    // As the notice beside it says (review of the D-164 fixes).
+    const helper: CliStatus = { state: "perToken", ...base, authMethod: "api_key_helper" };
+    return billingNotShown(readiness(helper), undefined)
+      ?.json()
+      .then((body: { error: string }) => {
+        expect(body.error).toMatch(/^This review may cost API usage, billed per token/);
+      });
+  });
+
   it("asks nothing of a subscription", () => {
     const cli: CliStatus = { state: "subscription", ...base };
     expect(billingNotShown(readiness(cli), undefined)).toBeNull();
