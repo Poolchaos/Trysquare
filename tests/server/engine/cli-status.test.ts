@@ -95,6 +95,21 @@ describe("the CLI's status", () => {
     });
   });
 
+  it("says where the sign-in it read is kept, as the CLI reports it", async () => {
+    // The sign-in lives in the config directory, not the binary, so a
+    // command run in a terminal set up otherwise signs in somewhere this
+    // check does not read (review of the 6.2 and 6.3 changes).
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({
+      loggedIn: false,
+      authMethod: "none",
+      configDirectory: "/home/someone/.claude",
+    });
+    expect(await readCliStatus({ claudePath: FAKE_CLI })).toMatchObject({
+      state: "signedOut",
+      configDirectory: "/home/someone/.claude",
+    });
+  });
+
   it("bills per token when signed in another way than a subscription", async () => {
     process.env.FAKE_CLAUDE_AUTH_STATUS = signedIn({ authMethod: "api_key" });
     expect(await readCliStatus({ claudePath: FAKE_CLI })).toEqual({

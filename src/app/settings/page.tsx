@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
 import { Badge, Button, Card, Empty, Field, Input, Mono, Problem } from "@/components/ui";
 import { send } from "@/components/request";
+import { signInPlaceWords, type SignIn } from "@/lib/engine/sign-in-command";
 
 interface Model {
   id: string;
@@ -27,7 +28,7 @@ interface Model {
 type CliStatus =
   | { state: "notFound"; message: string }
   | { state: "cannotRun"; path?: string; version?: string; message: string }
-  | { state: "signedOut"; path: string; version: string }
+  | { state: "signedOut"; path: string; version: string; configDirectory?: string }
   | { state: "perToken"; path: string; version: string; authMethod?: string }
   | { state: "subscription"; path: string; version: string; subscriptionType?: string };
 
@@ -72,7 +73,7 @@ export default function SettingsPage() {
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [cli, setCli] = useState<CliStatus | null>(null);
   const [cliProblem, setCliProblem] = useState("");
-  const [signIn, setSignIn] = useState("");
+  const [signIn, setSignIn] = useState<SignIn | null>(null);
   const [checkingCli, setCheckingCli] = useState(false);
   const [probing, setProbing] = useState("");
   const [error, setError] = useState("");
@@ -323,16 +324,25 @@ export default function SettingsPage() {
                 ) : cli.state === "signedOut" ? (
                   <>
                     <p className="text-[var(--color-warning)]">Not signed in.</p>
+                    {cli.configDirectory === undefined ? null : (
+                      <p className="text-xs text-[var(--color-ink-muted)]">
+                        The sign-in this check read is kept in{" "}
+                        <Mono className="break-all">{cli.configDirectory}</Mono>.
+                      </p>
+                    )}
                     {/* Shown, never run: the app starts the CLI with read-only
-                        tools alone (MVP 6.3, D-159). */}
-                    <p className="text-xs text-[var(--color-ink-muted)]">
-                      Sign it in from a terminal
-                      {signIn.startsWith("npm ") ? ", in this project's directory" : ""}, then check
-                      again:
-                    </p>
-                    <p className="text-xs" data-testid="sign-in-command">
-                      <Mono className="break-all">{signIn}</Mono>
-                    </p>
+                        tools alone (MVP 6.3, D-159). With no command, neither
+                        line, rather than an instruction pointing at nothing. */}
+                    {signIn === null ? null : (
+                      <>
+                        <p className="text-xs text-[var(--color-ink-muted)]">
+                          Sign it in {signInPlaceWords(signIn.place)}, then check again:
+                        </p>
+                        <p className="text-xs" data-testid="sign-in-command">
+                          <Mono className="break-all">{signIn.command}</Mono>
+                        </p>
+                      </>
+                    )}
                   </>
                 ) : cli.state === "perToken" ? (
                   <p className="text-[var(--color-warning)]">
@@ -360,7 +370,7 @@ export default function SettingsPage() {
               onClick={async () => {
                 setCheckingCli(true);
                 try {
-                  const sent = await send<{ cli: CliStatus; signInCommand?: string }>(
+                  const sent = await send<{ cli: CliStatus; signIn?: SignIn }>(
                     "/api/auth",
                     { method: "GET" },
                     "The CLI could not be checked",
@@ -369,7 +379,7 @@ export default function SettingsPage() {
                     setCli(sent.body.cli);
                     // An answer without one draws no command rather than
                     // failing the card.
-                    setSignIn(sent.body.signInCommand ?? "");
+                    setSignIn(sent.body.signIn ?? null);
                     setCliProblem("");
                   } else {
                     setCli(null);

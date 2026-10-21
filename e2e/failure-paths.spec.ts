@@ -2194,7 +2194,7 @@ test("Start refused for a CLI that cannot run says why, and stays on the form", 
       status: 409,
       json: {
         error:
-          "The Claude Code CLI at /opt/claude is not signed in, so the review cannot run. Sign it in, then start the review again.",
+          "The Claude Code CLI at /opt/claude is not signed in, so the review cannot run. Sign it in from a terminal, in this project's directory, with: npm run claude -- auth login Then start the review again.",
         code: "CliNotReady",
       },
     });
@@ -2212,8 +2212,13 @@ test("a signed-out CLI's check shows the command that signs it in", async ({ pag
     route.fulfill({
       status: 200,
       json: {
-        cli: { state: "signedOut", path: "/opt/claude", version: "2.1.301" },
-        signInCommand: "npm run claude -- auth login",
+        cli: {
+          state: "signedOut",
+          path: "/opt/claude",
+          version: "2.1.301",
+          configDirectory: "/home/someone/.claude",
+        },
+        signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
       },
     }),
   );
@@ -2222,5 +2227,22 @@ test("a signed-out CLI's check shows the command that signs it in", async ({ pag
     "Sign it in from a terminal, in this project's directory, then check again:",
   );
   await expect(page.getByTestId("sign-in-command")).toHaveText("npm run claude -- auth login");
+  // Where the sign-in lives, which a terminal set up otherwise would miss
+  // (review of the 6.2 and 6.3 changes).
+  await expect(page.getByTestId("cli-status")).toContainText(
+    "The sign-in this check read is kept in /home/someone/.claude.",
+  );
   await stop();
+
+  // With no command in the answer, no instruction pointing at nothing.
+  const stopBare = await answerOnce(page, "**/api/auth", (route) =>
+    route.fulfill({
+      status: 200,
+      json: { cli: { state: "signedOut", path: "/opt/claude", version: "2.1.301" } },
+    }),
+  );
+  await page.getByRole("button", { name: "Check the CLI" }).click();
+  await expect(page.getByTestId("cli-status")).toContainText("Not signed in.");
+  await expect(page.getByTestId("cli-status")).not.toContainText("Sign it in");
+  await stopBare();
 });

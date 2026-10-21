@@ -867,7 +867,7 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
       // runs under Node (MVP 6.3).
       await refused(
         await create(),
-        /is not signed in.*Sign it in with node ".*fake-claude\.mjs" auth login/,
+        /is not signed in.*Sign it in (in PowerShell|from a terminal) with: node '.*fake-claude\.mjs' auth login Then start the review again\./,
         before,
       );
     } finally {
@@ -944,7 +944,7 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
       expect(response.status).toBe(409);
       const body = (await response.json()) as { error: string; code: string };
       expect(body.code).toBe("CliNotReady");
-      expect(body.error).toMatch(/is not signed in.*Sign it in with/);
+      expect(body.error).toMatch(/is not signed in.*Sign it in .* with: /);
       const detail = (await (
         await routes.review.GET(new Request("http://localhost/x"), params(review.id))
       ).json()) as { review: { status: string } };

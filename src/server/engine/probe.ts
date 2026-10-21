@@ -39,13 +39,25 @@ export type CliStatus =
   | { state: "notFound"; message: string }
   /** No path when finding the CLI failed before naming one. */
   | { state: "cannotRun"; path?: string; version?: string; message: string }
-  | { state: "signedOut"; path: string; version: string }
+  | { state: "signedOut"; path: string; version: string; configDirectory?: string }
   /**
    * Signed in some other way than a subscription: a warning, not a block
    * (D-92). No method when the CLI did not say one.
    */
-  | { state: "perToken"; path: string; version: string; authMethod?: string }
-  | { state: "subscription"; path: string; version: string; subscriptionType?: string };
+  | {
+      state: "perToken";
+      path: string;
+      version: string;
+      authMethod?: string;
+      configDirectory?: string;
+    }
+  | {
+      state: "subscription";
+      path: string;
+      version: string;
+      subscriptionType?: string;
+      configDirectory?: string;
+    };
 
 interface CliOutcome {
   ok: boolean;
@@ -174,7 +186,12 @@ export async function readCliStatus(
     };
   }
   const status = parsed.data;
-  if (!status.loggedIn) return { state: "signedOut", path, version };
+  // Where the sign-in was read from: it lives in the config directory, not
+  // the binary, so a command run in a terminal set up otherwise signs in
+  // somewhere this check does not read (review of the 6.2 and 6.3 changes).
+  const configDirectory =
+    typeof status.configDirectory === "string" ? { configDirectory: status.configDirectory } : {};
+  if (!status.loggedIn) return { state: "signedOut", path, version, ...configDirectory };
   // A subscription sign-in reports claude.ai as its method; an API key
   // reports something else, and that changes how the user is billed.
   if (status.authMethod !== "claude.ai") {
@@ -183,6 +200,7 @@ export async function readCliStatus(
       path,
       version,
       ...(status.authMethod === undefined ? {} : { authMethod: status.authMethod }),
+      ...configDirectory,
     };
   }
   return {
@@ -190,6 +208,7 @@ export async function readCliStatus(
     path,
     version,
     ...(status.subscriptionType === undefined ? {} : { subscriptionType: status.subscriptionType }),
+    ...configDirectory,
   };
 }
 

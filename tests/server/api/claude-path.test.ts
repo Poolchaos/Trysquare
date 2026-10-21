@@ -100,10 +100,19 @@ describe("the CLI path kept in Settings", () => {
 
   it("comes with the command that signs in the CLI it names (MVP 6.3)", async () => {
     const signIn = async () =>
-      ((await (await routes.auth.GET()).json()) as { signInCommand: string }).signInCommand;
-    expect(await signIn()).toBe("npm run claude -- auth login");
+      ((await (await routes.auth.GET()).json()) as { signIn: { command: string; place: string } })
+        .signIn;
+    expect(await signIn()).toEqual({
+      command: "npm run claude -- auth login",
+      place: "projectDirectory",
+    });
     await save({ claudePath: FAKE_CLI });
-    expect(await signIn()).toBe(`node "${FAKE_CLI}" auth login`);
+    expect((await signIn()).command).toBe(`node '${FAKE_CLI}' auth login`);
+    // A relative path is named as it resolved, from the server's directory:
+    // typed as kept, it was found from wherever the person's terminal was
+    // (review of the 6.2 and 6.3 changes).
+    await save({ claudePath: join("tests", "fixtures", "fake-claude.mjs") });
+    expect((await signIn()).command).toBe(`node '${FAKE_CLI}' auth login`);
   }, 30_000);
 
   it("gives way to TRYSQUARE_CLAUDE_PATH", async () => {
