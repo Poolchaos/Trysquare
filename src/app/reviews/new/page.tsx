@@ -1173,7 +1173,10 @@ function NewReview() {
 
           {error ? <Problem>{error}</Problem> : null}
 
-          {billing === null ? null : <BillingNotice billing={billing} />}
+          {/* An interactive review starts no CLI, so it bills nothing here. */}
+          {billing === null || engineMode !== "headless" ? null : (
+            <BillingNotice billing={billing} />
+          )}
 
           <div className="flex items-center gap-3">
             <Button type="submit" variant="primary" disabled={!ready || starting}>

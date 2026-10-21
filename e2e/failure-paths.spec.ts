@@ -2286,6 +2286,13 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
   await expect(notice).toContainText("(api_key)");
   await expect(notice).toContainText("npm run claude -- auth login");
   await expect(page.getByRole("button", { name: "Start review" })).toBeEnabled();
+  // An interactive review starts no CLI, so it costs nothing here and is
+  // not said to (review of D-161).
+  await page.getByText("Advanced", { exact: true }).click();
+  await page.getByTestId("engine-mode").selectOption("interactive");
+  await expect(notice).toHaveCount(0);
+  await page.getByTestId("engine-mode").selectOption("headless");
+  await expect(notice).toContainText("This review will cost API usage, billed per token.");
   await stop();
 
   // A token whose source the CLI does not name may be a subscription's, so
