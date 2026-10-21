@@ -1,4 +1,9 @@
-import { realCliEnvironment, resolveCli } from "@/server/engine/cli";
+import {
+  CliNotFoundError,
+  CliUnusableError,
+  realCliEnvironment,
+  resolveCli,
+} from "@/server/engine/cli";
 
 /**
  * Whether a real Claude Code CLI is there for the suite's guard to refuse:
@@ -10,12 +15,24 @@ import { realCliEnvironment, resolveCli } from "@/server/engine/cli";
  * and those tests would fail for a reason that is not theirs. Checking the
  * node_modules copy alone skipped them where `claude` on PATH would have
  * served (review of the D-154 fixes).
+ *
+ * Only a CLI not there, or not runnable, answers no. Anything else is thrown,
+ * and so is no CLI on CI, which always has the one npm ci installs: a skip
+ * there would let a broken guard pass with all five of its refusals unrun
+ * (review of the D-155 fixes).
  */
 export function realCliPresent(): boolean {
   try {
     resolveCli(undefined, realCliEnvironment());
     return true;
-  } catch {
+  } catch (error) {
+    if (!(error instanceof CliNotFoundError || error instanceof CliUnusableError)) throw error;
+    if (process.env.CI) {
+      throw new Error(
+        `No real CLI resolved on CI, where npm ci installs one, so the guard's refusals ` +
+          `would all be skipped: ${(error as Error).message}`,
+      );
+    }
     return false;
   }
 }
