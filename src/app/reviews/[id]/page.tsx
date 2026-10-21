@@ -97,6 +97,7 @@ interface Snapshot {
     model: string;
     effort: string;
     intent: string | null;
+    engineMode: string;
     pausedReason: string | null;
     pausedResetsAt: number | null;
     mergedDetectedAt: string | null;
@@ -674,6 +675,33 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     };
   }, [isDraft, draftReadAttempt]);
 
+  // An interactive review starts no CLI here, so the server asks nothing of
+  // it, but the commands it prints run this one: said as the screen opens
+  // while it can still be started or resumed (review of the D-163 fixes).
+  const interactiveToStart =
+    snapshot !== null &&
+    snapshot.review.engineMode === "interactive" &&
+    !snapshot.running &&
+    !snapshot.queued &&
+    (snapshot.review.status === "draft" ||
+      isResumableReview(snapshot.review.status as ReviewStatus));
+  const [interactiveBilling, setInteractiveBilling] = useState<Billing | null>(null);
+  useEffect(() => {
+    if (!interactiveToStart) return;
+    let cancelled = false;
+    void (async () => {
+      const sent = await send<{ cli: { state: string; authMethod?: string }; signIn?: SignIn }>(
+        "/api/auth",
+        {},
+        "The CLI could not be checked",
+      );
+      if (!cancelled && sent.ok) setInteractiveBilling(billingOf(sent.body.cli, sent.body.signIn));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [interactiveToStart]);
+
   if (!snapshot) {
     return (
       <PageLoading
@@ -993,6 +1021,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           <SignInLine signIn={refusedSignIn.signIn} />
         ) : null}
         {billing === null ? null : <BillingNotice billing={billing} />}
+        {interactiveToStart && interactiveBilling !== null ? (
+          <BillingNotice billing={interactiveBilling} what="interactive" />
+        ) : null}
         {review.pausedReason ? (
           <Problem>
             {review.pausedReason}

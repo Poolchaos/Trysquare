@@ -1665,6 +1665,59 @@ test("a Start refused after the review was made leaves no second draft at the ne
   }
 });
 
+test("an interactive review's own screen says its commands would cost, before Start", async ({
+  page,
+}) => {
+  // The server asks nothing for an interactive review, which starts no CLI,
+  // so only the new-review screen warned of the commands it prints, which run
+  // this CLI; a draft's Start or a Resume on its own screen said nothing
+  // (review of the D-163 fixes).
+  const listed = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const made = await page.request.post("/api/reviews", {
+    data: {
+      projectId: app.id,
+      fromBranch: "feature/rename-prefs",
+      intoBranch: "main",
+      model: "claude-fable-5[1m]",
+      engineMode: "interactive",
+    },
+  });
+  expect(made.status()).toBe(201);
+  const { review } = (await made.json()) as { review: { id: string } };
+  const notice = page.getByTestId("per-token-notice");
+
+  const stop = await routeUntilStopped(page, "**/api/auth", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        cli: { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
+        signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+      },
+    }),
+  );
+  await page.goto(`/reviews/${review.id}`);
+  await expect(page.getByRole("button", { name: "Start review" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(notice).toContainText(
+    "The commands this review prints will cost API usage, billed per token.",
+  );
+  await stop();
+
+  // On the suite's subscription, once the check has answered, nothing.
+  const checked = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth" && response.ok(),
+  );
+  await page.reload();
+  await checked;
+  await expect(page.getByRole("button", { name: "Start review" })).toBeVisible();
+  await expect(notice).toHaveCount(0);
+  expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
+});
+
 test("a review left as a draft can be started from its own screen", async ({ page }) => {
   // A review is created and then started, two requests. When the start
   // failed, the review was left a draft whose screen offered no way to start
