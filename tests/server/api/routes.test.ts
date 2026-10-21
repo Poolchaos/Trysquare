@@ -863,7 +863,13 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
     const before = await reviewCount();
     process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: false, authMethod: "none" });
     try {
-      await refused(await create(), /is not signed in/, before);
+      // And with the command that signs it in, the fake's own, a script that
+      // runs under Node (MVP 6.3).
+      await refused(
+        await create(),
+        /is not signed in.*Sign it in with node ".*fake-claude\.mjs" auth login/,
+        before,
+      );
     } finally {
       useSignedInFake();
     }

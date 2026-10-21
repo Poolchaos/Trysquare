@@ -25,7 +25,8 @@ review is the expensive action. Everything else, including the whole demo with
   Settings says which CLI that is, its version and how it is signed in.
   `npm run claude` runs `TRYSQUARE_CLAUDE_PATH`'s CLI, or else the one
   installed with the app, or else `claude` on PATH, never a path kept on
-  Settings: sign that CLI in with its own `auth login`.
+  Settings: sign that CLI in with its own `auth login`. Signed out, Check
+  the CLI on Settings shows the command for the CLI reviews use (D-159).
 - **Chromium**, only if you intend to run `./verify.sh --e2e`:
   `npx playwright install chromium`.
 

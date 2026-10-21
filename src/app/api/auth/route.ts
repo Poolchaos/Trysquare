@@ -12,6 +12,7 @@ import { readCliStatus } from "@/server/engine/probe";
 import { handler, ok } from "@/server/api/respond";
 import { configuredClaudePath } from "@/server/cli-path";
 import { runtime } from "@/server/runtime";
+import { signInCommand } from "@/lib/engine/sign-in-command";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,9 @@ export function GET(): Promise<Response> {
     const claudePath = configuredClaudePath(runtime().db);
     return ok({
       cli: await readCliStatus(claudePath === undefined ? {} : { claudePath }),
+      // Shown when it is signed out, for the person to run; never run here
+      // (MVP 6.3, D-159).
+      signInCommand: signInCommand(claudePath, process.platform),
     });
   });
 }

@@ -33,6 +33,7 @@ import { findingTallies } from "@/server/db/repositories/findings";
 import { runtime } from "@/server/runtime";
 import { configuredClaudePath } from "@/server/cli-path";
 import { readCliStatus, type CliStatus } from "@/server/engine/probe";
+import { signInCommand } from "@/lib/engine/sign-in-command";
 import { listProjects } from "@/server/db/repositories/projects";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
 
@@ -232,8 +233,10 @@ export function POST(request: Request): Promise<Response> {
     // failed at its first stage (MVP 6.2). A sign-in that bills per token is
     // a warning, not a block (D-92); the interactive engine starts no CLI.
     const headless = (input.engineMode ?? "headless") === "headless";
-    const cli = headless ? await readCliStatus(withClaudePath(configuredClaudePath(db))) : null;
-    const refusal = cli === null ? null : cliRefusal(cli);
+    const claudePath = configuredClaudePath(db);
+    const cli = headless ? await readCliStatus(withClaudePath(claudePath)) : null;
+    const refusal =
+      cli === null ? null : cliRefusal(cli, signInCommand(claudePath, process.platform));
     if (refusal !== null) {
       throw Response.json({ error: refusal, code: "CliNotReady" }, { status: 409 });
     }
@@ -307,7 +310,7 @@ function withClaudePath(claudePath: string | undefined): { claudePath?: string }
 }
 
 /** Why the CLI cannot run a review, in words a person can act on, or null when it can. */
-function cliRefusal(cli: CliStatus): string | null {
+function cliRefusal(cli: CliStatus, signIn: string): string | null {
   switch (cli.state) {
     case "notFound":
       return `No Claude Code CLI was found, so the review cannot run. ${cli.message}`;
@@ -316,7 +319,7 @@ function cliRefusal(cli: CliStatus): string | null {
     case "signedOut":
       return (
         `The Claude Code CLI at ${cli.path} is not signed in, so the review cannot run. ` +
-        "Sign it in, then start the review again."
+        `Sign it in with ${signIn}, then start the review again.`
       );
     case "perToken":
     case "subscription":

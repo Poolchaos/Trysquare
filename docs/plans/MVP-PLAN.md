@@ -213,7 +213,7 @@ resolved only by an entry in `docs/DECISIONS.md`.
   an undo for the last decision until the review completes. (c) Remove the
   shortcut. Recommended: (a); it adds no reversal state to a record whose
   premise is that each decision was deliberate.
-- **MG-7: login.** (a) Show the command for the user to run. (b) Spawn
+- **MG-7: login. RESOLVED (a), D-159.** (a) Show the command for the user to run. (b) Spawn
   `auth login` from the server. Recommended: (a). Whether the login flow
   runs without a terminal is unverified, and (b) would need a decision
   entry against the read-only spawn law in any case.

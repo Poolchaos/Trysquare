@@ -2204,3 +2204,23 @@ test("Start refused for a CLI that cannot run says why, and stays on the form", 
   await expect(page).toHaveURL(/\/reviews\/new/);
   await stop();
 });
+
+test("a signed-out CLI's check shows the command that signs it in", async ({ page }) => {
+  // Shown for the person to run, never run by the app (MVP 6.3, D-159).
+  await page.goto("/settings");
+  const stop = await answerOnce(page, "**/api/auth", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        cli: { state: "signedOut", path: "/opt/claude", version: "2.1.301" },
+        signInCommand: "npm run claude -- auth login",
+      },
+    }),
+  );
+  await page.getByRole("button", { name: "Check the CLI" }).click();
+  await expect(page.getByTestId("cli-status")).toContainText(
+    "Sign it in from a terminal, in this project's directory, then check again:",
+  );
+  await expect(page.getByTestId("sign-in-command")).toHaveText("npm run claude -- auth login");
+  await stop();
+});

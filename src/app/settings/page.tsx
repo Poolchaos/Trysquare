@@ -72,6 +72,7 @@ export default function SettingsPage() {
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [cli, setCli] = useState<CliStatus | null>(null);
   const [cliProblem, setCliProblem] = useState("");
+  const [signIn, setSignIn] = useState("");
   const [checkingCli, setCheckingCli] = useState(false);
   const [probing, setProbing] = useState("");
   const [error, setError] = useState("");
@@ -320,7 +321,19 @@ export default function SettingsPage() {
                     </p>
                   </>
                 ) : cli.state === "signedOut" ? (
-                  <p className="text-[var(--color-warning)]">Not signed in.</p>
+                  <>
+                    <p className="text-[var(--color-warning)]">Not signed in.</p>
+                    {/* Shown, never run: the app starts the CLI with read-only
+                        tools alone (MVP 6.3, D-159). */}
+                    <p className="text-xs text-[var(--color-ink-muted)]">
+                      Sign it in from a terminal
+                      {signIn.startsWith("npm ") ? ", in this project's directory" : ""}, then check
+                      again:
+                    </p>
+                    <p className="text-xs" data-testid="sign-in-command">
+                      <Mono className="break-all">{signIn}</Mono>
+                    </p>
+                  </>
                 ) : cli.state === "perToken" ? (
                   <p className="text-[var(--color-warning)]">
                     {cli.authMethod === undefined
@@ -347,13 +360,16 @@ export default function SettingsPage() {
               onClick={async () => {
                 setCheckingCli(true);
                 try {
-                  const sent = await send<{ cli: CliStatus }>(
+                  const sent = await send<{ cli: CliStatus; signInCommand?: string }>(
                     "/api/auth",
                     { method: "GET" },
                     "The CLI could not be checked",
                   );
                   if (sent.ok) {
                     setCli(sent.body.cli);
+                    // An answer without one draws no command rather than
+                    // failing the card.
+                    setSignIn(sent.body.signInCommand ?? "");
                     setCliProblem("");
                   } else {
                     setCli(null);

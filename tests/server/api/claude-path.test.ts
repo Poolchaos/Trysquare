@@ -98,6 +98,14 @@ describe("the CLI path kept in Settings", () => {
     expect(await cliState()).toMatchObject({ state: "subscription", path: FAKE_CLI });
   }, 30_000);
 
+  it("comes with the command that signs in the CLI it names (MVP 6.3)", async () => {
+    const signIn = async () =>
+      ((await (await routes.auth.GET()).json()) as { signInCommand: string }).signInCommand;
+    expect(await signIn()).toBe("npm run claude -- auth login");
+    await save({ claudePath: FAKE_CLI });
+    expect(await signIn()).toBe(`node "${FAKE_CLI}" auth login`);
+  }, 30_000);
+
   it("gives way to TRYSQUARE_CLAUDE_PATH", async () => {
     await save({ claudePath: FAKE_CLI });
     process.env.TRYSQUARE_CLAUDE_PATH = "no-such-claude-anywhere";

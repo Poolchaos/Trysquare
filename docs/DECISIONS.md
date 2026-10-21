@@ -3730,3 +3730,17 @@ verified evidence, in writing, here.
   removed. It is its own module, scripts/lib/hashed-names.mjs, with twenty
   unit tests over made-up names; five failed on the matcher before.
   The gate runs in 969 to 988 ms here.
+- 2026-10-21 D-159 DECIDED (MVP 6.3, MG-7, taken under the maintainer's
+  standing instruction to proceed on recommendations; theirs to overturn):
+  MG-7 resolves as (a). A signed-out CLI is signed in by a command the app
+  shows and the person runs, never by the app: it starts the CLI with
+  read-only tools alone, and whether the login flow runs without a terminal
+  is unverified. The command is `npm run claude -- auth login`, from the
+  project directory, when no CLI path is configured, which resolves the CLI
+  as a review does; and the configured path's own, `node "<path>"` for a
+  script and `& "<path>"` on Windows for PowerShell, when one is set, since
+  npm run claude never reads a path kept on Settings and the variable the
+  server was started with may not be set in the person's terminal (D-152).
+  Settings' check shows it when the CLI is signed out, and the refusal to
+  create a review for a signed-out CLI (MVP 6.2) names it. Nothing stores a
+  token. Rejected: (b), the server spawning `auth login`.
