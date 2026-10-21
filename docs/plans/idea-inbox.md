@@ -51,6 +51,10 @@ pulled deliberately.
   reviewer in a review round, once it is known to keep to one subagent;
   not /simplify, which applies its own changes; the third-party grill
   plugin only with the maintainer's OK.
+- 2026-10-21: the checkout's check of every tracked file (7b4a586) has a
+  600 s ceiling on git hash-object, measured here only up to 3,436 files in
+  489 ms (D-153); measure it on a large repository and size the ceiling, or
+  make it scale with the file count.
 
 ## Retired
 

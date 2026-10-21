@@ -3527,3 +3527,45 @@ verified evidence, in writing, here.
   record, before the run failed. No unit test was kept from the real CLI.
   c074998 refuses it to every unit test outside TRYSQUARE_REAL_CLI=1, at the
   resolveCli the engine modules import; the experiment was not run again.
+- 2026-10-21 D-153 REVIEW (7b4a586, the D-151 record and MVP 6.1,
+  3054ebe..9942d36, by a separate read-only reviewer told never to run
+  anything that could reach the real CLI; each finding re-run here before it
+  was fixed, without starting the real CLI). Eleven findings, one HIGH, three
+  MEDIUM and seven LOW, all dispositioned before new work:
+  1. HIGH: c074998's guard let through any program under the temp
+  directory, where a git archive copy of the repository made to prove a fix
+  against its parent sits, with its node_modules and the real CLI: the
+  reviewer showed, by resolution only, resolveCli returning such a copy's
+  claude.exe. Fixed fd98d4b: a fake is a program in this checkout's tests or
+  a script in the temp directory, never one under node_modules.
+  2. MEDIUM: TRYSQUARE_REAL_CLI=1, exported in a shell, opened the guard to
+  every test of a run. Fixed a77defd: only inside real-cli.test.ts.
+  3. MEDIUM: 7b4a586's hash-object check failed the whole baseline with
+  git's error for a tracked file not on disk, foo beside FOO/bar.txt on a
+  case-folding file system, which had been refused with a reason, and for a
+  name starting with a double quote, which hash-object unquotes. Fixed
+  4fb2357: such paths go to the full check.
+  4. MEDIUM: 9942d36's "one resolver decides the path everywhere" was untrue:
+  the review service fell back to the variable itself, and npm run claude,
+  which its comment and the RUNBOOK said runs the program reviews use, never
+  reads a path kept on Settings. Fixed 9c9cb79: the service takes its
+  caller's path, and the script's comment and the RUNBOOK say what it runs.
+  5. LOW: describeCli, resolving inside its own module, started the real CLI
+  for its free --version past the guard. Fixed eea10d1.
+  6. LOW: stale words: the minimum-version comment, two errors naming only
+  the variable, ManagerInit's "for tests", the architecture doc's "every
+  tracked file". Fixed 7ce6253.
+  7. LOW: readCliStatus called any finding failure "not found", wrote
+  "unknown" for a sign-in that named no method, and called a --version
+  timeout an unreported version. Fixed e5aad77, with the precedence test
+  now naming the CLI it found missing.
+  8. LOW: Settings said "Runs draw on your max, at no extra cost.", a cost
+  claim wider than its 2026-07-30 source. Fixed 0c99b68: "Reviews draw on
+  your Max plan's usage limits rather than billing per token."
+  9. LOW: two tests failed for whoever exports TRYSQUARE_CLAUDE_PATH. Fixed
+  21cde8b: the setup file clears it for every test file.
+  10. LOW: the full-checkout hash has a 600 s ceiling, measured here only up
+  to 3,436 files (489 ms); a repository past it would fail every review. Not
+  changed; the inbox holds measuring a large one.
+  11. The record: 9942d36's CI run 39462852674 had no macOS runner on its
+  first attempt and passed on all three on its second.
