@@ -11,7 +11,7 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { useSignedInFake } from "../../helpers/signed-in-fake";
 import { cloneBare } from "@/server/gitops/repo";
 import { buildFixture, type SeededFixture } from "../../helpers/seeded-fixture";
@@ -125,6 +125,30 @@ it("refuses while a review is running, rather than orphaning its process", async
   expect(after.counts.reviews).toBe(1);
 
   transitionReview(runtime().db, row.id, "cancelled");
+
+  // Nor while one is being deleted, or its run is still ending, its row
+  // already saying cancelled; the manager's answer stands in for the second
+  // (reviews of the D-165 and D-166 fixes).
+  const { jobManager } = await import("@/server/jobs/manager");
+  const counts = async () =>
+    ((await (await routes.system.GET()).json()) as { counts: { reviews: number } }).counts.reviews;
+  expect(jobManager().beginDelete(row.id, { evenQueued: true })).toBe(true);
+  try {
+    const claimed = await routes.wipe.DELETE();
+    expect(claimed.status).toBe(409);
+    expect(((await claimed.json()) as { code: string }).code).toBe("ReviewStillRunning");
+    expect(await counts()).toBe(1);
+  } finally {
+    jobManager().endDelete(row.id);
+  }
+  const ending = vi.spyOn(jobManager(), "isRunning").mockReturnValue(true);
+  try {
+    const held = await routes.wipe.DELETE();
+    expect(held.status).toBe(409);
+    expect(await counts()).toBe(1);
+  } finally {
+    ending.mockRestore();
+  }
   await routes.wipe.DELETE();
 }, 240_000);
 
