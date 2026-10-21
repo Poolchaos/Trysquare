@@ -48,7 +48,8 @@ export type CliStatus =
   | { state: "signedOut"; path: string; version: string; configDirectory?: string }
   /**
    * Signed in some other way than a subscription: a warning, not a block
-   * (D-92).
+   * (D-92), though a review does not start until its page has shown it
+   * (review of D-161).
    */
   | {
       state: "perToken";

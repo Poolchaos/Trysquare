@@ -402,7 +402,7 @@ export default function SettingsPage() {
                   </>
                 ) : cli.state === "perToken" || cli.state === "maybePerToken" ? (
                   // As strict as the notice beside Start: reviews still run,
-                  // and they cost API usage (D-161).
+                  // and they cost, or may cost, API usage (D-161).
                   <>
                     <p className="font-medium text-[var(--color-warning)]">
                       {cli.state === "perToken"

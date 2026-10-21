@@ -179,9 +179,9 @@ const STRIPPED: ReadonlySet<string> = new Set([
   // And the paid providers, each of which sends a review elsewhere, billed
   // per token, winning over the sign-in, so no sign-in could undo it; with
   // the keys they take. All read by the 2.1.301 binary (review of the D-160
-  // fixes). This narrows D-120's "every other variable passes": a key
-  // signed into the CLI itself is the way to per-token billing left, and the
-  // app warns of it.
+  // fixes). This narrows D-120's "every other variable passes": what is left
+  // to bill per token is how the CLI itself is signed in, a token given it in
+  // CLAUDE_CODE_OAUTH_TOKEN included, and the app warns of that.
   "CLAUDE_CODE_USE_BEDROCK",
   "CLAUDE_CODE_USE_VERTEX",
   "CLAUDE_CODE_USE_FOUNDRY",

@@ -63,7 +63,8 @@ starts a fresh session, by name and whatever their case, exactly as it sets an e
 working directory rather than inheriting one. A person's own settings, such
 as `CLAUDE_CODE_OAUTH_TOKEN`, pass through (D-120), except
 `CLAUDE_CODE_EFFORT_LEVEL` and `CLAUDE_CODE_EXTRA_BODY`, which the CLI ranks
-above the `--effort` every stage passes (D-121, D-124). No settings file is
+above the `--effort` every stage passes (D-121, D-124), and the keys and
+paid providers named above, which would bill a review per token (D-161). No settings file is
 read at all, a person's included, for the same reason (D-124). Older CLIs refused to start at all under `CLAUDECODE`;
 2.1.301 does not.
 
