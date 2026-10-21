@@ -15,7 +15,7 @@
 
 import { execFileSync } from "node:child_process";
 import { hash } from "node:crypto";
-import { readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 
 /**
@@ -66,7 +66,24 @@ const FORBIDDEN_HASHED = new Map([
 ]);
 const HASHED_RUN = 3;
 
-/** Each run's answer, hashed once: most runs recur across the tree. */
+// A mistyped hash matches nothing and says nothing, and a gate that silently
+// finds nothing is worse than none (review of the D-156 fixes).
+for (const digest of FORBIDDEN_HASHED.keys()) {
+  if (!/^[0-9a-f]{64}$/.test(digest)) {
+    console.error(`check-no-private: "${digest}" is not a sha256 hash, so it would match nothing.`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Where the maintainer keeps the hashed names written out, in the gitignored
+ * docs/private/, each hash must still find its name there, or one that
+ * stopped matching would pass in silence. Absent on CI, which has no private
+ * material, so the check is the maintainer's machine's.
+ */
+const HASHED_PROBE = "docs/private/hashed-names-probe.txt";
+
+/** Each run's matching hash, or null, worked out once: most runs recur across the tree. */
 const hashedAnswers = new Map();
 
 /** Every run of words in a file that is a hashed name, with the line it starts on. */
@@ -84,12 +101,15 @@ function hashedNamesIn(contents) {
     let run = "";
     for (let length = 1; length <= HASHED_RUN && start + length <= words.length; length += 1) {
       run = length === 1 ? words[start].word : `${run} ${words[start + length - 1].word}`;
-      let why = hashedAnswers.get(run);
-      if (why === undefined) {
-        why = FORBIDDEN_HASHED.get(hash("sha256", run)) ?? null;
-        hashedAnswers.set(run, why);
+      let digest = hashedAnswers.get(run);
+      if (digest === undefined) {
+        const candidate = hash("sha256", run);
+        digest = FORBIDDEN_HASHED.has(candidate) ? candidate : null;
+        hashedAnswers.set(run, digest);
       }
-      if (why !== null) found.push({ line: words[start].line, why });
+      if (digest !== null) {
+        found.push({ line: words[start].line, why: FORBIDDEN_HASHED.get(digest), digest });
+      }
     }
   }
   return found;
@@ -116,7 +136,11 @@ const HOME_FORMS = (() => {
   return [REAL_HOME, forward, msys].map((form) => form.toLowerCase());
 })();
 
-/** Files whose job is to define the markers, so they legitimately contain them. */
+/**
+ * Files whose job is to define the literal markers, so they legitimately
+ * contain them. Exempt from that list alone: exempt from every check, this
+ * file once carried private names past the gate (review of the D-156 fixes).
+ */
 const SELF_REFERENTIAL = new Set(["scripts/check-no-private.mjs"]);
 
 /** Binary or generated files that are not prose and would produce noise. */
@@ -153,7 +177,7 @@ if (files.length === 0) {
 const violations = [];
 
 for (const file of files) {
-  if (SELF_REFERENTIAL.has(file)) continue;
+  const definesMarkers = SELF_REFERENTIAL.has(file);
 
   const dot = file.lastIndexOf(".");
   if (dot !== -1 && SKIP_EXTENSIONS.has(file.slice(dot).toLowerCase())) continue;
@@ -181,7 +205,7 @@ for (const file of files) {
     violations.push(`${file}:${line + 1}: ${why}\n    ${lines[line].trim().slice(0, 160)}`);
   }
   lines.forEach((line, index) => {
-    for (const { pattern, why } of FORBIDDEN_CONTENT) {
+    for (const { pattern, why } of definesMarkers ? [] : FORBIDDEN_CONTENT) {
       if (pattern.test(line)) {
         violations.push(`${file}:${index + 1}: ${why}\n    ${line.trim().slice(0, 160)}`);
       }
@@ -193,6 +217,17 @@ for (const file of files) {
       );
     }
   });
+}
+
+if (existsSync(HASHED_PROBE)) {
+  const matched = new Set(
+    hashedNamesIn(readFileSync(HASHED_PROBE, "utf8")).map((hit) => hit.digest),
+  );
+  for (const digest of FORBIDDEN_HASHED.keys()) {
+    if (!matched.has(digest)) {
+      violations.push(`${HASHED_PROBE}: hash ${digest.slice(0, 12)}... no longer finds its name`);
+    }
+  }
 }
 
 if (violations.length > 0) {
