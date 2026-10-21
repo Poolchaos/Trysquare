@@ -18,7 +18,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { useSignedInFake } from "../../helpers/signed-in-fake";
@@ -81,11 +80,7 @@ beforeAll(async () => {
   fixture = await buildFixture();
   dataDir = mkdtempSync(join(tmpdir(), "trysquare-confirm-"));
   process.env.TRYSQUARE_DATA = dataDir;
-  // The fake, so this suite spends nothing. Resolved from this file rather
-  // than the fixture's temp directory.
-  process.env.TRYSQUARE_CLAUDE_PATH = fileURLToPath(
-    new URL("../../fixtures/fake-claude.mjs", import.meta.url),
-  );
+  // The fake, set by useSignedInFake above, so this suite spends nothing.
   process.env.FAKE_CLAUDE_SCENARIO = "script";
   process.env.FAKE_CLAUDE_DIR = join(dataDir, "answers");
   process.env.FAKE_CLAUDE_COUNTER = join(dataDir, "calls.txt");
@@ -167,7 +162,6 @@ afterAll(async () => {
   (await import("@/server/runtime")).closeRuntime();
   if (dataDir) rmSync(dataDir, { recursive: true, force: true });
   delete process.env.TRYSQUARE_DATA;
-  delete process.env.TRYSQUARE_CLAUDE_PATH;
   delete process.env.FAKE_CLAUDE_SCENARIO;
   delete process.env.FAKE_CLAUDE_DIR;
   delete process.env.FAKE_CLAUDE_COUNTER;
