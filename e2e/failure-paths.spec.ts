@@ -1094,6 +1094,21 @@ test("cancelling a running review stops it and says so", async ({ page }) => {
   await expect(page.getByText("Cancelled mid-stage.")).toBeVisible();
   // And it is genuinely over: nothing is left running to come back later.
   await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeHidden();
+  // Its row says cancelled while the manager still removes its worktrees,
+  // and the next test deletes it; waited for so that delete is not refused
+  // (review of the D-166 fixes).
+  const cancelled = new URL(page.url()).pathname.split("/").pop()!;
+  await expect
+    .poll(
+      async () =>
+        (
+          (await (await page.request.get(`/api/reviews/${cancelled}`)).json()) as {
+            running: boolean;
+          }
+        ).running,
+      { timeout: 60_000 },
+    )
+    .toBe(false);
 });
 
 test("a review deleted from the list takes its evidence with it", async ({ page }) => {
@@ -2284,6 +2299,7 @@ test("Settings keeps the latest check's answer, not the one that lands last", as
     release = resolve;
   });
   let asked = 0;
+  let staleSent = false;
   const stop = await routeUntilStopped(page, "**/api/auth", async (route) => {
     asked += 1;
     if (asked === 1) {
@@ -2292,6 +2308,7 @@ test("Settings keeps the latest check's answer, not the one that lands last", as
         status: 200,
         json: { cli: { state: "cannotRun", path: "/old/claude", message: "no answer in time." } },
       });
+      staleSent = true;
       return;
     }
     await route.fulfill({
@@ -2310,7 +2327,9 @@ test("Settings keeps the latest check's answer, not the one that lands last", as
   const notice = page.getByTestId("per-token-notice");
   await expect(notice).toContainText("A probe will cost API usage");
   release();
-  await expect.poll(() => asked).toBe(2);
+  // Until the older answer has been sent, the checks after would pass on
+  // the newer one still showing (review of the D-166 fixes).
+  await expect.poll(() => staleSent).toBe(true);
   // The older answer, landed now, changes nothing.
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
