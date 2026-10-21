@@ -1180,9 +1180,13 @@ function NewReview() {
           {error ? <Problem>{error}</Problem> : null}
           {error && refusedSignIn ? <SignInLine signIn={refusedSignIn} /> : null}
 
-          {/* An interactive review starts no CLI, so it bills nothing here. */}
-          {billing === null || engineMode !== "headless" ? null : (
-            <BillingNotice billing={billing} />
+          {/* An interactive review starts no CLI here, but the commands it
+              prints run this one (review of the D-162 fixes). */}
+          {billing === null ? null : (
+            <BillingNotice
+              billing={billing}
+              what={engineMode === "headless" ? "review" : "interactive"}
+            />
           )}
 
           <div className="flex items-center gap-3">

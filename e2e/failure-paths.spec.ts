@@ -2359,12 +2359,18 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
   await expect(notice).toContainText("(api_key)");
   await expect(notice).toContainText("npm run claude -- auth login");
   await expect(page.getByRole("button", { name: "Start review" })).toBeEnabled();
-  // An interactive review starts no CLI, so it costs nothing here and is
-  // not said to (review of D-161).
+  // An interactive review prints commands that run this same CLI in the
+  // person's own terminal, so it is said of them, not hidden (review of the
+  // D-162 fixes).
   await page.getByText("Advanced", { exact: true }).click();
   await page.getByTestId("engine-mode").selectOption("interactive");
-  await expect(notice).toHaveCount(0);
+  await expect(notice).toContainText(
+    "The commands this review prints will cost API usage, billed per token.",
+  );
+  await expect(notice).toContainText("so each one draws on paid API usage");
+  await expect(notice).toContainText("a key set in that terminal bills per token too");
   await page.getByTestId("engine-mode").selectOption("headless");
+  await expect(notice).not.toContainText("in that terminal");
   await expect(notice).toContainText("This review will cost API usage, billed per token.");
   await stop();
 

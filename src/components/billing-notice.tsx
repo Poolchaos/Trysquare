@@ -44,11 +44,14 @@ export function BillingNotice({
   what = "review",
 }: {
   billing: Billing;
-  /** What would cost: a review, or on Settings, a model's probe. */
-  what?: "review" | "probe";
+  /**
+   * What would cost: a review; an interactive one, whose printed commands run
+   * this CLI in the person's own terminal; or on Settings, a model's probe.
+   */
+  what?: "review" | "interactive" | "probe";
 }) {
   const { state, authMethod, signIn } = billing;
-  const one = what === "probe" ? "a probe" : "a review";
+  const one = what === "probe" ? "a probe" : what === "interactive" ? "each one" : "a review";
   const unknownWay =
     authMethod === undefined
       ? "The CLI did not say how it is signed in"
@@ -68,11 +71,19 @@ export function BillingNotice({
       className="rounded-md border border-[var(--color-warning)] bg-[var(--color-warning-soft)] p-3 text-sm"
     >
       <p className="font-medium">
-        {what === "probe" ? "A probe" : "This review"} {state === "perToken" ? "will" : "may"} cost
-        API usage, billed per token.
+        {what === "probe"
+          ? "A probe"
+          : what === "interactive"
+            ? "The commands this review prints"
+            : "This review"}{" "}
+        {state === "perToken" ? "will" : "may"} cost API usage, billed per token.
       </p>
       <p className="mt-1 text-xs">
         {why}
+        {/* The app keeps keys from the CLIs it starts (D-161), not from a terminal's. */}
+        {what === "interactive"
+          ? " They run in your own terminal, and a key set in that terminal bills per token too."
+          : ""}
         {!remedy
           ? ""
           : signIn === undefined
