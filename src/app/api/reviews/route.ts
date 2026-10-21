@@ -273,10 +273,11 @@ export function POST(request: Request): Promise<Response> {
     if (cli?.state === "perToken") {
       appendRunNote(db, review.id, {
         kind: "note",
+        // As strict as the notice beside Start (D-161).
         message:
-          "The CLI is signed in some other way than a subscription" +
+          "This review costs API usage, billed per token: the CLI is signed in" +
           (cli.authMethod === undefined ? "" : ` (${cli.authMethod})`) +
-          ", so this review may bill per token rather than draw on a plan's usage limits.",
+          " some other way than a Claude subscription.",
       });
     }
     if (resolution.downgradedFrom !== null) {

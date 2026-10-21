@@ -2117,12 +2117,12 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
     [{ state: "signedOut", path: "/opt/claude", version: "2.1.301" }, "Not signed in."],
     [
       { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
-      "bills per token rather than drawing on a subscription. Reviews still run.",
+      "Signed in (api_key) some other way than your Claude subscription: reviews will cost API usage, billed per token.",
     ],
     [
       // No method named: how it bills is not claimed (review of the D-153 fixes).
       { state: "perToken", path: "/opt/claude", version: "2.1.301" },
-      "the CLI did not say how, so whether reviews draw on a subscription or bill per token is not known.",
+      "the CLI did not say how: unless it is your Claude subscription, reviews will cost API usage, billed per token.",
     ],
   ];
   for (const [cli, said] of answers) {
@@ -2245,4 +2245,31 @@ test("a signed-out CLI's check shows the command that signs it in", async ({ pag
   await expect(page.getByTestId("cli-status")).toContainText("Not signed in.");
   await expect(page.getByTestId("cli-status")).not.toContainText("Sign it in");
   await stopBare();
+});
+
+test("a sign-in that bills per token is said before Start, strictly, and Start stays on", async ({
+  page,
+}) => {
+  // Reviews draw on the subscription by default; a CLI signed in with a key
+  // is told before Start that a review costs API usage (D-161). The suite's
+  // own fake is signed in through a subscription, which shows no notice.
+  await fillANewReview(page);
+  await expect(page.getByTestId("per-token-notice")).toHaveCount(0);
+
+  const stop = await routeUntilStopped(page, "**/api/auth", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        cli: { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
+        signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+      },
+    }),
+  );
+  await fillANewReview(page);
+  const notice = page.getByTestId("per-token-notice");
+  await expect(notice).toContainText("This review will cost API usage, billed per token.");
+  await expect(notice).toContainText("(api_key)");
+  await expect(notice).toContainText("npm run claude -- auth login");
+  await expect(page.getByRole("button", { name: "Start review" })).toBeEnabled();
+  await stop();
 });

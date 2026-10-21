@@ -883,7 +883,7 @@ describe("creating a review asks the CLI first (MVP 6.2)", () => {
       const { review } = (await response.json()) as { review: { id: string } };
       const detail = await routes.review.GET(new Request("http://localhost/x"), params(review.id));
       expect(JSON.stringify(await detail.json())).toMatch(
-        /\(api_key\), so this review may bill per token/,
+        /This review costs API usage, billed per token: the CLI is signed in \(api_key\)/,
       );
     } finally {
       useSignedInFake();

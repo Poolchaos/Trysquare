@@ -24,9 +24,11 @@ is named.
 Signed out, 2.1.301 prints `{"loggedIn":false,"authMethod":"none",...}` and
 exits 1 (measured 2026-10-20 with an empty config directory), so the status
 is read from stdout before the exit code. The app reads this only when
-someone presses Check the CLI on Settings, or creates a review that runs
-headless, which is refused with the reason when the CLI is not found,
-cannot run or is signed out (MVP 6.2); never at startup or on a timer.
+someone presses Check the CLI on Settings, opens the new-review screen,
+which says before Start that a sign-in billing per token makes a review
+cost API usage (D-161), or creates or starts a review that runs headless,
+which is refused with the reason when the CLI is not found, cannot run or
+is signed out (MVP 6.2); never at startup or on a timer.
 Both checks are free, and each is an explicit action, as D-31 keeps every
 CLI call. The check names the CLI's path and version and tells apart a CLI
 not found, one that cannot run (with the real error: too old, not

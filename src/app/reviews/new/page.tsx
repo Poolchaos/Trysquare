@@ -33,6 +33,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { send } from "@/components/request";
+import { signInPlaceWords, type SignIn } from "@/lib/engine/sign-in-command";
 
 interface Branch {
   name: string;
@@ -216,6 +217,30 @@ function NewReview() {
     body: Preflight | null;
     error: string;
   } | null>(null);
+
+  // Asked once as the screen opens, and free: a sign-in that bills per token
+  // is said before Start, while it can still be changed, not in a run note
+  // on a review already billing (D-161). Anything else the CLI cannot do is
+  // refused at Start, with its reason (MVP 6.2).
+  const [perToken, setPerToken] = useState<{ authMethod?: string; signIn?: SignIn } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const sent = await send<{ cli: { state: string; authMethod?: string }; signIn?: SignIn }>(
+        "/api/auth",
+        {},
+        "The CLI could not be checked",
+      );
+      if (cancelled || !sent.ok || sent.body.cli.state !== "perToken") return;
+      setPerToken({
+        ...(sent.body.cli.authMethod === undefined ? {} : { authMethod: sent.body.cli.authMethod }),
+        ...(sent.body.signIn === undefined ? {} : { signIn: sent.body.signIn }),
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // One effect, one guarded async body. Everything this screen needs is
   // fetched together so the form does not appear a field at a time.
@@ -1134,6 +1159,30 @@ function NewReview() {
           ) : null}
 
           {error ? <Problem>{error}</Problem> : null}
+
+          {perToken === null ? null : (
+            <div
+              role="alert"
+              data-testid="per-token-notice"
+              className="rounded-md border border-[var(--color-warning)] bg-[var(--color-warning-soft)] p-3 text-sm"
+            >
+              <p className="font-medium">This review will cost API usage, billed per token.</p>
+              <p className="mt-1 text-xs">
+                The CLI is signed in
+                {perToken.authMethod === undefined ? "" : ` (${perToken.authMethod})`} some other
+                way than your Claude subscription, so a review draws on paid API usage rather than
+                your plan&apos;s usage limits.
+                {perToken.signIn === undefined
+                  ? " Sign it in with your Claude account to use the subscription."
+                  : ` To use the subscription, sign it in with your Claude account ${signInPlaceWords(perToken.signIn.place)}:`}
+              </p>
+              {perToken.signIn === undefined ? null : (
+                <p className="mt-1 text-xs">
+                  <Mono className="break-all">{perToken.signIn.command}</Mono>
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             <Button type="submit" variant="primary" disabled={!ready || starting}>

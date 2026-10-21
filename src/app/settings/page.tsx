@@ -345,11 +345,26 @@ export default function SettingsPage() {
                     )}
                   </>
                 ) : cli.state === "perToken" ? (
-                  <p className="text-[var(--color-warning)]">
-                    {cli.authMethod === undefined
-                      ? "Signed in, but the CLI did not say how, so whether reviews draw on a subscription or bill per token is not known. Reviews still run."
-                      : `Signed in, but this sign-in (${cli.authMethod}) bills per token rather than drawing on a subscription. Reviews still run.`}
-                  </p>
+                  // As strict as the notice beside Start: reviews still run,
+                  // and they cost API usage (D-161).
+                  <>
+                    <p className="font-medium text-[var(--color-warning)]">
+                      {cli.authMethod === undefined
+                        ? "Signed in, but the CLI did not say how: unless it is your Claude subscription, reviews will cost API usage, billed per token."
+                        : `Signed in (${cli.authMethod}) some other way than your Claude subscription: reviews will cost API usage, billed per token.`}
+                    </p>
+                    {signIn === null ? null : (
+                      <>
+                        <p className="text-xs text-[var(--color-ink-muted)]">
+                          To use the subscription, sign it in with your Claude account{" "}
+                          {signInPlaceWords(signIn.place)}:
+                        </p>
+                        <p className="text-xs">
+                          <Mono className="break-all">{signIn.command}</Mono>
+                        </p>
+                      </>
+                    )}
+                  </>
                 ) : (
                   <p className="text-[var(--color-good)]">
                     {/* What the CLI's support article says of headless runs, and no more:
