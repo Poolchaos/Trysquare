@@ -2580,8 +2580,10 @@ test("a billing notice follows the last answer, not the first", async ({ page })
   let pressed = 0;
   const stopStarts = await routeUntilStopped(page, "**/api/reviews/*/start", async (route) => {
     pressed += 1;
+    // The fourth goes to the real server, whose fake draws on a subscription.
+    if (pressed === 4) return route.fallback();
     await route.fulfill(
-      pressed === 1
+      pressed !== 2
         ? {
             status: 409,
             json: {
@@ -2608,7 +2610,28 @@ test("a billing notice follows the last answer, not the first", async ({ page })
   await draftStart.click();
   await expect(page.getByTestId("sign-in-command")).toBeVisible();
   await expect(notice).toHaveCount(0);
+  // Said again, then a start that goes ahead: the notice was for that start,
+  // and the next is asked afresh (7a8aba8).
+  await draftStart.click();
+  await expect(notice).toContainText("This review will cost API usage");
+  await draftStart.click();
+  await expect(draftStart).toHaveCount(0, { timeout: 30_000 });
   await stopStarts();
+  // Let the run end before it is removed.
+  await expect
+    .poll(
+      async () =>
+        (
+          (await (await page.request.get(`/api/reviews/${review.id}`)).json()) as {
+            review: { status: string };
+          }
+        ).review.status,
+      { timeout: 60_000 },
+    )
+    .not.toMatch(/^(draft|running|verifying)$/);
+  // Read once the run has ended and the screen has settled on it.
+  await expect(page.getByRole("button", { name: "Start review" })).toHaveCount(0);
+  await expect(notice).toHaveCount(0);
   expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
 });
 

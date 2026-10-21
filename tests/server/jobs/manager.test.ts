@@ -187,6 +187,28 @@ describe("deciding what runs now", () => {
     await manager.settled(second);
   }, 240_000);
 
+  it("judges a start as start would, and changes nothing doing so", async () => {
+    // The start route asks it before the CLI, so it must agree with start and
+    // claim nothing (review of the D-162 fixes, 2cb5541).
+    const first = seedReview();
+    const second = seedReview();
+    expect(manager.judge(first, { ruleset: RULESET })).toBe("startable");
+    expect(manager.isRunning(first)).toBe(false);
+    expect(manager.queueDepth()).toBe(0);
+    expect(start(first)).toBe("running");
+    expect(manager.judge(second)).toBe("startable");
+    expect(start(second)).toBe("queued");
+    expect(manager.judge(first)).toBe("already-running");
+    expect(manager.judge(second)).toBe("queued");
+    expect(() => manager.judge(second, { ruleset: RULESET })).toThrow(ReviewAlreadyStartedError);
+    expect(manager.queueDepth()).toBe(1);
+    const cancelled = seedReview();
+    transitionReview(db, cancelled, "cancelled");
+    expect(() => manager.judge(cancelled)).toThrow(ReviewNotStartableError);
+    await manager.settled(first);
+    await manager.settled(second);
+  }, 240_000);
+
   it("refuses an id that is not a review at all", () => {
     // Fails here rather than inside a promise nobody is awaiting.
     expect(() => start("not-a-review")).toThrow();

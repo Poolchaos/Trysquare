@@ -1158,6 +1158,51 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
     }
   }, 240_000);
 
+  it("answers a review that cannot start for what it is, whatever the CLI", async () => {
+    // Asked first, the CLI answered for a review that could never start: a
+    // cancelled one under a signed-out CLI was told to sign in (review of the
+    // D-162 fixes, 2cb5541).
+    const startRoute = await import("@/app/api/reviews/[id]/start/route");
+    const { jobManager } = await import("@/server/jobs/manager");
+    const made = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    const { review } = (await made.json()) as { review: { id: string } };
+    jobManager().cancel(review.id);
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "Unstartable check protocol",
+        tier: "global",
+        markdown,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+    for (const status of [
+      { loggedIn: false, authMethod: "none" },
+      { loggedIn: true, authMethod: "api_key" },
+    ]) {
+      process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify(status);
+      try {
+        const answer = await startRoute.POST(
+          post(`http://localhost/api/reviews/${review.id}/start`, { rulesetId }),
+          params(review.id),
+        );
+        expect(answer.status).toBe(409);
+        expect(((await answer.json()) as { code: string }).code).toBe("ReviewNotStartableError");
+      } finally {
+        useSignedInFake();
+      }
+    }
+  }, 120_000);
+
   it("refuses at create before anything is fetched", async () => {
     // Asked last, a refusal waited on a fetch of every project first, and
     // recorded it (review of the 6.2 changes).
