@@ -1727,7 +1727,26 @@ test("an interactive review's own screen says its commands would cost, before St
   await page.reload();
   await checked;
   await expect(page.getByRole("button", { name: "Start review" })).toBeVisible();
+  // Two frames, so the answer has been applied: an absence passes at once
+  // (review of the D-164 fixes).
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
   await expect(notice).toHaveCount(0);
+
+  // A check that fails is said, not taken as nothing to say (review of the
+  // D-164 fixes).
+  const stopFailing = await routeUntilStopped(page, "**/api/auth", (route) =>
+    route.fulfill({ status: 500, json: { error: "Refused for this test: the check." } }),
+  );
+  await page.reload();
+  await expect(
+    page.getByText(
+      "Refused for this test: the check. Whether the commands this review prints would cost API usage is not known.",
+    ),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(notice).toHaveCount(0);
+  await stopFailing();
   expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
 });
 

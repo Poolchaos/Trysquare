@@ -685,7 +685,12 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     !snapshot.queued &&
     (snapshot.review.status === "draft" ||
       isResumableReview(snapshot.review.status as ReviewStatus));
-  const [interactiveBilling, setInteractiveBilling] = useState<Billing | null>(null);
+  // The last answer whole, a failure included, so an older one never stands
+  // for it (review of the D-164 fixes).
+  const [interactiveCheck, setInteractiveCheck] = useState<{
+    billing: Billing | null;
+    error: string;
+  } | null>(null);
   useEffect(() => {
     if (!interactiveToStart) return;
     let cancelled = false;
@@ -695,7 +700,12 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         {},
         "The CLI could not be checked",
       );
-      if (!cancelled && sent.ok) setInteractiveBilling(billingOf(sent.body.cli, sent.body.signIn));
+      if (cancelled) return;
+      setInteractiveCheck(
+        sent.ok
+          ? { billing: billingOf(sent.body.cli, sent.body.signIn), error: "" }
+          : { billing: null, error: sent.error },
+      );
     })();
     return () => {
       cancelled = true;
@@ -1021,8 +1031,14 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           <SignInLine signIn={refusedSignIn.signIn} />
         ) : null}
         {billing === null ? null : <BillingNotice billing={billing} />}
-        {interactiveToStart && interactiveBilling !== null ? (
-          <BillingNotice billing={interactiveBilling} what="interactive" />
+        {interactiveToStart && interactiveCheck?.error ? (
+          <Problem>
+            {interactiveCheck.error} Whether the commands this review prints would cost API usage is
+            not known.
+          </Problem>
+        ) : null}
+        {interactiveToStart && interactiveCheck?.billing ? (
+          <BillingNotice billing={interactiveCheck.billing} what="interactive" />
         ) : null}
         {review.pausedReason ? (
           <Problem>
