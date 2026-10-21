@@ -22,8 +22,9 @@ import { buildChildEnv } from "@/lib/engine/command";
 /**
  * The oldest Claude Code a review stage runs on. Stages pass their system
  * prompt with `--system-prompt-file`, and 2.1.301 is the only version this
- * project has measured accepting it (D-91, 2026-10-16). Probes and the
- * sign-in check do not need it and run on anything.
+ * project has measured accepting it (D-91, 2026-10-16). Probes do not need
+ * it and run on anything; the CLI check on Settings holds a CLI to it, since
+ * it says whether reviews can run (MVP 6.1).
  */
 export const MINIMUM_CLI_VERSION = "2.1.301";
 
@@ -42,8 +43,8 @@ export class CliNotFoundError extends Error {
     readonly searched: readonly string[],
   ) {
     super(
-      `Could not find "${command}", the Claude Code CLI, on PATH. Install it, or set ` +
-        "TRYSQUARE_CLAUDE_PATH to its full path. Searched: " +
+      `Could not find "${command}", the Claude Code CLI, on PATH. Install it, or give ` +
+        "its full path as the CLI path on Settings or as TRYSQUARE_CLAUDE_PATH. Searched: " +
         (searched.length === 0 ? "(PATH is empty)" : searched.join(delimiter)),
     );
     this.name = "CliNotFoundError";
@@ -336,7 +337,7 @@ function fromPath(path: string, cli: CliEnvironment): CliCommand {
     throw new CliUnusableError(
       path,
       "it is a batch file, which Windows runs only through a shell, and it does not name a " +
-        "program this app can start instead. Point TRYSQUARE_CLAUDE_PATH at claude.exe.",
+        "program this app can start instead. Give the path of claude.exe instead.",
     );
   }
   if (!cli.isRunnable(path)) {

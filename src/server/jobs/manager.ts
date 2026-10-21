@@ -46,7 +46,10 @@ const DEFAULT_MAX_CONCURRENT = 1;
 export interface ManagerInit {
   db: Db;
   dataDir?: string;
-  /** For tests: a path that wins over the configured one for every run. */
+  /**
+   * A path that wins over the configured one for every run: tests' fake, and
+   * the demo fixture's when it is asked to run on the fake.
+   */
   claudePath?: string;
 }
 
