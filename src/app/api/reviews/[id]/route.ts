@@ -46,9 +46,12 @@ export async function GET(
  * gone.
  *
  * `?unstarted=1` removes it only while it is a draft nobody has started: a
- * queued review keeps the status draft, as does one launched a moment ago,
- * and read as a draft from the page, one put in line from another tab was
- * removed (review of the D-164 fixes).
+ * queued review keeps the status draft, and read as a draft from the page,
+ * one put in line from another tab was removed (review of the D-164 fixes).
+ *
+ * The manager's claim is held for the whole removal, so nothing starts the
+ * review while its files go, and it refuses one whose run is still ending,
+ * its row already saying cancelled or failed (review of the D-165 fixes).
  */
 export async function DELETE(
   request: Request,
@@ -58,33 +61,34 @@ export async function DELETE(
     const { db, dataDir, manager } = runtime();
     const { id } = await context.params;
 
-    if (new URL(request.url).searchParams.get("unstarted") === "1") {
-      const held = manager.isRunning(id) || manager.isQueued(id);
-      if (held || statusOf(requireReview(db, id)) !== "draft") {
-        return Response.json(
-          {
-            error: "This review is no longer a draft nobody has started, so it was left.",
-            code: "NotAnUnstartedDraft",
-          },
-          { status: 409 },
-        );
-      }
+    const unstarted = new URL(request.url).searchParams.get("unstarted") === "1";
+    const status = statusOf(requireReview(db, id));
+    const notUnstarted = Response.json(
+      {
+        error: "This review is no longer a draft nobody has started, so it was left.",
+        code: "NotAnUnstartedDraft",
+      },
+      { status: 409 },
+    );
+    if (unstarted && status !== "draft") return notUnstarted;
+    if (!manager.beginDelete(id, { evenQueued: !unstarted })) {
+      return unstarted
+        ? notUnstarted
+        : Response.json(
+            {
+              error: "This review is still running; cancel it first.",
+              code: "ReviewStillRunningError",
+            },
+            { status: 409 },
+          );
     }
-    // Launched a moment ago, a run's row still says draft, which the removal
-    // below would not refuse.
-    if (manager.isRunning(id)) {
-      return Response.json(
-        { error: "This review is running; cancel it first.", code: "ReviewStillRunningError" },
-        { status: 409 },
-      );
-    }
-
     try {
-      manager.dequeue(id);
       await deleteReviewEntirely(db, id, dataDir);
     } catch (error) {
       if (isNamed(error, "ReviewStillRunningError")) return failed(error, 409);
       throw error;
+    } finally {
+      manager.endDelete(id);
     }
     return ok({ removed: id });
   });

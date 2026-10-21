@@ -217,6 +217,7 @@ describe("an error thrown by another copy of its module", () => {
       [new projects.CloneNotReadyError("x", "cloning"), 409],
       [new manager.ReviewNotStartableError("x", "cancelled"), 409],
       [new manager.ReviewAlreadyStartedError("x", "queued"), 409],
+      [new manager.ReviewBeingDeletedError("x"), 409],
     ];
     const byName = new Map(expected.map(([error]) => [error.name, error]));
     const names = ERROR_STATUSES.map(([name]) => name);

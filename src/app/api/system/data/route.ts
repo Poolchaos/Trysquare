@@ -42,13 +42,33 @@ export async function DELETE(): Promise<Response> {
     }
 
     const projects = listProjects(db);
+    // Each claimed before any is removed, as a project's reviews are (review
+    // of the D-165 fixes).
+    const all = projects.flatMap((project) => listReviewsForProject(db, project.id));
+    const claimed: string[] = [];
     let reviews = 0;
-    for (const project of projects) {
-      for (const review of listReviewsForProject(db, project.id)) {
-        manager.dequeue(review.id);
+    try {
+      // Checked first, so a refusal takes nothing out of the queue.
+      const ending = all.find((review) => manager.isRunning(review.id));
+      if (ending) {
+        throw Response.json(
+          {
+            error: `Review ${ending.id} is still ending its run. Try again in a moment.`,
+            code: "ReviewStillRunning",
+          },
+          { status: 409 },
+        );
+      }
+      for (const review of all) {
+        manager.beginDelete(review.id, { evenQueued: true });
+        claimed.push(review.id);
+      }
+      for (const review of all) {
         await deleteReviewEntirely(db, review.id, dataDir);
         reviews += 1;
       }
+    } finally {
+      for (const id of claimed) manager.endDelete(id);
     }
     for (const listed of projects) {
       // Read again just before: the deletions above awaited, and a clone may

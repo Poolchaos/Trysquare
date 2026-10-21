@@ -67,6 +67,14 @@ export class ReviewNotStartableError extends Error {
   }
 }
 
+/** Refused a start while a delete has claimed the review and is removing it. */
+export class ReviewBeingDeletedError extends Error {
+  constructor(readonly reviewId: string) {
+    super(`Review "${reviewId}" is being deleted, so it cannot be started or resumed.`);
+    this.name = "ReviewBeingDeletedError";
+  }
+}
+
 export class ReviewAlreadyStartedError extends Error {
   constructor(
     readonly reviewId: string,
@@ -100,6 +108,8 @@ export class JobManager {
   private readonly bus = createReviewBus();
   private readonly active = new Map<string, ActiveRun>();
   private readonly queue: { reviewId: string; options: PrepareAndRunOptions }[] = [];
+  /** Reviews a delete has claimed; see beginDelete. */
+  private readonly deleting = new Set<string>();
   private db: Db | undefined;
   private dataDir: string | undefined;
   private claudePath: string | undefined;
@@ -140,6 +150,29 @@ export class JobManager {
     return this.queue.some((entry) => entry.reviewId === reviewId);
   }
 
+  /**
+   * Claims a review for a delete, or refuses: one running is never claimed,
+   * and one in line only when the delete takes it out of the line. While it
+   * is claimed, nothing starts it. Every delete checked and then awaited the
+   * removal of its files, and a start landing between ran on a review whose
+   * worktree and row went from under it; and a run's row says cancelled or
+   * failed while its worktrees are still being removed, which a check of the
+   * row alone let through (review of the D-165 fixes).
+   */
+  beginDelete(reviewId: string, options: { evenQueued: boolean }): boolean {
+    if (this.active.has(reviewId)) return false;
+    if (this.isQueued(reviewId)) {
+      if (!options.evenQueued) return false;
+      this.dequeue(reviewId);
+    }
+    this.deleting.add(reviewId);
+    return true;
+  }
+
+  endDelete(reviewId: string): void {
+    this.deleting.delete(reviewId);
+  }
+
   queueDepth(): number {
     return this.queue.length;
   }
@@ -177,6 +210,7 @@ export class JobManager {
     reviewId: string,
     options: PrepareAndRunOptions = {},
   ): "already-running" | "queued" | "startable" {
+    if (this.deleting.has(reviewId)) throw new ReviewBeingDeletedError(reviewId);
     // Reads the row so an unknown id fails here rather than inside a promise
     // nobody is awaiting.
     const review = requireReview(this.requireDb(), reviewId);

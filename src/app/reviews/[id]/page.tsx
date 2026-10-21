@@ -651,8 +651,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     if (snapshot) runLive.current = snapshot.running || snapshot.queued;
   }, [snapshot]);
 
-  // A draft waiting in the queue, or launched a moment ago, is no draft to
-  // start: its screen offered Start with a ruleset the run would not use,
+  // A draft waiting in the queue is no draft to start: its screen offered
+  // Start with a ruleset the run would not use,
   // and starting it answered 200 and dropped the choice (D-137).
   const isDraft = snapshot?.review.status === "draft" && !snapshot.queued && !snapshot.running;
   useEffect(() => {

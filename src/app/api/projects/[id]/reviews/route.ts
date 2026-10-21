@@ -42,11 +42,30 @@ export async function DELETE(
       );
     }
 
-    for (const row of rows) {
-      // Out of the queue first: the scheduler holds ids, and one pointing at
-      // a deleted row would strand every review behind it.
-      manager.dequeue(row.id);
-      await deleteReviewEntirely(db, row.id, dataDir);
+    // Each claimed, and so out of the queue, before any is removed: the
+    // scheduler holds ids, and one pointing at a deleted row would strand
+    // every review behind it; and a run still ending, its row already saying
+    // cancelled or failed, is refused (review of the D-165 fixes).
+    const claimed: string[] = [];
+    try {
+      // Checked first, so a refusal takes nothing out of the queue.
+      const ending = rows.find((row) => manager.isRunning(row.id));
+      if (ending) {
+        throw Response.json(
+          {
+            error: `Review ${ending.id} is still ending its run. Try again in a moment.`,
+            code: "ReviewStillRunning",
+          },
+          { status: 409 },
+        );
+      }
+      for (const row of rows) {
+        manager.beginDelete(row.id, { evenQueued: true });
+        claimed.push(row.id);
+      }
+      for (const row of rows) await deleteReviewEntirely(db, row.id, dataDir);
+    } finally {
+      for (const id of claimed) manager.endDelete(id);
     }
     return ok({ deleted: rows.length });
   });

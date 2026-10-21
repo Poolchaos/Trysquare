@@ -31,6 +31,7 @@ import { models, projects } from "@/server/db/schema";
 import {
   JobManager,
   ReviewAlreadyStartedError,
+  ReviewBeingDeletedError,
   ReviewNotStartableError,
 } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
@@ -207,6 +208,30 @@ describe("deciding what runs now", () => {
     expect(() => manager.judge(cancelled)).toThrow(ReviewNotStartableError);
     await manager.settled(first);
     await manager.settled(second);
+  }, 240_000);
+
+  it("lets a delete claim only what it does not hold, and starts nothing claimed", async () => {
+    // Every delete checked, then awaited the removal of its files, and a
+    // start landing between ran on a review whose files and row went from
+    // under it (review of the D-165 fixes).
+    const first = seedReview();
+    const second = seedReview();
+    const idle = seedReview();
+    expect(start(first)).toBe("running");
+    expect(start(second)).toBe("queued");
+    expect(manager.beginDelete(first, { evenQueued: true })).toBe(false);
+    expect(manager.beginDelete(second, { evenQueued: false })).toBe(false);
+    expect(manager.isQueued(second)).toBe(true);
+    expect(manager.beginDelete(second, { evenQueued: true })).toBe(true);
+    expect(manager.isQueued(second)).toBe(false);
+
+    expect(manager.beginDelete(idle, { evenQueued: false })).toBe(true);
+    expect(() => manager.judge(idle)).toThrow(ReviewBeingDeletedError);
+    expect(() => start(idle)).toThrow(ReviewBeingDeletedError);
+    manager.endDelete(idle);
+    expect(manager.judge(idle, { ruleset: RULESET })).toBe("startable");
+    manager.endDelete(second);
+    await manager.settled(first);
   }, 240_000);
 
   it("refuses an id that is not a review at all", () => {

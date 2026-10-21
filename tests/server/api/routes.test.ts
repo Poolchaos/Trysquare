@@ -10,7 +10,7 @@
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { useSignedInFake } from "../../helpers/signed-in-fake";
 import { cloneBare } from "@/server/gitops/repo";
 import { buildFixture, type SeededFixture } from "../../helpers/seeded-fixture";
@@ -1204,9 +1204,9 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
   }, 120_000);
 
   it("removes an unstarted draft only, and nothing the manager holds", async () => {
-    // A queued review keeps the status draft, as does one launched a moment
-    // ago; read as a draft, the new-review screen removed a review put in line
-    // from another tab (review of the D-164 fixes).
+    // A queued review keeps the status draft; read as a draft, the new-review
+    // screen removed a review put in line from another tab (review of the
+    // D-164 fixes).
     const startRoute = await import("@/app/api/reviews/[id]/start/route");
     const { jobManager } = await import("@/server/jobs/manager");
     const draft = async () => {
@@ -1271,6 +1271,22 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
       await jobManager().settled(holding);
       delete process.env.FAKE_CLAUDE_SCENARIO;
     }
+
+    // Nor one whose run is still ending, its row already saying cancelled:
+    // the row alone let it through (review of the D-165 fixes). The manager's
+    // own test drives that refusal; here it stands in for it.
+    const ending = await draft();
+    jobManager().cancel(ending);
+    const refuse = vi.spyOn(jobManager(), "beginDelete").mockReturnValue(false);
+    try {
+      const refused = await remove(ending, false);
+      expect(refused.status).toBe(409);
+      expect(((await refused.json()) as { code: string }).code).toBe("ReviewStillRunningError");
+      expect(await exists(ending)).toBe(true);
+    } finally {
+      refuse.mockRestore();
+    }
+    expect((await remove(ending, false)).status).toBe(200);
   }, 240_000);
 
   it("refuses at create before anything is fetched", async () => {

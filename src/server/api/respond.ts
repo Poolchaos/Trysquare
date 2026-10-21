@@ -113,6 +113,7 @@ export const ERROR_STATUSES: readonly (readonly [name: string, status: 404 | 409
   // is already running or in line.
   ["ReviewNotStartableError", 409],
   ["ReviewAlreadyStartedError", 409],
+  ["ReviewBeingDeletedError", 409],
 ];
 const STATUS_BY_NAME = new Map(ERROR_STATUSES);
 
