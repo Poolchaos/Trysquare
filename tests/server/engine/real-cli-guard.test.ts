@@ -17,6 +17,19 @@ describe("the real-CLI guard", () => {
     expect(() => resolveCli("  ")).toThrow(/not a fake/);
   });
 
+  it("refuses it in any test but the real-CLI one, whatever the shell says", () => {
+    // The variable exported in a shell let every test of a run reach the real
+    // CLI, not only the one that asks for it (review of the D-152 fixes).
+    const before = process.env.TRYSQUARE_REAL_CLI;
+    process.env.TRYSQUARE_REAL_CLI = "1";
+    try {
+      expect(() => resolveCli(undefined)).toThrow(/not a fake/);
+    } finally {
+      if (before === undefined) delete process.env.TRYSQUARE_REAL_CLI;
+      else process.env.TRYSQUARE_REAL_CLI = before;
+    }
+  });
+
   it("lets the fake through", () => {
     expect(resolveCli(FAKE_CLI).prefixArgs).toEqual([FAKE_CLI]);
   });

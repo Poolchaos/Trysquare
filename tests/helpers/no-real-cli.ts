@@ -6,18 +6,25 @@
  * one real stage ran on the maintainer's sign-in, 33,893 output tokens on
  * claude-fable-5, before it failed (2026-10-20, D-152). Every engine call
  * that can reach a model finds its CLI through `resolveCli` as imported by
- * the engine modules, so that import is wrapped here: outside the opt-in
- * real-CLI test (TRYSQUARE_REAL_CLI=1), a CLI that is not a fake is refused
- * before anything is started (tests/helpers/fake-cli-rule.ts). A test that hands in its own CLI
- * environment resolves nothing real and is left alone.
+ * the engine modules, so that import is wrapped here: a CLI that is not a
+ * fake (tests/helpers/fake-cli-rule.ts) is refused before anything is
+ * started. A test that hands in its own CLI environment resolves nothing
+ * real and is left alone. TRYSQUARE_REAL_CLI=1 opens the guard to the
+ * real-CLI test alone: exported in a shell, it opened it to every test of
+ * the run (review of the D-152 fixes).
  */
 
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 import { isFakeCli } from "./fake-cli-rule";
 
 const TESTS_DIR = fileURLToPath(new URL("..", import.meta.url));
+
+function inRealCliTest(): boolean {
+  const testPath = (expect.getState().testPath ?? "").replace(/\\/g, "/");
+  return testPath.endsWith("/tests/server/engine/real-cli.test.ts");
+}
 
 vi.mock("@/server/engine/cli", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/server/engine/cli")>();
@@ -25,7 +32,8 @@ vi.mock("@/server/engine/cli", async (importOriginal) => {
     ...actual,
     resolveCli: (...args: Parameters<typeof actual.resolveCli>) => {
       const found = actual.resolveCli(...args);
-      if (args[1] !== undefined || process.env.TRYSQUARE_REAL_CLI === "1") return found;
+      if (args[1] !== undefined) return found;
+      if (process.env.TRYSQUARE_REAL_CLI === "1" && inRealCliTest()) return found;
       const program =
         found.command === process.execPath && found.prefixArgs[0] !== undefined
           ? found.prefixArgs[0]
