@@ -136,6 +136,10 @@ export class JobManager {
     return this.active.has(reviewId);
   }
 
+  isQueued(reviewId: string): boolean {
+    return this.queue.some((entry) => entry.reviewId === reviewId);
+  }
+
   queueDepth(): number {
     return this.queue.length;
   }

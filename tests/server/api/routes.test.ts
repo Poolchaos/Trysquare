@@ -1203,6 +1203,76 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
     }
   }, 120_000);
 
+  it("removes an unstarted draft only, and nothing the manager holds", async () => {
+    // A queued review keeps the status draft, as does one launched a moment
+    // ago; read as a draft, the new-review screen removed a review put in line
+    // from another tab (review of the D-164 fixes).
+    const startRoute = await import("@/app/api/reviews/[id]/start/route");
+    const { jobManager } = await import("@/server/jobs/manager");
+    const draft = async () => {
+      const made = await routes.reviews.POST(
+        post("http://localhost/api/reviews", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          model: "claude-fable-5[1m]",
+        }),
+      );
+      return ((await made.json()) as { review: { id: string } }).review.id;
+    };
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "Removal check protocol",
+        tier: "global",
+        markdown,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+    const remove = (id: string, unstarted: boolean) =>
+      routes.review.DELETE(
+        new Request(`http://localhost/api/reviews/${id}${unstarted ? "?unstarted=1" : ""}`, {
+          method: "DELETE",
+        }),
+        params(id),
+      );
+    const exists = async (id: string) =>
+      (await routes.review.GET(new Request("http://localhost/x"), params(id))).status === 200;
+
+    const unstarted = await draft();
+    expect((await remove(unstarted, true)).status).toBe(200);
+    expect(await exists(unstarted)).toBe(false);
+
+    const holding = await draft();
+    const waiting = await draft();
+    process.env.FAKE_CLAUDE_SCENARIO = "hang";
+    try {
+      for (const id of [holding, waiting]) {
+        await startRoute.POST(
+          post(`http://localhost/api/reviews/${id}/start`, { rulesetId }),
+          params(id),
+        );
+      }
+      // Running, and in line though its row still says draft: left alone.
+      for (const id of [holding, waiting]) {
+        const refused = await remove(id, true);
+        expect(refused.status).toBe(409);
+        expect(((await refused.json()) as { code: string }).code).toBe("NotAnUnstartedDraft");
+        expect(await exists(id)).toBe(true);
+      }
+      expect(jobManager().snapshot(waiting).queued).toBe(true);
+      // A plain delete still refuses one the manager is running.
+      expect((await remove(holding, false)).status).toBe(409);
+    } finally {
+      jobManager().cancel(waiting);
+      jobManager().cancel(holding);
+      await jobManager().settled(holding);
+      delete process.env.FAKE_CLAUDE_SCENARIO;
+    }
+  }, 240_000);
+
   it("refuses at create before anything is fetched", async () => {
     // Asked last, a refusal waited on a fetch of every project first, and
     // recorded it (review of the 6.2 changes).

@@ -534,15 +534,22 @@ function NewReview() {
       // started again, it ran on the branch tips pinned at its first press,
       // or was pressed at for ever once started or cancelled elsewhere
       // (review of the D-163 fixes). Made afresh, the review is pinned to
-      // the tips as they are now. One that is no longer a draft is left.
+      // the tips as they are now. The server judges whether it still is
+      // one: a review put in line keeps the status draft, and read from here
+      // one queued from another tab was removed (review of the D-164 fixes).
+      // One no longer a draft, or gone, is left; a removal that failed is
+      // said, and the draft kept for the next press, not a second made.
       if (draft !== null) {
-        const read = await send<{ review: { status: string } }>(
-          `/api/reviews/${draft}`,
-          {},
-          "The review left before could not be read",
+        const removed = await send(
+          `/api/reviews/${draft}?unstarted=1`,
+          { method: "DELETE" },
+          "The review this screen left could not be removed",
         );
-        if (read.ok && read.body.review.status === "draft") {
-          await send(`/api/reviews/${draft}`, { method: "DELETE" }, "It could not be removed");
+        const leftAlone =
+          !removed.ok && (removed.status === 404 || removed.body.code === "NotAnUnstartedDraft");
+        if (!removed.ok && !leftAlone) {
+          setError(`${removed.error} Press Start again to try again.`);
+          return;
         }
         setDraft(null);
       }

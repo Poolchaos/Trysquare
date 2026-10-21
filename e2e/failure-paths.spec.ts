@@ -1646,19 +1646,32 @@ test("a Start refused after the review was made leaves no second draft at the ne
   expect(deletes).toEqual([`/api/reviews/${first}`]);
   expect((await page.request.get(`/api/reviews/${first}`)).status()).toBe(404);
 
-  // One no longer a draft, started elsewhere here, is not removed.
-  const stopReading = await routeUntilStopped(page, `**/api/reviews/${second}`, async (route) => {
-    if (route.request().method() !== "GET") return route.fallback();
-    const response = await route.fetch();
-    const body = (await response.json()) as { review: Record<string, unknown> };
-    await route.fulfill({
-      response,
-      json: { ...body, review: { ...body.review, status: "running" } },
-    });
+  // The server judges whether it is still one: here it is not, started or
+  // put in line from another tab, so it is left and a review made afresh
+  // (review of the D-164 fixes).
+  const answerRemoval = (id: string, answer: { status: number; json: object }) =>
+    routeUntilStopped(page, `**/api/reviews/${id}?unstarted=1`, (route) =>
+      route.request().method() === "DELETE" ? route.fulfill(answer) : route.fallback(),
+    );
+  const stopLeft = await answerRemoval(second, {
+    status: 409,
+    json: { error: "No longer a draft.", code: "NotAnUnstartedDraft" },
   });
   const third = await made();
-  expect(deletes).toEqual([`/api/reviews/${first}`]);
-  await stopReading();
+  expect(creates).toHaveLength(3);
+  await stopLeft();
+
+  // A removal that fails is said, and no review is made over it.
+  const stopFailing = await answerRemoval(third, {
+    status: 500,
+    json: { error: "Refused for this test: the removal.", code: "Test" },
+  });
+  await start.click();
+  await expect(
+    page.getByText("Refused for this test: the removal. Press Start again to try again."),
+  ).toBeVisible();
+  expect(creates).toHaveLength(3);
+  await stopFailing();
   await stopRefusing();
   for (const id of [second, third]) {
     expect((await page.request.delete(`/api/reviews/${id}`)).status()).toBe(200);
