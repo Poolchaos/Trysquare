@@ -116,92 +116,82 @@ export function buildProbeArgs(model: string): string[] {
 }
 
 /**
- * What a review's CLI does not inherit: what a Claude Code session, or the
- * editor or SDK hosting one, sets for the processes it starts (D-120), what
- * the CLI itself removes when it starts a fresh session, and a setting that
- * would override a flag every stage pins (D-121, D-124).
+ * What a CLI the app starts inherits from the server's environment: only what
+ * it needs to run, and the sign-in. What the app configures wins over the
+ * machine's own Claude configuration (D-174).
  *
- * A review is an independent run that may have been started from a terminal
- * inside a session, and must not run as that session's child: the 2.1.301
- * binary reads CLAUDECODE and CLAUDE_CODE_CHILD_SESSION as meaning it is one
- * and changes where it looks for credentials, and a messaging socket would tie
- * the review to whatever session launched the server. Named, not matched by
- * prefix: the same prefix carries a person's own settings, such as
- * CLAUDE_CODE_OAUTH_TOKEN for a headless sign-in, and those reach the CLI.
- * Upper case, and matched so: Windows names are case-insensitive, and the CLI
- * matches some of these by their upper-cased form.
+ * It was a list of what to keep out, which let every variable it did not name
+ * through: a session's markers, which made a review run as that session's
+ * child (D-120); settings that outrank the --effort every stage pins (D-121,
+ * D-124); an API key or a paid provider, which billed per token over the
+ * subscription sign-in (D-161); and, unnamed, another API's address, another
+ * model, another thinking budget. Each list grew after a review found the
+ * next; this one is closed.
+ *
+ * Upper case, and matched so: Windows names are case-insensitive.
  */
-const STRIPPED: ReadonlySet<string> = new Set([
-  // Set by the CLI on every process it starts.
-  "CLAUDECODE",
-  "CLAUDE_CODE_CHILD_SESSION",
-  "CLAUDE_CODE_SESSION_ID",
-  "CLAUDE_CODE_SESSION_ATTENDED",
-  "CLAUDE_PID",
-  // Set by it on some: an agent's, and one started at a set effort.
-  "AI_AGENT",
-  "CLAUDE_EFFORT",
-  // Set by the editor or SDK that hosts a session.
-  "CLAUDE_CODE_ENTRYPOINT",
-  "CLAUDE_AGENT_SDK_VERSION",
-  "CLAUDE_CODE_MESSAGING_SOCKET",
-  "CLAUDE_CODE_MESSAGING_TOKEN",
-  "CLAUDE_CODE_EXECPATH",
-  "CLAUDE_CODE_SSE_PORT",
-  // What the 2.1.301 binary deletes by name when it starts a fresh session.
-  // A token file descriptor's number means nothing in another process.
-  "CLAUDE_CODE_CHROME_MCP_ORG_DENIED",
-  "CLAUDE_CODE_EVAL_INTERVIEW_SESSION",
-  "CLAUDE_CODE_BRIDGE_SESSION_ID",
-  "CLAUDE_CODE_HOST_WORKTREE",
-  "CLAUDE_CODE_HOST_WORKTREE_FENCE",
-  "CLAUDE_CODE_PLUGIN_DIRS",
-  "CLAUDE_BG_SESSION_PERMISSION_RULES",
-  "CLAUDE_BG_MEMORY_TOGGLED_OFF",
-  "CLAUDE_BG_AUTO_MEMORY_OFF",
-  "CLAUDE_BG_AUTH_SNAPSHOT_PATH",
-  "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
-  "CLAUDE_CODE_GATEWAY_TOKEN_FILE_DESCRIPTOR",
-  "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR",
-  "CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR",
-  "CCR_AGENT_PROXY_TOKEN_FILE_DESCRIPTOR",
-  // A person's settings, but 2.1.301 ranks each above --effort, so a review
-  // created at high ran at whatever they said and still recorded high
-  // (D-121, D-124).
-  "CLAUDE_CODE_EFFORT_LEVEL",
-  "CLAUDE_CODE_EXTRA_BODY",
-  // An API key in the server's environment, which the CLI would take over
-  // the sign-in it shares with the editor's Claude Code, billing a review per
-  // token without a word. Reviews draw on that subscription sign-in by
-  // default (D-161).
-  "ANTHROPIC_API_KEY",
-  "ANTHROPIC_AUTH_TOKEN",
-  // And the paid providers, each of which sends a review elsewhere, billed
-  // per token, winning over the sign-in, so no sign-in could undo it; with
-  // the keys they take. All read by the 2.1.301 binary (review of the D-160
-  // fixes). This narrows D-120's "every other variable passes": what is left
-  // to bill per token is how the CLI itself is signed in, a token given it in
-  // CLAUDE_CODE_OAUTH_TOKEN included, and the app warns of that.
-  "CLAUDE_CODE_USE_BEDROCK",
-  "CLAUDE_CODE_USE_VERTEX",
-  "CLAUDE_CODE_USE_FOUNDRY",
-  "CLAUDE_CODE_USE_ANTHROPIC_AWS",
-  "CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD",
-  "CLAUDE_CODE_USE_MANTLE",
-  "CLAUDE_CODE_USE_GATEWAY",
-  "AWS_BEARER_TOKEN_BEDROCK",
-  "ANTHROPIC_FOUNDRY_API_KEY",
-  "ANTHROPIC_AWS_API_KEY",
+const PASSED: ReadonlySet<string> = new Set([
+  // Finding programs, and the system they run on.
+  "PATH",
+  "PATHEXT",
+  "SYSTEMROOT",
+  "SYSTEMDRIVE",
+  "WINDIR",
+  "COMSPEC",
+  "OS",
+  "PROCESSOR_ARCHITECTURE",
+  "NUMBER_OF_PROCESSORS",
+  "PROGRAMDATA",
+  "PROGRAMFILES",
+  "PROGRAMFILES(X86)",
+  "PROGRAMW6432",
+  "COMMONPROGRAMFILES",
+  "ALLUSERSPROFILE",
+  // Where the person's home and data are, which is where the sign-in is.
+  "HOME",
+  "USERPROFILE",
+  "HOMEDRIVE",
+  "HOMEPATH",
+  "APPDATA",
+  "LOCALAPPDATA",
+  "USER",
+  "USERNAME",
+  "LOGNAME",
+  "XDG_CONFIG_HOME",
+  "XDG_DATA_HOME",
+  "XDG_CACHE_HOME",
+  "XDG_RUNTIME_DIR",
+  // The secret store a Linux sign-in may be kept in.
+  "DBUS_SESSION_BUS_ADDRESS",
+  "TEMP",
+  "TMP",
+  "TMPDIR",
+  // The network the machine reaches the API through.
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "ALL_PROXY",
+  "NO_PROXY",
+  "NODE_EXTRA_CA_CERTS",
+  "SSL_CERT_FILE",
+  "SSL_CERT_DIR",
+  // Where Windows' CLI finds Git Bash; missing, reviews there failed (D-120).
+  "CLAUDE_CODE_GIT_BASH_PATH",
+  // The sign-in: a config folder of one's own, or a `claude setup-token`.
+  "CLAUDE_CONFIG_DIR",
+  "CLAUDE_CODE_OAUTH_TOKEN",
 ]);
 
-export function isStrippedFromChild(name: string): boolean {
-  return STRIPPED.has(name.toUpperCase());
+/** The stand-in CLI the tests run reads these; the real CLI reads none of them. */
+const STAND_IN_PREFIX = "FAKE_CLAUDE_";
+
+function isPassedToChild(name: string): boolean {
+  const upper = name.toUpperCase();
+  return PASSED.has(upper) || upper.startsWith(STAND_IN_PREFIX);
 }
 
 /**
- * The environment for a child `claude` process: the current environment minus
- * what it must not inherit, plus a pinned locale so parsing never depends on
- * the user's language.
+ * The environment for a child `claude` process: what it may inherit, plus a
+ * pinned locale so parsing never depends on the user's language.
  */
 export function buildChildEnv(
   parentEnv: Readonly<Record<string, string | undefined>>,
@@ -209,7 +199,7 @@ export function buildChildEnv(
   const child: Record<string, string> = {};
   for (const [key, value] of Object.entries(parentEnv)) {
     if (value === undefined) continue;
-    if (isStrippedFromChild(key)) continue;
+    if (!isPassedToChild(key)) continue;
     child[key] = value;
   }
   child.LC_ALL = "C";

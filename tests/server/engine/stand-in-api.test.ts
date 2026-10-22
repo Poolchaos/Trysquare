@@ -141,11 +141,16 @@ function plantedRun(effort: string): Promise<void> {
     outputFormat: "stream-json",
     effort,
   });
-  // The app's environment for the CLI, which keeps any API key from it
-  // (D-161), with the stand-in's key put back: the stand-in API is what it
-  // authenticates to, and nothing here is real.
+  // The app's environment for the CLI, which passes only what the CLI needs
+  // and the sign-in (D-161, D-174), with the stand-in's own put back: its
+  // address and key, which the API calls go to, and the telemetry kept off,
+  // so nothing leaves the machine and nothing here is real.
   const env: Record<string, string> = buildChildEnv(shell);
   env.ANTHROPIC_API_KEY = shell.ANTHROPIC_API_KEY;
+  env.ANTHROPIC_BASE_URL = shell.ANTHROPIC_BASE_URL;
+  env.DISABLE_TELEMETRY = shell.DISABLE_TELEMETRY;
+  env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = shell.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
+  env.CLAUDE_CODE_MAX_RETRIES = shell.CLAUDE_CODE_MAX_RETRIES;
   return new Promise((resolve, reject) => {
     const child = spawn(cli.command, [...cli.prefixArgs, ...args], {
       cwd: repo,

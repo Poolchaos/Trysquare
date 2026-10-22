@@ -45,31 +45,30 @@ another provider: a warning; reviews still run, D-92), signed in some way
 that may (an `oauth_token`, which 2.1.301 reports both for a token
 `claude setup-token` made and for a Console profile, an unknown method, or
 none said: a warning that says "may"), and a subscription.
-ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN and the paid providers' selectors
-and keys (CLAUDE_CODE_USE_BEDROCK, _VERTEX, _FOUNDRY, _ANTHROPIC_AWS,
-_ANTHROPIC_GOOGLE_CLOUD, _MANTLE and _GATEWAY, AWS_BEARER_TOKEN_BEDROCK,
-ANTHROPIC_FOUNDRY_API_KEY, ANTHROPIC_AWS_API_KEY) are kept from every CLI
-the app starts, so reviews draw on the subscription sign-in by default;
-what is left to bill per token is how the CLI itself is signed in, and the
-app warns of it (D-161). ANTHROPIC_BASE_URL still passes:
-what it does beside a claude.ai sign-in is unmeasured. The app never reads,
-copies, or logs the credentials themselves.
+An API key, a paid provider's selector or key, another API's address,
+another model, another thinking budget: none reaches a CLI the app starts,
+so reviews draw on the subscription sign-in by default; what is left to
+bill per token is how the CLI itself is signed in, and the app warns of it
+(D-161, D-174). The app never reads, copies, or logs the credentials
+themselves.
 
 **A spawned `claude` process must not inherit the parent shell's Claude Code
 session variables.** A review is an independent program that may have been
 launched from a terminal which is itself a Claude Code session, and must not
 run as that session's child: the CLI reads `CLAUDECODE` and
 `CLAUDE_CODE_CHILD_SESSION` as meaning it is one and looks for credentials
-elsewhere. The engine therefore removes the variables a session and its host
-set for the processes they start, and those the CLI itself removes when it
-starts a fresh session, by name and whatever their case, exactly as it sets an explicit
-working directory rather than inheriting one. A person's own settings, such
-as `CLAUDE_CODE_OAUTH_TOKEN`, pass through (D-120), except
-`CLAUDE_CODE_EFFORT_LEVEL` and `CLAUDE_CODE_EXTRA_BODY`, which the CLI ranks
-above the `--effort` every stage passes (D-121, D-124), and the keys and
-paid providers named above, which would bill a review per token (D-161). No settings file is
-read at all, a person's included, for the same reason (D-124). Older CLIs refused to start at all under `CLAUDECODE`;
-2.1.301 does not.
+elsewhere. What the app configures wins over the machine's own Claude
+configuration (D-174), so the environment a CLI the app starts gets is
+closed: only what it needs to run (system paths, home and app-data
+directories, temp, locale, proxy and certificate settings, where Windows
+finds Git Bash) and the sign-in (`CLAUDE_CONFIG_DIR`,
+`CLAUDE_CODE_OAUTH_TOKEN`), whatever their case, exactly as it sets an
+explicit working directory rather than inheriting one. It was a list of what
+to keep out, a session's markers (D-120), the settings that outrank the
+`--effort` every stage passes (D-121, D-124), the keys and paid providers
+(D-161), which let every variable it did not name through. No settings file
+is read at all, a person's included, for the same reason (D-124). Older
+CLIs refused to start at all under `CLAUDECODE`; 2.1.301 does not.
 
 Model discovery is done by probing, and the results below are an example of
 what one account returned on one day. They are recorded to show the shape of

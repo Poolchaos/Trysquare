@@ -4,7 +4,6 @@ import {
   buildChildEnv,
   buildProbeArgs,
   buildStageArgs,
-  isStrippedFromChild,
 } from "@/lib/engine/command";
 import { toEngineEvent } from "@/lib/engine/events";
 
@@ -130,125 +129,75 @@ describe("a prompt too large for a command line", () => {
 });
 
 describe("the child environment", () => {
-  it("recognises what a session sets for the processes it starts (D-120)", () => {
-    // The CLI's own five, as the 2.1.301 binary sets them for a child, and
-    // what an editor hosting a session adds.
-    for (const name of [
-      "CLAUDECODE",
-      "CLAUDE_CODE_CHILD_SESSION",
-      "CLAUDE_CODE_SESSION_ID",
-      "CLAUDE_CODE_SESSION_ATTENDED",
-      "CLAUDE_PID",
-      "CLAUDE_CODE_ENTRYPOINT",
-      "CLAUDE_CODE_MESSAGING_SOCKET",
-      "CLAUDE_CODE_SSE_PORT",
-    ]) {
-      expect(isStrippedFromChild(name), name).toBe(true);
-    }
-    expect(isStrippedFromChild("PATH")).toBe(false);
-    expect(isStrippedFromChild("HOME")).toBe(false);
-  });
+  // What the app configures wins over the machine's own Claude
+  // configuration: only what the CLI needs to run, and the sign-in, reach it
+  // (D-174). It was a list of what to keep out, and every variable it did
+  // not name went through (D-120).
+  const passes = (name: string) => name in buildChildEnv({ [name]: "x" });
 
-  it("keeps an API key from the CLI, so a review draws on the subscription sign-in (D-161)", () => {
-    // Set in the server's environment, a key took over from the sign-in the
-    // CLI shares with the editor's Claude Code, and reviews billed per token
-    // without a word. A sign-in made with a key in the CLI itself is the only
-    // way to per-token billing left, and the app warns of it.
-    for (const name of ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "anthropic_api_key"]) {
-      expect(isStrippedFromChild(name), name).toBe(true);
-    }
-    expect(buildChildEnv({ ANTHROPIC_API_KEY: "sk-ant-x", PATH: "/bin" })).not.toHaveProperty(
-      "ANTHROPIC_API_KEY",
-    );
-  });
-
-  it("keeps the paid providers from the CLI, whatever its sign-in (D-161)", () => {
-    // Each of these sends a review to another provider, billed per token,
-    // and wins over the subscription sign-in, so signing in again could not
-    // help; the 2.1.301 binary reads them all (review of the D-160 fixes).
+  it("passes what the CLI needs to run, whatever the platform's spelling", () => {
     for (const name of [
-      "CLAUDE_CODE_USE_BEDROCK",
-      "CLAUDE_CODE_USE_VERTEX",
-      "CLAUDE_CODE_USE_FOUNDRY",
-      "CLAUDE_CODE_USE_ANTHROPIC_AWS",
-      "CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD",
-      "CLAUDE_CODE_USE_MANTLE",
-      "CLAUDE_CODE_USE_GATEWAY",
-      "AWS_BEARER_TOKEN_BEDROCK",
-      "ANTHROPIC_FOUNDRY_API_KEY",
-      "ANTHROPIC_AWS_API_KEY",
-    ]) {
-      expect(isStrippedFromChild(name), name).toBe(true);
-    }
-  });
-
-  it("passes a person's own Claude Code settings through (D-120)", () => {
-    // Every CLAUDE_CODE_ variable used to be stripped, so a headless
-    // subscription sign-in or a Git Bash at a custom path never reached the
-    // review's CLI. A paid provider's selector no longer passes (D-161).
-    for (const name of [
-      "CLAUDE_CODE_OAUTH_TOKEN",
+      "PATH",
+      "Path",
+      "PATHEXT",
+      "HOME",
+      "USERPROFILE",
+      "APPDATA",
+      "LOCALAPPDATA",
+      "SystemRoot",
+      "TEMP",
+      "TMP",
+      "TMPDIR",
+      "USER",
+      "USERNAME",
+      "XDG_CONFIG_HOME",
+      "HTTPS_PROXY",
+      "https_proxy",
+      "NO_PROXY",
+      "NODE_EXTRA_CA_CERTS",
+      // Where Windows' CLI finds Git Bash; missing, reviews there failed (D-120).
       "CLAUDE_CODE_GIT_BASH_PATH",
-      "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
     ]) {
-      expect(isStrippedFromChild(name), name).toBe(false);
+      expect(passes(name), name).toBe(true);
     }
   });
 
-  it("strips the settings that outrank a flag every stage pins (D-121, D-124)", () => {
-    // 2.1.301 takes each ahead of --effort, so a review created at high ran
-    // at whatever it said and still recorded high.
-    expect(isStrippedFromChild("CLAUDE_CODE_EFFORT_LEVEL")).toBe(true);
-    expect(isStrippedFromChild("CLAUDE_CODE_EXTRA_BODY")).toBe(true);
+  it("passes the sign-in kept in a custom config folder or made by setup-token", () => {
+    expect(passes("CLAUDE_CONFIG_DIR")).toBe(true);
+    expect(passes("CLAUDE_CODE_OAUTH_TOKEN")).toBe(true);
   });
 
-  it("strips what the CLI itself removes when it starts a fresh session (review of 4.5 to 4.7)", () => {
-    // Passed through after D-120 until named. A token file descriptor's
-    // number means nothing in another process.
+  it("drops what would change what a review runs with, named or not (D-174)", () => {
     for (const name of [
-      "CLAUDE_CODE_CHROME_MCP_ORG_DENIED",
-      "CLAUDE_CODE_EVAL_INTERVIEW_SESSION",
-      "CLAUDE_CODE_BRIDGE_SESSION_ID",
-      "CLAUDE_CODE_HOST_WORKTREE",
-      "CLAUDE_CODE_HOST_WORKTREE_FENCE",
-      "CLAUDE_CODE_PLUGIN_DIRS",
-      "CLAUDE_BG_SESSION_PERMISSION_RULES",
-      "CLAUDE_BG_MEMORY_TOGGLED_OFF",
-      "CLAUDE_BG_AUTO_MEMORY_OFF",
-      "CLAUDE_BG_AUTH_SNAPSHOT_PATH",
-      "CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR",
-      "CLAUDE_CODE_GATEWAY_TOKEN_FILE_DESCRIPTOR",
-      "CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR",
-      "CLAUDE_CODE_WEBSOCKET_AUTH_FILE_DESCRIPTOR",
-      "CCR_AGENT_PROXY_TOKEN_FILE_DESCRIPTOR",
+      // A session's markers (D-120).
+      "CLAUDECODE",
+      "CLAUDE_CODE_ENTRYPOINT",
+      "CLAUDE_CODE_SSE_PORT",
+      // Keys and paid providers (D-161).
+      "ANTHROPIC_API_KEY",
+      "ANTHROPIC_AUTH_TOKEN",
+      "CLAUDE_CODE_USE_BEDROCK",
+      "AWS_BEARER_TOKEN_BEDROCK",
+      // Settings that outrank a flag every stage pins (D-121, D-124).
+      "CLAUDE_CODE_EFFORT_LEVEL",
+      "CLAUDE_CODE_EXTRA_BODY",
+      // And what no list named: another API, another model, another budget.
+      "ANTHROPIC_BASE_URL",
+      "ANTHROPIC_MODEL",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL",
+      "CLAUDE_CODE_SUBAGENT_MODEL",
+      "MAX_THINKING_TOKENS",
+      "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+      "NODE_OPTIONS",
+      "SSH_AUTH_SOCK",
+      "ANY_OTHER_VARIABLE",
     ]) {
-      expect(isStrippedFromChild(name), name).toBe(true);
+      expect(passes(name), name).toBe(false);
     }
   });
 
-  it("matches a name whatever its case, as Windows reads it", () => {
-    // Windows environment names are case-insensitive, and the CLI matches
-    // some of these by their upper-cased form.
-    expect(isStrippedFromChild("ClaudeCode")).toBe(true);
-    expect(isStrippedFromChild("claude_code_plugin_dirs")).toBe(true);
-  });
-
-  it("strips every session marker while keeping the rest of the environment", () => {
-    const child = buildChildEnv({
-      PATH: "/usr/bin",
-      HOME: "/home/someone",
-      CLAUDECODE: "1",
-      CLAUDE_CODE_ENTRYPOINT: "cli",
-      CLAUDE_CODE_OAUTH_TOKEN: "a-token",
-      SSH_AUTH_SOCK: "/run/agent",
-    });
-
-    expect(child.CLAUDECODE).toBeUndefined();
-    expect(child.CLAUDE_CODE_ENTRYPOINT).toBeUndefined();
-    expect(child.CLAUDE_CODE_OAUTH_TOKEN).toBe("a-token");
-    expect(child.PATH).toBe("/usr/bin");
-    // Kept deliberately: cloning over SSH needs the agent.
-    expect(child.SSH_AUTH_SOCK).toBe("/run/agent");
+  it("passes the stand-in CLI's own variables, which the real CLI does not read", () => {
+    expect(passes("FAKE_CLAUDE_SCENARIO")).toBe(true);
   });
 
   it("pins the locale so parsing never depends on the user's language", () => {
@@ -262,9 +211,9 @@ describe("the child environment", () => {
   });
 
   it("drops undefined values rather than passing them as empty strings", () => {
-    const child = buildChildEnv({ DEFINED: "x", MISSING: undefined });
-    expect(child.DEFINED).toBe("x");
-    expect("MISSING" in child).toBe(false);
+    const child = buildChildEnv({ PATH: "/bin", HOME: undefined });
+    expect(child.PATH).toBe("/bin");
+    expect("HOME" in child).toBe(false);
   });
 });
 

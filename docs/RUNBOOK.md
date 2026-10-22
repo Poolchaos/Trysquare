@@ -19,11 +19,12 @@ review is the expensive action. Everything else, including the whole demo with
   else in this runbook works without it. `npm install` installs the Claude
   Code CLI the reviews run through (D-92); sign it in with
   `npm run claude -- auth login`. It shares the `~/.claude` sign-in of any
-  other Claude Code on the machine. An `ANTHROPIC_API_KEY`,
-  `ANTHROPIC_AUTH_TOKEN` or paid provider (`CLAUDE_CODE_USE_BEDROCK` and its
-  kind) in the server's environment is never passed to it, so reviews draw
-  on that subscription sign-in (D-161), unless the CLI is given a token of
-  its own in `CLAUDE_CODE_OAUTH_TOKEN`, which passes and wins over it. A different CLI,
+  other Claude Code on the machine. Of the server's environment it gets only
+  what it needs to run and the sign-in (D-174): an API key, a paid provider
+  or any other Claude setting there never reaches it, so reviews draw on
+  that subscription sign-in (D-161), unless the CLI is given a token of its
+  own in `CLAUDE_CODE_OAUTH_TOKEN` or a config folder in `CLAUDE_CONFIG_DIR`,
+  which pass. A different CLI,
   which must be 2.1.301 or newer, is picked by the CLI path on Settings, or by
   `TRYSQUARE_CLAUDE_PATH`, which wins over it (D-152); Check the CLI on
   Settings says which CLI that is, its version and how it is signed in.
