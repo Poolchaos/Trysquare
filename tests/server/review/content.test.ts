@@ -297,6 +297,7 @@ describe("cross-repo contract changes", () => {
     ]);
     expect(rendered).toContain("Prefs (interface, modified) in types.ts");
     expect(rendered).toContain("only break at the consumer");
+    expect(rendered).toContain("is in consumersChecked of a");
   });
 
   it("renders nothing when there is no linked repository", () => {

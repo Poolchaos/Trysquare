@@ -265,7 +265,8 @@ describe("a correct review of the seeded fixture", () => {
 
   it("reports the deletion the diff cannot show, from the stage that reads removals", async () => {
     // The caller is not in the change set at all, so this finding can only
-    // come from S4: an S3 finding citing a file without a hunk is rejected.
+    // come from S4: an S3 finding citing a file without a hunk is rejected
+    // unless a contract-change verdict named it as a consumer (D-181).
     await runGate();
     const defect = manifest.defects.find((entry) => entry.kind === "deleted-file")!;
 

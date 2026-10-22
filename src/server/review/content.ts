@@ -204,6 +204,9 @@ export function renderChangedSymbols(symbols: readonly ChangedSymbol[]): string 
     "dispositioned: find its consumers in the primary repository, check each one",
     "against the new contract, and either raise a finding or record which consumer",
     "files you verified.",
+    "A finding in a consumer this change never touched is kept only when that",
+    "file's path, exactly as the finding cites it, is in consumersChecked of a",
+    "symbol whose verdict is finding. It accounts for no hunk.",
     "",
     ...symbols.map(
       (symbol) => `- ${symbol.name} (${symbol.kind}, ${symbol.change}) in ${symbol.path}`,

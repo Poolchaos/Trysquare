@@ -421,7 +421,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   }));
 
   const findingHunks: HunkRef[] = adversarial.findings.flatMap((finding) =>
-    hunksCoveredBy(finding, ledgerFiles, db),
+    hunksCoveredBy(finding, ledgerFiles, adversarial.findingConsumers, db),
   );
 
   const expectedSymbols: SymbolRef[] = (qualifiedSymbols ?? []).map((symbol) => ({
@@ -779,7 +779,13 @@ async function runAdversarialStage(
   input: PipelineInput,
   content: StageContentInput,
   ledgerFiles: readonly { path: string }[],
-): Promise<AdversarialStageOutput & { requestCount: number; excludedPairs: number }> {
+): Promise<
+  AdversarialStageOutput & {
+    requestCount: number;
+    excludedPairs: number;
+    findingConsumers: ReadonlySet<string>;
+  }
+> {
   const filePaths = ledgerFiles.map((file) => file.path);
   const plan = planRuleBatches(input.rules, filePaths, input.profile);
   // Proves the division did not lose anything before a single request is sent.
@@ -806,6 +812,9 @@ async function runAdversarialStage(
     symbolDispositions: [],
   };
   let requestCount = 0;
+  // From every request, not the merge below: it keeps one disposition per
+  // symbol, and a consumer a later request named would be lost (D-181).
+  const findingConsumers = new Set<string>();
 
   // Every request planned before the first one is sent, because a prompt that
   // says "request 2 of 5" has to know the 5. It said "of 0" instead, which is
@@ -874,6 +883,9 @@ async function runAdversarialStage(
       // Deduplicated: a symbol may legitimately be dispositioned in more than
       // one batch, and counting it twice would misreport the accounting.
       for (const disposition of parsed.symbolDispositions) {
+        if (disposition.verdict === "finding") {
+          for (const path of disposition.consumersChecked) findingConsumers.add(path);
+        }
         const seen = merged.symbolDispositions.some(
           (existing) =>
             existing.symbol === disposition.symbol && existing.path === disposition.path,
@@ -892,7 +904,7 @@ async function runAdversarialStage(
     }
   }
 
-  return { ...merged, requestCount, excludedPairs: plan.excluded.length };
+  return { ...merged, requestCount, excludedPairs: plan.excluded.length, findingConsumers };
 }
 
 /**
@@ -1127,16 +1139,23 @@ function repoOf(path: string, input: PipelineInput): RepoRole {
  * A finding elsewhere in a changed file is kept, since unchanged code can
  * break with the change, but it accounts for no hunk. It used to stand in for
  * the file's first hunk, so a stage could account for code it never looked at.
+ * So is one in a consumer a "finding" verdict named, which is where a
+ * contract change breaks and is often a file the branch never touched
+ * (D-181 item 2, amending D-60). Matched exactly, as at 4.23.
  */
 function hunksCoveredBy(
   finding: { path: string; lineStart: number; lineEnd: number },
   ledgerFiles: readonly { id: string; path: string }[],
+  findingConsumers: ReadonlySet<string>,
   db: Db,
 ): HunkRef[] {
   const ledgerFile = ledgerFiles.find((file) => file.path === finding.path);
-  // Reported against a hunk that does not exist, so reconciliation refuses
-  // the answer as describing a file outside the change set.
-  if (!ledgerFile) return [{ path: finding.path, hunkIndex: 0 }];
+  if (!ledgerFile) {
+    if (findingConsumers.has(finding.path)) return [];
+    // Reported against a hunk that does not exist, so reconciliation refuses
+    // the answer as describing a file outside the change set.
+    return [{ path: finding.path, hunkIndex: 0 }];
+  }
   return listHunks(db, ledgerFile.id)
     .filter((hunk) => citesHunk(finding, hunk))
     .map((hunk) => ({ path: finding.path, hunkIndex: hunk.hunkIndex }));

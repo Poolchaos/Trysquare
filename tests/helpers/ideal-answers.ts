@@ -125,7 +125,9 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
   });
 
   // A deleted-file defect cannot be an S3 finding: its caller is not in the
-  // change set, and the pipeline refuses an S3 finding in a file outside it.
+  // change set, and the pipeline refuses an S3 finding in a file outside it
+  // unless a contract-change verdict names that file as a consumer (D-181),
+  // which a removed module's caller is not.
   // It is raised by S4, the stage that reads removals, and faces only the
   // quote check against the surviving caller in the worktree.
   const findingFor = (defect: SeededDefect) => ({

@@ -131,7 +131,10 @@ stage must enumerate its consumers in the primary repo (Grep the primary
 worktree, resolving the package import via `links.json`), verify each
 consumer against the new contract, and disposition the contract change like
 a hunk: findings or an explicit all-consumers-verified clear naming the
-consumer files checked. The protocol's backwards-compatibility section
+consumer files checked. A finding at a consumer the branch never touched is
+kept when a symbol whose verdict is finding names that file among its
+consumers checked; it accounts for no hunk and faces the quote check like
+any other (D-181, amending D-60). The protocol's backwards-compatibility section
 applies across the repo boundary exactly as within one repo. App code
 enforces completeness: S0 extracts the list of changed exported symbols
 from the dependency diff, and S3's output must disposition every symbol.
@@ -184,7 +187,9 @@ distrust (D-52). Review moves to `awaiting_confirmation`.
 A finding accounts for the hunks its first or last cited line falls in, and
 a sweep hit dispositioned as a finding needs a finding whose lines include
 it (D-96, D-101). A deleted file has no lines to cite, so S3 accounts for
-its hunk only by clearing it. A hunk or hit whose every finding S5 refuted
+its hunk only by clearing it. A finding in a file outside the change set
+refuses the S3 answer, except at a consumer a finding verdict named (D-181).
+A hunk or hit whose every finding S5 refuted
 stays accounted for, but the statement of what was examined counts it, and
 the review page lists every refuted finding with its reason (D-97).
 

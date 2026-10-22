@@ -1524,6 +1524,146 @@ describe("cross-repo contract changes", () => {
     const result = await run({ ...BASE_ANSWERS, s5_verification: { verdicts: [] } });
     expect(result.coverage.pendingHunks).toBe(0);
   });
+
+  describe("a finding in a consumer the branch never touched", () => {
+    // The prompt asks for a finding at the consumer, and every S3 finding
+    // had to land in a hunk of the change set (D-60), so a contract change
+    // breaking an untouched file could not be reported at all. Kept when a
+    // finding verdict names the file among its consumers (D-181 item 2).
+    const SETTINGS =
+      "import type { Prefs } from 'core';\nexport const nav = prefs.reportAutoNavigate;\n";
+    const QUOTE = "export const nav = prefs.reportAutoNavigate;";
+    const atConsumer = {
+      path: "app/settings.ts",
+      lineStart: 2,
+      lineEnd: 2,
+      severity: "CRITICAL",
+      ruleCode: null,
+      issue: "Consumer still reads the old field name.",
+      comment: "The renamed field leaves this read undefined at runtime.",
+      mechanism: "Prefs.reportAutoNavigate was renamed; this untouched consumer was not migrated",
+    };
+
+    function consumerRun(consumersChecked: string[], verdict = "finding", quote = QUOTE) {
+      writeFileSync(join(worktreeRoot, "app", "settings.ts"), SETTINGS);
+      return runReviewPipeline({
+        db,
+        reviewId,
+        worktreeRoot,
+        files: FILES,
+        rules: RULES,
+        profile: "full-context",
+        changedSymbols: SYMBOLS,
+        systemPromptFor: (stage) => `prompt for ${stage}`,
+        run: scripted({
+          ...BASE_ANSWERS,
+          s3_adversarial: {
+            findings: [atConsumer],
+            clearedHunks: [CLEARED_HUNK],
+            sweepDispositions: [CLEARED_SWEEP],
+            symbolDispositions: [
+              { symbol: "Prefs", path: "types.ts", consumersChecked, verdict, reason: "checked" },
+            ],
+          },
+          s5_verification: {
+            verdicts: [
+              {
+                ref: "C1",
+                verdict: "verified",
+                quotedCode: quote,
+                lineStart: 2,
+                lineEnd: 2,
+                note: "read",
+              },
+            ],
+          },
+        }),
+      });
+    }
+
+    it("is kept when a finding verdict names the file, and verified against it", async () => {
+      const result = await consumerRun(["app/settings.ts"]);
+      expect(result.candidatesRaised).toBe(1);
+      expect(result.verified).toBe(1);
+      expect(result.coverage.pendingHunks).toBe(0);
+      const [finding] = listFindings(db, reviewId);
+      expect(finding?.filePath).toBe("app/settings.ts");
+      expect(finding?.repo).toBe("primary");
+      expect(statusOf(finding!)).toBe("verified");
+      expect(finding?.quotedCode).toBe(QUOTE);
+    });
+
+    it("still faces the quote check", async () => {
+      const result = await consumerRun(
+        ["app/settings.ts"],
+        "finding",
+        "export const nav = prefs.autoNavigate;",
+      );
+      expect(result.killedByQuoteCheck).toBe(1);
+      expect(listFindings(db, reviewId)[0]?.killedBy).toBe("quote_check");
+    });
+
+    it("is still refused in an untouched file no disposition names", async () => {
+      await expect(consumerRun(["app/orders.ts"])).rejects.toThrow(/not in the change set/);
+      expect(listFindings(db, reviewId)).toHaveLength(0);
+    });
+
+    it("is refused where only a verified verdict named the file", async () => {
+      // A file the stage's own answer called sound cannot carry its finding.
+      await expect(consumerRun(["app/settings.ts"], "all_consumers_verified")).rejects.toThrow(
+        /not in the change set/,
+      );
+    });
+
+    it("is kept when a later request names the consumer, which the merge drops", async () => {
+      // The merge keeps one disposition per symbol, the first request's.
+      writeFileSync(join(worktreeRoot, "app", "settings.ts"), SETTINGS);
+      const disposition = (verdict: string, consumersChecked: string[]) => ({
+        symbol: "Prefs",
+        path: "types.ts",
+        consumersChecked,
+        verdict,
+        reason: "checked",
+      });
+      const result = await runReviewPipeline({
+        db,
+        reviewId,
+        worktreeRoot,
+        files: FILES,
+        rules: [rule("3", ["typescript"], ["\\bas\\b"]), rule("9", ["general"])],
+        profile: "chunked",
+        changedSymbols: SYMBOLS,
+        systemPromptFor: (stage) => `prompt for ${stage}`,
+        run: async (request) => {
+          if (request.stage !== "s3_adversarial") {
+            return {
+              output:
+                request.stage === "s5_verification"
+                  ? { verdicts: [] }
+                  : (BASE_ANSWERS[request.stage as keyof typeof BASE_ANSWERS] ?? {}),
+              sessionId: "s",
+            };
+          }
+          const second = request.batchNumber === 2;
+          return {
+            output: {
+              findings: second ? [atConsumer] : [],
+              clearedHunks: [CLEARED_HUNK],
+              sweepDispositions: request.prompt.includes("rule 3") ? [CLEARED_SWEEP] : [],
+              symbolDispositions: [
+                second
+                  ? disposition("finding", ["app/settings.ts"])
+                  : disposition("all_consumers_verified", ["app/orders.ts"]),
+              ],
+            },
+            sessionId: "s",
+          };
+        },
+      });
+      expect(result.adversarialRequests).toBe(2);
+      expect(result.candidatesRaised).toBe(1);
+    });
+  });
 });
 
 /**
