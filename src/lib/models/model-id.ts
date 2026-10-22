@@ -8,12 +8,15 @@
  * every id in the registry (`claude-fable-5[1m]`) and the older naming that
  * puts the version first (`claude-3-5-sonnet-<date>`). A rule that says what
  * an id must be, rather than a list of aliases, also refuses aliases nobody
- * has listed yet, such as `sonnet[1m]` or `claude-fable`.
+ * has listed yet, such as `sonnet[1m]` or `claude-fable`. The number is
+ * looked for before any context suffix: the 1 of `[1m]` let
+ * `claude-opus[1m]` pass (D-181 item 3).
  */
 const FULL_ID = /claude-[^\d]*\d/i;
+const CONTEXT_SUFFIX = /\[[^\]]*\]$/;
 
 export function isFullModelId(id: string): boolean {
-  return FULL_ID.test(id.trim());
+  return FULL_ID.test(id.trim().replace(CONTEXT_SUFFIX, ""));
 }
 
 export function aliasRefusal(id: string): string {

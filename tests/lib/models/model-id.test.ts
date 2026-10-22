@@ -23,6 +23,9 @@ describe("which model ids name one model", () => {
     "opusplan",
     "default",
     "claude-fable",
+    // The 1 of a context suffix is no version (D-181 item 3).
+    "claude-opus[1m]",
+    "claude-fable[1m]",
     "",
   ])("refuses %j", (id) => {
     expect(isFullModelId(id)).toBe(false);

@@ -4285,3 +4285,33 @@ verified evidence, in writing, here.
   handling, worktree hooks, path containment, the CLI spawn and its
   environment, the printed interactive commands, reg.exe, the settings and
   data-deletion routes, the UI's rendering and the CI workflow.
+- 2026-10-22 D-181 REVIEW (Claude Code's /code-review at high effort, read
+  only, over a45f73f..97125b1, 375 commits, D-169 item 4; each finding read
+  again here before it was acted on). Nine findings:
+  1. The quote check reads a cited file through insideRoot, which checks
+  the path's text only, so a symlink the reviewed branch commits is read
+  out of the worktree and its contents stored as quotedCode. The context
+  route already contains by real path (D-142, D-143). To fix.
+  2. A dependency's contract change that breaks a primary file the branch
+  never touched cannot be reported: the S3 prompt asks for a finding at
+  the consumer, and D-60's rule, every S3 finding in a hunk of the change
+  set, refuses the whole answer, retried into the same refusal. DECIDED by
+  the maintainer, amending D-60 for this case: an S3 finding may cite a
+  file outside the change set when a symbol disposition names that file
+  among the consumers it checked; it accounts for no hunk and faces the
+  quote check like any other. Rejected: keeping D-60 and asking the model
+  to cite the dependency's hunk, which points the report away from where
+  the code must change; and waiting for 7.3 and 7.4.
+  3. isFullModelId took `claude-opus[1m]` for a full id, the 1 of the
+  context suffix counted as a version. To fix.
+  4. D-180's stand-in is trusted once per process; a temp cleaner removing
+  it later would let another user make it again under a running server.
+  To fix: checked again before it is used.
+  5. The data wipe refused with a bare 500, half done, when a review was
+  made during it. To fix.
+  6. A runtime() whose database or migrations failed kept the lock and,
+  tried again, opened a second handle on the database. To fix.
+  7. Creating a linked review fetches the two clones one after the other.
+  8. The top bar's count of reviews awaiting confirmation loads every row
+  to count them. 9. readCliStatus resolves the CLI twice. These three are
+  efficiency; fixed as they are small.
