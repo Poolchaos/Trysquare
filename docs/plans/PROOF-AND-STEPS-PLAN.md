@@ -90,25 +90,25 @@ in `CLAUDE.md` section 8 stands); a model the app has not probed.
 | --- | --- | --- | --- |
 | WP-A | Run view stuck on one stage: show it, with a test, then send `finished` and `failed` stage events and update the step live. | G1 verdict | TODO |
 | WP-B | Models: probe `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5` and each at `[1m]`; add those that probe usable, each on the profile its window and family give; Opus 5.5 at `[1m]` (or 200k if that is all there is) the recommended default; remove Haiku from the candidates; the demo's default becomes Opus 5.5. | G1 verdict; maintainer go on the probes (given, D-184) | TODO |
-| WP-C | Proof the verifier must give, checked by the app: S5 receives each candidate's rule text, rule code, severity, the finder's quote and comment; a verified verdict must carry `ruleApplies`, its own `severity`, `trigger`, and `evidence`, an ordered path of `{path, lineStart, lineEnd, quote}` from trigger to failure, plus `guardsSearched`; the app quote-checks every evidence step and kills the finding on any that fails; 03 rewritten to say what S5 does. | WP-B, PG-3 | TODO |
-| WP-D | No unproven finding in the report: an open question cannot be confirmed; it can be dismissed, or verified again (a paid request, said before it is sent). | PG-2 | TODO |
-| WP-E | A second, independent verifier: after S5 and the quote check, every verified finding goes to a fresh session on the paired model (PG-1) with the same proof schema; it stays verified only if both verify and both evidence paths pass the quote check; any disagreement makes it an open question, which WP-D keeps out of the report. Pre-flight counts the request. | WP-C, WP-D, PG-1 | TODO |
+| WP-C | Proof the verifier must give, checked by the app: S5 receives each candidate's rule text, rule code, severity, the finder's quote and comment; a verified verdict must carry `ruleApplies`, its own `severity`, `trigger`, and `evidence`, an ordered path of `{path, lineStart, lineEnd, quote}` from trigger to failure, plus `guardsSearched`; the app quote-checks every evidence step and kills the finding on any that fails; 03 rewritten to say what S5 does. | WP-B | TODO |
+| WP-D | No unproven finding in the report: an open question cannot be confirmed; it can be dismissed, or verified again (a paid request, said before it is sent). | WP-C | TODO |
+| WP-E | A second, independent verifier: after S5 and the quote check, every verified finding goes to a fresh session on the paired model (PG-1) with the same proof schema; it stays verified only if both verify and both evidence paths pass the quote check; any disagreement makes it an open question, which WP-D keeps out of the report. Pre-flight counts the request. | WP-C, WP-D | TODO |
 | WP-F | The picker and pre-flight say what each model gets: "the whole ruleset in one pass", "one pass per rule theme, N passes", or "each file against the rules that apply to it"; a plain line on the non-recommended ones that accuracy may fall; and a request count that includes every stage, the splits and the second verifier, not S3's batches alone. | WP-B, WP-E | TODO |
 | WP-G | Five steps a person reads, mapped onto the stages: Understand the rules (S0's frozen ruleset and sweeps), Understand the change (S1, S2), Find issues (S3, S4), Prove each finding (S5, the quote check, the second verifier), Report (S6, your confirmation, the report). Labelled on the bar, live counts per step (candidates raised, proven, refuted, discarded by the quote check, open), and the same five steps summarised on a finished review, refuted and discarded told apart. Design shown to the maintainer before it is built (PG-4). | WP-A, WP-E, PG-4 | TODO |
 | WP-H | Fresh evidence: the fixture reviewed on the new engine with Opus 5.5 on Windows, scored against the key, every finding's evidence path read. | WP-B to WP-G; maintainer go on spend | TODO |
 
 ## 4. Decision gates (maintainer)
 
-- **PG-1: the second verifier's model.** (a) The other recommended family:
+- **PG-1: the second verifier's model. RESOLVED (a), D-185.** (a) The other recommended family:
   a review on Opus 5.5 is verified again by Fable 5.1, a review on Fable by
   Opus 5.5, any other by Opus 5.5. (b) One verifier model chosen on
   Settings. Recommended: (a), with the review refused at Start, saying why,
   when the paired model has not probed usable.
-- **PG-2: an open question at confirmation.** (a) It cannot be confirmed;
+- **PG-2: an open question at confirmation. RESOLVED (a), D-185.** (a) It cannot be confirmed;
   dismiss it, or verify it again. (b) It can be confirmed but the report
   lists it apart as unproven. Recommended: (a), the maintainer's "proven a
   real issue".
-- **PG-3: severity disagreement.** (a) The verifier's severity stands, the
+- **PG-3: severity disagreement. RESOLVED (a), D-185.** (a) The verifier's severity stands, the
   finder's kept beside it. (b) The lower of the two. (c) It becomes an open
   question. Recommended: (a); a disagreement on how bad is not a doubt that
   it is real, and the person confirming sees both. A verifier answering that

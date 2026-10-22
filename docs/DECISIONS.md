@@ -4391,3 +4391,17 @@ verified evidence, in writing, here.
   Grep and Glob only, checked after each call), and Haiku is already
   refused for a review. The smaller choices the plan raises are PG-1 to
   PG-4 there, each with a recommendation, not yet decided.
+- 2026-10-22 D-185 DECIDED by the maintainer, the proof-and-steps plan's
+  gates PG-1 to PG-3, each the plan's recommendation:
+  1. PG-1 (a): the second verifier is the other strong family, a review on
+  Opus 5.5 verified again by Fable 5.1, one on Fable by Opus 5.5, any other
+  by Opus 5.5; Start is refused, saying why, when the paired model has not
+  probed usable. Rejected: one verifier model chosen on Settings.
+  2. PG-2 (a): an open question cannot be confirmed; it is dismissed, or
+  verified again as a paid request said before it is sent, so only proven
+  findings reach the report. Rejected: confirmable and listed as unproven.
+  3. PG-3 (a): when both agree a finding is real but rate it differently,
+  the verifier's severity stands with the finder's shown beside it; a
+  verifier answering that the rule does not apply kills it. Rejected: the
+  lower of the two, and treating a disagreement as unproven.
+  PG-4, the steps view's mockup, is still to be shown.
