@@ -4369,3 +4369,25 @@ verified evidence, in writing, here.
   $0.9985; this run's higher cost is not explained by anything measured
   here. Evidence, git-ignored: review/2026-10-22-fg2/151004-claude-fable-5-1m/
   (events.jsonl, score.json, findings.json).
+- 2026-10-22 D-184 DECIDED by the maintainer, asked together after reading
+  what exists (`plans/PROOF-AND-STEPS-PLAN.md` section 2):
+  1. Models: the 5.5 family is probed and added where usable, Opus 5.5 the
+  recommended default; the others stay selectable with a plain line that
+  accuracy may fall; Haiku is removed from the candidates and the demo
+  defaults to Opus 5.5. The probes, a handful of tiny calls, may spend.
+  2. Proof: a finding reaches the report only with evidence the app
+  checks, a code path from trigger to failure quoted step by step, the rule
+  and severity judged by the verifier, open questions kept out of the
+  report unproven, and a second independent verifier on a different strong
+  model, both agreeing. Rejected: the checked evidence alone, and a second
+  verifier for CRITICAL only.
+  3. Splitting: the profiles stay; the picker and pre-flight say what each
+  model gets. Rejected: a few-rules-per-round mode, and splitting a
+  full-context model's ruleset in two.
+  4. Order: the G1 verdict is given on MVP 7.3's run first; the plan is
+  built after, and the fixture run again on the new engine as fresh
+  evidence. Rejected: building first, and planning only.
+  Also said, from the code: a review stage cannot spawn subagents (Read,
+  Grep and Glob only, checked after each call), and Haiku is already
+  refused for a review. The smaller choices the plan raises are PG-1 to
+  PG-4 there, each with a recommendation, not yet decided.

@@ -1,0 +1,132 @@
+# Proof and steps plan
+
+Status: DRAFT, written 2026-10-22. Decided by the maintainer the same day
+(D-184); built only after the G1 verdict on MVP 7.3's run.
+
+## 0. How to work this plan (non-negotiable)
+
+This document is written for an AI driver to execute work package by work
+package. It plans; it does not code. All `CLAUDE.md` rules apply on top of
+this plan, in particular: one feature at a time, prove before done, commit
+only when asked.
+
+Definition of done for every work package:
+
+- One WP per branch/diff; no batching.
+- `./verify.sh --e2e` exits 0, run unpiped, and every test a WP adds was
+  first shown failing on the code before it.
+- The real flow is driven at runtime, not just typechecked.
+- Every doc the WP makes stale is updated in the same diff.
+- The WP row below is marked DONE with the commit hash, in the same session.
+- Open decisions are asked, or the WP is scoped so the decision is not
+  needed yet. Do not guess.
+
+Work top to bottom through unblocked items without asking; skip blocked
+items until their input lands, never wait on them. Anything that calls a
+model spends the maintainer's usage and needs their go, given per WP below.
+
+## 1. Goal and non-goals
+
+The maintainer, 2026-10-22: "I want to ensure the AI is 100% confident in
+findings and should be proven a real issue", with Opus 5.5 recommended, the
+other models offered with a plain word about accuracy, no Haiku, and the
+review shown as a step-by-step visualisation.
+
+No software makes a model 100% right. What this plan makes true is that a
+finding reaches the report only with proof the app itself checked: a code
+path from trigger to failure, every step of it quoted and matched against
+the checkout, judged by two independent verifiers on different models, and
+then confirmed by a person. A finding that cannot carry that is never
+reported as proven.
+
+Goals:
+
+1. The 5.5 family offered, Opus 5.5 the recommended default, every model's
+   way of dividing the work and its accuracy risk said in the picker.
+2. Proof a finding must carry, checked by the app, before it can be
+   confirmed into the report.
+3. A second, independent verifier on a different strong model.
+4. The run shown as five steps a person reads, with live counts.
+
+Non-goals: new splitting modes (the profiles stay as they are, D-184
+item 3); executing code or tests to reproduce a finding (the read-only law
+in `CLAUDE.md` section 8 stands); a model the app has not probed.
+
+## 2. What exists (read 2026-10-22, the evidence for each claim)
+
+- Profiles already divide the work by window: full-context sends the whole
+  ruleset in one pass (Fable and Opus at [1m]); chunked sends one pass per
+  rule theme over all files (200k Fable and Opus, Sonnet [1m]); decomposed
+  sends each file only the themes that match it (Sonnet 200k). S5 verifies
+  every candidate on every profile. `src/lib/rulesets/compose.ts:208-263`,
+  `docs/06-MODELS-AND-PROFILES.md` section 3.
+- Shipped candidates are code (`src/server/engine/probe.ts:349-408`); none
+  of the 5.5 family; Haiku is registered mechanical-only and refused for a
+  review (`src/lib/review/profiles.ts:59-85`), but is the fixture demo's
+  default (`scripts/demo-fixture.ts:51`).
+- A review stage cannot spawn subagents: Read, Grep and Glob only, checked
+  after every call (`src/server/engine/headless.ts:391-403`).
+- S5 gets the finding's path, lines, severity, issue and mechanism, not its
+  rule, its comment or a quote (`src/server/review/pipeline.ts:638-650`); it
+  answers a verdict, a quote, lines and a note, with no field for severity,
+  rule or evidence (`src/lib/review/stage-schemas.ts:110-129`). The quote
+  check proves the cited code exists at those lines, not the mechanism
+  (`src/lib/review/quote-match.ts:91-116`). The finder and the verifier are
+  one model. An open question can be confirmed into the report with no
+  quote check (`src/lib/domain/state-machines.ts:121`).
+- 03 says S5 receives a "quoted claim" and must "confirm mechanism" and
+  "confirm severity" (`docs/03-REVIEW-PIPELINE.md:155-166`); the code does
+  neither. A stale record, fixed in WP-C.
+- The run view (`src/app/reviews/[id]/page.tsx:1730-1982`) shows seven
+  technical stage names on an unlabelled bar; only stage `started` events
+  are ever sent (`src/server/jobs/manager.ts:391-400`), and the page re-reads
+  its snapshot only on status changes (`page.tsx:586`), so by reading it
+  likely shows "Risk" through S2 to S4 (unverified). No live finding
+  counts; refuted and quote-check kills are listed as one.
+
+## 3. Work packages
+
+| WP | Scope | Blocked on | Status |
+| --- | --- | --- | --- |
+| WP-A | Run view stuck on one stage: show it, with a test, then send `finished` and `failed` stage events and update the step live. | G1 verdict | TODO |
+| WP-B | Models: probe `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5` and each at `[1m]`; add those that probe usable, each on the profile its window and family give; Opus 5.5 at `[1m]` (or 200k if that is all there is) the recommended default; remove Haiku from the candidates; the demo's default becomes Opus 5.5. | G1 verdict; maintainer go on the probes (given, D-184) | TODO |
+| WP-C | Proof the verifier must give, checked by the app: S5 receives each candidate's rule text, rule code, severity, the finder's quote and comment; a verified verdict must carry `ruleApplies`, its own `severity`, `trigger`, and `evidence`, an ordered path of `{path, lineStart, lineEnd, quote}` from trigger to failure, plus `guardsSearched`; the app quote-checks every evidence step and kills the finding on any that fails; 03 rewritten to say what S5 does. | WP-B, PG-3 | TODO |
+| WP-D | No unproven finding in the report: an open question cannot be confirmed; it can be dismissed, or verified again (a paid request, said before it is sent). | PG-2 | TODO |
+| WP-E | A second, independent verifier: after S5 and the quote check, every verified finding goes to a fresh session on the paired model (PG-1) with the same proof schema; it stays verified only if both verify and both evidence paths pass the quote check; any disagreement makes it an open question, which WP-D keeps out of the report. Pre-flight counts the request. | WP-C, WP-D, PG-1 | TODO |
+| WP-F | The picker and pre-flight say what each model gets: "the whole ruleset in one pass", "one pass per rule theme, N passes", or "each file against the rules that apply to it"; a plain line on the non-recommended ones that accuracy may fall; and a request count that includes every stage, the splits and the second verifier, not S3's batches alone. | WP-B, WP-E | TODO |
+| WP-G | Five steps a person reads, mapped onto the stages: Understand the rules (S0's frozen ruleset and sweeps), Understand the change (S1, S2), Find issues (S3, S4), Prove each finding (S5, the quote check, the second verifier), Report (S6, your confirmation, the report). Labelled on the bar, live counts per step (candidates raised, proven, refuted, discarded by the quote check, open), and the same five steps summarised on a finished review, refuted and discarded told apart. Design shown to the maintainer before it is built (PG-4). | WP-A, WP-E, PG-4 | TODO |
+| WP-H | Fresh evidence: the fixture reviewed on the new engine with Opus 5.5 on Windows, scored against the key, every finding's evidence path read. | WP-B to WP-G; maintainer go on spend | TODO |
+
+## 4. Decision gates (maintainer)
+
+- **PG-1: the second verifier's model.** (a) The other recommended family:
+  a review on Opus 5.5 is verified again by Fable 5.1, a review on Fable by
+  Opus 5.5, any other by Opus 5.5. (b) One verifier model chosen on
+  Settings. Recommended: (a), with the review refused at Start, saying why,
+  when the paired model has not probed usable.
+- **PG-2: an open question at confirmation.** (a) It cannot be confirmed;
+  dismiss it, or verify it again. (b) It can be confirmed but the report
+  lists it apart as unproven. Recommended: (a), the maintainer's "proven a
+  real issue".
+- **PG-3: severity disagreement.** (a) The verifier's severity stands, the
+  finder's kept beside it. (b) The lower of the two. (c) It becomes an open
+  question. Recommended: (a); a disagreement on how bad is not a doubt that
+  it is real, and the person confirming sees both. A verifier answering that
+  the rule does not apply kills the finding.
+- **PG-4: the steps view.** A mockup of the five steps, live and finished,
+  in both themes, shown before WP-G is built.
+
+## 5. Cost, said before it is spent
+
+WP-B: about six probe calls, each a tiny request. WP-E adds one verification
+request per review (plus at most one schema-repair round) on the paired
+model, uncached; S5 is one request for every candidate today, by the code
+(`src/server/review/pipeline.ts:632-663`). WP-H is one fixture
+run; MVP 7.3's cost $5.2976 cost-equivalent on Fable without a second
+verifier. No figure is claimed for the second verifier's cost until WP-H
+measures it.
+
+## 6. Review cadence
+
+A structured review pass after every 3-4 completed WPs and before anything
+goes external. Findings numbered and fixed before new WPs start.

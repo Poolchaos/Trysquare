@@ -48,6 +48,7 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/AUDIT-2026-10-16-GLM.md](plans/AUDIT-2026-10-16-GLM.md) | The 2026-10-16 audit: gate results on Windows, the unit-failure taxonomy, security findings, open work, and a cross-check against the parallel audit. Read-only report; nothing in it was fixed. |
 | [plans/AUDIT-2026-10-16.md](plans/AUDIT-2026-10-16.md) | The parallel 2026-10-16 audit: finding IDs W, S, E, A, U, T, R, D with proof per finding, and the evidence behind each disagreement with the GLM report. Read-only report. |
 | [plans/MVP-PLAN.md](plans/MVP-PLAN.md) | The MVP: three-OS support, security, engine fixes, spend safety, Claude connect, then the G1 and G2 verdicts. Seven phases, decision gates MG-1..MG-10. RATIFIED 2026-10-16 (D-86). |
+| [plans/PROOF-AND-STEPS-PLAN.md](plans/PROOF-AND-STEPS-PLAN.md) | After the MVP: the 5.5 models, proof a finding must carry and a second verifier, and the run shown as five steps. DRAFT 2026-10-22 (D-184), built after the G1 verdict. |
 
 ## Specs
 
@@ -101,3 +102,5 @@ reality disagree, reality wins and both get fixed in the same session.
 - 2026-10-16: `plans/AUDIT-2026-10-16.md` added: the parallel session's
   audit with finding IDs, and its cross-check of the GLM report.
   `plans/MVP-PLAN.md` added: the MVP planned against both audits (D-85).
+- 2026-10-22: `plans/PROOF-AND-STEPS-PLAN.md` added: the maintainer's
+  D-184 asks planned against what exists, built after the G1 verdict.
