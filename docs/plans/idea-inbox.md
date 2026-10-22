@@ -76,6 +76,9 @@ pulled deliberately.
   signal, exit and uncaught-error tracing in the server that recorded only
   its start. Not leftover unit-test processes (none lingered, and unit then
   e2e passed). Next occurrence: trace again before guessing at a cause.
+- 2026-10-22: README's three screenshots (docs/images) were last taken in
+  c09b2ad on 2026-08-25, and the screens have changed since, last in
+  3169502. Re-shoot them from the theme pass and compare (D-179).
 
 ## Retired
 

@@ -8,13 +8,13 @@ Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
 ## Status
 
 - 2026-10-22: the MVP (`plans/MVP-PLAN.md`) is built but for what spends
-  usage: every row of phases 1 to 7.1 is DONE except 4.2, a measurement
+  usage: every row of phases 1 to 7.2 is DONE except 4.2, a measurement
   that spends, and 3.7's hand-drive of Mode B, folded into 7.4. Left are
-  this records pass (7.2), then 4.2, a fresh real run of the fixture on
-  Windows for the G1 verdict (7.3) and the maintainer's own review (7.4),
-  each waiting for the maintainer's go on spend. `./verify.sh --build
-  --e2e` exits 0 on the maintainer's Windows 11 machine at 89901b5, with
-  1171 unit tests passing, 8 skipped, and 99 browser tests, and CI passes
+  4.2, a fresh real run of the fixture on Windows for the G1 verdict (7.3)
+  and the maintainer's own review (7.4), each waiting for the
+  maintainer's go on spend. `./verify.sh --build --e2e` exits 0 on the
+  maintainer's Windows 11 machine at 89901b5, with 1171 unit tests
+  passing, 8 skipped, and 99 browser tests, and CI passes
   it on `ubuntu-latest`, `windows-latest` and `macos-latest` at every
   push (run 39766201111 at 89901b5). Real models have run on Linux only.
 - 2026-10-16: two audits on the maintainer's Windows 11 machine found the

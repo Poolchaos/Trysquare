@@ -4240,3 +4240,25 @@ verified evidence, in writing, here.
   answered `/` with 200, its log said nothing of it, and CLAUDE.md was
   unchanged. Rejected: committing the block, and gitignoring the change,
   which cannot be done for a tracked file.
+- 2026-10-22 D-179 DONE (MVP 7.2, the records pass), each commit pushed
+  once the one before it passed CI on all three, unit tests from
+  `./verify.sh` for the docs: 06 re-verified against the bundled CLI,
+  D-177 (e665683; 1171, CI run 39769651393); the inbox's built and decided
+  entries retired (a8148e6; 1171, CI run 39771814027); README and RUNBOOK
+  name the OSes, the CLI floor and the sign-in check (ef25522; 1171, CI run
+  39773436939); PROJECT-STATE brought up to the code, and CLAUDE.md's
+  dated proof of its commands moved there after each was run again
+  (e16c5d5; 1171, CI run 39774595523); `next dev` kept out of CLAUDE.md,
+  D-178 (3826aab; 1171 and 99 from `./verify.sh --e2e`, CI run
+  39776141378); the stale plan rows closed (d60a550; 1171, CI run
+  39777897643). The audit findings were gathered by a separate read-only
+  agent and each read again here before it was acted on.
+  Left as they stand: GATES' G3 row cites the 2026-08-18 e2e run's counts,
+  dated evidence, not a claim about now; the `review/` evidence GATES and
+  PROJECT-STATE cite is git-ignored and not on this machine, which
+  PROJECT-STATE now says. The four 2026-07-30 WP-E entries appear twice in
+  this log, the second set a rewording of the first that adds nothing;
+  both stand, the log being append-only, and both name
+  `--setting-sources user`, which D-124 made `""`. Whether README's
+  screenshots, last taken in c09b2ad, still match the screens is unknown
+  and in the idea inbox.
