@@ -16,9 +16,6 @@ pulled deliberately.
 - 2026-08-04: a risk-tagged variant of the quality gate, so the risk-first
   ordering is exercised with non-empty tags somewhere outside the pipeline
   tests.
-- 2026-08-04: S3 ruleCode arrives from real models as prose ("Rule 11")
-  where the ruleset speaks bare codes ("11"); normalise or validate at the
-  stage boundary (observed in both clean fable runs, D-59).
 - 2026-10-17: parseUnifiedDiff reads the empty line after a diff's final
   newline as one more context line of the last hunk (src/lib/git/diff.ts,
   the `line === ""` branch), so that hunk holds one line more than its
@@ -26,6 +23,9 @@ pulled deliberately.
 - 2026-10-17: the probe's candidate models (fable-5, opus-5, sonnet-5,
   haiku-4-5) trail the bundled CLI 2.1.301's own model table, which lists
   fable-5-1, opus-5-5, sonnet-5-5 and haiku-5-5 (found during 4.7, D-122).
+  Read again in D-177 from the bundled binary. Whether to add them, and
+  which become the recommended defaults, is the maintainer's call: each
+  needs a probe to show this account can use it, and a probe spends.
 - 2026-10-17: the CLI 2.1.301 swapped claude-opus-4-1-20250805 for
   claude-opus-5-5 without a word (D-123), so a review on a retired model id
   would record a model it did not run.
@@ -45,14 +45,6 @@ pulled deliberately.
   gone two seconds after its server's SIGKILL, once, on macOS (CI run
   39420099693, D-148). Not root-caused; since 4aa31fa a recurrence says how
   the CLI ended. Read that note when it comes, and fix the cause.
-- 2026-10-20: the maintainer passed on a colleague's note about Claude Code's
-  built-in skills. Proposed: /security-review once before anything goes
-  external, after 7.2; /code-review read-only (never --fix) as a second
-  reviewer in a review round, once it is known to keep to one subagent;
-  not /simplify, which applies its own changes; the third-party grill
-  plugin only with the maintainer's OK. DECIDED in D-169: /security-review
-  after 7.2 and /code-review read-only, as proposed; neither /simplify nor
-  grill.
 - 2026-10-21: the checkout's check of every tracked file (7b4a586) has a
   600 s ceiling on git hash-object, measured only up to 3,436 files in
   489 ms, a private working tree on the maintainer's Windows machine
@@ -84,11 +76,6 @@ pulled deliberately.
   signal, exit and uncaught-error tracing in the server that recorded only
   its start. Not leftover unit-test processes (none lingered, and unit then
   e2e passed). Next occurrence: trace again before guessing at a cause.
-- 2026-10-22 The maintainer's call: whether the shipped model candidates
-  gain the bundled 2.1.301 catalog's latest ids, claude-fable-5-1,
-  claude-opus-5-5, claude-sonnet-5-5 and claude-haiku-5-5, and which become
-  the recommended defaults. Each needs a probe to show this account can use
-  it, and a probe spends (D-177).
 
 ## Retired
 
@@ -133,3 +120,16 @@ the line entirely would lose the trail.
   file naming them, at the cost of the patterns' reach and of a list no
   reader can review, with history keeping every literal regardless.
   DECIDED in D-169, BUILT in D-171.
+- 2026-08-04: S3 ruleCode arrives from real models as prose ("Rule 11")
+  where the ruleset speaks bare codes ("11"); normalise or validate at the
+  stage boundary (observed in both clean fable runs, D-59).
+  BUILT in daca225 (2026-08-17): src/lib/review/rule-codes.ts reads a
+  prose code back to the ruleset's own.
+- 2026-10-20: the maintainer passed on a colleague's note about Claude Code's
+  built-in skills. Proposed: /security-review once before anything goes
+  external, after 7.2; /code-review read-only (never --fix) as a second
+  reviewer in a review round, once it is known to keep to one subagent;
+  not /simplify, which applies its own changes; the third-party grill
+  plugin only with the maintainer's OK. DECIDED in D-169: /security-review
+  after 7.2 and /code-review read-only, as proposed; neither /simplify nor
+  grill.
