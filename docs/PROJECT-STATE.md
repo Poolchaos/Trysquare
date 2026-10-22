@@ -3,10 +3,20 @@
 The live cache. Current facts only; if a change makes a line here wrong,
 fixing it is part of that change. Dates are absolute (YYYY-MM-DD).
 
-Last verified: 2026-08-18
+Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
 
 ## Status
 
+- 2026-10-22: the MVP (`plans/MVP-PLAN.md`) is built but for what spends
+  usage: every row of phases 1 to 7.1 is DONE except 4.2, a measurement
+  that spends, and 3.7's hand-drive of Mode B, folded into 7.4. Left are
+  this records pass (7.2), then 4.2, a fresh real run of the fixture on
+  Windows for the G1 verdict (7.3) and the maintainer's own review (7.4),
+  each waiting for the maintainer's go on spend. `./verify.sh --build
+  --e2e` exits 0 on the maintainer's Windows 11 machine at 89901b5, with
+  1171 unit tests passing, 8 skipped, and 99 browser tests, and CI passes
+  it on `ubuntu-latest`, `windows-latest` and `macos-latest` at every
+  push (run 39766201111 at 89901b5). Real models have run on Linux only.
 - 2026-10-16: two audits on the maintainer's Windows 11 machine found the
   app did not install, test or run there (`plans/AUDIT-2026-10-16.md`
   section 2). The same day MVP phases 1 to 3 made it green there and on all
@@ -18,11 +28,12 @@ Last verified: 2026-08-18
   `plans/MVP-PLAN.md` (D-85), with G1 re-scoped to cover Linux, Windows and
   macOS (D-86).
 - Gate G0 (brief and plan) PASSED 2026-07-30. Gate G1 (working pipeline) is
-  ACTIVE with all evidence captured, including the 2026-08-04 real-engine
-  smoke runs (haiku refusal D-57, the symbol-path fix D-58, two clean fable
-  runs at 8/8): see `plans/FG2-CHECKLIST.md` and `review/2026-08-04-fg2/`.
-  The verdict is the maintainer's, and nothing in this repository marks it
-  passed.
+  ACTIVE. Its Linux evidence is the 2026-08-04 real-engine smoke runs (haiku
+  refusal D-57, the symbol-path fix D-58, two clean fable runs at 8/8): see
+  `plans/FG2-CHECKLIST.md` and `review/2026-08-04-fg2/`, a directory git
+  ignores and which this Windows machine does not hold. Re-scoped on 2026-10-16
+  (D-86), it also needs the fresh Windows run of MVP 7.3. The verdict is
+  the maintainer's, and nothing in this repository marks it passed.
 - The app is usable end to end. A person can add a project from a git URL, see
   its branches, set up a review with a pre-flight estimate, watch it run,
   decide every finding, complete it, and export a report.
@@ -39,17 +50,17 @@ Last verified: 2026-08-18
   widget dashboard at `/`, a full-screen scan theater, a queue-first review
   screen and a rendered report. `plans/UX-UPLIFT-PLAN.md` and
   `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; three rows are
-  open (WP-G completion moment, WP-K queue phone layout, WP-L my branches).
-  What remains beyond them is the two maintainer judgments, the G1 verdict
-  and the FG-4 design acceptance, whose current argument is
+  open (WP-G completion moment, WP-K queue phone layout, WP-L my branches),
+  outside the MVP (its non-goals). The FG-4 design acceptance is now part of
+  G3, the public release after the MVP (D-86); its argument is
   `review/2026-08-18-fg4/DESIGN-NOTES.md`.
 - The two external AI plans never arrived. They fold in as spec amendments if
   they do; they did not block the build.
 
-## Stack (installed and proven 2026-07-31)
+## Stack (installed and proven on each machine on the date given)
 
 Linux, 2026-07-31: Node 22.22.1, npm 11.17.0, git 2.43.0, Claude Code 2.1.71.
-Windows 11, 2026-10-16: Node 22.17.0, npm 10.9.2, git 2.50.0.windows.1,
+Windows 11, 2026-10-22: Node 22.17.0, npm 10.9.2, git 2.50.0.windows.1,
 Claude Code 2.1.301 (the bundled CLI, D-92). Review stages now refuse a CLI
 below 2.1.301 (D-91), so the Linux line's CLI would be refused today.
 
@@ -63,12 +74,15 @@ TypeScript runs strict plus `noUncheckedIndexedAccess`,
 
 ## Commands
 
-See `CLAUDE.md` section 3. `./verify.sh` is the single gate. On Linux it
-passes with `--e2e` at df94bb0: CI run 33740537490 (ubuntu-latest,
-2026-09-03) reported 726 unit tests passing and 6 skipped across 47 files,
-plus 41 browser tests (the journey, the failure paths, the theme and
+See `CLAUDE.md` section 3, whose commands were last re-proven on this
+Windows 11 machine on 2026-10-22: `./verify.sh`, with `--build` and
+`--e2e`, `npm run dev`, `npm run start`, `npm test`, `npm run typecheck`,
+`npm run lint`, `npm run format`, `npm run e2e` and `npm run
+db:generate`. `./verify.sh` is the single gate. At 89901b5 it passes
+with `--e2e` on Windows 11, 1171 unit tests passing and 8 skipped, plus
+99 browser tests (the journey, the failure paths, the theme and
 screenshot pass, the phone-width pass, and axe over every screen in both
-themes). `--e2e` implies `--build` since 2026-08-18, because Playwright serves
+themes; the shutdown pass runs on Linux and macOS only). `--e2e` implies `--build` since 2026-08-18, because Playwright serves
 the last build and without it the browser gate can pass against output that
 predates the change under test (D-70). CI runs `./verify.sh --build --e2e`
 and then the fake demo on Ubuntu, Windows and macOS (MVP WP 3.6); the local
@@ -101,6 +115,8 @@ are accepted; anything else is refused by name.
 - `stageTimeoutMinutes` (default 20).
 - `stageMaxBudgetUsd` (default 15). A ceiling on any single model call; zero
   removes the ceiling.
+- `claudePath` (default empty). The CLI reviews run through, which
+  `TRYSQUARE_CLAUDE_PATH` wins over (D-152).
 
 ## Structure
 
@@ -122,6 +138,11 @@ are accepted; anything else is refused by name.
   runner that makes a resumed stage free, the service that runs a review from
   a row, merged detection, and the report assembler.
 - `src/server/jobs/` - the event bus, the job manager, and the SSE stream.
+- `src/server/projects/` - cloning a project in the background.
+- `src/server/runtime.ts` - the one door to the database and the job
+  manager; `data-dir-lock.ts` - one server per data directory;
+  `cli-path.ts` and `cli-readiness.ts` - which CLI reviews use and whether
+  it can run one; `real-path.ts` - a path resolved through its links.
 - `src/server/api/` - one response shape for every route.
 - `src/proxy.ts` - the request guard in front of every route (MVP WP 2.3).
 - `src/app/api/` - 35 route handlers. `src/app/` - 9 screens, plus a root
@@ -129,13 +150,15 @@ are accepted; anything else is refused by name.
 - `src/components/` - the shared UI vocabulary, the top bar, and the
   confirmation queue.
 - `scripts/` - the house-style gate, the leak gate, the nothing-hidden gate,
-  the dead-export gate, and the fixture demo.
+  the dead-export gate, the fixture demo, and `claude.ts`, which `npm run
+  claude` runs to sign in the CLI reviews use (MVP 6.3).
 - `tests/fixtures/example-protocol.md` - the public sample protocol the
   fidelity gate runs against.
 - `tests/fixtures/fake-claude.mjs` - stand-in CLI, so tests are hermetic and
   cost nothing.
 - `tests/` - unit and integration tests. `e2e/` - the browser journey, the
-  theme and screenshot pass, and the axe accessibility pass.
+  failure paths, the theme and screenshot pass with the axe accessibility
+  pass, and the shutdown pass.
   `drizzle/` - twelve committed migrations.
 - `verify.sh` - the gate.
 
@@ -173,6 +196,7 @@ own now (D-75, D-81).
 
 - More than one dependency per review: the model and the screens take a
   single linked project.
+- More than one ruleset per review, so tiers compose: designed, not built.
 - Emailing a report (`plans/idea-inbox.md`).
 - Any authentication. This is a local, single-user tool by design.
 
@@ -183,7 +207,10 @@ None. Reviews run through the local Claude Code CLI, installed with the app
 Claude Code, by default: API keys and paid providers in the server's
 environment are kept from it, a sign-in that bills per token, or may, is
 said on Settings and before Start, and a review on one starts only once
-its page has said so (D-161, D-162); see `06-MODELS-AND-PROFILES.md`.
+its page has said so (D-161, D-162). The CLI gets only what it needs to
+run and the sign-in (D-174); a managed Claude Code policy, which no flag
+keeps out, is said where one is found (D-175); see
+`06-MODELS-AND-PROFILES.md`.
 The CLI is Anthropic's, "All rights reserved. Use is subject to the Legal
 Agreements" at
 <https://code.claude.com/docs/en/legal-and-compliance>, and each user

@@ -84,7 +84,7 @@ starts. The maintainer can trigger one at any time with "review".
 
 ## 3. Commands (the CI gate)
 
-All proven on this machine, last re-proven 2026-08-03.
+Where and when each was last proven: `docs/PROJECT-STATE.md`, Commands.
 
 - `./verify.sh` - the single gate. Lint, format check, typecheck, house style,
   private-material leak check, nothing-hidden-from-git check, dead-export
