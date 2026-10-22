@@ -87,9 +87,14 @@ afterAll(async () => {
   delete process.env.TRYSQUARE_DATA;
 });
 
-/** Waits for the background clone to land, which is what the UI polls for. */
+/**
+ * Waits for the background clone to land, which is what the UI polls for.
+ * Twenty seconds, as danger-zone.test.ts allows: five was enough alone and
+ * not on a loaded Windows runner, where a clone outlasted it (CI run
+ * 39861306604, on a commit that changed only docs).
+ */
 async function projectReady(id: string): Promise<Record<string, unknown>> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  for (let attempt = 0; attempt < 400; attempt += 1) {
     const body = (await (await routes.projects.GET()).json()) as {
       projects: { id: string; cloneStatus: string; cloneError: string | null }[];
     };
