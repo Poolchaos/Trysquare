@@ -546,7 +546,7 @@ U11 extracts the seam first, then builds against it.
 - Proof: unit tests for the watcher (answer, timeout, malformed output);
   an e2e round trip where the test writes the output file, per T15.
 
-### U12. The suite and the truth pass (T17 + T19). PART DONE 2026-08-04
+### U12. The suite and the truth pass (T17 + T19). DONE 2026-08-04
 
 Landed: axe (WCAG 2 A and AA) over every screen in both themes plus the
 completed review, which found three real violations on first run, all fixed

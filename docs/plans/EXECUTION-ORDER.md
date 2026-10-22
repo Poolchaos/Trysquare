@@ -443,32 +443,31 @@ T19 last. FG-2 after T9; FG-3 after T15; FG-4 after T18.
 | T15  | T10 (T9 for Mode B) | DONE |
 | FG-3 | T15        | GATE   |
 | T16  | T14, T15   | DONE   |
-| T17  | T13-T16    | PART   |
+| T17  | T13-T16    | DONE   |
 | T18  | T7, T9     | GATE   |
-| T19  | T17, T18   | PART   |
+| T19  | T17, T18   | DONE   |
 | FG-4 | T18, T19   | GATE   |
 
-Status as of 2026-08-04. T14 is done: the confirmation queue is the two-pane
-screen 04 specifies, with the rule text, the diff hunk, the edit-comment path
-and the full key map. T15 is done, including Mode B, the interactive engine
-that exchanges prompt and answer files with a session you run yourself. T16 is
+Status as of 2026-08-04, with T17 and T19 brought up to 2026-10-22. T14 is
+done: the confirmation queue is the two-pane screen 04 specifies, with the
+rule text, the diff hunk, the edit-comment path and the full key map. T15
+is done, including Mode B, the interactive engine that exchanges prompt and
+answer files with a session you run yourself. T16 is
 done: tokens, states, per-page titles, the 40px floor, reduced motion, the
 settings and list screens, and the FG-4 design notes with both-theme
 screenshots.
 
-T17 is part done: axe now checks WCAG AA on every screen in both themes, and
-the browser suite walks the three endings that are not success (a usage limit
-pausing and resuming, a cancel mid-run, a delete). What is left is the fixture
-work, which is tracked in M4-FINISH-PLAN.md under U12.
+T17 is done: axe checks WCAG AA on every screen in both themes, the
+browser suite walks the three endings that are not success (a usage limit
+pausing and resuming, a cancel mid-run, a delete), and the fixture work
+landed with U12 in M4-FINISH-PLAN.md on 2026-08-04.
 
 T18 is the real-engine proof and is maintainer-gated: it spends real usage
-(D-31), and nothing runs it without an explicit instruction. T19's records
-pass is part done: the specs, PROJECT-STATE, the runbook and the README are
-current; the dead-export sweep is outstanding.
+(D-31), and nothing runs it without an explicit instruction. T19 is done:
+the dead-export sweep became a gate in `./verify.sh` (MVP 7.1, D-172), and
+the records pass is MVP 7.2 (2026-10-22).
 
-T10 and T12 are partially built (routes for projects, branches, reviews,
-rulesets, models, events; screens for projects, new review, live review,
-reviews list, rulesets import, settings). The remainder of T10-T17, the FG-2
-evidence, and the defects found in the shipped slice are planned to commit
-level in [M3-FINISH-PLAN.md](M3-FINISH-PLAN.md) (V1-V9, decisions
-D-30..D-44). That plan is the driver's working order for M3.
+The work since is ordered by [MVP-PLAN.md](MVP-PLAN.md) (D-85), which
+supersedes this table for anything not marked DONE here. T10 to T16 were
+finished through [M3-FINISH-PLAN.md](M3-FINISH-PLAN.md) (V1-V9, decisions
+D-30..D-44) and M4-FINISH-PLAN.md.
