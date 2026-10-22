@@ -30,7 +30,6 @@ const ROOT = resolve(import.meta.dirname, "..");
 const PRODUCTION = ["src", "scripts"];
 const SOURCE = /\.(ts|tsx|mts|mjs)$/;
 
-/** Names Next.js reads from a file it loads by its path, by where that file is. */
 // A segment's config, read from a route, a page or a layout alike.
 const SEGMENT_CONFIG = [
   "dynamic",
@@ -42,6 +41,8 @@ const SEGMENT_CONFIG = [
   "maxDuration",
   "generateStaticParams",
 ];
+
+/** Names Next.js reads from a file it loads by its path, by where that file is. */
 const FRAMEWORK = [
   {
     file: /^src\/app\/(.*\/)?route\.(ts|js)$/,
