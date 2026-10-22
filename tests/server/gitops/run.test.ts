@@ -5,7 +5,16 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  lstatSync,
+  mkdtempSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
@@ -259,6 +268,44 @@ describe("the system config git is given", () => {
       expect(refusals).toBe(3);
       expect(await readFile(system.path, "utf8")).toBe(text);
     });
+
+    // POSIX only: Windows gives each user a temp folder of their own and no
+    // mode bits to read. The owner check shares this branch; a test cannot
+    // make a file another user owns without root.
+    it.skipIf(process.platform === "win32")(
+      "is not taken from a file others could write, nor through a link",
+      async () => {
+        // The path is the machine's temp folder and a hash of text anyone
+        // can work out, and a file there holding that text was taken as is.
+        // In a shared /tmp another user could make it first and keep it,
+        // then add a core.fsmonitor that git runs as this user (security
+        // review of the MVP, D-180).
+        const first = await (await ownCopy()).systemGitConfig();
+        if (first.kind !== "standIn") return;
+        const text = await readFile(first.path, "utf8");
+        // Replaced where it can be, so the path may be the same one: what
+        // git is given must be a plain file no one else can write.
+        const own = (system: { kind: string; path?: string }) => {
+          expect(system.kind).toBe("standIn");
+          const path = (system as { path: string }).path;
+          const stat = lstatSync(path);
+          expect(stat.isFile()).toBe(true);
+          expect(stat.mode & 0o022).toBe(0);
+          return path;
+        };
+
+        rmSync(first.path);
+        writeFileSync(first.path, text);
+        chmodSync(first.path, 0o666);
+        expect(await readFile(own(await (await ownCopy()).systemGitConfig()), "utf8")).toBe(text);
+
+        rmSync(first.path);
+        const elsewhere = join(dir, "elsewhere.gitconfig");
+        writeFileSync(elsewhere, text);
+        symlinkSync(elsewhere, first.path);
+        expect(await readFile(own(await (await ownCopy()).systemGitConfig()), "utf8")).toBe(text);
+      },
+    );
 
     it("is built again on the next call after one that failed", async () => {
       // The failure was kept for the life of the process, and every git call

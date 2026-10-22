@@ -4262,3 +4262,26 @@ verified evidence, in writing, here.
   `--setting-sources user`, which D-124 made `""`. Whether README's
   screenshots, last taken in c09b2ad, still match the screens is unknown
   and in the idea inbox.
+- 2026-10-22 D-180 FIXED, from the security review D-169 set after 7.2.
+  Claude Code's /security-review compares a branch with main, where every
+  MVP change already was, so it saw only bfb548e's docs; the same
+  instructions were run by one read-only agent over a45f73f..bfb548e's
+  production code (112 files), and its one finding was read again here.
+  MEDIUM: the stand-in system gitconfig (28dce93, 7f2f1ac) is at the shared
+  temp folder and a hash of text anyone can work out, and a file there
+  holding that text was taken whoever owned it. On a shared Linux /tmp
+  another user could make it first, keep it, and later add a
+  core.fsmonitor or a credential helper that git runs as this user. Fixed:
+  only a plain file this user owns that no one else can write is taken; a
+  link or a writable file is replaced; one another user holds sends this
+  process to a stand-in of its own in a folder only it can open; and the
+  stand-in is written 0644 whatever the umask. macOS and Windows give each
+  user a temp folder, so Linux was the one exposed. The test runs on POSIX
+  only and was shown failing on Linux and macOS before the fix, in draft
+  pull request 1 (run 39783478068: a file anyone could write, taken as it
+  was), Windows skipping it. Rejected: moving the stand-in into the data folder, which
+  undoes the one path every copy and server shares (D-148, D-149).
+  The agent judged sound the request guard, the git URL and branch-name
+  handling, worktree hooks, path containment, the CLI spawn and its
+  environment, the printed interactive commands, reg.exe, the settings and
+  data-deletion routes, the UI's rendering and the CI workflow.

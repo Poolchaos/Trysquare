@@ -10,7 +10,7 @@
 
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { readFile, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -131,10 +131,12 @@ function runGit(
  * (2026-10-21).
  */
 async function writeStandIn(path: string, text: string): Promise<void> {
-  const holds = async () => (await readFile(path, "utf8").catch(() => null)) === text;
+  const holds = async () =>
+    (await trusted(path)) && (await readFile(path, "utf8").catch(() => null)) === text;
   if (await holds()) return;
   const partial = `${path}.${process.pid}.${randomUUID()}.partial`;
-  await writeFile(partial, text, "utf8");
+  // Never writable by others, whatever the umask: trusted() refuses it then.
+  await writeFile(partial, text, { encoding: "utf8", mode: 0o644 });
   const deadline = Date.now() + RENAME_RETRY_MS;
   for (;;) {
     try {
@@ -152,6 +154,30 @@ async function writeStandIn(path: string, text: string): Promise<void> {
       await new Promise((resolve) => setTimeout(resolve, RENAME_RETRY_WAIT_MS));
     }
   }
+}
+
+/**
+ * Whether the file at the stand-in's path may be read as this machine's
+ * system config. Its path is the shared temp folder and a hash of text
+ * anyone can work out, so on a shared /tmp another user could put the right
+ * text there first, keep the file, and later add a core.fsmonitor or a
+ * credential helper that git runs as this user (security review of the
+ * MVP, D-180). Only a plain file this user owns, which no one else can
+ * write, is taken as it is; a link or a writable file is replaced. Windows
+ * gives each user a temp folder of their own and no mode bits to read.
+ */
+async function trusted(path: string): Promise<boolean> {
+  const stat = await lstat(path).catch(() => null);
+  if (stat === null || !stat.isFile()) return false;
+  if (process.platform === "win32") return true;
+  return stat.uid === process.getuid?.() && (stat.mode & 0o022) === 0;
+}
+
+/** Whether another user holds the path, where this one can neither trust nor replace it. */
+async function othersHold(path: string): Promise<boolean> {
+  if (process.platform === "win32") return false;
+  const stat = await lstat(path).catch(() => null);
+  return stat !== null && stat.uid !== process.getuid?.();
 }
 
 const RENAME_REFUSALS = new Set(["EPERM", "EACCES", "EBUSY"]);
@@ -181,10 +207,15 @@ export function systemGitConfig(): Promise<SystemConfig> {
     const helpers =
       read.ok && read.stdout !== "" ? read.stdout.replace(/\r?\n$/, "").split(/\r?\n/) : [];
     const text = standInConfigText(helpers);
-    const path = join(
+    const shared = join(
       tmpdir(),
       `trysquare-system-${createHash("sha256").update(text).digest("hex").slice(0, 12)}.gitconfig`,
     );
+    // Shared by every copy and server when it can be; one of this process's
+    // own, in a folder only this user can open, when another user holds it.
+    const path = (await othersHold(shared))
+      ? join(await mkdtemp(join(tmpdir(), "trysquare-system-")), "system.gitconfig")
+      : shared;
     await writeStandIn(path, text);
 
     const standIn: SystemConfig = { kind: "standIn", path };
