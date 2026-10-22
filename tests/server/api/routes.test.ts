@@ -150,6 +150,60 @@ describe("adding a project", () => {
   });
 });
 
+describe("editing a project (D-51)", () => {
+  // Its name and default branch were editable in the data model, with no
+  // route or screen to edit either (02-DATA-MODEL, MVP 7.1).
+  const edit = (body: unknown, id = projectId) =>
+    routes.project.PATCH(
+      new Request("http://localhost/x", { method: "PATCH", body: JSON.stringify(body) }),
+      params(id),
+    );
+  const read = async () =>
+    (
+      (await (
+        await routes.project.GET(new Request("http://localhost/x"), params(projectId))
+      ).json()) as {
+        project: { name: string; defaultBranch: string };
+      }
+    ).project;
+
+  it("renames it, trimmed, and keeps a name", async () => {
+    const before = await read();
+    try {
+      const renamed = await edit({ name: "  the app  " });
+      expect(renamed.status).toBe(200);
+      expect((await read()).name).toBe("the app");
+      const blank = await edit({ name: "   " });
+      expect(blank.status).toBe(400);
+      expect((await read()).name).toBe("the app");
+    } finally {
+      await edit({ name: before.name });
+    }
+  });
+
+  it("sets a default branch the clone has, and refuses one it does not", async () => {
+    try {
+      expect((await edit({ defaultBranch: "feature/rename-prefs" })).status).toBe(200);
+      expect((await read()).defaultBranch).toBe("feature/rename-prefs");
+      const missing = await edit({ defaultBranch: "no-such-branch" });
+      expect(missing.status).toBe(400);
+      const body = (await missing.json()) as { error: string; code: string };
+      expect(body.code).toBe("BranchNotFound");
+      expect(body.error).toMatch(/no-such-branch/);
+      expect((await read()).defaultBranch).toBe("feature/rename-prefs");
+    } finally {
+      await edit({ defaultBranch });
+    }
+    expect((await read()).defaultBranch).toBe(defaultBranch);
+  });
+
+  it("refuses a body that changes nothing, or something it cannot", async () => {
+    expect((await edit({})).status).toBe(400);
+    expect((await edit({ gitUrl: "file:///elsewhere" })).status).toBe(400);
+    expect((await edit({ name: "x" }, "NOPE")).status).toBe(404);
+  });
+});
+
 describe("listing branches", () => {
   it("returns them with how far each has diverged", async () => {
     const response = await routes.branches.GET(new Request("http://localhost"), params(projectId));

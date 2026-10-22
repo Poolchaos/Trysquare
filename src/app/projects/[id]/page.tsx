@@ -402,6 +402,67 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
           <aside className="grid gap-4 self-start">
             <Card className="p-4">
+              <h2 className="mb-1 text-heading font-semibold">Name and default branch</h2>
+              <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
+                A new review compares against the default branch unless told otherwise. It was
+                guessed from the remote when the project was added.
+              </p>
+              {/* Keyed on what is stored, so a save or a reload draws it afresh;
+                  only what changed is sent (D-51). */}
+              <form
+                key={`${project.name}\u0000${project.defaultBranch}`}
+                className="grid gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const form = new FormData(event.currentTarget);
+                  const name = String(form.get("name") ?? "");
+                  const branch = String(form.get("defaultBranch") ?? project.defaultBranch);
+                  const changed = {
+                    ...(name.trim() === project.name ? {} : { name }),
+                    ...(branch === project.defaultBranch ? {} : { defaultBranch: branch }),
+                  };
+                  if (Object.keys(changed).length === 0) return;
+                  void call(`/api/projects/${id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify(changed),
+                  });
+                }}
+              >
+                <Field label="Name">
+                  <Input name="name" defaultValue={project.name} />
+                </Field>
+                <Field
+                  label="Default branch"
+                  {...(listed ? {} : { hint: "Chosen once the branches are read." })}
+                >
+                  <Select
+                    name="defaultBranch"
+                    defaultValue={project.defaultBranch}
+                    disabled={!listed}
+                  >
+                    {/* The stored one, even when the clone lacks it, so a rename
+                        alone never moves it. */}
+                    {listed?.branches.some(
+                      (branch) => branch.name === project.defaultBranch,
+                    ) ? null : (
+                      <option value={project.defaultBranch}>{project.defaultBranch}</option>
+                    )}
+                    {(listed?.branches ?? []).map((branch) => (
+                      <option key={branch.name} value={branch.name}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <div>
+                  <Button type="submit" disabled={busy}>
+                    Save
+                  </Button>
+                </div>
+              </form>
+            </Card>
+
+            <Card className="p-4">
               <h2 className="mb-1 text-heading font-semibold">Dependencies</h2>
               <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
                 A linked project can be reviewed alongside this one, so a changed type is traced to

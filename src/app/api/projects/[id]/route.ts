@@ -1,14 +1,19 @@
 /** One project, with its dependency links and its reviews. Or gone. */
 
+import { z } from "zod";
 import {
+  CloneNotReadyError,
   type ProjectHasReviewsError,
   deleteProject,
   listDependencyLinks,
   listProjects,
+  renameProject,
   requireProject,
+  setDefaultBranch,
 } from "@/server/db/repositories/projects";
+import { listBranches } from "@/server/gitops/repo";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
-import { failed, handler, isNamed, ok } from "@/server/api/respond";
+import { failed, handler, isNamed, ok, readJson } from "@/server/api/respond";
 import { removeProjectFiles } from "@/server/projects/clone";
 import { runtime } from "@/server/runtime";
 
@@ -42,6 +47,52 @@ export async function GET(
         .map((candidate) => ({ id: candidate.id, name: candidate.name })),
       reviews: listReviewsForProject(db, id),
     });
+  });
+}
+
+const edit = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+    defaultBranch: z.string().trim().min(1).optional(),
+  })
+  .strict()
+  .refine((body) => body.name !== undefined || body.defaultBranch !== undefined, {
+    message: "Say what to change: a name, a default branch, or both.",
+  });
+
+/**
+ * Renames a project, or sets the branch a review compares against by
+ * default, which the clone guessed from the remote's HEAD and could guess
+ * wrong; the data model always called both editable, with no way to edit
+ * either (D-51). A default branch must be one the clone has, so its clone
+ * must be ready; a review's own branches are its own, so none changes.
+ */
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  return handler(async () => {
+    const { db } = runtime();
+    const { id } = await context.params;
+    const project = requireProject(db, id);
+    const body = await readJson(request, edit);
+
+    if (body.defaultBranch !== undefined) {
+      if (project.cloneStatus !== "ready") throw new CloneNotReadyError(id, project.cloneStatus);
+      const branches = await listBranches(project.clonePath);
+      if (!branches.some((branch) => branch.name === body.defaultBranch)) {
+        return Response.json(
+          {
+            error: `This project's clone has no branch named "${body.defaultBranch}".`,
+            code: "BranchNotFound",
+          },
+          { status: 400 },
+        );
+      }
+      setDefaultBranch(db, id, body.defaultBranch);
+    }
+    if (body.name !== undefined) renameProject(db, id, body.name);
+    return ok({ project: requireProject(db, id) });
   });
 }
 

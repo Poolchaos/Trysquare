@@ -7,15 +7,10 @@ on read and write.
 
 ## Not built yet
 
-This document specifies the target. Verified against the code on 2026-08-03,
-these parts of it do not exist yet. They stay here as requirements rather
-than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
-is named.
-
-- Editing a project name or default branch. Both are marked editable above
-  and there is no route or screen for either. U10, D-51.
-- Offering bulk deletion of a project reviews when a delete is refused. The
-  refusal and its count are implemented; the remedy is not. U9.
+Nothing, verified against the code on 2026-10-22. The two parts listed here
+on 2026-08-03 are built: a project's name and default branch are edited from
+its page through PATCH /api/projects/:id (D-51, MVP 7.1), and a refused
+project delete offers to delete the reviews that block it (U9).
 
 ## Tables
 

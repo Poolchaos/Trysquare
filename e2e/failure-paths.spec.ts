@@ -1111,6 +1111,37 @@ test("cancelling a running review stops it and says so", async ({ page }) => {
     .toBe(false);
 });
 
+test("a project's name and default branch are edited from its page (D-51)", async ({ page }) => {
+  // Editable in the data model, with no route or screen for either (MVP 7.1).
+  await page.goto("/projects");
+  await page.getByRole("link", { name: "app", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "app", level: 1 })).toBeVisible();
+  const name = page.getByLabel("Name", { exact: true });
+  const branch = page.getByLabel("Default branch");
+  const save = page.getByRole("button", { name: "Save", exact: true });
+  await expect(branch).toBeEnabled({ timeout: 30_000 });
+  const before = await branch.inputValue();
+
+  await name.fill("app, renamed");
+  await branch.selectOption("feature/rename-prefs");
+  await save.click();
+  await expect(page.getByRole("heading", { name: "app, renamed", level: 1 })).toBeVisible();
+  await expect(page.getByText("default feature/rename-prefs")).toBeVisible();
+
+  // A blank name is refused with the server's words, and nothing changes.
+  await page.getByLabel("Name", { exact: true }).fill("   ");
+  await save.click();
+  await expect(page.getByRole("heading", { name: "app, renamed", level: 1 })).toBeVisible();
+
+  // Put back, for the tests after.
+  await page.reload();
+  await page.getByLabel("Name", { exact: true }).fill("app");
+  await page.getByLabel("Default branch").selectOption(before);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "app", level: 1 })).toBeVisible();
+  await expect(page.getByText(`default ${before}`)).toBeVisible();
+});
+
 test("a review deleted from the list takes its evidence with it", async ({ page }) => {
   // The other ordinary ending: a review nobody needs any more. Its worktrees,
   // bundle and logs go with it, which is why the list says so out loud.
@@ -2013,6 +2044,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "POST models/[id]/probe": { data: {} },
     "GET projects/[id]": {},
     "DELETE projects/[id]": {},
+    "PATCH projects/[id]": { data: { name: "Swept" } },
     "GET projects/[id]/branches": {},
     "POST projects/[id]/clone": { data: {} },
     "POST projects/[id]/fetch": { data: {} },
