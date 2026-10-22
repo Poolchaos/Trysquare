@@ -4214,3 +4214,18 @@ verified evidence, in writing, here.
   beside it failed there, and item 6's message was shown missing on a
   build without it. Counts are unit then browser tests from
   `./verify.sh --e2e` on Windows, 89901b5's unit tests from `./verify.sh`.
+- 2026-10-22 D-177 VERIFIED (MVP 7.2): 06 against the current CLI, the
+  bundled 2.1.301, by reading its binary and its free commands; nothing
+  probed. Holds: the effort levels low to max; `auth status`'s shape and
+  signed-out exit (measured in D-169). D-175 and D-176 read the VS Code
+  extension's 2.1.306; the same code is in 2.1.301: the policy folder and
+  its stubbed override, the drop-in rule, the registry query, the policy
+  tier added past `--setting-sources`, and the browser rule. Stale, fixed:
+  06's "Not built yet" listed the profile control, which shipped with U8
+  on 2026-08-04. New: 2.1.301's baked catalog names claude-fable-5-1,
+  claude-opus-5-5, claude-sonnet-5-5 and claude-haiku-5-5 as each family's
+  latest, and the shipped candidates carry none of them
+  (src/server/engine/probe.ts). Whether this account can use them, and
+  where an alias points on 2.1.301, each needs a probe, which spends, so it
+  goes to the maintainer (idea inbox). The probe table and the probe's cost
+  stay 2.1.71's, and 06 says so.

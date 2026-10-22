@@ -3,19 +3,14 @@
 Status: RATIFIED 2026-07-30 at G0. Supersedes the two-model assumption in
 `01-ARCHITECTURE.md` section 7. Facts below were measured on the maintainer's
 machine on 2026-07-30 with Claude Code 2.1.71; they are re-probed by the
-app, never trusted from this document.
+app, never trusted from this document. Re-verified on 2026-10-22 against
+the bundled 2.1.301 by reading its binary and running its free commands,
+not by probing: the probe table and the probe's cost in section 1 were not
+measured again, since a probe spends usage (MVP 7.2).
 
-## Not built yet
-
-This document specifies the target. Verified against the code on 2026-08-03,
-these parts of it do not exist yet. They stay here as requirements rather
-than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
-is named.
-
-- Choosing the profile from the new-review screen. The server resolves it
-  from the model and refuses an upgrade (U4, 2026-08-03), and the pre-flight
-  returns the resolved profile with the request count each profile would
-  cost, but no control renders them yet. U8.
+Every part of this document is built: the one item this section listed on
+2026-08-03, choosing the profile on the new-review screen, shipped with U8
+on 2026-08-04 as the Profile control in its advanced fold.
 
 ## 1. Measured facts (evidence, 2026-07-30)
 
@@ -74,8 +69,8 @@ to keep out, a session's markers (D-120), the settings that outrank the
 is read at all, a person's included, for the same reason (D-124). Older
 CLIs refused to start at all under `CLAUDECODE`; 2.1.301 does not.
 
-**A managed policy is the one tier no flag keeps out.** The 2.1.306 binary
-adds it to whatever `--setting-sources` allows, so every review runs under
+**A managed policy is the one tier no flag keeps out.** The bundled 2.1.301
+binary adds it to whatever `--setting-sources` allows, as 2.1.306 does, so every review runs under
 one, and with no settings read and the provider variables kept from the
 CLI, it is the only place an `apiKeyHelper` or another provider a check
 names can come from. The app looks for one, read-only, where that binary
@@ -109,6 +104,13 @@ the app re-probes and never trusts this table.
 
 Availability differs by account and changes over time. An id that is not
 available simply probes as unavailable and is shown disabled with its error.
+
+The table is 2.1.71's. The bundled 2.1.301's own model catalog names
+`claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5-5` and
+`claude-haiku-5-5` as each family's latest, read from its binary on
+2026-10-22; none is among the candidates the app ships, and whether this
+account can use them, and what an alias resolves to on 2.1.301, is
+unmeasured, both needing a probe (D-177).
 
 **Two consequences the app must honour:**
 

@@ -46,9 +46,10 @@ export function signInWouldHelp(authMethod: string | undefined): boolean {
  * The sentence naming the setting that wins, or null when none is known to.
  * The check asks as every review reads, with no settings (D-170, D-174), so a
  * setting it names is one a review would use, and the one tier reading none
- * leaves is a managed policy's, which the 2.1.306 binary always reads; it may
- * be delivered to the person's account rather than kept on the machine, so
- * no place is named. Read from that binary's code, not measured: measuring
+ * leaves is a managed policy's, which the bundled 2.1.301 binary always
+ * reads, as 2.1.306 does; it may be delivered to the person's account rather
+ * than kept on the machine, so no place is named. Read from the code of
+ * both, not measured: measuring
  * means writing a machine-wide policy file, which waits for the maintainer
  * (D-175). Said as so because the code leaves no other source; the flag
  * tier it also reads is one the app never passes.

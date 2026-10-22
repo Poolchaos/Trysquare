@@ -2,9 +2,9 @@
  * Whether the machine has a managed Claude Code policy, looked for read-only
  * where the CLI reads one (D-174 item 3).
  *
- * A policy outranks every flag the app passes: the 2.1.306 binary adds the
- * policy tier to whatever `--setting-sources` allows, so a review reading no
- * settings still runs under it. It can set the model, the tools, an
+ * A policy outranks every flag the app passes: the bundled 2.1.301 binary
+ * adds the policy tier to whatever `--setting-sources` allows, as 2.1.306
+ * does, so a review reading no settings still runs under it. It can set the model, the tools, an
  * apiKeyHelper or another provider, so it is said rather than overridden.
  *
  * The places are the binary's own: a managed-settings.json in a folder fixed

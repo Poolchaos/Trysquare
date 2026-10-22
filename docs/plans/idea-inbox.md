@@ -71,9 +71,24 @@ pulled deliberately.
   the person to a file they may not own (D-173 item 8). Measuring it means
   writing a machine-wide policy file, which governs the maintainer's own
   Claude Code too, so it waits for the maintainer.
-  READ in D-175 from the 2.1.306 binary: it survives, the policy tier being
-  added to whatever `--setting-sources` allows, and the notice now names a
-  managed policy. Still unmeasured, for the same reason.
+  READ in D-175 from the 2.1.306 binary, and in D-177 from the bundled
+  2.1.301: it survives, the policy tier being added to whatever
+  `--setting-sources` allows, and the notice now names a managed policy.
+  Still unmeasured, for the same reason.
+
+- 2026-10-22 Unexplained, Windows only so far: the e2e web server died
+  partway through 3 of 13 local runs during the D-174 item 2 work (two
+  `./verify.sh --e2e` gates and the standalone run straight after one),
+  the rest of the suite then failing on connection refused, nothing on
+  stderr. Not reproduced since: 10 standalone runs passed, 4 of them with
+  signal, exit and uncaught-error tracing in the server that recorded only
+  its start. Not leftover unit-test processes (none lingered, and unit then
+  e2e passed). Next occurrence: trace again before guessing at a cause.
+- 2026-10-22 The maintainer's call: whether the shipped model candidates
+  gain the bundled 2.1.301 catalog's latest ids, claude-fable-5-1,
+  claude-opus-5-5, claude-sonnet-5-5 and claude-haiku-5-5, and which become
+  the recommended defaults. Each needs a probe to show this account can use
+  it, and a probe spends (D-177).
 
 ## Retired
 
@@ -118,11 +133,3 @@ the line entirely would lose the trail.
   file naming them, at the cost of the patterns' reach and of a list no
   reader can review, with history keeping every literal regardless.
   DECIDED in D-169, BUILT in D-171.
-- 2026-10-22 Unexplained, Windows only so far: the e2e web server died
-  partway through 3 of 13 local runs during the D-174 item 2 work (two
-  `./verify.sh --e2e` gates and the standalone run straight after one),
-  the rest of the suite then failing on connection refused, nothing on
-  stderr. Not reproduced since: 10 standalone runs passed, 4 of them with
-  signal, exit and uncaught-error tracing in the server that recorded only
-  its start. Not leftover unit-test processes (none lingered, and unit then
-  e2e passed). Next occurrence: trace again before guessing at a cause.

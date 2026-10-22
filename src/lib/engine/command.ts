@@ -213,10 +213,10 @@ export function buildChildEnv(
 
 /**
  * What the sign-in run, `npm run claude`, adds to a review's environment: it
- * runs attached to the person's terminal, and the 2.1.306 binary reads these
- * to draw in it and to decide whether a browser can be opened for the
- * sign-in, skipping one on Linux with no display. Each is named in that
- * binary. Without them b3fb1ef's closed list left a desktop's sign-in
+ * runs attached to the person's terminal, and the bundled 2.1.301 binary
+ * reads these, as 2.1.306 does, to draw in it and to decide whether a
+ * browser can be opened for the sign-in, skipping one on Linux with no
+ * display. Each is named in both binaries. Without them b3fb1ef's closed list left a desktop's sign-in
  * printing a link where it opened a browser before (review of D-174's
  * changes).
  */
