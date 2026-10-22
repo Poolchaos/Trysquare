@@ -131,9 +131,7 @@ function runGit(
  * (2026-10-21).
  */
 async function writeStandIn(path: string, text: string): Promise<void> {
-  const holds = async () =>
-    (await trusted(path)) && (await readFile(path, "utf8").catch(() => null)) === text;
-  if (await holds()) return;
+  if (await holds(path, text)) return;
   const partial = `${path}.${process.pid}.${randomUUID()}.partial`;
   // Never writable by others, whatever the umask: trusted() refuses it then.
   await writeFile(partial, text, { encoding: "utf8", mode: 0o644 });
@@ -144,7 +142,7 @@ async function writeStandIn(path: string, text: string): Promise<void> {
       return;
     } catch (error) {
       const refused = RENAME_REFUSALS.has((error as NodeJS.ErrnoException).code ?? "");
-      const done = await holds();
+      const done = await holds(path, text);
       if (done || !refused || Date.now() + RENAME_RETRY_WAIT_MS > deadline) {
         // Its own refusal is no reason to fail the stand-in.
         await rm(partial, { force: true }).catch(() => undefined);
@@ -173,6 +171,11 @@ async function trusted(path: string): Promise<boolean> {
   return stat.uid === process.getuid?.() && (stat.mode & 0o022) === 0;
 }
 
+/** Whether the file at the path may be read as system config and holds this text. */
+async function holds(path: string, text: string): Promise<boolean> {
+  return (await trusted(path)) && (await readFile(path, "utf8").catch(() => null)) === text;
+}
+
 /** Whether another user holds the path, where this one can neither trust nor replace it. */
 async function othersHold(path: string): Promise<boolean> {
   if (process.platform === "win32") return false;
@@ -184,10 +187,13 @@ const RENAME_REFUSALS = new Set(["EPERM", "EACCES", "EBUSY"]);
 const RENAME_RETRY_MS = 2_000;
 const RENAME_RETRY_WAIT_MS = 5;
 
-let systemConfig: Promise<SystemConfig> | undefined;
+let systemConfig: Promise<{ config: SystemConfig; text: string }> | undefined;
 
 /**
- * Built once per process. A stand-in is used only once git has been seen to
+ * Built once per process, and checked again on every call: a stand-in no
+ * longer trusted or no longer holding its text is built again, since a temp
+ * cleaner can remove it under a running server and another user make it
+ * again (D-181 item 4). A stand-in is used only once git has been seen to
  * read it: a git too old to know GIT_CONFIG_SYSTEM would silently read the
  * real file instead, autocrlf and all, so then system config is switched off
  * and private HTTPS repositories go without their helper rather than worktrees
@@ -195,14 +201,26 @@ let systemConfig: Promise<SystemConfig> | undefined;
  * failure was every git call's until the server restarted (review of the
  * D-149 fixes).
  */
-export function systemGitConfig(): Promise<SystemConfig> {
-  const built = (systemConfig ??= (async (): Promise<SystemConfig> => {
+export async function systemGitConfig(): Promise<SystemConfig> {
+  const cached = systemConfig;
+  if (cached !== undefined) {
+    const { config, text } = await cached;
+    if (config.kind === "none" || (await holds(config.path, text))) return config;
+    // A full build, not a rewrite: another user may hold the shared path now.
+    // Only the first caller to find it stale drops it; the rest share the build.
+    if (systemConfig === cached) systemConfig = undefined;
+  }
+  return (await (systemConfig ??= buildSystemConfig())).config;
+}
+
+function buildSystemConfig(): Promise<{ config: SystemConfig; text: string }> {
+  return (async (): Promise<{ config: SystemConfig; text: string }> => {
     const plain = { ...process.env, GIT_TERMINAL_PROMPT: "0", LC_ALL: "C", LANG: "C" };
     const read = await runGit(["config", "--system", "--get-all", "credential.helper"], plain);
     // Exit 1 is "no such key"; no system file says the same.
     if (!read.ok && read.code !== 1) {
       systemConfig = undefined;
-      return { kind: "none" };
+      return { config: { kind: "none" }, text: "" };
     }
     const helpers =
       read.ok && read.stdout !== "" ? read.stdout.replace(/\r?\n$/, "").split(/\r?\n/) : [];
@@ -225,12 +243,11 @@ export function systemGitConfig(): Promise<SystemConfig> {
       .split(/\r?\n/)
       .filter((line) => line !== "")
       .every((line) => normalise(line).startsWith(`file:${normalise(path)}`));
-    return seen.code !== null && honoured ? standIn : { kind: "none" };
+    return { config: seen.code !== null && honoured ? standIn : { kind: "none" }, text };
   })().catch((error: unknown) => {
     systemConfig = undefined;
     throw error;
-  }));
-  return built;
+  });
 }
 
 export async function git(args: readonly string[], options: GitRunOptions = {}): Promise<string> {

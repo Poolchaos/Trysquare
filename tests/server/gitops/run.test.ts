@@ -136,6 +136,17 @@ describe("the system config git is given", () => {
       vi.doUnmock("node:fs/promises");
     });
 
+    // Replaced where it can be, so the path may be the same one: what git is
+    // given must be a plain file no one else can write.
+    const own = (system: { kind: string; path?: string }) => {
+      expect(system.kind).toBe("standIn");
+      const path = (system as { path: string }).path;
+      const stat = lstatSync(path);
+      expect(stat.isFile()).toBe(true);
+      expect(stat.mode & 0o022).toBe(0);
+      return path;
+    };
+
     it("is never empty while another copy writes it", async () => {
       // Every copy of this module writes the same path, named for its text:
       // the instrumentation bundle's and the routes', and other servers'.
@@ -283,17 +294,6 @@ describe("the system config git is given", () => {
         const first = await (await ownCopy()).systemGitConfig();
         if (first.kind !== "standIn") return;
         const text = await readFile(first.path, "utf8");
-        // Replaced where it can be, so the path may be the same one: what
-        // git is given must be a plain file no one else can write.
-        const own = (system: { kind: string; path?: string }) => {
-          expect(system.kind).toBe("standIn");
-          const path = (system as { path: string }).path;
-          const stat = lstatSync(path);
-          expect(stat.isFile()).toBe(true);
-          expect(stat.mode & 0o022).toBe(0);
-          return path;
-        };
-
         rmSync(first.path);
         writeFileSync(first.path, text);
         chmodSync(first.path, 0o666);
@@ -304,6 +304,37 @@ describe("the system config git is given", () => {
         writeFileSync(elsewhere, text);
         symlinkSync(elsewhere, first.path);
         expect(await readFile(own(await (await ownCopy()).systemGitConfig()), "utf8")).toBe(text);
+      },
+    );
+
+    it("is checked again on the next call, and written again when it no longer holds its text", async () => {
+      // Trusted once per process, a stand-in a temp cleaner removed could be
+      // made again by another user under a running server, and every later
+      // git call read it as system config (D-181 item 4). One copy, called
+      // twice: a fresh copy per call always built, so no test saw this.
+      const copy = await ownCopy();
+      const system = await copy.systemGitConfig();
+      if (system.kind !== "standIn") return;
+      const text = await readFile(system.path, "utf8");
+
+      writeFileSync(system.path, "[core]\n\tautocrlf = true\n", "utf8");
+      expect(await copy.systemGitConfig()).toEqual(system);
+      expect(await readFile(system.path, "utf8")).toBe(text);
+
+      rmSync(system.path);
+      expect(await copy.systemGitConfig()).toEqual(system);
+      expect(await readFile(system.path, "utf8")).toBe(text);
+    });
+
+    it.skipIf(process.platform === "win32")(
+      "is not handed out once others could write it",
+      async () => {
+        const copy = await ownCopy();
+        const first = await copy.systemGitConfig();
+        if (first.kind !== "standIn") return;
+        const text = await readFile(first.path, "utf8");
+        chmodSync(first.path, 0o666);
+        expect(await readFile(own(await copy.systemGitConfig()), "utf8")).toBe(text);
       },
     );
 
