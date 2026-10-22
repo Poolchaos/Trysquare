@@ -1,7 +1,8 @@
 # Runbook: install, start, first review
 
-One page, for the person operating the app rather than building it. Every
-command here was run or read from the code on 2026-08-03.
+One page, for the person operating the app rather than building it. Written
+on 2026-08-03 from commands run or read from the code that day; a line added
+since names the decision that added it.
 
 The rule that matters most is at the bottom of this section: **almost nothing
 in this app spends model usage, and the few things that do are listed.** A
@@ -10,9 +11,15 @@ review is the expensive action. Everything else, including the whole demo with
 
 ## Prerequisites
 
+- **Windows, macOS or Linux.** Every push passes `./verify.sh --build
+  --e2e` on all three in CI (`windows-latest`, `macos-latest`,
+  `ubuntu-latest`), against a stand-in for the CLI. Real reviews have run
+  on Linux only; the first on Windows is MVP step 7.3.
 - **Node 22 or newer.** `package.json` declares `>=22`, `.nvmrc` pins `22`.
-  Proven on v22.22.1.
-- **npm.** No version is declared. Proven on 11.17.0.
+  Proven on v22.22.1 (Linux, 2026-07-31) and v22.17.0 (Windows 11,
+  2026-10-22).
+- **npm.** No version is declared. Proven on 11.17.0 (Linux) and 10.9.2
+  (Windows 11).
 - **git on PATH.** The gate requires it, and the app shells out to it for
   every clone, fetch and worktree.
 - **A Claude subscription, signed in**, but only for a real review. Everything

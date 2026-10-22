@@ -39,10 +39,11 @@ been made.
 All twelve work packages are built: the review engine, the data and git
 layers, every screen, the design pass, the accessibility checks, and the
 interactive engine mode that runs a review from files in your own terminal
-instead of a subprocess. What remains open is judgment, not construction:
-the finding-quality verdict above and the design acceptance, both the
-maintainer's. The trail is in
-[docs/plans/M4-FINISH-PLAN.md](docs/plans/M4-FINISH-PLAN.md), and
+instead of a subprocess. What remains is the MVP in
+[docs/plans/MVP-PLAN.md](docs/plans/MVP-PLAN.md): one engine measurement
+that spends usage (4.2), a fresh real run of the fixture on Windows for the
+finding-quality verdict above (7.3), and the maintainer's own review of a
+real branch (7.4), with the verdicts and the design acceptance theirs.
 [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md) is the current-facts cache.
 
 Treat this as usable by its author and not yet finished for anyone else.
@@ -150,9 +151,14 @@ requests, never a shortened rule set.
 
 ## Requirements
 
+- Windows, macOS or Linux. Every push passes the whole test suite on all
+  three in CI (GitHub's `windows-latest`, `macos-latest` and
+  `ubuntu-latest`) against a stand-in for the CLI; real reviews have run on
+  Linux, and the first on Windows is the MVP's step 7.3.
 - Node 22 or newer
 - git
 - A Claude subscription, signed in to [Claude Code](https://claude.com/claude-code)
+- Claude Code 2.1.301 or newer; reviews refuse an older CLI and say so.
 
 `npm install` installs the Claude Code CLI with the app (version 2.1.301,
 about 270MB for your platform), so there is nothing else to install. Reviews
@@ -165,6 +171,10 @@ to check, run the CLI the reviews use:
 npm run claude -- auth login
 npm run claude -- auth status
 ```
+
+Or press Check the CLI on Settings, which names the CLI reviews run
+through, its version, and whether a review draws on the subscription or
+bills per token.
 
 Trysquare drives that CLI using whatever credentials it already holds. It ships no model of its own and has no
 account system, no server of its own, and no telemetry.
