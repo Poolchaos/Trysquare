@@ -33,6 +33,7 @@ let routes: {
   rule: typeof import("@/app/api/rulesets/[id]/rules/[code]/route");
   duplicate: typeof import("@/app/api/rulesets/[id]/duplicate/route");
   projectReviews: typeof import("@/app/api/projects/[id]/reviews/route");
+  models: typeof import("@/app/api/models/route");
 };
 
 const post = (url: string, body: unknown) =>
@@ -65,6 +66,7 @@ beforeAll(async () => {
     rule: await import("@/app/api/rulesets/[id]/rules/[code]/route"),
     duplicate: await import("@/app/api/rulesets/[id]/duplicate/route"),
     projectReviews: await import("@/app/api/projects/[id]/reviews/route"),
+    models: await import("@/app/api/models/route"),
   };
 
   const created = await routes.projects.POST(
@@ -202,6 +204,31 @@ describe("editing a project (D-51)", () => {
     expect((await edit({ gitUrl: "file:///elsewhere" })).status).toBe(400);
     expect((await edit({ name: "x" }, "NOPE")).status).toBe(404);
   });
+});
+
+describe("the model used last (MVP 7.1)", () => {
+  // A new review starts on it, the first on Fable at 1M (DECISIONS,
+  // 2026-07-30); the models answer says which it is.
+  const lastUsed = async () =>
+    ((await (await routes.models.GET()).json()) as { lastUsed: string | null }).lastUsed;
+  const make = (model: string) =>
+    routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model,
+      }),
+    );
+
+  it("is the model of the review made last", async () => {
+    expect((await make("claude-opus-5[1m]")).status).toBe(201);
+    expect(await lastUsed()).toBe("claude-opus-5[1m]");
+    // Two made in a row may share a millisecond, and an id within one is
+    // random, so the order is the table's.
+    expect((await make("claude-fable-5[1m]")).status).toBe(201);
+    expect(await lastUsed()).toBe("claude-fable-5[1m]");
+  }, 120_000);
 });
 
 describe("listing branches", () => {

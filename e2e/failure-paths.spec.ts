@@ -1111,6 +1111,47 @@ test("cancelling a running review stops it and says so", async ({ page }) => {
     .toBe(false);
 });
 
+test("a new review starts on the model used last, while a probe vouches for it", async ({
+  page,
+}) => {
+  // Fable at 1M first, then the one used last (DECISIONS, 2026-07-30); the
+  // picker took the first probed model every time (MVP 7.1). The suite has
+  // one probed model fit to review, so a second is marked available in the
+  // answer here; creating a review refuses one registered for mechanical
+  // work, so such a model is never the one used last.
+  const second = "claude-opus-5[1m]";
+  const answer = (lastUsed: string) =>
+    routeUntilStopped(page, "**/api/models", async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        models: { id: string; availability: string }[];
+      };
+      await route.fulfill({
+        response,
+        json: {
+          ...body,
+          models: body.models.map((model) =>
+            model.id === second ? { ...model, availability: "available" } : model,
+          ),
+          lastUsed,
+        },
+      });
+    });
+  const chosen = page.locator("label", { has: page.locator('input[name="model"]:checked') });
+
+  for (const [lastUsed, shown] of [
+    [second, "Opus 5 (1M context)"],
+    ["claude-fable-5[1m]", "Fable 5 (1M context)"],
+    // One no longer registered falls back to the first a probe vouches for.
+    ["claude-gone-4", "Fable 5 (1M context)"],
+  ] as const) {
+    const stop = await answer(lastUsed);
+    await fillANewReview(page);
+    await expect(chosen).toContainText(shown);
+    await stop();
+  }
+});
+
 test("a project's name and default branch are edited from its page (D-51)", async ({ page }) => {
   // Editable in the data model, with no route or screen for either (MVP 7.1).
   await page.goto("/projects");

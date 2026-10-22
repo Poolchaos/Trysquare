@@ -7,7 +7,7 @@
  * status alone.
  */
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { newId, nowIso } from "@/lib/ids";
 import type { EngineMode, ReviewEffort, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
@@ -273,6 +273,22 @@ export function appendRunNote(db: Db, reviewId: string, note: Omit<RunNote, "at"
 
 export function markReviewMerged(db: Db, reviewId: string, detectedAt = nowIso()): void {
   db.update(reviews).set({ mergedDetectedAt: detectedAt }).where(eq(reviews.id, reviewId)).run();
+}
+
+/**
+ * The model of the review made last, which a new one starts on (DECISIONS,
+ * 2026-07-30), or null before any. Two made in a row may share a
+ * millisecond, and an id within one is random, so the table's own order
+ * breaks the tie.
+ */
+export function lastUsedModel(db: Db): string | null {
+  const row = db
+    .select({ model: reviews.model })
+    .from(reviews)
+    .orderBy(desc(reviews.createdAt), sql`rowid desc`)
+    .limit(1)
+    .get();
+  return row?.model ?? null;
 }
 
 export function listReviewsForProject(db: Db, projectId: string): Review[] {

@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   PROBE_FRESHNESS_MS,
   availabilityOf,
+  defaultModel,
   isSelectable,
   pickerOrder,
   probeAgeInWords,
@@ -84,6 +85,35 @@ describe("the order the picker shows", () => {
       entry("o", "opus", true, 9),
     ]);
     expect(ordered.map((model) => model.id)).toEqual(["o", "h", "s"]);
+  });
+});
+
+describe("the model a new review starts on", () => {
+  // The first review on Fable at 1M, then the one used last (DECISIONS,
+  // 2026-07-30), which the picker never did: it took the first probed one
+  // (MVP 7.1).
+  const row = (id: string, availability: "available" | "unavailable" | "unknown") => ({
+    id,
+    availability,
+  });
+  const ordered = [
+    row("claude-fable-5[1m]", "available"),
+    row("claude-opus-5[1m]", "available"),
+    row("claude-sonnet-5", "unknown"),
+  ];
+
+  it("is the one used last, when a probe vouches for it", () => {
+    expect(defaultModel(ordered, "claude-opus-5[1m]")).toBe("claude-opus-5[1m]");
+  });
+
+  it("is the first a probe vouches for with none used, or none usable now", () => {
+    expect(defaultModel(ordered, null)).toBe("claude-fable-5[1m]");
+    expect(defaultModel(ordered, "claude-sonnet-5")).toBe("claude-fable-5[1m]");
+    expect(defaultModel(ordered, "claude-gone-4")).toBe("claude-fable-5[1m]");
+  });
+
+  it("is none with nothing vouched for", () => {
+    expect(defaultModel([row("claude-sonnet-5", "unknown")], "claude-sonnet-5")).toBe("");
   });
 });
 

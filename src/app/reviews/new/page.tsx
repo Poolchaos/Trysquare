@@ -14,6 +14,7 @@ import { Suspense, useEffect, useState } from "react";
 import { SELECTABLE_REVIEW_EFFORTS, type ReviewEffort } from "@/lib/domain/enums";
 import { effortRunsOn } from "@/lib/models/effort-support";
 import {
+  defaultModel,
   isSelectable,
   pickerOrder,
   probeAgeInWords,
@@ -271,7 +272,11 @@ function NewReview() {
           "The branches could not be listed",
         ),
         send<{ rulesets: Ruleset[] }>("/api/rulesets", {}, "The rulesets could not be read"),
-        send<{ models: Model[] }>("/api/models", {}, "The models could not be read"),
+        send<{ models: Model[]; lastUsed: string | null }>(
+          "/api/models",
+          {},
+          "The models could not be read",
+        ),
         send<{ links?: Link[] }>(
           `/api/projects/${projectId}`,
           {},
@@ -329,13 +334,14 @@ function NewReview() {
         setRulesetId((current) => current || (listed[0]?.id ?? ""));
       }
 
-      // Only a model a probe currently vouches for is picked by default; with
-      // none probed, nothing is chosen and the picker says why.
+      // Only a model a probe currently vouches for is picked by default: the
+      // one used last, else the first in the picker; with none probed, nothing
+      // is chosen and the picker says why (MVP 7.1).
       if (modelList.ok) {
         const ordered = pickerOrder(modelList.body.models);
         setModels(ordered);
-        const usable = ordered.find((row) => isSelectable(row.availability));
-        setModel((current) => current || (usable?.id ?? ""));
+        const chosen = defaultModel(ordered, modelList.body.lastUsed ?? null);
+        setModel((current) => current || chosen);
       }
     })();
 

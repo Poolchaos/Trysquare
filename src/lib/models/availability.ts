@@ -38,6 +38,23 @@ export function isSelectable(availability: ModelAvailability): boolean {
   return availability === "available";
 }
 
+/**
+ * The model a new review starts on: the one used last while a probe vouches
+ * for it, else the first in picker order that a probe vouches for, else none.
+ * Fable at 1M first, then the last used (DECISIONS, 2026-07-30); the picker
+ * took the first probed one every time (MVP 7.1).
+ *
+ * @param ordered Already in picker order.
+ */
+export function defaultModel(
+  ordered: readonly { id: string; availability: ModelAvailability }[],
+  lastUsed: string | null,
+): string {
+  const last = ordered.find((row) => row.id === lastUsed);
+  if (last !== undefined && isSelectable(last.availability)) return last.id;
+  return ordered.find((row) => isSelectable(row.availability))?.id ?? "";
+}
+
 export interface PickerEntry {
   id: string;
   family: string;
