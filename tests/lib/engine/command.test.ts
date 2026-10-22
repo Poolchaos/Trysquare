@@ -50,6 +50,11 @@ describe("stage arguments", () => {
     expect(buildStageArgs({ ...base, outputFormat: "json" })).not.toContain("--verbose");
   });
 
+  it("sends each stage its own system prompt, never the session's first (D-182)", () => {
+    const args = buildStageArgs({ ...base, resumeSessionId: "abc" });
+    expect(valueAfter(args, "--system-prompt-snapshot")).toBe("off");
+  });
+
   it("omits resume for a fresh session and includes it for a continued one", () => {
     expect(buildStageArgs(base)).not.toContain("--resume");
     expect(valueAfter(buildStageArgs({ ...base, resumeSessionId: "s-1" }), "--resume")).toBe("s-1");

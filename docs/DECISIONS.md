@@ -4315,3 +4315,21 @@ verified evidence, in writing, here.
   8. The top bar's count of reviews awaiting confirmation loads every row
   to count them. 9. readCliStatus resolves the CLI twice. These three are
   efficiency; fixed as they are small.
+- 2026-10-22 D-182 DECIDED and MEASURED (MVP 4.2; MG-5 resolved (a)). The
+  maintainer approved spending on 4.2, then 7.3, D-169 item 2's ask; 7.4
+  stays theirs to drive. Measured on the bundled 2.1.301, signed in through
+  a claude.ai Team subscription, with claude-haiku-4-5-20251001, no tools
+  and no settings, system prompts from files as stages pass them: a call
+  told to answer ALPHA did, and a call resuming its session told to answer
+  BETA also answered ALPHA; with `--system-prompt-snapshot off` on both,
+  the resume answered BETA. Four calls, $0.0086 cost-equivalent as the CLI
+  reported it. So every stage that resumed S1's session, S2 to S4, ran
+  under S1's system prompt on 2.1.301, S3 without the ruleset its own
+  prompt carries; every real run on record predates 2.1.301 (D-92), so none
+  of them was affected. MG-5 taken as (a), the plan's recommendation for a
+  replay found real, by the driver under the maintainer's instruction of
+  2026-10-18 and open to their reversal: every stage passes
+  `--system-prompt-snapshot off`. A stand-in for the API reproduces the
+  replay with the real CLI, free on every platform, and is the test.
+  Rejected: (b) no longer chaining S2 to S4, which gives up the cache the
+  chain is for; (c) no change, the replay being real.

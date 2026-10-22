@@ -188,3 +188,72 @@ describe("what a stage's CLI sends (D-124)", () => {
     for (const request of requests) expect(request.output_config?.effort).toBe("xhigh");
   }, 120_000);
 });
+
+/**
+ * One stage's call against the stand-in, in a home of its own, resumed when
+ * given a session: the session id it answers with.
+ */
+function stageRun(home: string, systemPrompt: string, resumeSessionId?: string): Promise<string> {
+  const cli = resolveCli(undefined, realCliEnvironment());
+  const args = buildStageArgs({
+    prompt: "",
+    systemPrompt,
+    model: "claude-fable-5",
+    outputFormat: "stream-json",
+    resumeSessionId,
+  });
+  const env: Record<string, string> = buildChildEnv({
+    PATH: process.env.PATH,
+    SystemRoot: process.env.SystemRoot,
+    TEMP: process.env.TEMP,
+    TMP: process.env.TMP,
+    HOME: home,
+    USERPROFILE: home,
+    CLAUDE_CONFIG_DIR: home,
+  });
+  env.ANTHROPIC_API_KEY = "sk-ant-api03-stand-in-not-a-real-key-0000000000000000000000000000000";
+  env.ANTHROPIC_BASE_URL = baseUrl;
+  env.DISABLE_TELEMETRY = "1";
+  env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+  env.CLAUDE_CODE_MAX_RETRIES = "0";
+  return new Promise((resolve, reject) => {
+    const child = spawn(cli.command, [...cli.prefixArgs, ...args], {
+      cwd: home,
+      env: env as NodeJS.ProcessEnv,
+      windowsHide: true,
+    });
+    let stdout = "";
+    child.stdout.on("data", (chunk) => (stdout += chunk));
+    child.stdin.end("Reply with exactly: ok");
+    const timer = setTimeout(() => child.kill(), 60_000);
+    child.once("error", reject);
+    child.once("exit", () => {
+      clearTimeout(timer);
+      const ids = [...stdout.matchAll(/"session_id":"([^"]+)"/g)].map((match) => match[1]!);
+      resolve(ids[0] ?? "");
+    });
+  });
+}
+
+describe("a chained stage's system prompt (MVP 4.2)", () => {
+  it("is the stage's own on a resumed call, not the first stage's", async () => {
+    // 2.1.301 records a conversation's first system prompt and sends that
+    // record on every resume, "even when a later launch passes different
+    // text", so S2 to S4, which resume S1's session, ran under S1's prompt.
+    // Measured on the real API on 2026-10-22 (D-182): a resume told to
+    // answer BETA answered ALPHA, and BETA once the snapshot was off.
+    const home = mkdtempSync(join(root, "chain-"));
+    requests = [];
+    const session = await stageRun(home, "STAGE-ONE-SYSTEM: reply ok.");
+    expect(session).not.toBe("");
+    const first = requests.length;
+    expect(first).toBeGreaterThan(0);
+    await stageRun(home, "STAGE-TWO-SYSTEM: reply ok.", session);
+    const resumed = requests.slice(first);
+    expect(resumed.length).toBeGreaterThan(0);
+    for (const request of resumed) {
+      expect(request.text.includes("STAGE-TWO-SYSTEM"), "the resumed stage's prompt").toBe(true);
+      expect(request.text.includes("STAGE-ONE-SYSTEM"), "the first stage's prompt").toBe(false);
+    }
+  }, 120_000);
+});

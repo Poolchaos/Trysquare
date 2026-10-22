@@ -72,6 +72,13 @@ export function buildStageArgs(options: StageCommandOptions): string[] {
     ...(options.systemPromptFile === undefined
       ? ["--system-prompt", options.systemPrompt]
       : ["--system-prompt-file", options.systemPromptFile]),
+    // Each stage's own prompt on a resumed call. 2.1.301 records a
+    // conversation's first system prompt and sends the record on every
+    // resume, whatever text a later call passes, so S2 to S4, which resume
+    // S1's session, ran under S1's prompt: measured on the real API, a
+    // resume told to answer BETA answered ALPHA (MVP 4.2, D-182).
+    "--system-prompt-snapshot",
+    "off",
     "--tools",
     tools.join(","),
     "--setting-sources",
