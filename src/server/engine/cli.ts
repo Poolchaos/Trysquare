@@ -17,7 +17,7 @@ import { execFile, spawnSync } from "node:child_process";
 import { accessSync, constants, readFileSync, statSync } from "node:fs";
 import { arch } from "node:os";
 import { delimiter, dirname, extname, isAbsolute, join, resolve } from "node:path";
-import { buildChildEnv } from "@/lib/engine/command";
+import { buildAttachedEnv, buildChildEnv } from "@/lib/engine/command";
 
 /**
  * The oldest Claude Code a review stage runs on. Stages pass their system
@@ -109,7 +109,7 @@ export function runCliAttached(args: readonly string[], configured: string | und
     stdio: "inherit",
     // Without this a sign-in started from inside a Claude Code session would
     // run as that session's child, which a review never does (D-120).
-    env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
+    env: buildAttachedEnv(process.env) as NodeJS.ProcessEnv,
   });
   if (result.error) {
     throw new CliUnusableError(cli.display, result.error.message);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   READ_ONLY_TOOLS,
+  buildAttachedEnv,
   buildChildEnv,
   buildProbeArgs,
   buildStageArgs,
@@ -214,6 +215,48 @@ describe("the child environment", () => {
     const child = buildChildEnv({ PATH: "/bin", HOME: undefined });
     expect(child.PATH).toBe("/bin");
     expect("HOME" in child).toBe(false);
+  });
+
+  it("keeps a terminal and its display from a review, which has neither", () => {
+    expect(passes("DISPLAY")).toBe(false);
+    expect(passes("TERM")).toBe(false);
+  });
+});
+
+describe("the sign-in run's environment", () => {
+  // `npm run claude` runs attached to the person's terminal, where the CLI
+  // draws and opens a browser to sign in (review of D-174's changes).
+  it("adds the terminal and display, whatever the platform's spelling", () => {
+    const child = buildAttachedEnv({
+      PATH: "/bin",
+      TERM: "xterm-256color",
+      DISPLAY: ":0",
+      WAYLAND_DISPLAY: "wayland-0",
+      BROWSER: "firefox",
+      SSH_CONNECTION: "10.0.0.1 22 10.0.0.2 22",
+      WSL_DISTRO_NAME: "Ubuntu",
+      Term_Program: "vscode",
+    });
+    expect(child).toMatchObject({
+      PATH: "/bin",
+      TERM: "xterm-256color",
+      DISPLAY: ":0",
+      WAYLAND_DISPLAY: "wayland-0",
+      BROWSER: "firefox",
+      SSH_CONNECTION: "10.0.0.1 22 10.0.0.2 22",
+      WSL_DISTRO_NAME: "Ubuntu",
+      Term_Program: "vscode",
+    });
+  });
+
+  it("is otherwise a review's: no key, a pinned locale, no updates", () => {
+    const child = buildAttachedEnv({
+      ANTHROPIC_API_KEY: "sk-ant-for-this-test",
+      CLAUDECODE: "1",
+      LC_ALL: "fr_FR.UTF-8",
+      DISPLAY: undefined,
+    });
+    expect(child).toEqual({ LC_ALL: "C", LANG: "C", DISABLE_AUTOUPDATER: "1" });
   });
 });
 
