@@ -79,6 +79,11 @@ pulled deliberately.
 - 2026-10-22: README's three screenshots (docs/images) were last taken in
   c09b2ad on 2026-08-25, and the screens have changed since, last in
   3169502. Re-shoot them from the theme pass and compare (D-179).
+- 2026-10-22: the preflight route (src/app/api/reviews/preflight/route.ts)
+  and the review service (src/server/review/service.ts) still fetch a
+  linked pair's clones one after the other, as review creation did until
+  D-181 item 7; and a failed fetch's error does not say which repository
+  it was.
 
 ## Retired
 

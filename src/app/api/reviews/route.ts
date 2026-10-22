@@ -141,13 +141,18 @@ export function POST(request: Request): Promise<Response> {
     // Fetched immediately before pinning, so the commits recorded are the tips
     // the remotes have now rather than whatever the last clone left behind.
     // Both sides are fetched before either is pinned, so the pair describes
-    // one moment rather than two.
-    await fetchAll(project.clonePath);
-    recordFetch(db, project.id);
-    if (dependency) {
-      await fetchAll(dependency.clonePath);
-      recordFetch(db, dependency.id);
-    }
+    // one moment rather than two. At once: they are separate clones, and the
+    // fetch queue serialises only one clone's fetches (D-181 item 7).
+    const sides = dependency === undefined ? [project] : [project, dependency];
+    const fetched = await Promise.allSettled(
+      sides.map(async (side) => {
+        await fetchAll(side.clonePath);
+        recordFetch(db, side.id);
+      }),
+    );
+    // Settled, not raced: the answer waits for both, and a failed primary is
+    // the one reported, as when they ran in turn.
+    for (const outcome of fetched) if (outcome.status === "rejected") throw outcome.reason;
     const pins = await pin(project.clonePath, input.fromBranch, input.intoBranch);
     const linked =
       dependency && input.linked
