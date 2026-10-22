@@ -42,10 +42,19 @@ export function runtime(): Runtime {
     // mark the first one's running reviews interrupted, and could migrate the
     // database alongside it (4.18).
     const release = acquireDataDirLock(dataDir);
-    const db = createDb(dbPath(dataDir));
-    runMigrations(db);
-    jobManager().init({ db, dataDir });
-    holder[RUNTIME_KEY] = { db, dataDir, release };
+    let db: Db | undefined;
+    try {
+      db = createDb(dbPath(dataDir));
+      runMigrations(db);
+      jobManager().init({ db, dataDir });
+      holder[RUNTIME_KEY] = { db, dataDir, release };
+    } catch (error) {
+      // Left open and held, the next call opened a second handle on the same
+      // file beside this one, under a lock no runtime owned (D-181 item 6).
+      db?.$client.close();
+      release();
+      throw error;
+    }
     if (!holder[EXIT_HOOK_KEY]) {
       process.once("exit", () => holder[RUNTIME_KEY]?.release());
       holder[EXIT_HOOK_KEY] = true;
