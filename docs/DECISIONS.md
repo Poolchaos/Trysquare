@@ -4100,3 +4100,53 @@ verified evidence, in writing, here.
   used, an export left with only its test once its production use was taken
   out, and a dead export in a script library each failed it, naming the
   export; restored, it is clean over 146 production files.
+- 2026-10-22 D-173 REVIEW (767868f..fe36706: D-170, D-171, the three MVP
+  7.1 items and 74a5c26, by a separate read-only reviewer under D-162's
+  rules; each finding read again here before it was fixed). Eight
+  findings, one HIGH, three MEDIUM and four LOW:
+  1. HIGH: the project form's default-branch select was left to the
+  browser, which took the newest branch once the list arrived, so a save
+  meant as a rename moved the default. 2. MEDIUM: both of ec9f6cb's tests
+  set the default to the one already stored, the fixture's detected
+  default being its newest branch, so they could not fail, and its message
+  claimed a move. Both fixed c1c06d0, pushed as soon as fe36706 passed:
+  the form holds its fields, and the tests move the default to main and
+  rename alone after the branches load.
+  3. MEDIUM: the dead-export gate skipped re-exports, which hid client.ts's
+  unused `export { schema }`. 5. LOW: it counted a destructured dynamic
+  import as no use. 6. LOW: its list of the names Next.js reads by path was
+  short. All fixed 5a19308, the dead re-export deleted, each proved against
+  fe36706's gate on the same trees.
+  4. MEDIUM: 74a5c26's wait for every animation hung on the top bar's
+  pulse, which never ends, and rejected on an interrupted one. Fixed
+  9a4fd19, shown hanging with the pulse injected and passing after.
+  7. LOW: D-171 called its proof "each name in the forms the old patterns
+  caught". The old patterns matched a name inside a longer token, a
+  camelCase identifier or one with letters or digits glued on, and the
+  hashed matcher splits only at what is not a letter or digit, so those
+  forms are no longer caught: D-171's six forms were each separated by
+  something else. That line stands corrected here; D-169 accepted the lost
+  reach.
+  8. LOW: the headless notice names a setting "in your Claude Code
+  settings", which a headless review does not read; only a managed policy
+  file might still reach it, unmeasured. Not changed: in the idea inbox,
+  measuring it touching a machine-wide policy file.
+- 2026-10-22 D-174 DECIDED by the maintainer: what is configured in the app
+  wins over the machine's own Claude configuration, so a global setting, an
+  environment variable or a policy file does not quietly change what a
+  review runs with.
+  1. The environment a CLI the app starts gets becomes an allowlist: what
+  the CLI needs to run (system paths, home and app-data directories, temp,
+  locale, proxy and certificate settings) and the app's own, plus
+  CLAUDE_CONFIG_DIR and CLAUDE_CODE_OAUTH_TOKEN, so a sign-in kept in a
+  custom config folder or made with `claude setup-token` still works.
+  Everything else in the server's environment is dropped. Rejected: keeping
+  D-120's denylist, which let every variable it did not name through, and
+  dropping the two sign-in variables too.
+  2. An interactive review's printed commands read no settings files,
+  `--setting-sources ""`, as a headless review has since D-124, which found
+  the person's settings changing a review's effort and putting their own
+  CLAUDE.md into every request. Rejected: keeping user settings.
+  3. A managed policy file outranks any flag by the CLI's design, so the
+  app looks for one, read-only, where the CLI reads it, and warns on
+  Settings and before Start when one exists. Rejected: ignoring them.

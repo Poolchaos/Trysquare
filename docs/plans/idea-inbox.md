@@ -64,6 +64,13 @@ pulled deliberately.
 - 2026-10-21: the probe route asks nothing of the CLI's billing; Settings
   says it above Models as it opens, unless that check failed (D-163
   item 11).
+- 2026-10-22: whether a managed (policy) settings file survives
+  `--setting-sources ""`. D-170 measured user settings only. If it does, a
+  headless check could still name an apiKeyHelper or a provider, and the
+  notice's "set in your Claude Code settings: remove it there" would send
+  the person to a file they may not own (D-173 item 8). Measuring it means
+  writing a machine-wide policy file, which governs the maintainer's own
+  Claude Code too, so it waits for the maintainer.
 
 ## Retired
 
