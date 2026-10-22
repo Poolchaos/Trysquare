@@ -181,6 +181,7 @@ run "Type check" npm run --silent typecheck
 run "House style" node scripts/check-style.mjs
 run "No private material" node scripts/check-no-private.mjs
 run "Nothing hidden from git" node scripts/check-nothing-hidden.mjs
+run "No dead exports" node scripts/check-dead-exports.mjs
 run "Unit tests" npm run --silent test
 
 # The browser suite starts its server with `npm run start`, which serves

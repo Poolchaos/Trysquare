@@ -4086,3 +4086,17 @@ verified evidence, in writing, here.
   old patterns caught, a domain among them: six of six found, and a line
   with the ordinary word "pos" not. The maintainer's gitignored probe file
   gained the five names, and every hash finds its own there.
+- 2026-10-22 D-172 BUILT (MVP 7.1, T19, MG-8): the dead-export gate,
+  scripts/check-dead-exports.mjs, run by `./verify.sh`. An export from src/
+  or scripts/ that nothing there uses fails it; a use from the tests does
+  not count, so an export only a test reaches is dead (D-54), except the
+  seams the gate names with why, one so far: runtime's closeRuntime, which a
+  test needs to close the database before deleting its data directory on
+  Windows. Every identifier in production is resolved through imports and
+  re-exports to what it names; a namespace handed on whole, as the schema is
+  to drizzle, uses every export in it; a script with a declaration file is
+  judged by that file; the exports Next.js reads by name are named as used.
+  Mutation-proved, as U12 required before it counted: a new export nothing
+  used, an export left with only its test once its production use was taken
+  out, and a dead export in a script library each failed it, naming the
+  export; restored, it is clean over 146 production files.

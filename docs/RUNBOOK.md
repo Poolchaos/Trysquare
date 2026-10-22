@@ -44,8 +44,8 @@ npm install
 The second command is optional but recommended once: it is the project's
 single gate, and if it does not exit 0 on a clean checkout, fix that before
 trusting anything else. It runs lint, format check, typecheck, house style,
-the private-material check, the nothing-hidden-from-git check, and the unit
-tests. Add `--build --e2e` for the full gate, which is what CI runs.
+the private-material check, the nothing-hidden-from-git check, the
+dead-export check, and the unit tests. Add `--build --e2e` for the full gate, which is what CI runs.
 
 ## Start
 

@@ -87,7 +87,8 @@ starts. The maintainer can trigger one at any time with "review".
 All proven on this machine, last re-proven 2026-08-03.
 
 - `./verify.sh` - the single gate. Lint, format check, typecheck, house style,
-  private-material leak check, nothing-hidden-from-git check, unit tests.
+  private-material leak check, nothing-hidden-from-git check, dead-export
+  check, unit tests.
   `--build` adds the production build; `--e2e` adds Playwright.
   "Verified" means this exited 0.
 - `npm run dev` - dev server. `npm run start -- --port <n>` - production

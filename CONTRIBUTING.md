@@ -41,7 +41,8 @@ that tests run without consuming anyone's model usage.
 ```
 
 This runs lint, format check, typecheck, house style, the private-material
-check, the nothing-hidden-from-git check, and the unit tests. Add `--build` if
+check, the nothing-hidden-from-git check, the dead-export check, and the unit
+tests. Add `--build` if
 you touched anything that affects the build, and `--e2e` if you touched UI or
 pipeline behaviour.
 

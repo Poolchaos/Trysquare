@@ -129,7 +129,7 @@ are accepted; anything else is refused by name.
 - `src/components/` - the shared UI vocabulary, the top bar, and the
   confirmation queue.
 - `scripts/` - the house-style gate, the leak gate, the nothing-hidden gate,
-  and the fixture demo.
+  the dead-export gate, and the fixture demo.
 - `tests/fixtures/example-protocol.md` - the public sample protocol the
   fidelity gate runs against.
 - `tests/fixtures/fake-claude.mjs` - stand-in CLI, so tests are hermetic and
