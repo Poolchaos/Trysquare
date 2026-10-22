@@ -47,6 +47,19 @@ test.beforeAll(() => {
   mkdirSync(EVIDENCE, { recursive: true });
 });
 
+/**
+ * Waits for every animation and transition on the page to end, so axe reads
+ * colours as they stay. A control enabled a moment ago is still fading in
+ * from its disabled opacity: on Settings, as Check the CLI turned enabled,
+ * the probe buttons read 0.45 to 0.70, and axe on macOS CI flagged their
+ * contrast mid-fade (run 39733821489, 2026-10-22).
+ */
+async function settled(page: import("@playwright/test").Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((animation) => animation.finished)),
+  );
+}
+
 for (const screen of SCREENS) {
   test(`${screen.name} renders and photographs`, async ({ page }, testInfo) => {
     await page.goto(screen.path);
@@ -167,6 +180,8 @@ for (const screen of SCREENS) {
       });
     }
 
+    await settled(page);
+
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
@@ -199,6 +214,8 @@ test("the billing notice has no accessibility violations", async ({ page }) => {
   await expect(page.getByTestId("per-token-notice")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("cli-status")).toContainText("Signed in (api_key)");
 
+  await settled(page);
+
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
@@ -218,6 +235,8 @@ test("the confirmation queue has no accessibility violations", async ({ page }) 
   await page.goto("/reviews");
   await openTheCompletedReview(page);
   await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
+
+  await settled(page);
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
