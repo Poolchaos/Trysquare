@@ -160,8 +160,12 @@ export function launchArgsFor(input: {
     input.model,
     "--tools",
     READ_ONLY_TOOLS.join(","),
-    "--setting-sources",
-    "user",
+    // No settings file, as a headless stage reads none (D-124): the
+    // person's own changed a review's effort and put their CLAUDE.md into
+    // every request (D-174). One token, since Windows PowerShell 5.1 drops an
+    // empty argument to a program, and the next flag became the value; the
+    // CLI reads this form as none, measured on 2.1.301 as D-170 was.
+    "--setting-sources=",
     "--strict-mcp-config",
     "--system-prompt-file",
     input.files.system,

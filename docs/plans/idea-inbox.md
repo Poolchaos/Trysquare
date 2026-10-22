@@ -115,3 +115,11 @@ the line entirely would lose the trail.
   file naming them, at the cost of the patterns' reach and of a list no
   reader can review, with history keeping every literal regardless.
   DECIDED in D-169, BUILT in D-171.
+- 2026-10-22 Unexplained, Windows only so far: the e2e web server died
+  partway through 3 of 13 local runs during the D-174 item 2 work (two
+  `./verify.sh --e2e` gates and the standalone run straight after one),
+  the rest of the suite then failing on connection refused, nothing on
+  stderr. Not reproduced since: 10 standalone runs passed, 4 of them with
+  signal, exit and uncaught-error tracing in the server that recorded only
+  its start. Not leftover unit-test processes (none lingered, and unit then
+  e2e passed). Next occurrence: trace again before guessing at a cause.

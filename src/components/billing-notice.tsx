@@ -39,22 +39,16 @@ export function billingOf(
  * from the CLI.
  */
 export function signInWouldHelp(authMethod: string | undefined): boolean {
-  return authMethod !== "oauth_token" && settingOverSignIn(authMethod, "review") === null;
+  return authMethod !== "oauth_token" && settingOverSignIn(authMethod) === null;
 }
 
 /**
  * The sentence naming the setting that wins, or null when none is known to.
- * Each check now asks as its reader sees it, so the setting it names is one
- * that reader reads: none for a review here or a probe, the person's user
- * settings for an interactive review's commands (D-169). Said as may until
- * that was measured (reviews of the D-162 to D-164 fixes).
- *
- * @param reader What would cost.
+ * The check asks as every review reads, with no settings (D-170, D-174), so a
+ * setting it names is one a review would use. Said as may until that was
+ * measured (reviews of the D-162 to D-164 fixes).
  */
-export function settingOverSignIn(
-  authMethod: string | undefined,
-  reader: "review" | "probe" | "interactive",
-): string | null {
+export function settingOverSignIn(authMethod: string | undefined): string | null {
   const setting =
     authMethod === "api_key_helper"
       ? "an apiKeyHelper"
@@ -62,9 +56,7 @@ export function settingOverSignIn(
         ? "another provider"
         : null;
   if (setting === null) return null;
-  const where =
-    reader === "interactive" ? "your user Claude Code settings" : "your Claude Code settings";
-  return `This is ${setting} set in ${where}, which wins over a sign-in: remove it there to use the subscription.`;
+  return `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`;
 }
 
 /** A sign-in command on a line of its own, so it is copied without the words around it. */
@@ -90,7 +82,7 @@ export function BillingNotice({
   const { state, authMethod, signIn } = billing;
   const one = what === "probe" ? "a probe" : what === "interactive" ? "each one" : "a review";
   const remedy = signInWouldHelp(authMethod);
-  const setting = settingOverSignIn(authMethod, what);
+  const setting = settingOverSignIn(authMethod);
   const surely = state === "perToken";
   const unknownWay =
     authMethod === undefined

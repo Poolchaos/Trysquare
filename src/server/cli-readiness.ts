@@ -24,20 +24,9 @@ export interface CliReadiness {
   refusal: string | null;
 }
 
-/**
- * @param reader A headless review, which reads no settings, unless an
- *   interactive review's commands, which read the person's user settings, are
- *   asked for (D-169).
- */
-export async function cliReadiness(
-  db: Db,
-  reader: "headless" | "interactive" = "headless",
-): Promise<CliReadiness> {
+export async function cliReadiness(db: Db): Promise<CliReadiness> {
   const claudePath = configuredClaudePath(db);
-  const cli = await readCliStatus({
-    ...(claudePath === undefined ? {} : { claudePath }),
-    settingSources: reader === "interactive" ? "user" : "",
-  });
+  const cli = await readCliStatus(claudePath === undefined ? {} : { claudePath });
   // A configured CLI is signed in by the path it resolved to, which the
   // person's terminal finds whatever its own directory and PATH.
   const resolved = cli.state === "notFound" ? undefined : cli.path;

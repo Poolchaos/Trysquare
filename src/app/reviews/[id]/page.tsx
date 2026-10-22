@@ -697,9 +697,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     if (!interactiveToStart) return;
     let cancelled = false;
     void (async () => {
-      // As its commands see it, reading the person's user settings (D-169).
+      // As its commands see it, reading no settings (D-174).
       const sent = await send<{ cli: { state: string; authMethod?: string }; signIn?: SignIn }>(
-        "/api/auth?reader=interactive",
+        "/api/auth",
         {},
         "The CLI could not be checked",
       );

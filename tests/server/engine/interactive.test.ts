@@ -306,7 +306,13 @@ describe("the command a person is given", () => {
   it("starts the session isolated the way a headless stage is", () => {
     expect(args).toContain("--strict-mcp-config");
     expect(args[args.indexOf("--tools") + 1]).toBe("Read,Grep,Glob");
-    expect(args[args.indexOf("--setting-sources") + 1]).toBe("user");
+    // No settings file, as a headless stage reads none (D-124): the person's
+    // own settings changed a review's effort and put their CLAUDE.md into
+    // every request (D-174).
+    // One token: PowerShell 5.1 drops an empty argument, which made the next
+    // flag the value.
+    expect(args).toContain("--setting-sources=");
+    expect(args).not.toContain("--setting-sources");
     expect(args[args.indexOf("--system-prompt-file") + 1]).toBe(files.system);
     expect(args[args.indexOf("--add-dir") + 1]).toBe(exchangeDir);
     // Options end before the one positional argument, since --add-dir and

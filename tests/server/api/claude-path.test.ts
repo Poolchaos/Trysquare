@@ -98,9 +98,10 @@ describe("the CLI path kept in Settings", () => {
     expect(await cliState()).toMatchObject({ state: "subscription", path: FAKE_CLI });
   }, 30_000);
 
-  it("answers for an interactive review's commands when asked for them", async () => {
-    // Those read the person's user settings, which a review here does not
-    // (D-169, measured 2026-10-22).
+  it("answers as every review reads, with no settings, interactive ones too", async () => {
+    // An apiKeyHelper only the person's settings hold is no review's sign-in:
+    // a headless review reads no settings (D-124), and an interactive
+    // review's commands read none either (D-174).
     process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({
       loggedIn: true,
       authMethod: "claude.ai",
@@ -112,10 +113,6 @@ describe("the CLI path kept in Settings", () => {
     try {
       await save({ claudePath: FAKE_CLI });
       expect((await cliState()).state).toBe("subscription");
-      const interactive = (await (
-        await routes.auth.GET(new Request("http://local/api/auth?reader=interactive"))
-      ).json()) as { cli: Answered & { authMethod?: string } };
-      expect(interactive.cli).toMatchObject({ state: "perToken", authMethod: "api_key_helper" });
     } finally {
       delete process.env.FAKE_CLAUDE_AUTH_STATUS_FROM_SETTINGS;
     }

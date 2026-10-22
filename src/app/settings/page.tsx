@@ -426,8 +426,8 @@ export default function SettingsPage() {
                             ? "Signed in, but the CLI did not say how: unless it is your Claude subscription, reviews may cost API usage, billed per token."
                             : `Signed in (${cli.authMethod}), a way this app does not know: unless it is your Claude subscription, reviews may cost API usage, billed per token.`}
                     </p>
-                    {settingOverSignIn(cli.authMethod, "review") === null ? null : (
-                      <p className="text-xs">{settingOverSignIn(cli.authMethod, "review")}</p>
+                    {settingOverSignIn(cli.authMethod) === null ? null : (
+                      <p className="text-xs">{settingOverSignIn(cli.authMethod)}</p>
                     )}
                     {signIn === null || !signInWouldHelp(cli.authMethod) ? null : (
                       <>

@@ -2729,40 +2729,24 @@ test("a signed-out CLI's check shows the command that signs it in", async ({ pag
   await stopBare();
 });
 
-test("the new-review screen asks the CLI as each engine reads its settings", async ({ page }) => {
-  // A headless review reads no settings and an interactive review's commands
-  // read the person's user settings, so a helper set there bills the second
-  // only; asked once, as neither, the check spoke for both (D-169, measured
-  // 2026-10-22).
-  const stop = await routeUntilStopped(page, "**/api/auth*", (route) =>
-    new URL(route.request().url()).searchParams.get("reader") === "interactive"
-      ? route.fulfill({
-          status: 200,
-          json: {
-            cli: {
-              state: "perToken",
-              path: "/opt/claude",
-              version: "2.1.301",
-              authMethod: "api_key_helper",
-            },
-          },
-        })
-      : route.fallback(),
-  );
-  const asked = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === "/api/auth" && new URL(response.url()).search === "",
+test("the new-review screen asks the CLI once, for both engines", async ({ page }) => {
+  // An interactive review's commands read no settings, as a headless review
+  // reads none (D-174), so one answer is each engine's: the screen asked a
+  // second time, for the person's user settings, which D-174 retired.
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/auth") asked.push(url.search);
+  });
+  const checked = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth",
   );
   await fillANewReview(page);
-  await asked;
-  const notice = page.getByTestId("per-token-notice");
-  await expect(notice).toHaveCount(0);
+  await checked;
   await page.getByText("Advanced", { exact: true }).click();
   await page.getByTestId("engine-mode").selectOption("interactive");
-  await expect(notice).toContainText(
-    "This is an apiKeyHelper set in your user Claude Code settings, which wins over a sign-in",
-  );
-  await stop();
+  await page.getByTestId("engine-mode").selectOption("headless");
+  expect(asked).toEqual([""]);
 });
 
 test("a sign-in that bills per token is said before Start, strictly, and Start stays on", async ({
@@ -2855,8 +2839,8 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
     );
     await fillANewReview(page);
     await expect(notice).toContainText(`(${authMethod})`);
-    // Each check asks as its reader reads, so the setting it names applies
-    // and is said to (D-169, measured 2026-10-22).
+    // The check asks as every review reads, so a setting it names applies
+    // and is said to (D-170, D-174).
     await expect(notice).toContainText("This review will cost API usage, billed per token.");
     await expect(notice).toContainText(
       `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
@@ -2868,7 +2852,7 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
       "The commands this review prints will cost API usage, billed per token.",
     );
     await expect(notice).toContainText(
-      `This is ${setting} set in your user Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
+      `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
     );
     await stopSetting();
   }

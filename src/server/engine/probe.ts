@@ -150,14 +150,14 @@ function runCli(
  * credentials themselves are never read, copied, or logged. Every step costs
  * nothing: `--version` and `auth status` run locally.
  *
- * Asked with the setting sources of the reader it answers for: none for a
- * headless review and a probe, `user` for an interactive review's commands.
- * Asked with neither, it read the person's settings and named an apiKeyHelper
- * or a provider a review here never reads; `--setting-sources` before `auth`
- * reaches it (D-169, measured 2026-10-22 with a throwaway config directory).
+ * Asked with no settings sources, as every review and probe the app starts
+ * reads none (D-124, D-174). Asked without, it read the person's settings and
+ * named an apiKeyHelper or a provider a review never reads;
+ * `--setting-sources` before `auth` reaches it (D-170, measured 2026-10-22
+ * with a throwaway config directory).
  */
 export async function readCliStatus(
-  options: { claudePath?: string; timeoutMs?: number; settingSources?: "" | "user" } = {},
+  options: { claudePath?: string; timeoutMs?: number } = {},
 ): Promise<CliStatus> {
   let cli: CliCommand;
   try {
@@ -179,7 +179,7 @@ export async function readCliStatus(
   }
 
   const outcome = await runCli(
-    ["--setting-sources", options.settingSources ?? "", "auth", "status"],
+    ["--setting-sources", "", "auth", "status"],
     options.timeoutMs ?? 30_000,
     options.claudePath,
   );
