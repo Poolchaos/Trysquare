@@ -12,11 +12,16 @@
  */
 
 import { exportsDir } from "@/lib/paths";
-import { deleteProject, getProject, listProjects } from "@/server/db/repositories/projects";
+import {
+  deleteProject,
+  getProject,
+  listProjects,
+  type ProjectHasReviewsError,
+} from "@/server/db/repositories/projects";
 import { listActiveReviews, listReviewsForProject } from "@/server/db/repositories/reviews";
 import { deleteRuleset, listRulesets } from "@/server/db/repositories/rulesets";
 import { deleteReviewEntirely } from "@/server/review/service";
-import { handler, ok } from "@/server/api/respond";
+import { handler, isNamed, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 import { removeProjectFiles } from "@/server/projects/clone";
 
@@ -72,13 +77,35 @@ export async function DELETE(): Promise<Response> {
     } finally {
       for (const id of claimed) manager.endDelete(id);
     }
+    let removedProjects = 0;
     for (const listed of projects) {
       // Read again just before: the deletions above awaited, and a clone may
       // have finished or been tried again since the list was read, which
       // decides whether a failed removal is the clone's to finish (D-137).
       const project = getProject(db, listed.id);
       if (!project) continue;
-      deleteProject(db, project.id);
+      try {
+        deleteProject(db, project.id);
+      } catch (error) {
+        if (!isNamed<ProjectHasReviewsError>(error, "ProjectHasReviewsError")) throw error;
+        // A review made during the awaits above was never listed or claimed,
+        // and may be running by now, so it is not deleted here. Stopped
+        // before the rulesets, since a started review holds its ruleset: it
+        // answered a bare 500, half done (D-181 item 5).
+        throw Response.json(
+          {
+            error:
+              `A review was added to ${project.name} while everything was being deleted, so ` +
+              `the delete stopped there. Already removed: ${reviews} review(s) and ` +
+              `${removedProjects} project(s). No rulesets were removed. Delete everything ` +
+              "again to finish.",
+            code: "ReviewAddedDuringWipe",
+            deleted: { projects: removedProjects, reviews, rulesets: 0 },
+          },
+          { status: 409 },
+        );
+      }
+      removedProjects += 1;
       await removeProjectFiles(dataDir, project);
     }
 
