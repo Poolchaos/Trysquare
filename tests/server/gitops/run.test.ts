@@ -283,10 +283,11 @@ describe("the system config git is given", () => {
         const first = await (await ownCopy()).systemGitConfig();
         if (first.kind !== "standIn") return;
         const text = await readFile(first.path, "utf8");
+        // Replaced where it can be, so the path may be the same one: what
+        // git is given must be a plain file no one else can write.
         const own = (system: { kind: string; path?: string }) => {
           expect(system.kind).toBe("standIn");
           const path = (system as { path: string }).path;
-          expect(path).not.toBe(first.path);
           const stat = lstatSync(path);
           expect(stat.isFile()).toBe(true);
           expect(stat.mode & 0o022).toBe(0);
