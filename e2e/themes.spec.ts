@@ -55,8 +55,17 @@ test.beforeAll(() => {
  * contrast mid-fade (run 39733821489, 2026-10-22).
  */
 async function settled(page: import("@playwright/test").Page): Promise<void> {
+  // Only those that end: the top bar's pulse runs for good while a review
+  // is active, and waited for, held the page until the test timed out; one
+  // a re-render interrupts rejects, and counts as ended (review of the 7.1
+  // changes).
   await page.evaluate(() =>
-    Promise.all(document.getAnimations().map((animation) => animation.finished)),
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
   );
 }
 
