@@ -58,12 +58,6 @@ pulled deliberately.
   489 ms, a private working tree on the maintainer's Windows machine
   (D-153, D-154); measure it on a large repository and size the
   ceiling, or make it scale with the file count.
-- 2026-10-21: the maintainer's call: whether check-no-private's remaining
-  literal markers (the private product, package and project names) move to
-  hashes as the working-tree names did (D-157): it would stop the gate's own
-  file naming them, at the cost of the patterns' reach and of a list no
-  reader can review, with history keeping every literal regardless.
-  DECIDED in D-169: they move to hashes; not built yet.
 - 2026-10-21: a review put in line is asked about the CLI as it is queued,
   not again as it leaves the queue, whose launch is synchronous, so a
   sign-in changed while it waits runs unchecked (D-163 item 4).
@@ -108,3 +102,9 @@ the line entirely would lose the trail.
   reaches it needs the real CLI run.
   MEASURED and BUILT in D-170: `--setting-sources` before `auth` reaches
   it, and each check now asks as its reader reads.
+- 2026-10-21 The maintainer's call: whether check-no-private's remaining
+  literal markers (the private product, package and project names) move to
+  hashes as the working-tree names did (D-157): it would stop the gate's own
+  file naming them, at the cost of the patterns' reach and of a list no
+  reader can review, with history keeping every literal regardless.
+  DECIDED in D-169, BUILT in D-171.

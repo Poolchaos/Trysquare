@@ -35,9 +35,6 @@ const FORBIDDEN_PATHS = [
  * new identifiers enters the working tree.
  */
 const FORBIDDEN_CONTENT = [
-  { pattern: /sally[-\s]?pos/i, why: "private product name" },
-  { pattern: /pos-core/i, why: "private package name" },
-  { pattern: /popiadesk|peelgrims/i, why: "other private project names" },
   { pattern: /\bSAL-\d+\b/, why: "internal tracker identifier" },
   { pattern: /v2-app-location-/i, why: "internal deployed function identifier" },
   { pattern: /[a-z0-9._%+-]+@(?:proton|gmail|outlook|hotmail)\.[a-z]{2,}/i, why: "personal email" },
@@ -57,11 +54,29 @@ const FORBIDDEN_HASHED = new Map([
   ["89c5769c84f1e5a050f6aacde3d8e2eb91bc82b32ecb2280ed8beae918cf4242", "private working tree name"],
   ["bb1849bfd3e2f298d45e4f82aaf7fef14fc2f4a2187261c8c86a5f359a7d80fb", "private working tree name"],
   ["e8a32f7a5f6d42e1e1c4a4ce73b6d2b60cecaf2e5d0e94c5936055272d508c9e", "private working tree name"],
+  // The private product, package and project names, once literal patterns
+  // here, which this public file then named itself (D-169).
+  ["97f82ca8295114008af2d539f36de0afe2f1149ca77999f1da34b54aeac70859", "private product name"],
+  ["2e22bbb787db240dc91ee2a73ef40285c86de7466a1d1dd878e672ecf85e61e0", "private package name"],
 ]);
+
+/**
+ * Names of one word, each coined, so no ordinary use of the word trips it,
+ * which is what the probe check's refusal of one word guards against. Listed
+ * apart, so a name meant as two words that matched as one is still refused
+ * (D-171).
+ */
+const FORBIDDEN_HASHED_WORDS = new Map([
+  ["76b7cbb1111bab53d9ea036c919d07be3d5c46950f57b0bd19b6fed0661e43a9", "private product name"],
+  ["bd2c6db0b77d64004f36235cabda8a3d096d6167348db705c7c68ca5991bb27a", "private project name"],
+  ["f64061477969dfbec4b81434e96736116fe89fc3208d6825bfc30bbee7cb0571", "private project name"],
+]);
+
+const ALL_HASHED = new Map([...FORBIDDEN_HASHED, ...FORBIDDEN_HASHED_WORDS]);
 
 // A mistyped hash matches nothing and says nothing, and a gate that silently
 // finds nothing is worse than none (review of the D-156 fixes).
-for (const digest of FORBIDDEN_HASHED.keys()) {
+for (const digest of ALL_HASHED.keys()) {
   if (!/^[0-9a-f]{64}$/.test(digest)) {
     console.error(`check-no-private: "${digest}" is not a sha256 hash, so it would match nothing.`);
     process.exit(1);
@@ -165,7 +180,7 @@ for (const file of files) {
   }
 
   const lines = contents.split("\n");
-  for (const { line, why } of hashedNamesIn(contents, FORBIDDEN_HASHED, hashedAnswers)) {
+  for (const { line, why } of hashedNamesIn(contents, ALL_HASHED, hashedAnswers)) {
     violations.push(`${file}:${line + 1}: ${why}\n    ${lines[line].trim().slice(0, 160)}`);
   }
   lines.forEach((line, index) => {
@@ -184,14 +199,19 @@ for (const file of files) {
 }
 
 if (existsSync(HASHED_PROBE)) {
-  const hits = hashedNamesIn(readFileSync(HASHED_PROBE, "utf8"), FORBIDDEN_HASHED, hashedAnswers);
-  for (const digest of FORBIDDEN_HASHED.keys()) {
+  const hits = hashedNamesIn(readFileSync(HASHED_PROBE, "utf8"), ALL_HASHED, hashedAnswers);
+  for (const digest of ALL_HASHED.keys()) {
     const own = hits.filter((hit) => hit.digest === digest);
+    const oneWord = FORBIDDEN_HASHED_WORDS.has(digest);
     if (own.length === 0) {
       violations.push(`${HASHED_PROBE}: hash ${digest.slice(0, 12)}... no longer finds its name`);
-    } else if (own.some((hit) => hit.words === 1)) {
+    } else if (!oneWord && own.some((hit) => hit.words === 1)) {
       violations.push(
         `${HASHED_PROBE}: hash ${digest.slice(0, 12)}... is one word, which every use of it would trip`,
+      );
+    } else if (oneWord && own.some((hit) => hit.words !== 1)) {
+      violations.push(
+        `${HASHED_PROBE}: hash ${digest.slice(0, 12)}... is listed as one word but found as more`,
       );
     }
   }

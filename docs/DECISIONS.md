@@ -4072,3 +4072,17 @@ verified evidence, in writing, here.
   every status exact, the "may cost" said of an apiKeyHelper or a provider
   since D-164 item 8 and D-165 items 3, 8 and 9 is "will" again, and those
   entries stand corrected by this line.
+- 2026-10-22 D-171 BUILT (D-169 item 3): the leak gate's private product,
+  package and project names are hashes now, not literal patterns, so
+  scripts/check-no-private.mjs no longer names them. Two are two words, as
+  the matcher reads a name, and join the hashed list; three are single
+  coined words, and the probe check's refusal of one-word names, kept since
+  D-157 so an ordinary word is not hashed by accident, would refuse them.
+  They sit in a list of their own, which the probe check requires to match
+  as exactly one word, so the refusal still holds for every other hash.
+  The tracker identifier, the deployed-function prefix and the personal
+  email stay patterns: none is a name a hash can stand for. Proved on an
+  untracked scratch file, since deleted, holding each name in the forms the
+  old patterns caught, a domain among them: six of six found, and a line
+  with the ordinary word "pos" not. The maintainer's gitignored probe file
+  gained the five names, and every hash finds its own there.
