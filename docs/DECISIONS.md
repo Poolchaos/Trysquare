@@ -4204,3 +4204,13 @@ verified evidence, in writing, here.
   so whether a policy applies went unsaid.
   7. LOW: the dead-export gate's comment for FRAMEWORK sat above
   SEGMENT_CONFIG.
+- 2026-10-22 D-176 FIXED, each pushed once the commit before it passed CI
+  on all three: item 1 4cc0a1d (1167 and 99, CI run 39761676947); item 2
+  f14b262 (1171 and 99, CI run 39762817337); items 3 to 6 3169502 (1171
+  and 99, CI run 39764540954); item 7 89901b5 (1171, CI run 39766201111).
+  Item 3 kept its wording, with its basis said beside it: the binary's code
+  leaves no other source. Item 4's absence check cannot fail on the code
+  before it, whose block had no name to look for; the presence check
+  beside it failed there, and item 6's message was shown missing on a
+  build without it. Counts are unit then browser tests from
+  `./verify.sh --e2e` on Windows, 89901b5's unit tests from `./verify.sh`.
