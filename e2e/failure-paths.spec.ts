@@ -2564,7 +2564,7 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
     ],
     [
       { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "third_party" },
-      "This is another provider set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.",
+      "This is another provider set by a managed Claude Code policy, which wins over a sign-in and over this app: whoever manages Claude Code for you can remove it.",
     ],
   ];
   for (const [cli, said] of answers) {
@@ -2821,9 +2821,10 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
   await expect(notice).not.toContainText("auth login");
   await stopToken();
 
-  // So do an apiKeyHelper and another provider, both set in the person's
-  // Claude Code settings, so the setting is named instead (review of the
-  // D-162 fixes).
+  // So do an apiKeyHelper and another provider, so the setting is named
+  // instead (review of the D-162 fixes). With no settings read and the
+  // provider variables kept from the CLI, only a managed policy sets them
+  // (D-174).
   for (const [authMethod, setting] of [
     ["api_key_helper", "an apiKeyHelper"],
     ["third_party", "another provider"],
@@ -2843,7 +2844,7 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
     // and is said to (D-170, D-174).
     await expect(notice).toContainText("This review will cost API usage, billed per token.");
     await expect(notice).toContainText(
-      `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
+      `This is ${setting} set by a managed Claude Code policy, which wins over a sign-in and over this app: whoever manages Claude Code for you can remove it.`,
     );
     await expect(notice).not.toContainText("auth login");
     await page.getByText("Advanced", { exact: true }).click();
@@ -2852,10 +2853,77 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
       "The commands this review prints will cost API usage, billed per token.",
     );
     await expect(notice).toContainText(
-      `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
+      `This is ${setting} set by a managed Claude Code policy, which wins over a sign-in and over this app: whoever manages Claude Code for you can remove it.`,
     );
     await stopSetting();
   }
+});
+
+test("a managed policy is said on Settings and before a review starts, and none is not", async ({
+  page,
+}) => {
+  // A policy outranks every flag the app passes, `--setting-sources ""`
+  // included, so it is warned of rather than overridden (D-174 item 3).
+  const found = String.raw`C:\Program Files\ClaudeCode\managed-settings.json`;
+  const unchecked = String.raw`HKCU\SOFTWARE\Policies\ClaudeCode\Settings: reg.exe did not answer in time`;
+  const stopAuth = await routeUntilStopped(page, "**/api/auth*", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        cli: { state: "subscription", path: "/opt/claude", version: "2.1.301" },
+        signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
+        managedPolicy: { found: [found], unchecked: [unchecked] },
+      },
+    }),
+  );
+  const notice = page.getByTestId("managed-policy-notice");
+  const notLooked = page.getByTestId("managed-policy-unchecked");
+
+  await page.goto("/settings");
+  await expect(notice).toContainText("A managed Claude Code policy is set on this machine.");
+  await expect(notice).toContainText(found);
+  // Settings alone says where it could not look.
+  await expect(notLooked).toContainText(unchecked);
+
+  await fillANewReview(page);
+  await expect(notice).toContainText("It outranks what this app sets");
+  await expect(notice).toContainText(found);
+  await expect(notLooked).toHaveCount(0);
+
+  // A draft, from the real server, whose first start is refused for this test.
+  const stopFirst = await answerOnce(page, "**/api/reviews/*/start", (route) =>
+    route.fulfill({ status: 500, json: { error: "Refused for this test.", code: "Test" } }),
+  );
+  const creation = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/reviews" && response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Start review" }).click();
+  const { review } = (await (await creation).json()) as { review: { id: string } };
+  await expect(page.getByText("Refused for this test.")).toBeVisible();
+  await stopFirst();
+
+  // A headless draft's own screen, whose Start asks nothing of the CLI first.
+  await page.goto(`/reviews/${review.id}`);
+  await expect(page.getByRole("button", { name: "Start review" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(notice).toContainText(found);
+  await stopAuth();
+
+  // The real route, on a machine with no policy (this one and CI's runners):
+  // nothing is said, and the screen still reads the answer.
+  const answered = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth",
+  );
+  await page.reload();
+  expect(((await (await answered).json()) as { managedPolicy: unknown }).managedPolicy).toEqual({
+    found: [],
+    unchecked: [],
+  });
+  await expect(page.getByRole("button", { name: "Start review" })).toBeVisible();
+  await expect(notice).toHaveCount(0);
+  expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
 });
 
 test("a billing notice follows the last answer, not the first", async ({ page }) => {

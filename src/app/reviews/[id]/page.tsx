@@ -36,6 +36,11 @@ import {
 } from "@/components/ui";
 import { asSentence, send } from "@/components/request";
 import { BillingNotice, billingOf, SignInLine, type Billing } from "@/components/billing-notice";
+import {
+  ManagedPolicyNotice,
+  managedPolicyOf,
+  type ManagedPolicy,
+} from "@/components/managed-policy-notice";
 import type { SignIn } from "@/lib/engine/sign-in-command";
 
 /**
@@ -675,47 +680,55 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     };
   }, [isDraft, draftReadAttempt]);
 
+  // Asked as the screen opens while the review can still be started or
+  // resumed, for a managed policy every review runs under (D-174 item 3).
   // An interactive review starts no CLI here, so the server asks nothing of
-  // it, but the commands it prints run this one: said as the screen opens
-  // while it can still be started or resumed (review of the D-163 fixes).
-  const interactiveToStart =
+  // it, but the commands it prints run this one, so its billing is said here
+  // too (review of the D-163 fixes); a headless one's the server refuses
+  // until a page has said it.
+  const toStart =
     snapshot !== null &&
-    snapshot.review.engineMode === "interactive" &&
     !snapshot.running &&
     !snapshot.queued &&
     (snapshot.review.status === "draft" ||
       isResumableReview(snapshot.review.status as ReviewStatus));
+  const interactiveToStart = toStart && snapshot.review.engineMode === "interactive";
   // The last answer whole, a failure included, so an older one never stands
   // for it (review of the D-164 fixes); dropped when the review stops being
   // startable, so coming back to it waits for a new one, and Start and
   // Resume wait with it (review of the D-165 fixes).
-  const [interactiveCheck, setInteractiveCheck] = useState<{
+  const [startCheck, setStartCheck] = useState<{
     billing: Billing | null;
+    managedPolicy: ManagedPolicy | null;
     error: string;
   } | null>(null);
   useEffect(() => {
-    if (!interactiveToStart) return;
+    if (!toStart) return;
     let cancelled = false;
     void (async () => {
       // As its commands see it, reading no settings (D-174).
-      const sent = await send<{ cli: { state: string; authMethod?: string }; signIn?: SignIn }>(
-        "/api/auth",
-        {},
-        "The CLI could not be checked",
-      );
+      const sent = await send<{
+        cli: { state: string; authMethod?: string };
+        signIn?: SignIn;
+        managedPolicy?: ManagedPolicy;
+      }>("/api/auth", {}, "The CLI could not be checked");
       if (cancelled) return;
-      setInteractiveCheck(
+      setStartCheck(
         sent.ok
-          ? { billing: billingOf(sent.body.cli, sent.body.signIn), error: "" }
-          : { billing: null, error: sent.error },
+          ? {
+              billing: billingOf(sent.body.cli, sent.body.signIn),
+              managedPolicy: managedPolicyOf(sent.body.managedPolicy),
+              error: "",
+            }
+          : { billing: null, managedPolicy: null, error: sent.error },
       );
     })();
     return () => {
       cancelled = true;
-      setInteractiveCheck(null);
+      setStartCheck(null);
     };
-  }, [interactiveToStart]);
-  const awaitingCheck = interactiveToStart && interactiveCheck === null;
+  }, [toStart]);
+  const awaitingCheck = interactiveToStart && startCheck === null;
 
   if (!snapshot) {
     return (
@@ -1036,14 +1049,17 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           <SignInLine signIn={refusedSignIn.signIn} />
         ) : null}
         {billing === null ? null : <BillingNotice billing={billing} />}
-        {interactiveToStart && interactiveCheck?.error ? (
+        {interactiveToStart && startCheck?.error ? (
           <Problem>
-            {asSentence(interactiveCheck.error)} Whether the commands this review prints would cost
-            API usage is not known.
+            {asSentence(startCheck.error)} Whether the commands this review prints would cost API
+            usage is not known.
           </Problem>
         ) : null}
-        {interactiveToStart && interactiveCheck?.billing ? (
-          <BillingNotice billing={interactiveCheck.billing} what="interactive" />
+        {interactiveToStart && startCheck?.billing ? (
+          <BillingNotice billing={startCheck.billing} what="interactive" />
+        ) : null}
+        {toStart && startCheck?.managedPolicy ? (
+          <ManagedPolicyNotice policy={startCheck.managedPolicy} />
         ) : null}
         {review.pausedReason ? (
           <Problem>

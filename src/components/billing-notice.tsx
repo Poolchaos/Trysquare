@@ -34,9 +34,9 @@ export function billingOf(
  * What a sign-in cannot override, by the method the CLI reports: the 2.1.301
  * binary takes a token set for it, an apiKeyHelper and another provider
  * before its claude.ai sign-in, so for these the sign-in command would change
- * nothing (review of the D-162 fixes). The last two can only come from the
- * person's Claude Code settings, since the app keeps the provider variables
- * from the CLI.
+ * nothing (review of the D-162 fixes). The last two can only come from a
+ * managed policy: a review reads no settings (D-174), and the app keeps the
+ * provider variables from the CLI.
  */
 export function signInWouldHelp(authMethod: string | undefined): boolean {
   return authMethod !== "oauth_token" && settingOverSignIn(authMethod) === null;
@@ -45,8 +45,10 @@ export function signInWouldHelp(authMethod: string | undefined): boolean {
 /**
  * The sentence naming the setting that wins, or null when none is known to.
  * The check asks as every review reads, with no settings (D-170, D-174), so a
- * setting it names is one a review would use. Said as may until that was
- * measured (reviews of the D-162 to D-164 fixes).
+ * setting it names is one a review would use, and the one tier reading none
+ * leaves is a managed policy's, which the 2.1.306 binary always reads; it may
+ * be delivered to the person's account rather than kept on the machine, so
+ * no place is named.
  */
 export function settingOverSignIn(authMethod: string | undefined): string | null {
   const setting =
@@ -56,7 +58,7 @@ export function settingOverSignIn(authMethod: string | undefined): string | null
         ? "another provider"
         : null;
   if (setting === null) return null;
-  return `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`;
+  return `This is ${setting} set by a managed Claude Code policy, which wins over a sign-in and over this app: whoever manages Claude Code for you can remove it.`;
 }
 
 /** A sign-in command on a line of its own, so it is copied without the words around it. */

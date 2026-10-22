@@ -71,6 +71,9 @@ pulled deliberately.
   the person to a file they may not own (D-173 item 8). Measuring it means
   writing a machine-wide policy file, which governs the maintainer's own
   Claude Code too, so it waits for the maintainer.
+  READ in D-175 from the 2.1.306 binary: it survives, the policy tier being
+  added to whatever `--setting-sources` allows, and the notice now names a
+  managed policy. Still unmeasured, for the same reason.
 
 ## Retired
 

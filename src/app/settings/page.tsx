@@ -18,6 +18,11 @@ import {
   settingOverSignIn,
   signInWouldHelp,
 } from "@/components/billing-notice";
+import {
+  ManagedPolicyNotice,
+  managedPolicyOf,
+  type ManagedPolicy,
+} from "@/components/managed-policy-notice";
 import { signInPlaceWords, type SignIn } from "@/lib/engine/sign-in-command";
 
 interface Model {
@@ -40,7 +45,7 @@ type CliStatus =
   | { state: "subscription"; path: string; version: string; subscriptionType?: string };
 
 const readCli = () =>
-  send<{ cli: CliStatus; signIn?: SignIn }>(
+  send<{ cli: CliStatus; signIn?: SignIn; managedPolicy?: ManagedPolicy }>(
     "/api/auth",
     { method: "GET" },
     "The CLI could not be checked",
@@ -51,14 +56,17 @@ function showCli(
   setCli: (cli: CliStatus | null) => void,
   setSignIn: (signIn: SignIn | null) => void,
   setCliProblem: (problem: string) => void,
+  setManagedPolicy: (policy: ManagedPolicy | null) => void,
 ) {
   if (sent.ok) {
     setCli(sent.body.cli);
     // An answer without one draws no command rather than failing the card.
     setSignIn(sent.body.signIn ?? null);
+    setManagedPolicy(managedPolicyOf(sent.body.managedPolicy));
     setCliProblem("");
   } else {
     setCli(null);
+    setManagedPolicy(null);
     setCliProblem(sent.error);
   }
 }
@@ -105,6 +113,7 @@ export default function SettingsPage() {
   const [cli, setCli] = useState<CliStatus | null>(null);
   const [cliProblem, setCliProblem] = useState("");
   const [signIn, setSignIn] = useState<SignIn | null>(null);
+  const [managedPolicy, setManagedPolicy] = useState<ManagedPolicy | null>(null);
   // Checking from the start, since Settings asks as it opens: the button and
   // the probes wait for that answer (review of the D-163 fixes).
   const [checkingCli, setCheckingCli] = useState(true);
@@ -167,7 +176,7 @@ export default function SettingsPage() {
     setCheckingCli(true);
     const sent = await readCli();
     if (asked !== latestCheck.current) return;
-    showCli(sent, setCli, setSignIn, setCliProblem);
+    showCli(sent, setCli, setSignIn, setCliProblem, setManagedPolicy);
     setCheckingCli(false);
   }
 
@@ -180,7 +189,7 @@ export default function SettingsPage() {
     void (async () => {
       const sent = await readCli();
       if (cancelled || asked !== latestCheck.current) return;
-      showCli(sent, setCli, setSignIn, setCliProblem);
+      showCli(sent, setCli, setSignIn, setCliProblem, setManagedPolicy);
       setCheckingCli(false);
     })();
     return () => {
@@ -451,6 +460,11 @@ export default function SettingsPage() {
                 )}
               </div>
             ) : null}
+            {managedPolicy === null ? null : (
+              <div className="mb-3 space-y-2">
+                <ManagedPolicyNotice policy={managedPolicy} withUnchecked />
+              </div>
+            )}
             {cliProblem === "" ? null : (
               <div className="mb-3">
                 <Problem>{cliProblem}</Problem>

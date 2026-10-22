@@ -37,7 +37,7 @@ Both checks are free, so they run as those screens open; D-31 keeps every
 call that spends to an explicit action. The check asks `auth status` with
 `--setting-sources ""`, as every review and probe runs, an interactive
 review's printed commands included (D-174), so an apiKeyHelper or provider
-it names is one a review uses (D-170). The check names the CLI's path and version and tells apart a CLI
+it names is one a review uses (D-170), set by a managed policy (below). The check names the CLI's path and version and tells apart a CLI
 not found, one that cannot run (with the real error: too old, not
 executable, an answer that is not its status, no answer in time), signed
 out, signed in some way that bills per token (a key, an `apiKeyHelper` or
@@ -69,6 +69,21 @@ to keep out, a session's markers (D-120), the settings that outrank the
 (D-161), which let every variable it did not name through. No settings file
 is read at all, a person's included, for the same reason (D-124). Older
 CLIs refused to start at all under `CLAUDECODE`; 2.1.301 does not.
+
+**A managed policy is the one tier no flag keeps out.** The 2.1.306 binary
+adds it to whatever `--setting-sources` allows, so every review runs under
+one, and with no settings read and the provider variables kept from the
+CLI, it is the only place an `apiKeyHelper` or another provider a check
+names can come from. The app looks for one, read-only, where that binary
+does: a `managed-settings.json` and the `.json` files of a
+`managed-settings.d` beside it, in `C:\Program Files\ClaudeCode`,
+`/Library/Application Support/ClaudeCode` or `/etc/claude-code`, and on
+Windows the `Settings` value under `HKLM` and `HKCU`
+`\SOFTWARE\Policies\ClaudeCode`, asked of `reg.exe` as the CLI asks it. One
+found is said on Settings and before a review starts; Settings also names
+any place it could not look. Not looked for: a macOS MDM profile, whose
+reader the Windows binary does not carry, and a policy an organisation's
+account delivers (D-174, D-175).
 
 Model discovery is done by probing, and the results below are an example of
 what one account returned on one day. They are recorded to show the shape of

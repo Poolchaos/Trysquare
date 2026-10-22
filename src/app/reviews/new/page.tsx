@@ -36,6 +36,11 @@ import {
 import { asSentence, send } from "@/components/request";
 import { type SignIn } from "@/lib/engine/sign-in-command";
 import { BillingNotice, billingOf, SignInLine, type Billing } from "@/components/billing-notice";
+import {
+  ManagedPolicyNotice,
+  managedPolicyOf,
+  type ManagedPolicy,
+} from "@/components/managed-policy-notice";
 
 interface Branch {
   name: string;
@@ -228,6 +233,7 @@ function NewReview() {
   // not show, so a check that failed, or a sign-in changed since, is shown
   // then (review of D-161).
   const [billing, setBilling] = useState<Billing | null>(null);
+  const [managedPolicy, setManagedPolicy] = useState<ManagedPolicy | null>(null);
   const [refusedSignIn, setRefusedSignIn] = useState<SignIn | null>(null);
   /** The review a refused Start left, removed at the next press if still a draft. */
   const [draft, setDraft] = useState<string | null>(null);
@@ -236,13 +242,14 @@ function NewReview() {
     void (async () => {
       // One answer for both engines: an interactive review's commands read
       // no settings either (D-174).
-      const sent = await send<{ cli: { state: string; authMethod?: string }; signIn?: SignIn }>(
-        "/api/auth",
-        {},
-        "The CLI could not be checked",
-      );
+      const sent = await send<{
+        cli: { state: string; authMethod?: string };
+        signIn?: SignIn;
+        managedPolicy?: ManagedPolicy;
+      }>("/api/auth", {}, "The CLI could not be checked");
       if (cancelled || !sent.ok) return;
       setBilling(billingOf(sent.body.cli, sent.body.signIn));
+      setManagedPolicy(managedPolicyOf(sent.body.managedPolicy));
     })();
     return () => {
       cancelled = true;
@@ -1232,6 +1239,7 @@ function NewReview() {
               what={engineMode === "headless" ? "review" : "interactive"}
             />
           )}
+          {managedPolicy === null ? null : <ManagedPolicyNotice policy={managedPolicy} />}
 
           <div className="flex items-center gap-3">
             <Button type="submit" variant="primary" disabled={!ready || starting}>

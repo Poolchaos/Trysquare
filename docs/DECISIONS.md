@@ -4150,3 +4150,31 @@ verified evidence, in writing, here.
   3. A managed policy file outranks any flag by the CLI's design, so the
   app looks for one, read-only, where the CLI reads it, and warns on
   Settings and before Start when one exists. Rejected: ignoring them.
+- 2026-10-22 D-175 BUILT (D-174 item 3), from the 2.1.306 binary read, not
+  run: where the CLI reads a managed policy, and whether
+  `--setting-sources ""` keeps one out. It does not: the binary's source
+  filter adds the policy and flag tiers to whatever `--setting-sources`
+  allows. The policy folder is fixed per platform, its override stubbed
+  out: `C:\Program Files\ClaudeCode` (a literal, not %ProgramFiles%),
+  `/Library/Application Support/ClaudeCode`, otherwise `/etc/claude-code`.
+  In it, `managed-settings.json` and each file or link in
+  `managed-settings.d` ending `.json` and not starting with a dot. On
+  Windows it also runs `reg.exe query <key> /v Settings` for HKLM and HKCU
+  `\SOFTWARE\Policies\ClaudeCode`, waiting 5 seconds.
+  Built: findManagedPolicy looks in each of those places, read-only;
+  /api/auth carries what it found and where it could not look; Settings,
+  the new-review screen and a review's own screen while it can be started
+  or resumed say a policy found, and Settings names a place not looked at.
+  reg.exe's exit 1 reads as nothing there, though it also means any other
+  refusal, because its words for which are translated.
+  Not looked for: a macOS MDM profile, whose reader the Windows binary does
+  not carry, and a policy an organisation's account delivers; nothing on
+  this machine shows either.
+  Settles D-173 item 8: a review reads no settings and gets no provider
+  variables, so an apiKeyHelper or another provider a check names can only
+  come from a managed policy, and the notice says so rather than sending
+  the person to their own settings. Measuring it still means writing a
+  machine-wide policy file, which waits for the maintainer (idea inbox).
+  Rejected: overriding a policy with flags, which none outranks by the
+  CLI's design; and reading a found policy to say what it sets, more of a
+  file the person may not own than a warning needs.
