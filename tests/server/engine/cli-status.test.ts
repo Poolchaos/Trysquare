@@ -9,7 +9,9 @@
  * out (measured on 2.1.301).
  */
 
-import { join } from "node:path";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readCliStatus } from "@/server/engine/probe";
@@ -138,6 +140,45 @@ describe("the CLI's status", () => {
       state: "subscription",
     });
   });
+
+  it("asks the sign-in of the CLI it checked, not one found by looking again", async () => {
+    // The CLI was resolved and its version checked, then looked for again
+    // to ask `auth status`, so the path and version said could belong to
+    // another binary than the one that answered (D-181 item 9). Here the
+    // first lookup's CLI puts another earlier on PATH as it is asked its
+    // version, as an install landing mid-check would.
+    const first = mkdtempSync(join(tmpdir(), "trysquare-swap-first-"));
+    const second = mkdtempSync(join(tmpdir(), "trysquare-swap-second-"));
+    const status = (authMethod: string) =>
+      JSON.stringify({ loggedIn: true, authMethod, apiProvider: "firstParty" });
+    const later = `process.stdout.write(${JSON.stringify(`${status("api_key")}\n`)});\n`;
+    writeFileSync(
+      join(second, "claude-swap.mjs"),
+      [
+        'import { writeFileSync } from "node:fs";',
+        'if (process.argv[2] === "--version") {',
+        `  writeFileSync(${JSON.stringify(join(first, "claude-swap.mjs"))}, ${JSON.stringify(later)});`,
+        '  process.stdout.write("2.1.301 (Claude Code)\\n");',
+        "  process.exit(0);",
+        "}",
+        `process.stdout.write(${JSON.stringify(`${status("claude.ai")}\n`)});`,
+        "",
+      ].join("\n"),
+    );
+    const path = process.env.PATH;
+    process.env.PATH = [first, second, path].join(delimiter);
+    try {
+      expect(await readCliStatus({ claudePath: "claude-swap.mjs" })).toEqual({
+        state: "subscription",
+        path: join(second, "claude-swap.mjs"),
+        version: "2.1.301 (Claude Code)",
+      });
+    } finally {
+      process.env.PATH = path;
+      rmSync(first, { recursive: true, force: true });
+      rmSync(second, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("bills per token when signed in with a key or another provider", async () => {
     for (const authMethod of ["api_key", "api_key_helper", "third_party"]) {

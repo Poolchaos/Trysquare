@@ -88,7 +88,12 @@ interface CliOutcome {
 function runCli(
   args: readonly string[],
   timeoutMs: number,
-  claudePath: string | undefined,
+  /**
+   * The CLI as its caller already resolved and checked it, so what runs is
+   * what was checked: looked for again, it could be another binary (D-181
+   * item 9). A path is resolved here.
+   */
+  claude: CliCommand | string | undefined,
   /** Written to the child's stdin, which is where a prompt travels now. */
   stdin = "",
 ): Promise<CliOutcome> {
@@ -100,7 +105,7 @@ function runCli(
   });
   let cli: CliCommand;
   try {
-    cli = resolveCli(claudePath);
+    cli = typeof claude === "object" ? claude : resolveCli(claude);
   } catch (error) {
     return Promise.resolve(failed(error));
   }
@@ -181,7 +186,7 @@ export async function readCliStatus(
   const outcome = await runCli(
     ["--setting-sources", "", "auth", "status"],
     options.timeoutMs ?? 30_000,
-    options.claudePath,
+    cli,
   );
   if (outcome.timedOut) {
     return {
