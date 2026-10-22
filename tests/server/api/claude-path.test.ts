@@ -98,6 +98,29 @@ describe("the CLI path kept in Settings", () => {
     expect(await cliState()).toMatchObject({ state: "subscription", path: FAKE_CLI });
   }, 30_000);
 
+  it("answers for an interactive review's commands when asked for them", async () => {
+    // Those read the person's user settings, which a review here does not
+    // (D-169, measured 2026-10-22).
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({
+      loggedIn: true,
+      authMethod: "claude.ai",
+    });
+    process.env.FAKE_CLAUDE_AUTH_STATUS_FROM_SETTINGS = JSON.stringify({
+      loggedIn: true,
+      authMethod: "api_key_helper",
+    });
+    try {
+      await save({ claudePath: FAKE_CLI });
+      expect((await cliState()).state).toBe("subscription");
+      const interactive = (await (
+        await routes.auth.GET(new Request("http://local/api/auth?reader=interactive"))
+      ).json()) as { cli: Answered & { authMethod?: string } };
+      expect(interactive.cli).toMatchObject({ state: "perToken", authMethod: "api_key_helper" });
+    } finally {
+      delete process.env.FAKE_CLAUDE_AUTH_STATUS_FROM_SETTINGS;
+    }
+  }, 30_000);
+
   it("comes with the command that signs in the CLI it names (MVP 6.3)", async () => {
     const signIn = async () =>
       ((await (await routes.auth.GET()).json()) as { signIn: { command: string; place: string } })

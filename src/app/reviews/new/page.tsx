@@ -227,19 +227,30 @@ function NewReview() {
   // not show, so a check that failed, or a sign-in changed since, is shown
   // then (review of D-161).
   const [billing, setBilling] = useState<Billing | null>(null);
+  // As an interactive review's commands see it, reading the person's user
+  // settings, which a review here does not (D-169).
+  const [interactiveBilling, setInteractiveBilling] = useState<Billing | null>(null);
   const [refusedSignIn, setRefusedSignIn] = useState<SignIn | null>(null);
   /** The review a refused Start left, removed at the next press if still a draft. */
   const [draft, setDraft] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const sent = await send<{ cli: { state: string; authMethod?: string }; signIn?: SignIn }>(
-        "/api/auth",
-        {},
-        "The CLI could not be checked",
-      );
-      if (cancelled || !sent.ok) return;
-      setBilling(billingOf(sent.body.cli, sent.body.signIn));
+      const ask = (url: string) =>
+        send<{ cli: { state: string; authMethod?: string }; signIn?: SignIn }>(
+          url,
+          {},
+          "The CLI could not be checked",
+        );
+      const [headless, interactive] = await Promise.all([
+        ask("/api/auth"),
+        ask("/api/auth?reader=interactive"),
+      ]);
+      if (cancelled) return;
+      if (headless.ok) setBilling(billingOf(headless.body.cli, headless.body.signIn));
+      if (interactive.ok) {
+        setInteractiveBilling(billingOf(interactive.body.cli, interactive.body.signIn));
+      }
     })();
     return () => {
       cancelled = true;
@@ -1218,11 +1229,12 @@ function NewReview() {
 
           {/* An interactive review starts no CLI here, but the commands it
               prints run this one (review of the D-162 fixes). */}
-          {billing === null ? null : (
-            <BillingNotice
-              billing={billing}
-              what={engineMode === "headless" ? "review" : "interactive"}
-            />
+          {engineMode === "headless" ? (
+            billing === null ? null : (
+              <BillingNotice billing={billing} />
+            )
+          ) : interactiveBilling === null ? null : (
+            <BillingNotice billing={interactiveBilling} what="interactive" />
           )}
 
           <div className="flex items-center gap-3">

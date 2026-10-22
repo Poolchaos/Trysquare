@@ -42,8 +42,24 @@ if (args[0] === "--version") {
 // when signed out (measured on 2.1.301 with an empty config directory). From
 // FAKE_CLAUDE_AUTH_STATUS, so a test can play each sign-in; unset, the call
 // falls through to the scenario, as it always did.
-if (args[0] === "auth" && args[1] === "status" && process.env.FAKE_CLAUDE_AUTH_STATUS) {
-  const status = process.env.FAKE_CLAUDE_AUTH_STATUS;
+//
+// A sign-in that only settings give, an apiKeyHelper or a provider, is read
+// unless `--setting-sources ""` comes first, as 2.1.301 does (measured
+// 2026-10-22 with a throwaway config directory): FAKE_CLAUDE_AUTH_STATUS_FROM
+// _SETTINGS, when set, answers whenever settings are read.
+const settingSourcesAt = args.indexOf("--setting-sources");
+const sources = settingSourcesAt === -1 ? undefined : args[settingSourcesAt + 1];
+const authAt = settingSourcesAt === -1 ? 0 : settingSourcesAt + 2;
+if (
+  args[authAt] === "auth" &&
+  args[authAt + 1] === "status" &&
+  process.env.FAKE_CLAUDE_AUTH_STATUS
+) {
+  const fromSettings = process.env.FAKE_CLAUDE_AUTH_STATUS_FROM_SETTINGS;
+  const status =
+    fromSettings !== undefined && sources !== ""
+      ? fromSettings
+      : process.env.FAKE_CLAUDE_AUTH_STATUS;
   let loggedIn = false;
   try {
     loggedIn = JSON.parse(status).loggedIn === true;

@@ -40,12 +40,11 @@ describe("the run note for a start that bills", () => {
     );
   });
 
-  it("says a setting's review may cost, since a review here reads no settings", () => {
-    // An apiKeyHelper or another provider can only come from the person's
-    // settings, which a headless review does not read (review of the D-163
-    // fixes).
+  it("says a setting's review costs, as the check asks as a review here reads", () => {
+    // Asked with a review's own setting sources, the check names a setting
+    // only when that review reads it (D-169, measured 2026-10-22).
     expect(billingNote({ state: "perToken", ...base, authMethod: "api_key_helper" })).toBe(
-      "This review may cost API usage, billed per token: the CLI is signed in (api_key_helper) by a setting in Claude Code settings, which a review here does not read, so whether it applies is not yet measured.",
+      "This review costs API usage, billed per token: the CLI is signed in (api_key_helper) some other way than a Claude subscription.",
     );
   });
 
@@ -67,14 +66,14 @@ describe("a page's Start, by the billing it showed", () => {
     expect(billingNotShown(readiness(maybe), "perToken")).toBeNull();
   });
 
-  it("says may, not will, of a setting that may not apply to a review", async () => {
+  it("says will of a setting the check found as a review here reads", async () => {
     // As the notice beside it says (review of the D-164 fixes); refused at
     // all first, or the words were never read (review of the D-165 fixes).
     const helper: CliStatus = { state: "perToken", ...base, authMethod: "api_key_helper" };
     const refused = billingNotShown(readiness(helper), undefined);
     expect(refused).not.toBeNull();
     const body = (await refused!.json()) as { error: string };
-    expect(body.error).toMatch(/^This review may cost API usage, billed per token/);
+    expect(body.error).toMatch(/^This review will cost API usage, billed per token/);
   });
 
   it("asks nothing of a subscription", () => {

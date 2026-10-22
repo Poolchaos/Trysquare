@@ -64,16 +64,6 @@ pulled deliberately.
   file naming them, at the cost of the patterns' reach and of a list no
   reader can review, with history keeping every literal regardless.
   DECIDED in D-169: they move to hashes; not built yet.
-- 2026-10-21: the CLI's check runs `auth status` with the person's
-  settings loaded, and reviews run with `--setting-sources ""`, so the
-  check can name an apiKeyHelper or a provider a settings file sets
-  that no review uses, or miss one. Unmeasured; read from the 2.1.301
-  binary's auth-method code only. So for those two every reader says may
-  cost: a headless review and a probe, which read no settings, and an
-  interactive review's commands, which read user settings only (D-164
-  item 8, D-165 items 3, 8 and 9), until it is measured. `auth status`
-  takes only --json and --text; whether a --setting-sources before it
-  reaches it needs the real CLI run.
 - 2026-10-21: a review put in line is asked about the CLI as it is queued,
   not again as it leaves the queue, whose launch is synchronous, so a
   sign-in changed while it waits runs unchecked (D-163 item 4).
@@ -106,3 +96,15 @@ the line entirely would lose the trail.
   or a step to acknowledge (D-160 item 3). DECIDED in D-161: a strict notice
   before Start, not a block; built in dd51866, and made a refusal until shown
   by 34ebb52 (D-162).
+- 2026-10-21 The CLI's check runs `auth status` with the person's
+  settings loaded, and reviews run with `--setting-sources ""`, so the
+  check can name an apiKeyHelper or a provider a settings file sets
+  that no review uses, or miss one. Unmeasured; read from the 2.1.301
+  binary's auth-method code only. So for those two every reader says may
+  cost: a headless review and a probe, which read no settings, and an
+  interactive review's commands, which read user settings only (D-164
+  item 8, D-165 items 3, 8 and 9), until it is measured. `auth status`
+  takes only --json and --text; whether a --setting-sources before it
+  reaches it needs the real CLI run.
+  MEASURED and BUILT in D-170: `--setting-sources` before `auth` reaches
+  it, and each check now asks as its reader reads.

@@ -149,9 +149,15 @@ function runCli(
  * whether it draws on the plan they already pay for or bills per token. The
  * credentials themselves are never read, copied, or logged. Every step costs
  * nothing: `--version` and `auth status` run locally.
+ *
+ * Asked with the setting sources of the reader it answers for: none for a
+ * headless review and a probe, `user` for an interactive review's commands.
+ * Asked with neither, it read the person's settings and named an apiKeyHelper
+ * or a provider a review here never reads; `--setting-sources` before `auth`
+ * reaches it (D-169, measured 2026-10-22 with a throwaway config directory).
  */
 export async function readCliStatus(
-  options: { claudePath?: string; timeoutMs?: number } = {},
+  options: { claudePath?: string; timeoutMs?: number; settingSources?: "" | "user" } = {},
 ): Promise<CliStatus> {
   let cli: CliCommand;
   try {
@@ -172,7 +178,11 @@ export async function readCliStatus(
     return { state: "cannotRun", path, message: (error as Error).message };
   }
 
-  const outcome = await runCli(["auth", "status"], options.timeoutMs ?? 30_000, options.claudePath);
+  const outcome = await runCli(
+    ["--setting-sources", options.settingSources ?? "", "auth", "status"],
+    options.timeoutMs ?? 30_000,
+    options.claudePath,
+  );
   if (outcome.timedOut) {
     return {
       state: "cannotRun",

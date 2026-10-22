@@ -44,10 +44,10 @@ export function signInWouldHelp(authMethod: string | undefined): boolean {
 
 /**
  * The sentence naming the setting that wins, or null when none is known to.
- * A headless review and a probe read no settings, so whether one applies to
- * them is unmeasured (D-163 item 3); an interactive review's commands read
- * the person's user settings only, and the check may have found it in a
- * project's (review of the D-164 fixes). Each is said so.
+ * Each check now asks as its reader sees it, so the setting it names is one
+ * that reader reads: none for a review here or a probe, the person's user
+ * settings for an interactive review's commands (D-169). Said as may until
+ * that was measured (reviews of the D-162 to D-164 fixes).
  *
  * @param reader What would cost.
  */
@@ -62,11 +62,9 @@ export function settingOverSignIn(
         ? "another provider"
         : null;
   if (setting === null) return null;
-  const read =
-    reader === "interactive"
-      ? "; the commands this review prints read your user settings only, so it applies if it is set there, and then wins over a sign-in"
-      : `, which a ${reader} here does not read, so whether it applies is not yet measured; where it does, it wins over a sign-in`;
-  return `This is ${setting} set in your Claude Code settings${read}: remove it there to use the subscription.`;
+  const where =
+    reader === "interactive" ? "your user Claude Code settings" : "your Claude Code settings";
+  return `This is ${setting} set in ${where}, which wins over a sign-in: remove it there to use the subscription.`;
 }
 
 /** A sign-in command on a line of its own, so it is copied without the words around it. */
@@ -93,9 +91,7 @@ export function BillingNotice({
   const one = what === "probe" ? "a probe" : what === "interactive" ? "each one" : "a review";
   const remedy = signInWouldHelp(authMethod);
   const setting = settingOverSignIn(authMethod, what);
-  // Said as may where the setting behind it may not apply (reviews of the
-  // D-163 and D-164 fixes).
-  const surely = state === "perToken" && setting === null;
+  const surely = state === "perToken";
   const unknownWay =
     authMethod === undefined
       ? "The CLI did not say how it is signed in"

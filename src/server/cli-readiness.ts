@@ -24,9 +24,20 @@ export interface CliReadiness {
   refusal: string | null;
 }
 
-export async function cliReadiness(db: Db): Promise<CliReadiness> {
+/**
+ * @param reader A headless review, which reads no settings, unless an
+ *   interactive review's commands, which read the person's user settings, are
+ *   asked for (D-169).
+ */
+export async function cliReadiness(
+  db: Db,
+  reader: "headless" | "interactive" = "headless",
+): Promise<CliReadiness> {
   const claudePath = configuredClaudePath(db);
-  const cli = await readCliStatus(claudePath === undefined ? {} : { claudePath });
+  const cli = await readCliStatus({
+    ...(claudePath === undefined ? {} : { claudePath }),
+    settingSources: reader === "interactive" ? "user" : "",
+  });
   // A configured CLI is signed in by the path it resolved to, which the
   // person's terminal finds whatever its own directory and PATH.
   const resolved = cli.state === "notFound" ? undefined : cli.path;
@@ -70,7 +81,7 @@ export function billingNotShown(
       error:
         // No cause is guessed: a Resume asks nothing before it is pressed, so
         // there nothing changed and no check failed (review of the D-162 fixes).
-        `This review ${billsSurely(cli) ? "will" : "may"} cost API usage, billed per ` +
+        `This review ${cli.state === "perToken" ? "will" : "may"} cost API usage, billed per ` +
         "token, which this page had not said yet. Read the notice, then press again.",
       code: "BillingNotShown",
       cli,
@@ -81,32 +92,12 @@ export function billingNotShown(
 }
 
 /**
- * Whether a review will bill per token, not only may: a key does, but an
- * apiKeyHelper or another provider comes only from a settings file, which a
- * review here does not read (review of the D-164 fixes).
- */
-function billsSurely(cli: CliStatus): boolean {
-  return cli.state === "perToken" && !SETTING_METHODS.has(cli.authMethod);
-}
-
-const SETTING_METHODS: ReadonlySet<string> = new Set(["api_key_helper", "third_party"]);
-
-/**
  * The run note for a review that started on a sign-in billing per token, or
  * that may. One put in line says so: it may be cancelled before it runs, and
  * the sign-in is not asked again as it leaves the queue.
  */
 export function billingNote(cli: CliStatus, queued = false): string | null {
   const when = queued ? " once it leaves the queue" : "";
-  if (cli.state === "perToken" && !billsSurely(cli)) {
-    // Only a setting gives these, and a review here reads none, so whether
-    // it applies is unmeasured (review of the D-163 fixes).
-    return (
-      `This review may cost API usage${when}, billed per token: the CLI is signed in ` +
-      `(${cli.authMethod}) by a setting in Claude Code settings, which a review here does ` +
-      "not read, so whether it applies is not yet measured."
-    );
-  }
   if (cli.state === "perToken") {
     // As strict as the notice beside Start (D-161).
     return (

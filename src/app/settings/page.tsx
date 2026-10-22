@@ -419,7 +419,7 @@ export default function SettingsPage() {
                   <>
                     <p className="font-medium text-[var(--color-warning)]">
                       {cli.state === "perToken"
-                        ? `Signed in (${cli.authMethod}) some other way than your Claude subscription: reviews ${settingOverSignIn(cli.authMethod, "review") === null ? "will" : "may"} cost API usage, billed per token.`
+                        ? `Signed in (${cli.authMethod}) some other way than your Claude subscription: reviews will cost API usage, billed per token.`
                         : cli.authMethod === "oauth_token"
                           ? "Signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other may cost API usage, billed per token."
                           : cli.authMethod === undefined

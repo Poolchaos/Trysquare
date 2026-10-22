@@ -22,6 +22,7 @@ const signedIn = (fields: object) =>
 
 afterEach(() => {
   delete process.env.FAKE_CLAUDE_AUTH_STATUS;
+  delete process.env.FAKE_CLAUDE_AUTH_STATUS_FROM_SETTINGS;
   delete process.env.FAKE_CLAUDE_SCENARIO;
   delete process.env.FAKE_CLAUDE_VERSION;
 });
@@ -122,6 +123,24 @@ describe("the CLI's status", () => {
     expect(await readCliStatus({ claudePath: FAKE_CLI })).toMatchObject({
       state: "signedOut",
       configDirectory: "/home/someone/.claude",
+    });
+  });
+
+  it("answers as each reader sees it: none for a review here, the user's for one in a terminal", async () => {
+    // A headless review and a probe pass --setting-sources "", and an
+    // interactive review's commands --setting-sources user; asked with
+    // neither, the check named an apiKeyHelper a review here never reads
+    // (D-169, measured 2026-10-22).
+    process.env.FAKE_CLAUDE_AUTH_STATUS = signedIn({ authMethod: "claude.ai" });
+    process.env.FAKE_CLAUDE_AUTH_STATUS_FROM_SETTINGS = signedIn({
+      authMethod: "api_key_helper",
+    });
+    expect(await readCliStatus({ claudePath: FAKE_CLI })).toMatchObject({
+      state: "subscription",
+    });
+    expect(await readCliStatus({ claudePath: FAKE_CLI, settingSources: "user" })).toMatchObject({
+      state: "perToken",
+      authMethod: "api_key_helper",
     });
   });
 

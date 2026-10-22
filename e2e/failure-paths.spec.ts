@@ -1736,7 +1736,7 @@ test("an interactive review's own screen says its commands would cost, before St
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const stop = await routeUntilStopped(page, "**/api/auth", async (route) => {
+  const stop = await routeUntilStopped(page, "**/api/auth*", async (route) => {
     await held;
     await route.fulfill({
       status: 200,
@@ -1775,7 +1775,7 @@ test("an interactive review's own screen says its commands would cost, before St
 
   // A check that fails is said, not taken as nothing to say (review of the
   // D-164 fixes).
-  const stopFailing = await routeUntilStopped(page, "**/api/auth", (route) =>
+  const stopFailing = await routeUntilStopped(page, "**/api/auth*", (route) =>
     route.fulfill({ status: 500, json: { error: "Refused for this test: the check." } }),
   );
   await page.reload();
@@ -2300,7 +2300,7 @@ test("Settings keeps the latest check's answer, not the one that lands last", as
   });
   let asked = 0;
   let staleSent = false;
-  const stop = await routeUntilStopped(page, "**/api/auth", async (route) => {
+  const stop = await routeUntilStopped(page, "**/api/auth*", async (route) => {
     asked += 1;
     if (asked === 1) {
       await held;
@@ -2352,7 +2352,7 @@ test("Settings holds its probes and its check until the check it asks as it open
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const stop = await answerOnce(page, "**/api/auth", async (route) => {
+  const stop = await answerOnce(page, "**/api/auth*", async (route) => {
     await held;
     await route.continue();
   });
@@ -2384,7 +2384,7 @@ test("Settings says as it opens that probes would cost API usage, above the mode
   // A probe is a real call, and under a sign-in billing per token it costs
   // API usage, which Settings said only once Check the CLI was pressed
   // (review of D-161). The check is free, so it runs as Settings opens.
-  const stop = await routeUntilStopped(page, "**/api/auth", (route) =>
+  const stop = await routeUntilStopped(page, "**/api/auth*", (route) =>
     route.fulfill({
       status: 200,
       json: {
@@ -2455,15 +2455,15 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
     ],
     [
       { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "third_party" },
-      "Signed in (third_party) some other way than your Claude subscription: reviews may cost API usage, billed per token.",
+      "Signed in (third_party) some other way than your Claude subscription: reviews will cost API usage, billed per token.",
     ],
     [
       { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "third_party" },
-      "This is another provider set in your Claude Code settings, which a review here does not read, so whether it applies is not yet measured; where it does, it wins over a sign-in: remove it there to use the subscription.",
+      "This is another provider set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.",
     ],
   ];
   for (const [cli, said] of answers) {
-    const stop = await answerOnce(page, "**/api/auth", (route) =>
+    const stop = await answerOnce(page, "**/api/auth*", (route) =>
       route.fulfill({ status: 200, json: { cli } }),
     );
     await check.click();
@@ -2475,7 +2475,7 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
   // Finding the CLI failed before it named a path, so no path line is drawn:
   // without the check, an empty one was, which no text could tell apart
   // (review of the D-154 fixes).
-  const stopNoPath = await answerOnce(page, "**/api/auth", (route) =>
+  const stopNoPath = await answerOnce(page, "**/api/auth*", (route) =>
     route.fulfill({
       status: 200,
       json: { cli: { state: "cannotRun", message: "the guard refused it." } },
@@ -2485,7 +2485,7 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
   await expect(status).toContainText("the guard refused it.");
   await expect(page.getByTestId("cli-path")).toHaveCount(0);
   await stopNoPath();
-  const stop = await answerOnce(page, "**/api/auth", (route) =>
+  const stop = await answerOnce(page, "**/api/auth*", (route) =>
     route.fulfill({ status: 500, json: { error: "The server could not run the check." } }),
   );
   await check.click();
@@ -2585,7 +2585,7 @@ test("Start refused for a CLI that cannot run says why, and stays on the form", 
 test("a signed-out CLI's check shows the command that signs it in", async ({ page }) => {
   // Shown for the person to run, never run by the app (MVP 6.3, D-159).
   await openSettings(page);
-  const stop = await answerOnce(page, "**/api/auth", (route) =>
+  const stop = await answerOnce(page, "**/api/auth*", (route) =>
     route.fulfill({
       status: 200,
       json: {
@@ -2612,7 +2612,7 @@ test("a signed-out CLI's check shows the command that signs it in", async ({ pag
   await stop();
 
   // With no command in the answer, no instruction pointing at nothing.
-  const stopBare = await answerOnce(page, "**/api/auth", (route) =>
+  const stopBare = await answerOnce(page, "**/api/auth*", (route) =>
     route.fulfill({
       status: 200,
       json: { cli: { state: "signedOut", path: "/opt/claude", version: "2.1.301" } },
@@ -2622,6 +2622,42 @@ test("a signed-out CLI's check shows the command that signs it in", async ({ pag
   await expect(page.getByTestId("cli-status")).toContainText("Not signed in.");
   await expect(page.getByTestId("cli-status")).not.toContainText("Sign it in");
   await stopBare();
+});
+
+test("the new-review screen asks the CLI as each engine reads its settings", async ({ page }) => {
+  // A headless review reads no settings and an interactive review's commands
+  // read the person's user settings, so a helper set there bills the second
+  // only; asked once, as neither, the check spoke for both (D-169, measured
+  // 2026-10-22).
+  const stop = await routeUntilStopped(page, "**/api/auth*", (route) =>
+    new URL(route.request().url()).searchParams.get("reader") === "interactive"
+      ? route.fulfill({
+          status: 200,
+          json: {
+            cli: {
+              state: "perToken",
+              path: "/opt/claude",
+              version: "2.1.301",
+              authMethod: "api_key_helper",
+            },
+          },
+        })
+      : route.fallback(),
+  );
+  const asked = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/auth" && new URL(response.url()).search === "",
+  );
+  await fillANewReview(page);
+  await asked;
+  const notice = page.getByTestId("per-token-notice");
+  await expect(notice).toHaveCount(0);
+  await page.getByText("Advanced", { exact: true }).click();
+  await page.getByTestId("engine-mode").selectOption("interactive");
+  await expect(notice).toContainText(
+    "This is an apiKeyHelper set in your user Claude Code settings, which wins over a sign-in",
+  );
+  await stop();
 });
 
 test("a sign-in that bills per token is said before Start, strictly, and Start stays on", async ({
@@ -2639,7 +2675,7 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
   await checked;
   await expect(page.getByTestId("per-token-notice")).toHaveCount(0);
 
-  const stop = await routeUntilStopped(page, "**/api/auth", (route) =>
+  const stop = await routeUntilStopped(page, "**/api/auth*", (route) =>
     route.fulfill({
       status: 200,
       json: {
@@ -2671,7 +2707,7 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
 
   // A token whose source the CLI does not name may be a subscription's, so
   // the notice says it may cost, not that it will (review of D-161).
-  const stopToken = await routeUntilStopped(page, "**/api/auth", (route) =>
+  const stopToken = await routeUntilStopped(page, "**/api/auth*", (route) =>
     route.fulfill({
       status: 200,
       json: {
@@ -2703,7 +2739,7 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
     ["api_key_helper", "an apiKeyHelper"],
     ["third_party", "another provider"],
   ] as const) {
-    const stopSetting = await routeUntilStopped(page, "**/api/auth", (route) =>
+    const stopSetting = await routeUntilStopped(page, "**/api/auth*", (route) =>
       route.fulfill({
         status: 200,
         json: {
@@ -2714,23 +2750,20 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
     );
     await fillANewReview(page);
     await expect(notice).toContainText(`(${authMethod})`);
-    // A headless review reads no settings, so whether that one applies to
-    // it is unmeasured: said as may (review of the D-163 fixes).
-    await expect(notice).toContainText("This review may cost API usage, billed per token.");
+    // Each check asks as its reader reads, so the setting it names applies
+    // and is said to (D-169, measured 2026-10-22).
+    await expect(notice).toContainText("This review will cost API usage, billed per token.");
     await expect(notice).toContainText(
-      `This is ${setting} set in your Claude Code settings, which a review here does not read, so whether it applies is not yet measured; where it does, it wins over a sign-in: remove it there to use the subscription.`,
+      `This is ${setting} set in your Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
     );
     await expect(notice).not.toContainText("auth login");
-    // An interactive review's commands read the person's user settings
-    // only, so there too it may, as the check may have found it elsewhere
-    // (review of the D-164 fixes).
     await page.getByText("Advanced", { exact: true }).click();
     await page.getByTestId("engine-mode").selectOption("interactive");
     await expect(notice).toContainText(
-      "The commands this review prints may cost API usage, billed per token.",
+      "The commands this review prints will cost API usage, billed per token.",
     );
     await expect(notice).toContainText(
-      `This is ${setting} set in your Claude Code settings; the commands this review prints read your user settings only, so it applies if it is set there, and then wins over a sign-in: remove it there to use the subscription.`,
+      `This is ${setting} set in your user Claude Code settings, which wins over a sign-in: remove it there to use the subscription.`,
     );
     await stopSetting();
   }
@@ -2748,7 +2781,7 @@ test("a billing notice follows the last answer, not the first", async ({ page })
       signIn: { command: "npm run claude -- auth login", place: "projectDirectory" },
     },
   };
-  const stopAuth = await routeUntilStopped(page, "**/api/auth", (route) =>
+  const stopAuth = await routeUntilStopped(page, "**/api/auth*", (route) =>
     route.fulfill({
       status: 200,
       json: {
@@ -2853,7 +2886,7 @@ test("a sign-in billing per token that a page had not shown is refused, shown, t
   // A check that failed showed no notice, and Start went ahead; a Resume or a
   // draft's Start showed none at all (review of D-161). The server refuses
   // either, and the page shows what it was told and says it showed it next.
-  const stopAuth = await routeUntilStopped(page, "**/api/auth", (route) =>
+  const stopAuth = await routeUntilStopped(page, "**/api/auth*", (route) =>
     route.fulfill({ status: 500, json: { error: "Refused for this test: the check." } }),
   );
   await fillANewReview(page);

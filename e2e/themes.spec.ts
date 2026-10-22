@@ -186,7 +186,7 @@ for (const screen of SCREENS) {
 test("the billing notice has no accessibility violations", async ({ page }) => {
   // On its warning colours, in each theme: no page showed it while axe ran,
   // since the suite's fake draws on a subscription (review of D-161).
-  await page.route("**/api/auth", (route) =>
+  await page.route("**/api/auth*", (route) =>
     route.fulfill({
       status: 200,
       json: {

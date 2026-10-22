@@ -4057,3 +4057,18 @@ verified evidence, in writing, here.
   accepted.
   4. Claude Code's /security-review runs once after 7.2, and /code-review
   runs read-only, never with --fix; neither /simplify nor the grill plugin.
+- 2026-10-22 D-170 MEASURED (D-169 item 1) and BUILT: whether
+  `--setting-sources` reaches `auth status`. Measured on the bundled
+  2.1.301 binary with throwaway config directories, so neither the
+  maintainer's sign-in nor settings were read, no model was called and
+  nothing was spent: one whose settings name an apiKeyHelper printing a fake
+  key, and one whose settings' env sets CLAUDE_CODE_USE_BEDROCK. Without the
+  flag, `auth status` reported api_key_helper and third_party (bedrock);
+  with `--setting-sources ""` before `auth`, both reported signed out. So the
+  check, run with neither, named settings a headless review and a probe
+  never read. Each check now asks as its reader reads: `""` for a headless
+  review, a probe and the demo, `user` for an interactive review's commands
+  (`/api/auth?reader=interactive`); the new-review screen asks both. With
+  every status exact, the "may cost" said of an apiKeyHelper or a provider
+  since D-164 item 8 and D-165 items 3, 8 and 9 is "will" again, and those
+  entries stand corrected by this line.
