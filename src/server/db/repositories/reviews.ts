@@ -332,13 +332,19 @@ export function listInFlightReviews(db: Db) {
     .all();
 }
 
-/** How many reviews wait on a person to decide their findings. */
+/**
+ * How many reviews wait on a person to decide their findings. Counted by
+ * SQLite: the top bar asks every few seconds, and loading every row to
+ * count them grew with the reviews (D-181 item 8).
+ */
 export function countAwaitingConfirmation(db: Db): number {
-  return db
-    .select({ id: reviews.id })
-    .from(reviews)
-    .where(eq(reviews.status, "awaiting_confirmation"))
-    .all().length;
+  return (
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(reviews)
+      .where(eq(reviews.status, "awaiting_confirmation"))
+      .get()?.count ?? 0
+  );
 }
 
 /**

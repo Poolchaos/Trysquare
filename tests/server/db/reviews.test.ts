@@ -3,6 +3,7 @@ import { IllegalTransitionError } from "@/lib/domain/state-machines";
 import type { Db } from "@/server/db/client";
 import {
   addReviewUsage,
+  countAwaitingConfirmation,
   listActiveReviews,
   markOrphanedReviewsInterrupted,
   requireReview,
@@ -149,5 +150,30 @@ describe("restart recovery", () => {
     // Nothing was executing for these two, so a restart does not change them.
     expect(statusOf(requireReview(db, waiting.id))).toBe("awaiting_confirmation");
     expect(statusOf(requireReview(db, draft.id))).toBe("draft");
+  });
+});
+
+describe("the count of reviews awaiting confirmation", () => {
+  // Counted in SQL rather than by loading every row, as the top bar asks
+  // every few seconds on every screen (D-181 item 8); the same answer.
+  it("counts only those awaiting a decision, across projects, as a number", () => {
+    expect(countAwaitingConfirmation(db)).toBe(0);
+    const awaiting = (projectName: string) => {
+      const review = seedReview(db, seedProject(db, projectName).id);
+      transitionReview(db, review.id, "running");
+      transitionReview(db, review.id, "verifying");
+      return transitionReview(db, review.id, "awaiting_confirmation");
+    };
+    awaiting("a");
+    awaiting("b");
+    transitionReview(db, awaiting("c").id, "complete");
+    const verifying = seedReview(db, seedProject(db, "d").id);
+    transitionReview(db, verifying.id, "running");
+    transitionReview(db, verifying.id, "verifying");
+    seedReview(db, seedProject(db, "e").id);
+
+    const count = countAwaitingConfirmation(db);
+    expect(count).toBe(2);
+    expect(typeof count).toBe("number");
   });
 });
