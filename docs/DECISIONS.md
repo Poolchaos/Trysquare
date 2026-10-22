@@ -4229,3 +4229,14 @@ verified evidence, in writing, here.
   where an alias points on 2.1.301, each needs a probe, which spends, so it
   goes to the maintainer (idea inbox). The probe table and the probe's cost
   stay 2.1.71's, and 06 says so.
+- 2026-10-22 D-178 BUILT: `agentRules: false` in next.config.ts. Found
+  re-proving `npm run dev` for MVP 7.2: Next 16.3.8's dev server appended a
+  block of its own rules to the repository's CLAUDE.md as it started
+  ("Generated CLAUDE.md for AI agents" in its log), with an em dash the
+  charter forbids and a line asking to be committed so the tree stays
+  clean. The charter is loaded by every session and edited only for
+  durable rules (CLAUDE.md section 4), so it was put back, not committed,
+  and the option its own log names turns it off: run again, the server
+  answered `/` with 200, its log said nothing of it, and CLAUDE.md was
+  unchanged. Rejected: committing the block, and gitignoring the change,
+  which cannot be done for a tracked file.
