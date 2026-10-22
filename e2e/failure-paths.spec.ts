@@ -1154,33 +1154,65 @@ test("a new review starts on the model used last, while a probe vouches for it",
 
 test("a project's name and default branch are edited from its page (D-51)", async ({ page }) => {
   // Editable in the data model, with no route or screen for either (MVP 7.1).
+  // The fixture's detected default is feature/rename-prefs, also its newest
+  // branch, so the test moves it to main: set to itself, nothing was shown
+  // to change (review of the 7.1 changes).
   await page.goto("/projects");
   await page.getByRole("link", { name: "app", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "app", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "app", level: 1, exact: true })).toBeVisible();
+  const projectId = page.url().split("/").pop()!;
+  const stored = async () =>
+    (
+      (await (await page.request.get(`/api/projects/${projectId}`)).json()) as {
+        project: { name: string; defaultBranch: string };
+      }
+    ).project;
+  const before = (await stored()).defaultBranch;
+  expect(before).not.toBe("main");
   const name = page.getByLabel("Name", { exact: true });
   const branch = page.getByLabel("Default branch");
   const save = page.getByRole("button", { name: "Save", exact: true });
   await expect(branch).toBeEnabled({ timeout: 30_000 });
-  const before = await branch.inputValue();
+  await expect(branch).toHaveValue(before);
 
   await name.fill("app, renamed");
-  await branch.selectOption("feature/rename-prefs");
+  await branch.selectOption("main");
   await save.click();
-  await expect(page.getByRole("heading", { name: "app, renamed", level: 1 })).toBeVisible();
-  await expect(page.getByText("default feature/rename-prefs")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "app, renamed", level: 1, exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("default main")).toBeVisible();
+  expect(await stored()).toMatchObject({ name: "app, renamed", defaultBranch: "main" });
+
+  // A rename alone keeps the default, once the branches are read: the
+  // select took the newest branch when they arrived, and a save moved the
+  // default to it (review of the 7.1 changes).
+  await page.reload();
+  await expect(page.getByLabel("Default branch")).toBeEnabled({ timeout: 30_000 });
+  await expect(page.getByLabel("Default branch")).toHaveValue("main");
+  await page.getByLabel("Name", { exact: true }).fill("app, renamed again");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "app, renamed again", level: 1, exact: true }),
+  ).toBeVisible();
+  expect((await stored()).defaultBranch).toBe("main");
 
   // A blank name is refused with the server's words, and nothing changes.
   await page.getByLabel("Name", { exact: true }).fill("   ");
-  await save.click();
-  await expect(page.getByRole("heading", { name: "app, renamed", level: 1 })).toBeVisible();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText(/^name: /)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "app, renamed again", level: 1, exact: true }),
+  ).toBeVisible();
 
   // Put back, for the tests after.
   await page.reload();
+  await expect(page.getByLabel("Default branch")).toBeEnabled({ timeout: 30_000 });
   await page.getByLabel("Name", { exact: true }).fill("app");
   await page.getByLabel("Default branch").selectOption(before);
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "app", level: 1 })).toBeVisible();
-  await expect(page.getByText(`default ${before}`)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "app", level: 1, exact: true })).toBeVisible();
+  expect(await stored()).toMatchObject({ name: "app", defaultBranch: before });
 });
 
 test("a review deleted from the list takes its evidence with it", async ({ page }) => {

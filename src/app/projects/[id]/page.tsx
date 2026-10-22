@@ -407,59 +407,19 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 A new review compares against the default branch unless told otherwise. It was
                 guessed from the remote when the project was added.
               </p>
-              {/* Keyed on what is stored, so a save or a reload draws it afresh;
-                  only what changed is sent (D-51). */}
-              <form
+              <ProjectEditForm
                 key={`${project.name}\u0000${project.defaultBranch}`}
-                className="grid gap-3"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const form = new FormData(event.currentTarget);
-                  const name = String(form.get("name") ?? "");
-                  const branch = String(form.get("defaultBranch") ?? project.defaultBranch);
-                  const changed = {
-                    ...(name.trim() === project.name ? {} : { name }),
-                    ...(branch === project.defaultBranch ? {} : { defaultBranch: branch }),
-                  };
-                  if (Object.keys(changed).length === 0) return;
+                name={project.name}
+                defaultBranch={project.defaultBranch}
+                branches={listed ? listed.branches.map((branch) => branch.name) : null}
+                busy={busy}
+                onSave={(changed) =>
                   void call(`/api/projects/${id}`, {
                     method: "PATCH",
                     body: JSON.stringify(changed),
-                  });
-                }}
-              >
-                <Field label="Name">
-                  <Input name="name" defaultValue={project.name} />
-                </Field>
-                <Field
-                  label="Default branch"
-                  {...(listed ? {} : { hint: "Chosen once the branches are read." })}
-                >
-                  <Select
-                    name="defaultBranch"
-                    defaultValue={project.defaultBranch}
-                    disabled={!listed}
-                  >
-                    {/* The stored one, even when the clone lacks it, so a rename
-                        alone never moves it. */}
-                    {listed?.branches.some(
-                      (branch) => branch.name === project.defaultBranch,
-                    ) ? null : (
-                      <option value={project.defaultBranch}>{project.defaultBranch}</option>
-                    )}
-                    {(listed?.branches ?? []).map((branch) => (
-                      <option key={branch.name} value={branch.name}>
-                        {branch.name}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-                <div>
-                  <Button type="submit" disabled={busy}>
-                    Save
-                  </Button>
-                </div>
-              </form>
+                  })
+                }
+              />
             </Card>
 
             <Card className="p-4">
@@ -630,5 +590,78 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         </div>
       </PageBody>
     </>
+  );
+}
+
+/**
+ * A project's name and default branch, as stored, each held as typed or
+ * chosen. Keyed by the page on what is stored, so a save or a reload draws
+ * it afresh, and only what changed is sent (D-51).
+ *
+ * The branch is held, not left to the select: left to it, the select took
+ * the first branch listed, the newest, when the list arrived after the
+ * page was drawn, and a save meant as a rename moved the default to it
+ * (review of the 7.1 changes). The stored one stays an option even when
+ * the clone lacks it.
+ */
+function ProjectEditForm({
+  name: storedName,
+  defaultBranch: storedBranch,
+  branches,
+  busy,
+  onSave,
+}: {
+  name: string;
+  defaultBranch: string;
+  branches: string[] | null;
+  busy: boolean;
+  onSave: (changed: { name?: string; defaultBranch?: string }) => void;
+}) {
+  const [name, setName] = useState(storedName);
+  const [branch, setBranch] = useState(storedBranch);
+  const options =
+    branches === null
+      ? [storedBranch]
+      : branches.includes(storedBranch)
+        ? branches
+        : [storedBranch, ...branches];
+  return (
+    <form
+      className="grid gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const changed = {
+          ...(name.trim() === storedName ? {} : { name }),
+          ...(branch === storedBranch ? {} : { defaultBranch: branch }),
+        };
+        if (Object.keys(changed).length > 0) onSave(changed);
+      }}
+    >
+      <Field label="Name">
+        <Input name="name" value={name} onChange={(event) => setName(event.target.value)} />
+      </Field>
+      <Field
+        label="Default branch"
+        {...(branches === null ? { hint: "Chosen once the branches are read." } : {})}
+      >
+        <Select
+          name="defaultBranch"
+          value={branch}
+          disabled={branches === null}
+          onChange={(event) => setBranch(event.target.value)}
+        >
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <div>
+        <Button type="submit" disabled={busy}>
+          Save
+        </Button>
+      </div>
+    </form>
   );
 }

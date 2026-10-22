@@ -184,15 +184,19 @@ describe("editing a project (D-51)", () => {
   });
 
   it("sets a default branch the clone has, and refuses one it does not", async () => {
+    // A branch other than the one stored: the fixture's detected default is
+    // feature/rename-prefs, so setting that changed nothing (review of the
+    // 7.1 changes).
+    const other = defaultBranch === "main" ? "feature/rename-prefs" : "main";
     try {
-      expect((await edit({ defaultBranch: "feature/rename-prefs" })).status).toBe(200);
-      expect((await read()).defaultBranch).toBe("feature/rename-prefs");
+      expect((await edit({ defaultBranch: other })).status).toBe(200);
+      expect((await read()).defaultBranch).toBe(other);
       const missing = await edit({ defaultBranch: "no-such-branch" });
       expect(missing.status).toBe(400);
       const body = (await missing.json()) as { error: string; code: string };
       expect(body.code).toBe("BranchNotFound");
       expect(body.error).toMatch(/no-such-branch/);
-      expect((await read()).defaultBranch).toBe("feature/rename-prefs");
+      expect((await read()).defaultBranch).toBe(other);
     } finally {
       await edit({ defaultBranch });
     }
