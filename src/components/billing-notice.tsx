@@ -48,7 +48,10 @@ export function signInWouldHelp(authMethod: string | undefined): boolean {
  * setting it names is one a review would use, and the one tier reading none
  * leaves is a managed policy's, which the 2.1.306 binary always reads; it may
  * be delivered to the person's account rather than kept on the machine, so
- * no place is named.
+ * no place is named. Read from that binary's code, not measured: measuring
+ * means writing a machine-wide policy file, which waits for the maintainer
+ * (D-175). Said as so because the code leaves no other source; the flag
+ * tier it also reads is one the app never passes.
  */
 export function settingOverSignIn(authMethod: string | undefined): string | null {
   const setting =

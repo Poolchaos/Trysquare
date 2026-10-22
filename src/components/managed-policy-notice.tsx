@@ -25,15 +25,18 @@ export function managedPolicyOf(value: { found?: unknown; unchecked?: unknown } 
 export function ManagedPolicyNotice({
   policy,
   withUnchecked = false,
+  className,
 }: {
   policy: ManagedPolicy;
   /** Settings says where it could not look; a page about to start a review does not. */
   withUnchecked?: boolean;
+  /** The block's own spacing, drawn only when there is something in it. */
+  className?: string;
 }) {
   const unchecked = withUnchecked ? policy.unchecked : [];
   if (policy.found.length === 0 && unchecked.length === 0) return null;
   return (
-    <>
+    <div className={className} data-testid="managed-policy">
       {policy.found.length === 0 ? null : (
         <div
           role="alert"
@@ -70,6 +73,6 @@ export function ManagedPolicyNotice({
           </ul>
         </div>
       )}
-    </>
+    </div>
   );
 }

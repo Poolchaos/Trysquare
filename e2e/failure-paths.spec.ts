@@ -2897,8 +2897,9 @@ test("a managed policy is said on Settings and before a review starts, and none 
   await page.goto("/settings");
   await expect(notice).toContainText("A managed Claude Code policy is set on this machine.");
   await expect(notice).toContainText(found);
-  // Settings alone says where it could not look.
+  // Settings alone says where it could not look, in one block with it.
   await expect(notLooked).toContainText(unchecked);
+  await expect(page.getByTestId("managed-policy")).toContainText(unchecked);
 
   await fillANewReview(page);
   await expect(notice).toContainText("It outranks what this app sets");
@@ -2926,19 +2927,49 @@ test("a managed policy is said on Settings and before a review starts, and none 
   await expect(notice).toContainText(found);
   await stopAuth();
 
-  // The real route, on a machine with no policy (this one and CI's runners):
-  // nothing is said, and the screen still reads the answer.
-  const answered = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/auth",
+  // A check that fails is said there too, not taken as no policy (review of
+  // D-174's changes).
+  const stopFailing = await routeUntilStopped(page, "**/api/auth*", (route) =>
+    route.fulfill({ status: 500, json: { error: "Refused for this test: the check." } }),
   );
   await page.reload();
-  expect(((await (await answered).json()) as { managedPolicy: unknown }).managedPolicy).toEqual({
-    found: [],
-    unchecked: [],
-  });
+  await expect(
+    page.getByText(
+      "Refused for this test: the check. Whether this review would run under a managed Claude Code policy is not known.",
+    ),
+  ).toBeVisible({ timeout: 30_000 });
+  await stopFailing();
+
+  // The real route: what it says is what is drawn, nothing for nothing,
+  // whatever this machine holds. Two frames, so the answer has been applied:
+  // an absence passes at once (review of the D-164 fixes).
+  const frames = () =>
+    page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    );
+  const realAnswer = async () => {
+    const answered = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/auth" && response.ok(),
+    );
+    return ((await (await answered).json()) as { managedPolicy: { found: string[] } })
+      .managedPolicy;
+  };
+  let real = realAnswer();
+  await page.reload();
+  const onReview = await real;
   await expect(page.getByRole("button", { name: "Start review" })).toBeVisible();
-  await expect(notice).toHaveCount(0);
+  await frames();
+  await expect(notice).toHaveCount(onReview.found.length > 0 ? 1 : 0);
   expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
+
+  // Settings draws no spaced, empty block where there is nothing to say.
+  real = realAnswer();
+  await page.goto("/settings");
+  const onSettings = (await real) as { found: string[]; unchecked: string[] };
+  await frames();
+  await expect(page.getByTestId("managed-policy")).toHaveCount(
+    onSettings.found.length + onSettings.unchecked.length > 0 ? 1 : 0,
+  );
 });
 
 test("a billing notice follows the last answer, not the first", async ({ page }) => {

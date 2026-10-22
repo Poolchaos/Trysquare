@@ -1061,6 +1061,15 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             usage is not known.
           </Problem>
         ) : null}
+        {/* Said for a headless review too, which the check asks for a policy
+            alone: taken as none, a failure said nothing (review of D-174's
+            changes). */}
+        {toStart && !interactiveToStart && startCheck?.error ? (
+          <Problem>
+            {asSentence(startCheck.error)} Whether this review would run under a managed Claude Code
+            policy is not known.
+          </Problem>
+        ) : null}
         {interactiveToStart && startCheck?.billing ? (
           <BillingNotice billing={startCheck.billing} what="interactive" />
         ) : null}

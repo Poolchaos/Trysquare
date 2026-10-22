@@ -461,9 +461,11 @@ export default function SettingsPage() {
               </div>
             ) : null}
             {managedPolicy === null ? null : (
-              <div className="mb-3 space-y-2">
-                <ManagedPolicyNotice policy={managedPolicy} withUnchecked />
-              </div>
+              <ManagedPolicyNotice
+                policy={managedPolicy}
+                withUnchecked
+                className="mb-3 space-y-2"
+              />
             )}
             {cliProblem === "" ? null : (
               <div className="mb-3">
