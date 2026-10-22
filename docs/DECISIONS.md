@@ -4333,3 +4333,39 @@ verified evidence, in writing, here.
   replay with the real CLI, free on every platform, and is the test.
   Rejected: (b) no longer chaining S2 to S4, which gives up the cache the
   chain is for; (c) no change, the replay being real.
+- 2026-10-22 D-181 FIXED, each commit pushed once the one before it passed
+  CI on all three: item 3 6f87fe7 (1173 and 99, CI run 39789527534); item
+  1 e70a24e (1174 and 99, CI run 39792259126); item 2 609aa82 (1179 and
+  99, CI run 39794195360); item 4 f13f8fe (1180 and 99, CI run
+  39797190525); item 5 3608168 (1181 and 99, CI run 39800079436); item 6
+  a9d4a3a (1182 and 99, CI run 39808429491); item 8 3c5f85a (1183 and 99, CI run
+  39810523350); item 9 c5a62fa (1184 and 99, CI run 39812417671); item 7 7b7a7dd (1186
+  and 99, CI run 39814701934). Counts are unit then browser tests from
+  `./verify.sh --e2e` on Windows. Item 2 as applied: only a finding
+  verdict's consumers are exempt, since a file a verified verdict called
+  sound cannot carry its finding, and the prompt says so, which changed
+  S3's prompt. Item 4's POSIX test could not be run on this Windows
+  machine; its Windows half was shown failing before the fix, and CI ran
+  both. Items 7 to 9 were planned by read-only agents, each plan read
+  again here before it was built; the maintainer raised the subagent cap
+  to four on 2026-10-22.
+- 2026-10-22 D-183 RUN (MVP 7.3, the G1 evidence on Windows): the 11-defect
+  fixture reviewed by claude-fable-5[1m] through the bundled 2.1.301 on
+  the maintainer's Windows 11 machine at b0deb2f, with D-182's fix, on the
+  maintainer's subscription. 13 changed files, 11 candidates raised, 11
+  verified, none refuted, none left open, none discarded by the quote
+  check, no findings in the files that are deliberately fine; completed
+  in 280.0s for $5.2976 cost-equivalent (20 in, 22,485 out, 76,160 cache
+  write, 77,852 cached read tokens). The score reads 9/11: the two misses
+  were each found and verified, cited where the change was made rather
+  than where the key expects. silently-shortened-default was cited at
+  shared-core/types.ts:7, where the default changed, naming the consumer
+  that takes it implicitly; the key expects app/src/settings/prefs.ts:8.
+  deleted-module-live-caller was cited at the deleted
+  app/src/orders/retry.ts, naming dispatch.ts:1 and :4 as the live caller;
+  the key expects app/src/orders/dispatch.ts:4. Whether a cause-site
+  citation counts is the maintainer's to judge with the verdict. The
+  2026-08-04 Linux fable runs on the 8-defect fixture cost $0.9616 and
+  $0.9985; this run's higher cost is not explained by anything measured
+  here. Evidence, git-ignored: review/2026-10-22-fg2/151004-claude-fable-5-1m/
+  (events.jsonl, score.json, findings.json).

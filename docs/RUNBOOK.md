@@ -14,7 +14,7 @@ review is the expensive action. Everything else, including the whole demo with
 - **Windows, macOS or Linux.** Every push passes `./verify.sh --build
   --e2e` on all three in CI (`windows-latest`, `macos-latest`,
   `ubuntu-latest`), against a stand-in for the CLI. Real reviews have run
-  on Linux only; the first on Windows is MVP step 7.3.
+  on Linux and, since 2026-10-22 (MVP 7.3), on Windows; none on macOS.
 - **Node 22 or newer.** `package.json` declares `>=22`, `.nvmrc` pins `22`.
   Proven on v22.22.1 (Linux, 2026-07-31) and v22.17.0 (Windows 11,
   2026-10-22).

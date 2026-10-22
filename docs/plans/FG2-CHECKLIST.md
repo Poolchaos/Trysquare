@@ -13,6 +13,14 @@ Since those runs, U12 grew the fixture from eight planted defects to eleven
 planted" and "8/8" transcripts below and in the run directories predate the
 additions; a fresh run reports 11.
 
+Re-scoped to Windows (D-86), the run to judge now is MVP 7.3's, 2026-10-22,
+on the maintainer's Windows 11 machine: `review/2026-10-22-fg2/151004-claude-fable-5-1m/`.
+It scored 9/11 with 11 candidates, all verified, no quote-check kills and
+clean files clean. Both misses were found and verified, cited where the
+change was made rather than where the key expects: the shortened default
+at `shared-core/types.ts:7`, the deleted helper at `app/src/orders/retry.ts`.
+Whether that counts is part of the verdict (D-183).
+
 Two different questions live in this gate, and conflating them is the main way
 it could be answered wrongly.
 

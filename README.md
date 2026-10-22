@@ -39,11 +39,11 @@ been made.
 All twelve work packages are built: the review engine, the data and git
 layers, every screen, the design pass, the accessibility checks, and the
 interactive engine mode that runs a review from files in your own terminal
-instead of a subprocess. What remains is the MVP in
-[docs/plans/MVP-PLAN.md](docs/plans/MVP-PLAN.md): one engine measurement
-that spends usage (4.2), a fresh real run of the fixture on Windows for the
-finding-quality verdict above (7.3), and the maintainer's own review of a
-real branch (7.4), with the verdicts and the design acceptance theirs.
+instead of a subprocess. What remains of the MVP in
+[docs/plans/MVP-PLAN.md](docs/plans/MVP-PLAN.md) is the maintainer's own
+review of a real branch (7.4); a fresh real run of the fixture on Windows
+(7.3) waits on their finding-quality verdict, and the verdicts and the
+design acceptance are theirs.
 [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md) is the current-facts cache.
 
 Treat this as usable by its author and not yet finished for anyone else.
@@ -154,7 +154,7 @@ requests, never a shortened rule set.
 - Windows, macOS or Linux. Every push passes the whole test suite on all
   three in CI (GitHub's `windows-latest`, `macos-latest` and
   `ubuntu-latest`) against a stand-in for the CLI; real reviews have run on
-  Linux, and the first on Windows is the MVP's step 7.3.
+  Linux and, since 2026-10-22, on Windows; macOS has had none.
 - Node 22 or newer
 - git
 - A Claude subscription, signed in to [Claude Code](https://claude.com/claude-code)

@@ -93,8 +93,10 @@ Common contract for every AI stage:
 - Stages S1-S4 share one CLI session (resumed) so comprehension context
   carries into the adversarial pass, each under its own system prompt:
   every stage passes `--system-prompt-snapshot off`, without which 2.1.301
-  sends a resumed call the session's first system prompt (D-182). S5 verification always runs in a **fresh session** with no
-  access to the reasoning that produced the findings; independence is the point (protocol step 6).
+  sends a resumed call the session's first system prompt (D-182). S5
+  verification always runs in a **fresh session** with no access to the
+  reasoning that produced the findings; independence is the point
+  (protocol step 6).
 
 ### S1 Risk classification (protocol step 2)
 

@@ -7,16 +7,17 @@ Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
 
 ## Status
 
-- 2026-10-22: the MVP (`plans/MVP-PLAN.md`) is built but for what spends
-  usage: every row of phases 1 to 7.2 is DONE except 4.2, a measurement
-  that spends, and 3.7's hand-drive of Mode B, folded into 7.4. Left are
-  4.2, a fresh real run of the fixture on Windows for the G1 verdict (7.3)
-  and the maintainer's own review (7.4), each waiting for the
-  maintainer's go on spend. `./verify.sh --build --e2e` exits 0 on the
-  maintainer's Windows 11 machine at 89901b5, with 1171 unit tests
-  passing, 8 skipped, and 99 browser tests, and CI passes
-  it on `ubuntu-latest`, `windows-latest` and `macos-latest` at every
-  push (run 39766201111 at 89901b5). Real models have run on Linux only.
+- 2026-10-22: every row of the MVP (`plans/MVP-PLAN.md`) is DONE but 7.4,
+  the maintainer's own review, which they drive, with 3.7's hand-drive of
+  Mode B folded into it. 4.2 found chained stages running under the first
+  stage's system prompt on 2.1.301 and fixed it (D-182); 7.3 ran the
+  fixture for real on Windows for the G1 verdict, which is the
+  maintainer's (D-183). `./verify.sh --build --e2e` exits 0 on the
+  maintainer's Windows 11 machine at b0deb2f, with 1188 unit tests
+  passing, 10 skipped, and 99 browser tests, and CI passes it on
+  `ubuntu-latest`, `windows-latest` and `macos-latest` at every push
+  (run 39816602753 at b0deb2f). Real models have run on Linux and
+  Windows.
 - 2026-10-16: two audits on the maintainer's Windows 11 machine found the
   app did not install, test or run there (`plans/AUDIT-2026-10-16.md`
   section 2). The same day MVP phases 1 to 3 made it green there and on all
@@ -78,8 +79,8 @@ See `CLAUDE.md` section 3, whose commands were last re-proven on this
 Windows 11 machine on 2026-10-22: `./verify.sh`, with `--build` and
 `--e2e`, `npm run dev`, `npm run start`, `npm test`, `npm run typecheck`,
 `npm run lint`, `npm run format`, `npm run e2e` and `npm run
-db:generate`. `./verify.sh` is the single gate. At 89901b5 it passes
-with `--e2e` on Windows 11, 1171 unit tests passing and 8 skipped, plus
+db:generate`. `./verify.sh` is the single gate. At b0deb2f it passes
+with `--e2e` on Windows 11, 1188 unit tests passing and 10 skipped, plus
 99 browser tests (the journey, the failure paths, the theme and
 screenshot pass, the phone-width pass, and axe over every screen in both
 themes; the shutdown pass runs on Linux and macOS only). `--e2e` implies `--build` since 2026-08-18, because Playwright serves
