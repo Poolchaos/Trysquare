@@ -6,7 +6,7 @@
  * when what it says is wrong, incomplete, or invented.
  */
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -824,6 +824,31 @@ describe("the quotation check", () => {
     expect(statusOf(finding)).toBe("killed");
     expect(finding.verificationNote).toContain("did not match the file");
     expect(finding.killedBy).toBe("quote_check");
+  });
+
+  it("kills a finding whose file a link the change made leads out of the checkout", async () => {
+    // insideRoot checks a path's text only, so `app` linked elsewhere passed
+    // it and the read followed the link, storing what it found there as the
+    // finding's quotation, as the context route once did (D-142; D-181
+    // item 1). A junction on Windows, which needs no privilege.
+    const outside = mkdtempSync(join(tmpdir(), "trysquare-outside-"));
+    try {
+      writeFileSync(join(outside, "orders.ts"), SOURCE);
+      rmSync(join(worktreeRoot, "app"), { recursive: true, force: true });
+      symlinkSync(
+        outside,
+        join(worktreeRoot, "app"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      const { result } = await verifyWith("  const user = payload as User;", 2, 2);
+      expect(result.verified).toBe(0);
+      expect(result.killedByQuoteCheck).toBe(1);
+      const finding = listFindings(db, reviewId)[0]!;
+      expect(statusOf(finding)).toBe("killed");
+      expect(finding.killedBy).toBe("quote_check");
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 
   it("records a refutation as the verifier's, not the quotation check's (4.24)", async () => {

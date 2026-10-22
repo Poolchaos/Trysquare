@@ -14,6 +14,7 @@
  */
 
 import { readFile } from "node:fs/promises";
+import { sep } from "node:path";
 import type { RepoRole, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
 import { opaqueChanges } from "@/lib/git/opaque";
 import { unsafeRepoPathReason } from "@/lib/git/repo-path";
@@ -48,6 +49,7 @@ import {
 import { assertSweepComplete, runSweeps } from "@/lib/review/sweep";
 import type { Db } from "@/server/db/client";
 import { appendRunNote } from "@/server/db/repositories/reviews";
+import { realPath } from "@/server/real-path";
 import {
   isDeletionCandidate,
   numberedLines,
@@ -1144,7 +1146,15 @@ async function readFileIfPossible(root: string, qualifiedPath: string): Promise<
   try {
     // A path a model named is contained like one from a diff: one that leaves
     // the worktree reads as unreadable, and the finding citing it is killed.
-    return await readFile(insideRoot(root, qualifiedPath), "utf8");
+    // By where it really is, and read from there: a link the change
+    // committed passes the text check and led the read wherever it pointed,
+    // as it did the context route's (D-142, D-143; D-181 item 1).
+    const [target, realRoot] = await Promise.all([
+      realPath(insideRoot(root, qualifiedPath)),
+      realPath(root),
+    ]);
+    if (target !== realRoot && !target.startsWith(realRoot + sep)) return null;
+    return await readFile(target, "utf8");
   } catch {
     return null;
   }
