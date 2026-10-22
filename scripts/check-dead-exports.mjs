@@ -31,17 +31,48 @@ const PRODUCTION = ["src", "scripts"];
 const SOURCE = /\.(ts|tsx|mts|mjs)$/;
 
 /** Names Next.js reads from a file it loads by its path, by where that file is. */
+// A segment's config, read from a route, a page or a layout alike.
+const SEGMENT_CONFIG = [
+  "dynamic",
+  "dynamicParams",
+  "revalidate",
+  "fetchCache",
+  "runtime",
+  "preferredRegion",
+  "maxDuration",
+  "generateStaticParams",
+];
 const FRAMEWORK = [
   {
-    file: /^src\/app\/.*\/route\.ts$/,
-    names: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "dynamic", "runtime"],
+    file: /^src\/app\/(.*\/)?route\.(ts|js)$/,
+    names: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", ...SEGMENT_CONFIG],
   },
   {
-    file: /^src\/app\/(.*\/)?(page|layout|loading|error|not-found|global-error|template)\.tsx$/,
-    names: ["default", "metadata", "viewport", "generateMetadata", "dynamic", "runtime"],
+    file: /^src\/app\/(.*\/)?(page|layout|default|loading|error|not-found|global-error|template)\.(tsx|ts|jsx|js)$/,
+    names: [
+      "default",
+      "metadata",
+      "viewport",
+      "generateMetadata",
+      "generateViewport",
+      ...SEGMENT_CONFIG,
+    ],
+  },
+  {
+    file: /^src\/app\/(.*\/)?(opengraph-image|twitter-image|icon|apple-icon|sitemap|robots|manifest)\.(tsx|ts|jsx|js)$/,
+    names: [
+      "default",
+      "alt",
+      "size",
+      "contentType",
+      "generateImageMetadata",
+      "generateSitemaps",
+      ...SEGMENT_CONFIG,
+    ],
   },
   { file: /^src\/proxy\.ts$/, names: ["proxy", "config"] },
-  { file: /^src\/instrumentation\.ts$/, names: ["register"] },
+  { file: /^src\/instrumentation\.ts$/, names: ["register", "onRequestError"] },
+  { file: /^src\/instrumentation-client\.ts$/, names: ["onRouterTransitionStart"] },
 ];
 
 /** Exported for the tests alone, deliberately, and why. */
@@ -78,15 +109,21 @@ const checker = program.getTypeChecker();
 const posix = (file) => relative(ROOT, file).split(sep).join("/");
 const productionSet = new Set(production.map(posix));
 
-/** The declaration a symbol names, through imports and re-exports. */
-function original(symbol) {
+/**
+ * Marks a symbol used, and every import and re-export it reaches the
+ * declaration through, one step at a time, so a re-export is used only when
+ * something comes through it (review of the 7.1 changes). Returns the
+ * declaration.
+ */
+function markUsed(symbol) {
   let current = symbol;
-  while (current.flags & ts.SymbolFlags.Alias) {
-    const next = checker.getAliasedSymbol(current);
-    if (next === current) break;
+  for (;;) {
+    used.add(current);
+    if (!(current.flags & ts.SymbolFlags.Alias)) return current;
+    const next = checker.getImmediateAliasedSymbol(current);
+    if (next === undefined || next === current) return current;
     current = next;
   }
-  return current;
 }
 
 // A script's declaration file is production too: a type it declares may be
@@ -120,17 +157,30 @@ for (const source of program.getSourceFiles()) {
             ? checker.getShorthandAssignmentValueSymbol(parent)
             : checker.getSymbolAtLocation(node);
         if (symbol) {
-          const target = original(symbol);
-          used.add(target);
+          const target = markUsed(symbol);
           // A namespace handed on whole, as the schema is to drizzle, uses
           // every export in it; one read a property at a time is judged by
           // the properties.
           const readThrough =
             parent && ts.isPropertyAccessExpression(parent) && parent.expression === node;
           if (target.flags & ts.SymbolFlags.ValueModule && !readThrough) {
-            for (const each of checker.getExportsOfModule(target)) used.add(original(each));
+            for (const each of checker.getExportsOfModule(target)) markUsed(each);
           }
         }
+      }
+      // A destructured name, as in const { addWorktree } = await import(...),
+      // uses the property it is taken from: its later uses name the local.
+      if (
+        parent &&
+        ts.isBindingElement(parent) &&
+        parent.name === node &&
+        ts.isObjectBindingPattern(parent.parent)
+      ) {
+        const key = parent.propertyName ?? node;
+        const property = checker
+          .getTypeAtLocation(parent.parent)
+          .getProperty(ts.isIdentifier(key) ? key.text : key.getText());
+        if (property) markUsed(property);
       }
     }
     ts.forEachChild(node, visit);
@@ -151,8 +201,6 @@ for (const source of program.getSourceFiles()) {
   for (const exported of checker.getExportsOfModule(moduleSymbol)) {
     if (called.includes(exported.name)) continue;
     if (TEST_SEAMS.some((seam) => seam.file === file && seam.name === exported.name)) continue;
-    // Re-exported from elsewhere: judged where it is declared.
-    if (exported.flags & ts.SymbolFlags.Alias) continue;
     if (used.has(exported)) continue;
     const declaration = exported.declarations?.[0];
     const line = declaration

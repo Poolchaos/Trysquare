@@ -33,5 +33,3 @@ export function openSqlite(dbFilePath: string): Database.Database {
 export function createDb(dbFilePath: string) {
   return drizzle(openSqlite(dbFilePath), { schema });
 }
-
-export { schema };
