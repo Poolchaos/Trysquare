@@ -35,7 +35,13 @@ import {
 } from "@/components/ui";
 import { asSentence, send } from "@/components/request";
 import { type SignIn } from "@/lib/engine/sign-in-command";
-import { BillingNotice, billingOf, SignInLine, type Billing } from "@/components/billing-notice";
+import {
+  BillingNotice,
+  billingOf,
+  SignInLine,
+  TerminalEnvironmentNote,
+  type Billing,
+} from "@/components/billing-notice";
 import {
   ManagedPolicyNotice,
   managedPolicyOf,
@@ -241,7 +247,8 @@ function NewReview() {
     let cancelled = false;
     void (async () => {
       // One answer for both engines: an interactive review's commands read
-      // no settings either (D-174).
+      // no settings either (D-174). The terminal they run in, which this
+      // cannot see, is said apart.
       const sent = await send<{
         cli: { state: string; authMethod?: string };
         signIn?: SignIn;
@@ -1239,6 +1246,7 @@ function NewReview() {
               what={engineMode === "headless" ? "review" : "interactive"}
             />
           )}
+          {engineMode === "interactive" ? <TerminalEnvironmentNote /> : null}
           {managedPolicy === null ? null : <ManagedPolicyNotice policy={managedPolicy} />}
 
           <div className="flex items-center gap-3">

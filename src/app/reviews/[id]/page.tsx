@@ -35,7 +35,13 @@ import {
   statusTone,
 } from "@/components/ui";
 import { asSentence, send } from "@/components/request";
-import { BillingNotice, billingOf, SignInLine, type Billing } from "@/components/billing-notice";
+import {
+  BillingNotice,
+  billingOf,
+  SignInLine,
+  TerminalEnvironmentNote,
+  type Billing,
+} from "@/components/billing-notice";
 import {
   ManagedPolicyNotice,
   managedPolicyOf,
@@ -1058,6 +1064,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         {interactiveToStart && startCheck?.billing ? (
           <BillingNotice billing={startCheck.billing} what="interactive" />
         ) : null}
+        {interactiveToStart ? <TerminalEnvironmentNote /> : null}
         {toStart && startCheck?.managedPolicy ? (
           <ManagedPolicyNotice policy={startCheck.managedPolicy} />
         ) : null}

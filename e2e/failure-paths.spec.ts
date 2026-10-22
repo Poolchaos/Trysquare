@@ -1876,6 +1876,11 @@ test("an interactive review's own screen says its commands would cost, before St
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
   await expect(notice).toHaveCount(0);
+  // The terminal they run in is the person's own, which the check never
+  // sees, so that is said on a subscription too (review of D-174's changes).
+  await expect(page.getByTestId("terminal-environment-note")).toContainText(
+    "These commands run in your own terminal, with its environment",
+  );
 
   // A check that fails is said, not taken as nothing to say (review of the
   // D-164 fixes).
@@ -2744,8 +2749,17 @@ test("the new-review screen asks the CLI once, for both engines", async ({ page 
   await fillANewReview(page);
   await checked;
   await page.getByText("Advanced", { exact: true }).click();
+  // That answer cannot speak for the terminal an interactive review's
+  // commands run in, so that is said of them whatever it was (review of
+  // D-174's changes).
+  const terminal = page.getByTestId("terminal-environment-note");
+  await expect(terminal).toHaveCount(0);
   await page.getByTestId("engine-mode").selectOption("interactive");
+  await expect(terminal).toContainText(
+    "These commands run in your own terminal, with its environment, which this app cannot see",
+  );
   await page.getByTestId("engine-mode").selectOption("headless");
+  await expect(terminal).toHaveCount(0);
   expect(asked).toEqual([""]);
 });
 
@@ -2788,9 +2802,10 @@ test("a sign-in that bills per token is said before Start, strictly, and Start s
     "The commands this review prints will cost API usage, billed per token.",
   );
   await expect(notice).toContainText("so each one draws on paid API usage");
-  await expect(notice).toContainText("a key set in that terminal bills per token too");
+  // Said once, beside it, as on a subscription.
+  await expect(notice).not.toContainText("your own terminal");
+  await expect(page.getByTestId("terminal-environment-note")).toBeVisible();
   await page.getByTestId("engine-mode").selectOption("headless");
-  await expect(notice).not.toContainText("in that terminal");
   await expect(notice).toContainText("This review will cost API usage, billed per token.");
   await stop();
 

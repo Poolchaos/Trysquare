@@ -37,7 +37,11 @@ Both checks are free, so they run as those screens open; D-31 keeps every
 call that spends to an explicit action. The check asks `auth status` with
 `--setting-sources ""`, as every review and probe runs, an interactive
 review's printed commands included (D-174), so an apiKeyHelper or provider
-it names is one a review uses (D-170), set by a managed policy (below). The check names the CLI's path and version and tells apart a CLI
+it names is one a review uses (D-170), set by a managed policy (below).
+Those commands run in the person's own terminal, though, with its whole
+environment, which the check does not see: a key, a provider or any other
+Claude Code variable set there applies to them, and each screen that
+prints them says so whatever the check found (D-176). The check names the CLI's path and version and tells apart a CLI
 not found, one that cannot run (with the real error: too old, not
 executable, an answer that is not its status, no answer in time), signed
 out, signed in some way that bills per token (a key, an `apiKeyHelper` or

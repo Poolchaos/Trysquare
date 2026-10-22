@@ -4178,3 +4178,29 @@ verified evidence, in writing, here.
   Rejected: overriding a policy with flags, which none outranks by the
   CLI's design; and reading a found policy to say what it sets, more of a
   file the person may not own than a warning needs.
+- 2026-10-22 D-176 REVIEW (fe36706..d7159fc: D-173's fixes and D-174's
+  three changes, by a separate read-only reviewer under D-162's rules; each
+  finding read again here before it was fixed). Seven findings, one MEDIUM
+  and six LOW:
+  1. MEDIUM: an interactive review's commands run in the person's own
+  terminal with its whole environment, which the check does not see, yet
+  06 and D-175 said every reader alike and gets no provider variables; on
+  a subscription nothing was said of that terminal, the sentence about it
+  being inside the billing notice alone. D-175's "gets no provider
+  variables" holds for a CLI the app starts, not for those commands.
+  Fixed: each screen that prints them says so whatever the check found,
+  and 06 says what the check cannot see.
+  2. LOW: `npm run claude`, the sign-in the app tells people to run, got
+  b3fb1ef's closed environment, without the terminal and display variables
+  the 2.1.306 binary reads to decide whether to open a browser.
+  3. LOW: the notice names a managed policy as the source of an
+  apiKeyHelper or a provider from a reading of the binary, not a
+  measurement, and the comment saying so was deleted.
+  4. LOW: Settings drew an empty spaced wrapper where no policy was found.
+  5. LOW: d7159fc's test read the notice's absence without waiting for the
+  answer to be applied, and expected the real route to find exactly
+  nothing, which fails on a machine with a policy or a slow reg.exe.
+  6. LOW: a failed check on a headless review's own screen said nothing,
+  so whether a policy applies went unsaid.
+  7. LOW: the dead-export gate's comment for FRAMEWORK sat above
+  SEGMENT_CONFIG.

@@ -61,6 +61,23 @@ export function settingOverSignIn(authMethod: string | undefined): string | null
   return `This is ${setting} set by a managed Claude Code policy, which wins over a sign-in and over this app: whoever manages Claude Code for you can remove it.`;
 }
 
+/**
+ * Said of every interactive review, whatever the check found: its commands
+ * run in the person's own terminal, which keeps nothing out of the
+ * environment the way a CLI the app starts does (D-174), and the check never
+ * sees that terminal. Said only inside a notice, it went unsaid on a
+ * subscription (review of D-174's changes).
+ */
+export function TerminalEnvironmentNote() {
+  return (
+    <p className="text-xs text-[var(--color-ink-muted)]" data-testid="terminal-environment-note">
+      These commands run in your own terminal, with its environment, which this app cannot see: an
+      API key or another provider set there wins over the sign-in and bills per token, and any other
+      Claude Code variable set there applies to them too.
+    </p>
+  );
+}
+
 /** A sign-in command on a line of its own, so it is copied without the words around it. */
 export function SignInLine({ signIn }: { signIn: SignIn }) {
   return (
@@ -112,10 +129,6 @@ export function BillingNotice({
       </p>
       <p className="mt-1 text-xs">
         {why}
-        {/* The app keeps keys from the CLIs it starts (D-161), not from a terminal's. */}
-        {what === "interactive"
-          ? " They run in your own terminal, and a key set in that terminal bills per token too."
-          : ""}
         {setting === null ? "" : ` ${setting}`}
         {!remedy
           ? ""
