@@ -179,6 +179,22 @@ export function markKilled(db: Db, findingId: string, reason: string, by: KillKi
 
 /** Verification could neither confirm nor refute. Surfaced to the user as a question. */
 export function markOpenQuestion(db: Db, findingId: string, whatWouldResolveIt: string): Finding {
+  // Verified again and still unsettled: the status stands, the note is the
+  // newer verifier's (WP-D2). Guarded like a transition, so a decision
+  // landing meanwhile is not overwritten.
+  if (statusOf(requireFinding(db, findingId)) === "open_question") {
+    const result = db
+      .update(findings)
+      .set({ verificationNote: whatWouldResolveIt, verifiedAt: nowIso() })
+      .where(and(eq(findings.id, findingId), eq(findings.status, "open_question")))
+      .run();
+    if (result.changes === 0) {
+      throw new Error(
+        `Finding "${findingId}" changed status concurrently; nothing was overwritten.`,
+      );
+    }
+    return requireFinding(db, findingId);
+  }
   return transitionFinding(db, findingId, "open_question", {
     verificationNote: whatWouldResolveIt,
   });
@@ -245,7 +261,7 @@ export class OpenQuestionNotConfirmableError extends Error {
   constructor(readonly findingId: string) {
     super(
       "This finding is an open question: verification could not prove it, so it cannot go " +
-        "into the report. Dismiss it.",
+        "into the report. Dismiss it, or verify it again.",
     );
     this.name = "OpenQuestionNotConfirmableError";
   }

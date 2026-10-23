@@ -56,7 +56,14 @@ import { outputContractFor, stageSchemaFor } from "@/lib/review/stage-schemas";
 import { composeSystemPrompt } from "@/lib/rulesets/compose";
 import type { ImportedRuleset } from "@/lib/rulesets/model";
 import type { Db } from "../db/client";
-import { deleteAllForReview } from "../db/repositories/findings";
+import {
+  deleteAllForReview,
+  markOpenQuestion,
+  requireFinding,
+  ReviewNotDecidingError,
+  statusOf as findingStatusOf,
+} from "../db/repositories/findings";
+import { listLedgerFiles } from "../db/repositories/ledger";
 import { listDependencyLinks, requireProject, recordFetch } from "../db/repositories/projects";
 import {
   appendRunNote,
@@ -95,6 +102,7 @@ import type { ReviewEngine } from "../engine/adapter";
 import { createInteractiveEngine } from "../engine/interactive";
 import { createEngineRunner } from "./engine-runner";
 import { runReviewPipeline, type PipelineResult, type StageRequest } from "./pipeline";
+import { applyVerdicts, parseVerdicts, renderVerificationFor } from "./verification";
 
 /** Twenty minutes. A stage that reads a large change set is not quick. */
 const DEFAULT_STAGE_TIMEOUT_MINUTES = 20;
@@ -357,7 +365,6 @@ export async function prepareAndRun(
       dataDir,
       review,
       snapshot,
-      sides,
       options,
     });
 
@@ -409,6 +416,141 @@ export async function prepareAndRun(
   } catch (error) {
     return recordFailure(db, reviewId, dataDir, error, options.signal);
   }
+}
+
+export class NotAnOpenQuestionError extends Error {
+  constructor(
+    readonly findingId: string,
+    readonly status: string,
+  ) {
+    super(
+      `This finding is ${status.replace(/_/g, " ")}, not an open question, so there is ` +
+        "nothing to verify again.",
+    );
+    this.name = "NotAnOpenQuestionError";
+  }
+}
+
+/** Why an open question cannot be verified again now, in words a person can act on. */
+export class VerifyAgainUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "VerifyAgainUnavailableError";
+  }
+}
+
+/** One at a time per review: its runner answers one question at a time. */
+const verifyingAgain = new Set<string>();
+
+/**
+ * Asks verification about one open question again, in a fresh session, and
+ * holds the answer to S5's checks (proof-and-steps plan, WP-D2). Proven, it
+ * can be confirmed; refuted, it is killed; unsettled, it stays open with the
+ * newer note. A paid request, so never replayed from the last answer.
+ */
+export async function verifyAgain(
+  db: Db,
+  findingId: string,
+  options: Pick<PrepareAndRunOptions, "dataDir" | "claudePath" | "signal"> = {},
+): Promise<{ status: string }> {
+  const dataDir = options.dataDir ?? resolveDataDir(process.env, homedir());
+  const { finding, review, worktreeRoot } = assertCanVerifyAgain(db, findingId, dataDir);
+
+  verifyingAgain.add(review.id);
+  try {
+    const snapshot = readReviewSnapshot(db, review.id);
+    const { contents: baseContents } = await readBaseContents(
+      bundleDirFor(dataDir, review.id),
+      listLedgerFiles(db, review.id)
+        .filter((file) => file.changeType === "deleted")
+        .map((file) => {
+          const [slug = "", ...rest] = file.path.split("/");
+          return {
+            slug,
+            file: {
+              path: rest.join("/"),
+              oldPath: file.oldPath ?? undefined,
+              changeType: "deleted" as const,
+              isBinary: false,
+            },
+          };
+        }),
+    );
+    const context = { db, worktreeRoot, baseContents, rules: snapshot.rules };
+    const runner = buildRunner(db, review.id, {
+      dataDir,
+      review,
+      snapshot,
+      options,
+      alone: true,
+    });
+    const response = await runner.run({
+      stage: "s5_verification",
+      systemPrompt: composeSystemPrompt({
+        directives: snapshot.directives,
+        rules: snapshot.rules,
+        stage: "s5_verification",
+        includeFullRules: false,
+        outputContract: outputContractFor(stageSchemaFor("s5_verification")),
+      }),
+      prompt: renderVerificationFor([finding], context),
+      fresh: true,
+    });
+    const verdicts = parseVerdicts(response.output, 1);
+    const tally = await applyVerdicts(context, [finding], verdicts);
+    if (verdicts.length === 0) {
+      markOpenQuestion(db, finding.id, "Verification returned no verdict for this finding.");
+    }
+    const after = findingStatusOf(requireFinding(db, finding.id));
+    appendRunNote(db, review.id, {
+      kind: "note",
+      message:
+        `Verified again: ${finding.filePath}:${finding.lineStart} ${finding.issue} is now ` +
+        `${after.replace(/_/g, " ")}` +
+        (tally.killedByQuoteCheck > 0 ? ", its proof not matching the code." : "."),
+    });
+    return { status: after };
+  } finally {
+    verifyingAgain.delete(review.id);
+  }
+}
+
+/**
+ * Everything that refuses a verify-again before anything is asked, so a route
+ * can answer it before the CLI is checked or a request is sent.
+ */
+export function assertCanVerifyAgain(db: Db, findingId: string, dataDir: string) {
+  const finding = requireFinding(db, findingId);
+  const status = findingStatusOf(finding);
+  if (status !== "open_question") throw new NotAnOpenQuestionError(findingId, status);
+  const review = requireReview(db, finding.reviewId);
+  const reviewStatus = statusOf(review);
+  if (reviewStatus !== "awaiting_confirmation") {
+    throw new ReviewNotDecidingError(review.id, reviewStatus);
+  }
+  // The person's own session answers an interactive review, which this
+  // request cannot wait on from a button.
+  if (engineModeSchema.parse(review.engineMode) === "interactive") {
+    throw new VerifyAgainUnavailableError(
+      "This review is answered in your own session, so a finding cannot be verified again " +
+        "from here.",
+    );
+  }
+  const worktreeRoot = worktreeRootDir(dataDir, review.id);
+  // Without the checkout every step would read as unreadable and the finding
+  // would be killed for a missing file, not for its proof.
+  if (!existsSync(worktreeRoot)) {
+    throw new VerifyAgainUnavailableError(
+      "This review's checkout is gone, so there is no code to verify the finding against.",
+    );
+  }
+  if (verifyingAgain.has(review.id)) {
+    throw new VerifyAgainUnavailableError(
+      "A finding of this review is being verified again already. Wait for its answer.",
+    );
+  }
+
+  return { finding, review, worktreeRoot };
 }
 
 function sidesOf(
@@ -508,8 +650,9 @@ function buildRunner(
     dataDir: string;
     review: ReturnType<typeof requireReview>;
     snapshot: { directives: ImportedRuleset["directives"]; rules: ImportedRuleset["rules"] };
-    sides: RepoSide[];
-    options: PrepareAndRunOptions;
+    options: Pick<PrepareAndRunOptions, "claudePath" | "signal" | "onEvent" | "onStageLifecycle">;
+    /** One question asked of a review that is not running: its stage is left as it is. */
+    alone?: boolean;
   },
 ): CheckpointingRunner {
   const { dataDir, review, snapshot, options } = context;
@@ -531,6 +674,7 @@ function buildRunner(
     kind: "live" | "replayed",
     batch?: { number: number; count: number },
   ): void => {
+    if (context.alone) return;
     setCurrentStage(db, reviewId, stage);
     // Driven by replays as well as live calls. A fully resumed run makes no
     // live call at all, and a review that never reached verifying could not

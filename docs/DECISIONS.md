@@ -4512,3 +4512,20 @@ verified evidence, in writing, here.
   Rows dismissed before the column read as dismissed. Rejected: the
   wording alone, which still counted an unproven finding as a false
   positive; and leaving it, with verifying again (WP-D2) the only way out.
+- 2026-10-23 WP-D2 step 2 (proof-and-steps plan, PG-2 (a), D-185): an
+  open question can be verified again through
+  `POST /api/findings/:id/verify-again`. It asks S5 about that one finding
+  in a fresh session, with a `fresh` request the checkpointing runner never
+  answers from a stored reply, so a second press is a new look and is
+  charged, and holds the answer to S5's checks (`verification.ts`):
+  proven it can be confirmed, refuted it is killed, unsettled it stays
+  open with the newer note. Refused before the CLI is asked anything for a
+  finding that is not an open question, a review not awaiting decisions,
+  an interactive review (its answers come from the person's own session),
+  a checkout that is gone (every step would read as missing), or a second
+  one of the same review in flight; refused until the page said what it
+  costs (`costShown`) and, as a Start is, how it bills. Synchronous, one
+  request under the stage timeout that a closed tab aborts. Rejected:
+  running it as a manager job, which would need the queue and a stream
+  for one question a person is waiting on. The page's button and dialog
+  are step 3.

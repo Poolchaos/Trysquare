@@ -217,9 +217,11 @@ hunk, mechanism, rule text it violates. Actions: confirm, dismiss (reason
 required, stored), edit-then-confirm (comment wording only; file/lines are
 immutable post-verification). Bulk actions exist only for dismiss-by-rule.
 Nothing reaches the report without an explicit confirm, and only a proven
-(verified) finding can be confirmed: an open question is dismissed, never
-confirmed (PG-2 (a), D-185), and verifying one again is not built yet
-(proof-and-steps plan, WP-D2); the card shows the
+(verified) finding can be confirmed: an open question is dismissed, or
+verified again, never confirmed (PG-2 (a), D-185). Verifying again asks S5
+about that one finding in a fresh session, never replayed from a stored
+answer, and holds the answer to the same checks (proof-and-steps plan,
+WP-D2); the card shows the
 verifier's proof, and the finder's severity where the verifier's differs.
 
 ## 3. S8 Report (deterministic)

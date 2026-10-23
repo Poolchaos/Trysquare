@@ -69,14 +69,19 @@ import {
   removeReviewWorktrees,
   ReviewNotRunnableError,
   RulesetRequiredError,
+  NotAnOpenQuestionError,
   type StageLifecycleEvent,
+  verifyAgain,
 } from "@/server/review/service";
 // @ts-expect-error -- plain JavaScript so it can also be run from a shell.
 import { buildSeededRepos } from "../../fixtures/build-seeded-repos.mjs";
 import {
   answerSequence,
   buildIdealStageOutputs,
+  candidateToken,
+  verdictAnswer,
   writeAnswersDir,
+  type VerdictByLine,
   type SeededManifest,
 } from "../../helpers/ideal-answers";
 import { makeTestDb, type TestDb } from "../db/helpers";
@@ -515,6 +520,87 @@ function resolveCandidateTokens(answer: string, prompt: string): string {
     return match ? match.ref : whole;
   });
 }
+
+describe("verifying an open question again (proof-and-steps plan, WP-D2)", () => {
+  /**
+   * A run whose verifier leaves its first finding open, with the answers the
+   * fake gives after it, each made from that finding's verdict.
+   */
+  async function leaveOneOpen(after: (verdict: VerdictByLine) => unknown[]) {
+    const reviewId = seedReview();
+    const outputs = buildIdealStageOutputs({
+      files: appFiles.map((file) => ({ repo: "primary" as const, slug: "app", file })),
+      manifest: { ...manifest, defects: manifest.defects.filter((d) => d.kind !== "cross-repo") },
+      worktreeRoot: referenceRoot,
+      rules: PROTOCOL.rules,
+    });
+    const [first, ...rest] = outputs.s5ByLine;
+    const open: VerdictByLine = { ...first!, verdict: "open_question", note: "Could not tell." };
+    writeAnswersDir(answersDir, [
+      ...answerSequence({ ...outputs, s5ByLine: [open, ...rest] }),
+      ...after(first!),
+    ]);
+    await run(reviewId);
+    const [finding, ...others] = listFindingsByStatus(db, reviewId, ["open_question"]);
+    expect(others).toHaveLength(0);
+    return { reviewId, finding: finding! };
+  }
+
+  const answer = (verdict: VerdictByLine) => ({
+    verdicts: [
+      verdictAnswer(
+        candidateToken(verdict.path, verdict.lineStart),
+        verdict,
+        verdict.lineStart,
+        verdict.path,
+      ),
+    ],
+  });
+  const again = (findingId: string) =>
+    verifyAgain(db, findingId, { dataDir, claudePath: FAKE_CLI });
+
+  it("proves an open question that the new answer proves, and keeps its proof", async () => {
+    const { reviewId, finding } = await leaveOneOpen((verdict) => [answer(verdict)]);
+
+    await expect(again(finding.id)).resolves.toMatchObject({ status: "verified" });
+    const proven = requireFinding(db, finding.id);
+    expect(findingStatusOf(proven)).toBe("verified");
+    expect(proven.proofJson).not.toBeNull();
+    // A request like any other: recorded, and charged to the review.
+    expect(
+      listForReview(db, reviewId).filter((row) => row.stage === "s5_verification"),
+    ).toHaveLength(2);
+  }, 120_000);
+
+  it("holds the new answer to the quotation check", async () => {
+    const { finding } = await leaveOneOpen((verdict) => [
+      answer({ ...verdict, quotedCode: "const somethingThatIsNotThere = true;" }),
+    ]);
+
+    await expect(again(finding.id)).resolves.toMatchObject({ status: "killed" });
+    expect(requireFinding(db, finding.id).killedBy).toBe("quote_check");
+  }, 120_000);
+
+  it("asks again on a second press rather than replaying the first answer", async () => {
+    const { finding } = await leaveOneOpen((verdict) => [
+      answer({ ...verdict, verdict: "open_question", note: "Still could not tell." }),
+      answer(verdict),
+    ]);
+
+    await expect(again(finding.id)).resolves.toMatchObject({ status: "open_question" });
+    expect(requireFinding(db, finding.id).verificationNote).toBe("Still could not tell.");
+    await expect(again(finding.id)).resolves.toMatchObject({ status: "verified" });
+    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("7");
+  }, 120_000);
+
+  it("refuses a finding that is not an open question, asking nothing", async () => {
+    const { reviewId } = await leaveOneOpen(() => []);
+    const [proven] = listFindingsByStatus(db, reviewId, ["verified"]);
+
+    await expect(again(proven!.id)).rejects.toThrow(NotAnOpenQuestionError);
+    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("5");
+  }, 120_000);
+});
 
 describe("the interactive engine", () => {
   it("runs a whole review from files on disk, spending nothing", async () => {

@@ -174,7 +174,9 @@ export function createCheckpointingRunner(
     }
 
     const promptHash = promptHashFor(request);
-    const stored = latestSucceeded(db, reviewId, request.stage, promptHash);
+    const stored = request.fresh
+      ? undefined
+      : latestSucceeded(db, reviewId, request.stage, promptHash);
     if (stored?.outputJson) {
       // Free, and deliberately silent about usage: replaying an answer spends
       // nothing, and adding its original cost again would inflate the total

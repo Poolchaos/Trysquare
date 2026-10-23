@@ -2273,6 +2273,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
   const asked: Record<string, { data?: object; query?: string }> = {
     "POST findings/[id]/confirm": { data: {} },
     "POST findings/[id]/dismiss": { data: { reason: "Asked by the sweep." } },
+    "POST findings/[id]/verify-again": { data: { costShown: true } },
     "POST models/[id]/probe": { data: {} },
     "GET projects/[id]": {},
     "DELETE projects/[id]": {},

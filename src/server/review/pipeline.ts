@@ -83,6 +83,11 @@ export interface StageRequest {
   /** Set only when a stage divides its work, so progress can be reported. */
   batchNumber?: number;
   batchCount?: number;
+  /**
+   * Asked even when this question has a stored answer: a person verifying a
+   * finding again wants a new look, not the last one replayed (WP-D2).
+   */
+  fresh?: true;
 }
 
 export interface StageResponse {

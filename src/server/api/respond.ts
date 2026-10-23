@@ -115,6 +115,9 @@ export const ERROR_STATUSES: readonly (readonly [name: string, status: 404 | 409
   ["ReviewNotStartableError", 409],
   ["ReviewAlreadyStartedError", 409],
   ["ReviewBeingDeletedError", 409],
+  // Verifying an open question again (WP-D2).
+  ["NotAnOpenQuestionError", 409],
+  ["VerifyAgainUnavailableError", 409],
 ];
 const STATUS_BY_NAME = new Map(ERROR_STATUSES);
 

@@ -128,6 +128,20 @@ describe("replaying what has already been answered", () => {
     expect(getReview(db, reviewId)?.usageInputTokens).toBe(usage.inputTokens);
   });
 
+  it("asks a fresh request again, and records and charges it like any other", async () => {
+    // Verifying an open question again is a new look the person asked and
+    // paid for; replaying the last answer would hand back the same verdict
+    // for nothing (proof-and-steps plan, WP-D2).
+    const engine = fakeEngine(() => ({ output: { verdicts: [] }, sessionId: "s-1", usage }));
+    const runner = createCheckpointingRunner({ db, reviewId, inner: engine.inner });
+
+    await runner.run(ask({ stage: "s5_verification", fresh: true }));
+    await runner.run(ask({ stage: "s5_verification", fresh: true }));
+
+    expect(engine.asked).toHaveLength(2);
+    expect(getReview(db, reviewId)?.usageInputTokens).toBe(2 * usage.inputTokens);
+  });
+
   it("asks again when the question changed", async () => {
     // A prompt only changes when the change set, the rules, or the batching
     // did. Answering the new question with the old answer would be a lie the

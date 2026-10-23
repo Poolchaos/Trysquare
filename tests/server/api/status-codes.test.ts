@@ -24,6 +24,7 @@ let routes: {
   link: typeof import("@/app/api/projects/[id]/links/[linkId]/route");
   rule: typeof import("@/app/api/rulesets/[id]/rules/[code]/route");
   preflight: typeof import("@/app/api/reviews/preflight/route");
+  verifyAgain: typeof import("@/app/api/findings/[id]/verify-again/route");
 };
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
@@ -46,6 +47,7 @@ beforeAll(async () => {
     link: await import("@/app/api/projects/[id]/links/[linkId]/route"),
     rule: await import("@/app/api/rulesets/[id]/rules/[code]/route"),
     preflight: await import("@/app/api/reviews/preflight/route"),
+    verifyAgain: await import("@/app/api/findings/[id]/verify-again/route"),
   };
 });
 
@@ -204,6 +206,7 @@ describe("an error thrown by another copy of its module", () => {
     const reviews = await import("@/server/db/repositories/reviews");
     const machines = await import("@/lib/domain/state-machines");
     const manager = await import("@/server/jobs/manager");
+    const service = await import("@/server/review/service");
     const expected: [Error, 404 | 409][] = [
       [new reviews.ReviewNotFoundError("x"), 404],
       [new projects.ProjectNotFoundError("x"), 404],
@@ -219,6 +222,8 @@ describe("an error thrown by another copy of its module", () => {
       [new manager.ReviewNotStartableError("x", "cancelled"), 409],
       [new manager.ReviewAlreadyStartedError("x", "queued"), 409],
       [new manager.ReviewBeingDeletedError("x"), 409],
+      [new service.NotAnOpenQuestionError("x", "verified"), 409],
+      [new service.VerifyAgainUnavailableError("x"), 409],
     ];
     const byName = new Map(expected.map(([error]) => [error.name, error]));
     const names = ERROR_STATUSES.map(([name]) => name);
@@ -297,8 +302,22 @@ describe("a step the state machine does not allow", () => {
     expect(refused.status).toBe(409);
     const body = (await refused.json()) as { code: string; error: string };
     expect(body.code).toBe("OpenQuestionNotConfirmableError");
-    // Only what can be done: verifying an open question again is not built.
-    expect(body.error).toMatch(/cannot go into the report\. Dismiss it\.$/);
+    expect(body.error).toMatch(/cannot go into the report\. Dismiss it, or verify it again\.$/);
+
+    // Verifying again is a paid request, refused until the page said so, and
+    // refused before the CLI is asked anything when it cannot run (WP-D2).
+    const asked = (findingId: string, sent: unknown) =>
+      routes.verifyAgain.POST(
+        new Request("http://localhost/x", { method: "POST", body: JSON.stringify(sent) }),
+        params(findingId),
+      );
+    expect((await asked(unproven.id, {})).status).toBe(400);
+    const proven = await asked(finding.id, { costShown: true });
+    expect(proven.status).toBe(409);
+    expect(await codeOf(proven)).toBe("NotAnOpenQuestionError");
+    const noCheckout = await asked(unproven.id, { costShown: true });
+    expect(noCheckout.status).toBe(409);
+    expect(await codeOf(noCheckout)).toBe("VerifyAgainUnavailableError");
 
     expect((await routes.confirm.POST(post(), params(finding.id))).status).toBe(200);
     const again = await routes.confirm.POST(post(), params(finding.id));

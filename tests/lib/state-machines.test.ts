@@ -113,6 +113,11 @@ describe("finding status machine", () => {
     expect(canTransitionFinding("open_question", "dismissed")).toBe(true);
   });
 
+  it("lets an open question verified again be proven or refuted (WP-D2)", () => {
+    expect(canTransitionFinding("open_question", "verified")).toBe(true);
+    expect(canTransitionFinding("open_question", "killed")).toBe(true);
+  });
+
   it("keeps a killed finding dead so it cannot be revived into a report", () => {
     for (const status of FINDING_STATUSES) {
       expect(canTransitionFinding("killed", status), `killed -> ${status}`).toBe(false);
