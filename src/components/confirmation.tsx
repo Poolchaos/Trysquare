@@ -40,6 +40,8 @@ export interface Finding {
   status: string;
   verificationNote: string | null;
   dismissReason: string | null;
+  /** open_question: left out unproven, not rejected (D-190). */
+  dismissedFrom?: string | null;
   /** The finder's severity, when the verifier's replaced it (PG-3, D-185). */
   raisedSeverity?: string | null;
   /** The verifier's proof as stored, read by proofOf. */
@@ -174,6 +176,13 @@ export function ConfirmationQueue({
   } | null>(null);
   const [againBusy, setAgainBusy] = useState(false);
   const [againNotice, setAgainNotice] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const verifyButtonRef = useRef<HTMLButtonElement>(null);
+  // Where the focus goes when the dialog closes: its buttons go with it.
+  const focusAfterAgain = useRef<"verify" | "title" | null>(null);
+  // A request left behind by leaving the page is stopped, not paid for.
+  const againAbort = useRef<AbortController | null>(null);
+  useEffect(() => () => againAbort.current?.abort(), []);
   const reasonRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
   // The first half of a `g g`. Held in a ref because a pending key is not
@@ -222,6 +231,7 @@ export function ConfirmationQueue({
   const moveTo = useCallback((next: number | ((index: number) => number)) => {
     moves.current += 1;
     focusedAtMove.current = document.activeElement;
+    setAgainNotice("");
     setSelected(next);
   }, []);
 
@@ -241,6 +251,18 @@ export function ConfirmationQueue({
     focusedAtMove.current = null;
     if (before && before !== document.body && !before.isConnected) titleRef.current?.focus();
   }, [current?.id]);
+  useEffect(() => {
+    if (againFor !== null) {
+      dialogRef.current?.focus();
+      return;
+    }
+    const target = focusAfterAgain.current;
+    focusAfterAgain.current = null;
+    if (target === "verify") verifyButtonRef.current?.focus();
+    else if (target === "title") titleRef.current?.focus();
+  }, [againFor]);
+  // The finding a sent verify-again is about: not decided until it answers.
+  const verifyingId = againBusy ? againFor : null;
   const currentRule = rules?.find((rule) => rule.code === current?.ruleCode);
   const editing = current !== undefined && editingFor === current.id;
   const ruleOpen = current !== undefined && ruleOpenFor === current.id;
@@ -307,11 +329,13 @@ export function ConfirmationQueue({
   async function sendAgain(finding: Finding) {
     setError("");
     setAgainBusy(true);
+    againAbort.current = new AbortController();
     try {
       const sent = await send<{ status: string }>(
         `/api/findings/${finding.id}/verify-again`,
         {
           method: "POST",
+          signal: againAbort.current.signal,
           body: JSON.stringify({
             costShown: true,
             ...(againTerms?.billing ? { billingShown: againTerms.billing.state } : {}),
@@ -321,8 +345,18 @@ export function ConfirmationQueue({
       );
       if (!sent.ok) {
         setError(sent.error);
+        // The sign-in changed since the dialog read it: say what it bills now,
+        // so the next Send carries what was shown.
+        if (sent.body.code === "BillingNotShown") {
+          const billing = billingOf(
+            sent.body.cli as { state?: unknown; authMethod?: unknown } | undefined,
+            undefined,
+          );
+          setAgainTerms((terms) => (terms ? { ...terms, billing } : terms));
+        }
         return;
       }
+      focusAfterAgain.current = "title";
       setAgainFor(null);
       const named = finding.issue.replace(/\.$/, "");
       setAgainNotice(
@@ -341,6 +375,9 @@ export function ConfirmationQueue({
   const act = useCallback(
     async (finding: Finding, action: "confirm" | "dismiss", detail?: string) => {
       setError("");
+      setAgainNotice("");
+      // A stale move must not take the focus when this decision moves on.
+      focusedAtMove.current = null;
       setBusy(true);
       const movesWhenSent = moves.current;
       try {
@@ -535,7 +572,7 @@ export function ConfirmationQueue({
           ref={completeRef}
           variant="primary"
           onClick={() => void complete()}
-          disabled={undecided.length > 0 || busy}
+          disabled={undecided.length > 0 || busy || againBusy}
           title={
             undecided.length > 0
               ? `${undecided.length} finding(s) still need a decision`
@@ -553,11 +590,14 @@ export function ConfirmationQueue({
       ) : null}
       {/* A refuted finding leaves the queue, so what the request found is
           said here rather than only on a card that may be gone. */}
-      {againNotice ? (
-        <p className="mb-3 text-dense" role="status" data-testid="verified-again">
-          {againNotice}
-        </p>
-      ) : null}
+      {/* Mounted empty and filled, as a live region must be to be heard. */}
+      <p
+        className={againNotice ? "mb-3 text-dense" : "sr-only"}
+        role="status"
+        data-testid="verified-again"
+      >
+        {againNotice}
+      </p>
 
       {/* Named rather than read out wholesale: moving through a queue should
           announce which finding is now active, not recite its whole card. */}
@@ -603,7 +643,13 @@ export function ConfirmationQueue({
                           className={`w-0.5 shrink-0 self-stretch ${severityEdge(finding.severity)}`}
                         />
                         <span className="flex items-center gap-2 py-2">
-                          <StateChip status={finding.status} />
+                          <StateChip
+                            status={
+                              finding.dismissedFrom === "open_question"
+                                ? "left_out"
+                                : finding.status
+                            }
+                          />
                         </span>
                         <span className="min-w-0 flex-1 py-2">
                           {/* The path leads the row. A reviewer's first
@@ -646,7 +692,11 @@ export function ConfirmationQueue({
                 <Badge tone="question">open question</Badge>
               ) : null}
               {current.status === "confirmed" ? <Badge tone="good">confirmed</Badge> : null}
-              {current.status === "dismissed" ? <Badge tone="neutral">dismissed</Badge> : null}
+              {current.status === "dismissed" ? (
+                <Badge tone="neutral">
+                  {current.dismissedFrom === "open_question" ? "left out" : "dismissed"}
+                </Badge>
+              ) : null}
               <Mono className="text-xs text-[var(--color-ink-muted)]">
                 {current.filePath}:{current.lineStart}
                 {current.lineEnd > current.lineStart ? `-${current.lineEnd}` : ""}
@@ -954,8 +1004,10 @@ export function ConfirmationQueue({
                   </Button>
                   {current.status === "open_question" && againFor !== current.id ? (
                     <Button
+                      ref={verifyButtonRef}
                       variant="quiet"
                       disabled={againBusy}
+                      title={againBusy ? "Another finding is being verified again." : undefined}
                       onClick={() => void askAgain(current)}
                     >
                       Verify again
@@ -965,26 +1017,36 @@ export function ConfirmationQueue({
                 {current.status === "open_question" && againFor === current.id ? (
                   // Said before anything is sent: it is a paid request (WP-D2).
                   <div
+                    ref={dialogRef}
+                    tabIndex={-1}
                     role="group"
                     aria-label="Verify again"
                     className="grid gap-2 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 text-xs"
                   >
-                    {againTerms ? (
-                      <p>
-                        <span className="font-medium">Verify this finding again? </span>
-                        This sends one new request to <Mono>{model}</Mono>, in a fresh session, and
-                        uses your Claude usage
-                        {againTerms.billing?.state === "perToken"
-                          ? ", billed per token"
-                          : againTerms.billing?.state === "maybePerToken"
-                            ? ", which may be billed per token"
-                            : ""}
-                        . It can take up to {againTerms.minutes} minutes. If it is proven, you can
-                        confirm it; if not, it stays an open question.
-                      </p>
-                    ) : (
-                      <p className="text-[var(--color-ink-muted)]">Reading what it costs.</p>
-                    )}
+                    <div aria-live="polite" className="grid gap-2">
+                      {againTerms ? (
+                        <p>
+                          <span className="font-medium">Verify this finding again? </span>
+                          This sends one new request to <Mono>{model}</Mono>, in a fresh session,
+                          and uses your Claude usage
+                          {againTerms.billing?.state === "perToken"
+                            ? ", billed per token"
+                            : againTerms.billing?.state === "maybePerToken"
+                              ? ", which may be billed per token"
+                              : ""}
+                          . It can take up to {againTerms.minutes} minutes. If it is proven, you can
+                          confirm it; if not, it stays an open question.
+                        </p>
+                      ) : (
+                        <p className="text-[var(--color-ink-muted)]">Reading what it costs.</p>
+                      )}
+                      {againBusy && againTerms ? (
+                        <p className="text-[var(--color-ink-muted)]">
+                          Waiting for the answer, up to {againTerms.minutes} minutes. Leaving this
+                          page stops the request.
+                        </p>
+                      ) : null}
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="primary"
@@ -996,7 +1058,10 @@ export function ConfirmationQueue({
                       <Button
                         variant="quiet"
                         disabled={againBusy}
-                        onClick={() => setAgainFor(null)}
+                        onClick={() => {
+                          focusAfterAgain.current = "verify";
+                          setAgainFor(null);
+                        }}
                       >
                         Not now
                       </Button>
@@ -1008,6 +1073,7 @@ export function ConfirmationQueue({
                   className="grid gap-1.5"
                   onSubmit={(event) => {
                     event.preventDefault();
+                    if (current.id === verifyingId) return;
                     void act(current, "dismiss", reason);
                   }}
                 >
@@ -1025,7 +1091,10 @@ export function ConfirmationQueue({
                       placeholder={reasonQuestion}
                       className="min-w-40 flex-1"
                     />
-                    <Button type="submit" disabled={busy || reason.trim() === ""}>
+                    <Button
+                      type="submit"
+                      disabled={busy || reason.trim() === "" || current.id === verifyingId}
+                    >
                       Dismiss
                     </Button>
                   </div>
@@ -1071,7 +1140,10 @@ function severityEdge(severity: string): string {
 }
 
 function StateChip({ status }: { status: string }) {
-  const label = { confirmed: "in report", dismissed: "dropped", open_question: "?" }[status] ?? "";
+  const label =
+    { confirmed: "in report", dismissed: "dropped", left_out: "left out", open_question: "?" }[
+      status
+    ] ?? "";
   if (label === "") {
     return (
       <span

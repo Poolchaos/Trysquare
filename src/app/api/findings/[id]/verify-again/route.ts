@@ -38,7 +38,7 @@ export async function POST(
       assertCanVerifyAgain(db, id, dataDir);
       const readiness = await cliReadiness(db);
       if (readiness.refusal) throw cliNotReady(readiness);
-      const unshown = billingNotShown(readiness, input.billingShown);
+      const unshown = billingNotShown(readiness, input.billingShown, "This request");
       if (unshown !== null) throw unshown;
       return ok(await manager.verifyAgain(id, request.signal));
     } catch (error) {

@@ -1191,18 +1191,43 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   // Verified again: a paid request, so what it costs is said, and nothing is
   // sent, until Send is pressed (WP-D2). Answered here as the server answers
   // a proof that holds; the server's side is unit-tested.
+  // The first Send is refused as a sign-in changed since the dialog read it
+  // would be; the second is held until released, as a real one is for minutes.
   const sent: unknown[] = [];
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
   const stopVerifying = await routeUntilStopped(
     page,
     "**/api/findings/*/verify-again",
     async (route) => {
       sent.push(route.request().postDataJSON());
+      if (sent.length === 1) {
+        await route.fulfill({
+          status: 409,
+          json: {
+            error:
+              "This request will cost API usage, billed per token, which this page had not " +
+              "said yet. Read the notice, then press again.",
+            code: "BillingNotShown",
+            cli: { state: "perToken", authMethod: "api_key" },
+          },
+        });
+        return;
+      }
+      await held;
       provenAgain.add(new URL(route.request().url()).pathname.split("/")[3]!);
       await route.fulfill({ json: { status: "verified" } });
     },
   );
-  await page.getByRole("button", { name: "Verify again" }).click();
+  const verifyButton = page.getByRole("button", { name: "Verify again" });
   const dialog = page.getByRole("group", { name: "Verify again" });
+  // Not now sends nothing, and gives the focus back to the button that opened it.
+  await verifyButton.click();
+  await expect(dialog).toBeFocused();
+  await page.getByRole("button", { name: "Not now" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(verifyButton).toBeFocused();
+  await verifyButton.click();
   await expect(dialog).toContainText("This sends one new request to claude-fable-5[1m]");
   await expect(dialog).toContainText(/It can take up to \d+ minutes\./);
   expect(sent).toHaveLength(0);
@@ -1223,12 +1248,51 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   await page.screenshot({ path: join(evidence, "verify-again-phone.png"), animations: "disabled" });
   if (desktop) await page.setViewportSize(desktop);
 
-  await page.getByRole("button", { name: "Send request" }).click();
+  // Refused: the dialog now says it bills per token, and the next Send says so.
+  const sendRequest = page.getByRole("button", { name: "Send request" });
+  await sendRequest.click();
+  await expect(page.getByText(/^This request will cost API usage, billed per token/)).toBeVisible();
+  await expect(dialog).toContainText("uses your Claude usage, billed per token.");
+
+  // In flight: the finding cannot be dismissed nor the review completed, and
+  // the dialog says how long it can take and that leaving stops it.
+  await page.getByLabel("Why leave it out?").fill("Asked while it was out.");
+  await sendRequest.click();
+  await expect(dialog).toContainText("Waiting for the answer, up to");
+  await expect(dialog).toContainText("Leaving this page stops the request.");
+  await expect(page.getByRole("button", { name: "Dismiss" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Complete review" })).toBeDisabled();
+  for (const [scheme, name] of [
+    ["light", "verify-again-waiting-light"],
+    ["dark", "verify-again-waiting-dark"],
+  ] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.locator("body").screenshot({
+      path: join(evidence, `${name}.png`),
+      animations: "disabled",
+      caret: "hide",
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await dialog.evaluate((element) => element.scrollIntoView({ block: "center" }));
+  await page.screenshot({
+    path: join(evidence, "verify-again-waiting-phone.png"),
+    animations: "disabled",
+  });
+  if (desktop) await page.setViewportSize(desktop);
+  release();
+
   await expect(page.getByTestId("verified-again")).toHaveText(
     `Proven: ${openTitle!.replace(/\.$/, "")}. It can be confirmed now.`,
   );
   await expect(page.getByRole("button", { name: "Confirm", exact: true })).toBeVisible();
-  expect(sent).toEqual([expect.objectContaining({ costShown: true })]);
+  await expect(title).toBeFocused();
+  expect(sent).toEqual([
+    expect.objectContaining({ costShown: true }),
+    expect.objectContaining({ costShown: true, billingShown: "perToken" }),
+  ]);
   // From the top: a body capture of a scrolled page draws the fixed top bar
   // across the middle of it.
   await page.evaluate(() => window.scrollTo(0, 0));

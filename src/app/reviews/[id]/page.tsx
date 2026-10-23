@@ -812,7 +812,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={severityTone(finding.severity)}>{finding.severity}</Badge>
                 {finding.status === "confirmed" ? <Badge tone="good">confirmed</Badge> : null}
-                {finding.status === "dismissed" ? <Badge tone="neutral">dismissed</Badge> : null}
+                {finding.status === "dismissed" ? (
+                  <Badge tone="neutral">
+                    {finding.dismissedFrom === "open_question" ? "left out" : "dismissed"}
+                  </Badge>
+                ) : null}
                 {finding.status === "open_question" ? (
                   <Badge tone="question">open question</Badge>
                 ) : null}

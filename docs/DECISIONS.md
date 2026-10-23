@@ -4560,3 +4560,12 @@ verified evidence, in writing, here.
   the finding a request was about (`finding_id`, migration 0014); the
   snapshot's stages and the duration medians leave such rows out, and
   their cost stays on the review. Said in the run notes instead.
+- 2026-10-23 Review round 2, the card. While a verify-again is out its
+  finding cannot be dismissed nor the review completed (F1), and the dialog
+  says how long it can take and that leaving the page stops it, which it
+  now does (F10). A billing refusal updates what the dialog says, so the
+  next Send carries it, and names "This request" (F7). The dialog takes the
+  focus; Not now gives it back to Verify again and an answer to the
+  finding's title (F8). The notice is one live region, mounted empty, and
+  clears on a move or a decision (F9); a decision clears a stale move's
+  focus (F12). A dismissed open question is badged "left out" (F13).

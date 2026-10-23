@@ -62,6 +62,7 @@ export const billingShownSchema = z.enum(["perToken", "maybePerToken"]).optional
 export function billingNotShown(
   { cli, signIn }: CliReadiness,
   shown: z.infer<typeof billingShownSchema>,
+  subject = "This review",
 ): Response | null {
   if (cli.state !== "perToken" && cli.state !== "maybePerToken") return null;
   if (shown === "perToken" || shown === cli.state) return null;
@@ -70,7 +71,7 @@ export function billingNotShown(
       error:
         // No cause is guessed: a Resume asks nothing before it is pressed, so
         // there nothing changed and no check failed (review of the D-162 fixes).
-        `This review ${cli.state === "perToken" ? "will" : "may"} cost API usage, billed per ` +
+        `${subject} ${cli.state === "perToken" ? "will" : "may"} cost API usage, billed per ` +
         "token, which this page had not said yet. Read the notice, then press again.",
       code: "BillingNotShown",
       cli,
