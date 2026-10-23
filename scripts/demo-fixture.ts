@@ -39,6 +39,7 @@ import { createReview, requireReview } from "@/server/db/repositories/reviews";
 import { cloneBare, diffText, mergeBase, resolveBranch } from "@/server/gitops/repo";
 import { probeModel, readCliStatus } from "@/server/engine/probe";
 import { configuredClaudePath } from "@/server/cli-path";
+import { pairedVerifierFor } from "@/lib/models/pairing";
 import { demoRefusal, describeSignIn } from "./lib/demo-billing";
 import { JobManager } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
@@ -145,26 +146,33 @@ async function main(): Promise<number> {
       if (!options.keep) rmSync(dataDir, { recursive: true, force: true });
       return 1;
     }
-    log(`Probing ${options.model}...`);
-    const probe = await probeModel(options.model, onPath);
-    if (probe.status !== "available") {
-      log(`The model is not usable: ${probe.error}`);
-      log("Nothing was spent. Pass --fake to run the demo without a model.");
-      db.$client.close();
-      if (!options.keep) rmSync(dataDir, { recursive: true, force: true });
-      return 1;
+    // The review's model and the second verifier it pairs with (WP-E), both
+    // probed before a review request is sent: the app refuses Start on an
+    // unprobed pair, and this calls the manager past that check, so without
+    // it a pair that cannot answer failed the run after five paid stages.
+    const family = (model: string) => model.split("-")[1] ?? "unknown";
+    for (const model of [options.model, pairedVerifierFor(family(options.model))]) {
+      log(`Probing ${model}...`);
+      const probe = await probeModel(model, onPath);
+      if (probe.status !== "available") {
+        log(`The model is not usable: ${probe.error}`);
+        log("No review request was sent. Pass --fake to run the demo without a model.");
+        db.$client.close();
+        if (!options.keep) rmSync(dataDir, { recursive: true, force: true });
+        return 1;
+      }
+      registerCandidate(db, {
+        id: model,
+        family: family(model),
+        displayName: model,
+        profileId: "full-context",
+      });
+      recordProbeSuccess(db, model, {
+        resolvedId: probe.resolvedId,
+        contextWindow: probe.contextWindow,
+      });
+      log(`Available as ${probe.resolvedId}, ` + `${count(probe.contextWindow)} token window.`);
     }
-    registerCandidate(db, {
-      id: options.model,
-      family: options.model.split("-")[1] ?? "unknown",
-      displayName: options.model,
-      profileId: "full-context",
-    });
-    recordProbeSuccess(db, options.model, {
-      resolvedId: probe.resolvedId,
-      contextWindow: probe.contextWindow,
-    });
-    log(`Available as ${probe.resolvedId}, ` + `${count(probe.contextWindow)} token window.`);
   }
 
   // Each cloned where the app keeps a project's own and marked ready, as
@@ -271,6 +279,8 @@ async function main(): Promise<number> {
     // The verifier's trigger and evidence path, each step checked against
     // the code, read for the verdict (proof-and-steps plan, WP-C).
     proof: finding.proofJson === null ? null : (JSON.parse(finding.proofJson) as unknown),
+    secondProof:
+      finding.secondProofJson === null ? null : (JSON.parse(finding.secondProofJson) as unknown),
     verificationNote: finding.verificationNote,
   }));
   writeFileSync(join(outDir, "findings.json"), `${JSON.stringify(findingRows, null, 2)}\n`);
