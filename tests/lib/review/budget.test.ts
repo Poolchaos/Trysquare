@@ -3,7 +3,7 @@ import {
   CONTEXT_BUDGET_FRACTION,
   budgetFor,
   estimateTokens,
-  fitsBudget,
+  fitBatch,
   splitToFit,
 } from "@/lib/review/budget";
 
@@ -25,9 +25,8 @@ describe("estimating size", () => {
 
   it("judges a composed prompt against the budget, not the whole window", () => {
     // 100 tokens of system plus 100 of user is 200, over a budget of 160.
-    const text = "a".repeat(400);
-    expect(fitsBudget(text, text, 200)).toBe(false);
-    expect(fitsBudget(text, text, 1000)).toBe(true);
+    expect(fitBatch(["a"], 100, () => 100, 200).kind).toBe("alone");
+    expect(fitBatch(["a"], 100, () => 100, 1000).kind).toBe("whole");
   });
 });
 
@@ -88,5 +87,53 @@ describe("splitting work to fit", () => {
     // loop, or silently drop everything.
     const result = splitToFit([item("a", 1), item("b", 1)], 10, 100);
     expect(result.groups.flat()).toHaveLength(2);
+  });
+});
+
+describe("fitting one batch of files to a window", () => {
+  // Shared by the run and the pre-flight, so the pre-flight counts the
+  // requests the run will make (proof-and-steps plan, WP-F).
+  const tokens: Record<string, number> = { a: 300, b: 300, c: 300, huge: 5000 };
+  const promptTokens = (files: readonly string[]) =>
+    files.reduce((sum, file) => sum + (tokens[file] ?? 0), 0);
+
+  it("keeps the batch whole with no window to fit", () => {
+    expect(fitBatch(["a", "b"], 100, promptTokens, undefined)).toEqual({
+      kind: "whole",
+      groups: [["a", "b"]],
+    });
+  });
+
+  it("keeps the batch whole when it fits", () => {
+    expect(fitBatch(["a", "b"], 100, promptTokens, 1000)).toEqual({
+      kind: "whole",
+      groups: [["a", "b"]],
+    });
+  });
+
+  it("sends one file too large for the window alone, saying how large", () => {
+    expect(fitBatch(["huge"], 100, promptTokens, 1000)).toEqual({
+      kind: "alone",
+      groups: [["huge"]],
+      tokens: 5100,
+    });
+  });
+
+  it("splits a batch too large together, in order", () => {
+    // Budget 800 less 100 for the system prompt: two files of 300 fit, not three.
+    expect(fitBatch(["a", "b", "c"], 100, promptTokens, 1000)).toEqual({
+      kind: "split",
+      groups: [["a", "b"], ["c"]],
+      oversized: [],
+    });
+  });
+
+  it("names a file too large on its own among others, in a group of its own", () => {
+    const fit = fitBatch(["a", "huge", "b"], 100, promptTokens, 1000);
+    expect(fit).toEqual({
+      kind: "split",
+      groups: [["a"], ["huge"], ["b"]],
+      oversized: [{ key: "huge", estimatedTokens: 5000 }],
+    });
   });
 });

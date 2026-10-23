@@ -95,11 +95,38 @@ export function splitToFit<T extends SizedItem>(
   return { groups, oversized };
 }
 
-/** True when a composed prompt is expected to fit. */
-export function fitsBudget(
-  systemPrompt: string,
-  userPrompt: string,
-  contextWindow: number,
-): boolean {
-  return estimateTokens(systemPrompt) + estimateTokens(userPrompt) <= budgetFor(contextWindow);
+export type BatchFit =
+  | { kind: "whole"; groups: string[][] }
+  /** One file too large on its own: sent anyway, its size said. */
+  | { kind: "alone"; groups: string[][]; tokens: number }
+  | { kind: "split"; groups: string[][]; oversized: SizedItem[] };
+
+/**
+ * How one batch of files is divided to fit a window: whole when it fits or
+ * no window is known, else packed by splitToFit. Shared by the run and the
+ * pre-flight, so the pre-flight counts the requests the run makes (WP-F).
+ */
+export function fitBatch(
+  files: readonly string[],
+  systemTokens: number,
+  promptTokens: (files: readonly string[]) => number,
+  contextWindow: number | undefined,
+): BatchFit {
+  if (contextWindow === undefined) return { kind: "whole", groups: [[...files]] };
+  const budget = budgetFor(contextWindow);
+  const whole = promptTokens(files);
+  if (systemTokens + whole <= budget) return { kind: "whole", groups: [[...files]] };
+  if (files.length <= 1) {
+    return { kind: "alone", groups: [[...files]], tokens: systemTokens + whole };
+  }
+  const split = splitToFit(
+    files.map((key) => ({ key, estimatedTokens: promptTokens([key]) })),
+    budget,
+    systemTokens,
+  );
+  return {
+    kind: "split",
+    groups: split.groups.map((group) => group.map((item) => item.key)),
+    oversized: split.oversized,
+  };
 }

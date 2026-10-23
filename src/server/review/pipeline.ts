@@ -19,7 +19,7 @@ import { unsafeRepoPathReason } from "@/lib/git/repo-path";
 import type { ChangedSymbol } from "@/lib/git/symbols";
 import { assertBatchesCoverEverything, planRuleBatches } from "@/lib/rulesets/compose";
 import type { ImportedRule } from "@/lib/rulesets/model";
-import { budgetFor, estimateTokens, fitsBudget, splitToFit } from "@/lib/review/budget";
+import { budgetFor, estimateTokens, fitBatch } from "@/lib/review/budget";
 import {
   assertDeletionsReconciled,
   assertReconciled,
@@ -845,12 +845,14 @@ function splitBatchToFit(
   systemPrompt: string,
   files: readonly string[],
 ): string[][] {
-  if (input.contextWindow === undefined) return [[...files]];
+  const fit = fitBatch(
+    files,
+    estimateTokens(systemPrompt),
+    (batch) => estimateTokens(renderAdversarialPrompt(content, { files: batch })),
+    input.contextWindow,
+  );
 
-  const whole = renderAdversarialPrompt(content, { files });
-  if (fitsBudget(systemPrompt, whole, input.contextWindow)) return [[...files]];
-
-  if (files.length <= 1) {
+  if (fit.kind === "alone") {
     // Nothing left to divide. It is still sent, and still reported: silently
     // sending an oversized prompt is how a request fails for a reason the run
     // never records.
@@ -858,31 +860,23 @@ function splitBatchToFit(
       kind: "oversized-prompt",
       message:
         `${files[0] ?? "(no file)"} does not fit the context window on its own (about ` +
-        `${estimateTokens(systemPrompt) + estimateTokens(whole)} tokens against a budget of ` +
-        `${budgetFor(input.contextWindow)}). It was sent anyway.`,
-    });
-    return [[...files]];
-  }
-
-  const sized = files.map((path) => ({
-    key: path,
-    estimatedTokens: estimateTokens(renderAdversarialPrompt(content, { files: [path] })),
-  }));
-
-  const split = splitToFit(sized, budgetFor(input.contextWindow), estimateTokens(systemPrompt));
-
-  for (const item of split.oversized) {
-    // Sent anyway. Being told the prompt is too large is strictly better than
-    // deciding here not to review the file.
-    appendRunNote(input.db, input.reviewId, {
-      kind: "oversized-prompt",
-      message:
-        `${item.key} does not fit the context window on its own (about ` +
-        `${item.estimatedTokens} tokens). It was sent as a request of its own.`,
+        `${fit.tokens} tokens against a budget of ` +
+        `${budgetFor(input.contextWindow!)}). It was sent anyway.`,
     });
   }
-
-  return split.groups.map((group) => group.map((item) => item.key));
+  if (fit.kind === "split") {
+    for (const item of fit.oversized) {
+      // Sent anyway. Being told the prompt is too large is strictly better than
+      // deciding here not to review the file.
+      appendRunNote(input.db, input.reviewId, {
+        kind: "oversized-prompt",
+        message:
+          `${item.key} does not fit the context window on its own (about ` +
+          `${item.estimatedTokens} tokens). It was sent as a request of its own.`,
+      });
+    }
+  }
+  return fit.groups;
 }
 
 export class SymbolVerdictUnbackedError extends Error {
