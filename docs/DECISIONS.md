@@ -4463,3 +4463,12 @@ verified evidence, in writing, here.
   Shift+C, and says under the verifier's note why. The state-machine and
   repository tests that allowed it were changed to the decision, not bent to
   pass: each says what it now holds and why.
+- 2026-10-23 Review round R1 (over WP-A to WP-D1): retiring Haiku deleted
+  its models row, and a model with no row resolves to full-context, so
+  D-184's "Haiku is already refused for a review" stopped being true: a
+  start naming it through the API created a full-context review. The
+  start and the pre-flight now refuse a retired id in their bodies, by the
+  list that retires it (moved to `lib/models/model-id.ts`), and the
+  pre-flight, which held no model rule of its own, refuses an alias as the
+  start does. Rejected: treating a retired id as mechanical-only, whose
+  message says it is registered when it is not.

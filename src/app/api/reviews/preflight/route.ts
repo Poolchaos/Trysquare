@@ -23,6 +23,7 @@ import { runSweeps } from "@/lib/review/sweep";
 import { composeSystemPrompt, planRuleBatches } from "@/lib/rulesets/compose";
 import { isJudgmentProfile, resolveProfile } from "@/lib/review/profiles";
 import { availabilityOf } from "@/lib/models/availability";
+import { reviewModelSchema } from "@/lib/models/model-id";
 import { getModel } from "@/server/db/repositories/models";
 import { recordFetch, requireClonedProject } from "@/server/db/repositories/projects";
 import { loadRuleset } from "@/server/db/repositories/rulesets";
@@ -40,7 +41,7 @@ const body = z
     fromBranch: z.string().min(1),
     intoBranch: z.string().min(1),
     rulesetId: z.string().min(1),
-    model: z.string().min(1),
+    model: reviewModelSchema,
     profileId: reviewProfileSchema.optional(),
     linked: z
       .object({

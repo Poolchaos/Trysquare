@@ -36,7 +36,8 @@ import {
 import { SETTING_KEYS, readSettingOr } from "../db/repositories/settings";
 import { configuredClaudePath } from "../cli-path";
 import { listForReview, usageTotals } from "../db/repositories/stage-executions";
-import { DEFAULT_MODEL_CANDIDATES, RETIRED_MODEL_IDS } from "../engine/probe";
+import { RETIRED_MODEL_IDS } from "@/lib/models/model-id";
+import { DEFAULT_MODEL_CANDIDATES } from "../engine/probe";
 import { prepareAndRun, type PrepareAndRunOptions, type RunOutcome } from "../review/service";
 import { createReviewBus, type ReviewListener } from "./bus";
 

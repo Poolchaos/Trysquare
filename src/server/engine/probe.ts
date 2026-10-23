@@ -423,9 +423,3 @@ export const DEFAULT_MODEL_CANDIDATES: readonly ModelCandidate[] = [
     sortOrder: 60,
   },
 ];
-
-/**
- * Candidates the app no longer offers, removed at start. Haiku could never
- * run a review (mechanical-only) and is not offered at all (D-184).
- */
-export const RETIRED_MODEL_IDS: readonly string[] = ["claude-haiku-4-5-20251001"];

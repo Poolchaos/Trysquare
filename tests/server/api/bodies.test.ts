@@ -164,6 +164,31 @@ describe("a branch compared against itself", () => {
       }
     }
   });
+
+  it("refuses a retired model, which has no registry row left to refuse it", async () => {
+    // Retiring Haiku deleted its row, and a model with no row resolves to
+    // full-context, so its mechanical-only refusal stopped firing (D-184).
+    const create = (await import("@/app/api/reviews/route")).POST;
+    const preflight = (await import("@/app/api/reviews/preflight/route")).POST;
+    const sent = {
+      projectId: "P",
+      fromBranch: "feature",
+      intoBranch: "main",
+      model: "claude-haiku-4-5-20251001",
+      rulesetId: "R",
+    };
+    for (const route of [create, preflight]) {
+      const response = await route(post(JSON.stringify(sent)));
+      const body = (await response.json()) as { code: string; error: string };
+      expect(response.status, body.error).toBe(400);
+      expect(body.code).toBe("Invalid");
+      expect(body.error).toMatch(/model: claude-haiku-4-5-20251001 is no longer offered/);
+    }
+    // The pre-flight held no model rule of its own, so it also answered for an alias.
+    const alias = await preflight(post(JSON.stringify({ ...sent, model: "opus" })));
+    expect(alias.status).toBe(400);
+    expect(((await alias.json()) as { error: string }).error).toMatch(/does not name a single/);
+  });
 });
 
 describe("a start that names a ruleset for a review already frozen with one", () => {

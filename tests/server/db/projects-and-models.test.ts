@@ -21,7 +21,8 @@ import {
   registerCandidate,
   retireModels,
 } from "@/server/db/repositories/models";
-import { DEFAULT_MODEL_CANDIDATES, RETIRED_MODEL_IDS } from "@/server/engine/probe";
+import { DEFAULT_MODEL_CANDIDATES } from "@/server/engine/probe";
+import { RETIRED_MODEL_IDS } from "@/lib/models/model-id";
 import { createReview, deleteReview } from "@/server/db/repositories/reviews";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
 
