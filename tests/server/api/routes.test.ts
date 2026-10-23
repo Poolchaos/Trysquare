@@ -450,12 +450,20 @@ describe("creating a review", () => {
   it("refuses a model that is registered for mechanical work only", async () => {
     // Its plan contains no judgment requests, so the run would raise nothing
     // and then fail with every hunk unaccounted for. Better refused up front.
+    // Registered here: Haiku, the candidate that was one, is retired (D-184).
+    const { registerCandidate } = await import("@/server/db/repositories/models");
+    registerCandidate((await import("@/server/runtime")).runtime().db, {
+      id: "claude-mechanical-9",
+      family: "mechanical",
+      displayName: "Mechanical 9",
+      profileId: "mechanical-only",
+    });
     const response = await routes.reviews.POST(
       post("http://localhost/api/reviews", {
         projectId,
         fromBranch: "feature/rename-prefs",
         intoBranch: "main",
-        model: "claude-haiku-4-5-20251001",
+        model: "claude-mechanical-9",
       }),
     );
     expect(response.status).toBe(400);

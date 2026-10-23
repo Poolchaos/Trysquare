@@ -175,24 +175,9 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(effort.locator("option", { hasText: "Max" })).toHaveCount(0);
     await expect(effort).toHaveValue("high");
 
-    // Extra high chosen, then a model the CLI runs without it: the picker
-    // shows and sends high instead, rather than an effort the run would not
-    // get. Haiku 4.5, since every current model does run it (D-123); it can
-    // be picked here though the server refuses it a review. Back on Fable the
-    // choice stays high: it used to come back as Extra high on its own, and
-    // a review started then ran at it (review of 4.5 to 4.7).
-    const picker = page.getByTestId("model-picker");
-    await effort.selectOption("xhigh");
-    await page.getByRole("button", { name: /model\(s\) that need probing/ }).click();
-    const haiku = picker.locator("li").filter({ hasText: "Haiku 4.5" });
-    await haiku.getByRole("button", { name: "Probe" }).click();
-    await expect(haiku.getByText(/probed just now/)).toBeVisible({ timeout: 30_000 });
-    await haiku.locator("label").click();
-    await expect(effort.locator("option")).toHaveCount(3);
-    await expect(effort).toHaveValue("high");
-    await picker.locator("li").filter({ hasText: "Fable 5 (1M context)" }).locator("label").click();
-    await expect(effort.locator("option")).toHaveCount(4);
-    await expect(effort).toHaveValue("high");
+    // Extra high is offered on every model the picker offers: the one that
+    // could not run it, Haiku 4.5, is no longer a candidate (D-184). Falling
+    // back to high on such a model is effortRunsOn's, tested on its own.
 
     // The pre-flight is free and read-only, so it appears on its own once the
     // four decisions are made.

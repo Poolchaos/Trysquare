@@ -7,7 +7,7 @@
  * to a previous model generation and would silently downgrade every review.
  */
 
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { nowIso } from "@/lib/ids";
 import type { ReviewProfile } from "@/lib/domain/enums";
 import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
@@ -52,8 +52,31 @@ export function registerCandidate(db: Db, input: RegisterModelInput): ModelRow {
     lastProbedAt: null,
     lastError: null,
   };
-  db.insert(models).values(row).onConflictDoNothing().run();
+  // What the app says of a candidate is taken again at every start, so a
+  // database made before a candidate changed does not keep its old mark,
+  // order and profile; what a probe found is left as it is (WP-B).
+  db.insert(models)
+    .values(row)
+    .onConflictDoUpdate({
+      target: models.id,
+      set: {
+        family: row.family,
+        displayName: row.displayName,
+        profileId: row.profileId,
+        recommended: row.recommended,
+        sortOrder: row.sortOrder,
+      },
+    })
+    .run();
   return db.select().from(models).where(eq(models.id, input.id)).get() ?? row;
+}
+
+/** Removes candidates the app no longer offers; a review names its model as text. */
+export function retireModels(db: Db, ids: readonly string[]): void {
+  if (ids.length === 0) return;
+  db.delete(models)
+    .where(inArray(models.id, [...ids]))
+    .run();
 }
 
 export function recordProbeSuccess(

@@ -97,7 +97,8 @@ reports 0.6s; the rest is npm and tsx starting up). It is the fastest way to
 confirm an install is sound, and it is the evidence behind gate G1.
 
 Drop `--fake` and the same demo runs against a real model on your
-subscription, defaulting to Haiku as a cheap smoke test. That spends usage.
+subscription, defaulting to Opus 5.5, the recommended model (D-184).
+That spends usage.
 
 Both forms write their score and full event log into `review/<date>-fg2/`,
 which is gitignored, so the evidence stays on your machine.

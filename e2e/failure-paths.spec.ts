@@ -1142,8 +1142,8 @@ test("cancelling a running review stops it and says so", async ({ page }) => {
 test("a new review starts on the model used last, while a probe vouches for it", async ({
   page,
 }) => {
-  // Fable at 1M first, then the one used last (DECISIONS, 2026-07-30); the
-  // picker took the first probed model every time (MVP 7.1). The suite has
+  // The one used last, else the first a probe vouches for; the picker took
+  // the first probed model every time (MVP 7.1). The suite has
   // one probed model fit to review, so a second is marked available in the
   // answer here; creating a review refuses one registered for mechanical
   // work, so such a model is never the one used last.
@@ -1170,8 +1170,10 @@ test("a new review starts on the model used last, while a probe vouches for it",
   for (const [lastUsed, shown] of [
     [second, "Opus 5 (1M context)"],
     ["claude-fable-5[1m]", "Fable 5 (1M context)"],
-    // One no longer registered falls back to the first a probe vouches for.
-    ["claude-gone-4", "Fable 5 (1M context)"],
+    // One no longer registered falls back to the first a probe vouches for,
+    // in picker order: the recommended families first, Opus first since
+    // Opus 5.5 is the recommended default (D-184).
+    ["claude-gone-4", "Opus 5 (1M context)"],
   ] as const) {
     const stop = await answer(lastUsed);
     await fillANewReview(page);

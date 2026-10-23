@@ -41,8 +41,9 @@ export function isSelectable(availability: ModelAvailability): boolean {
 /**
  * The model a new review starts on: the one used last while a probe vouches
  * for it, else the first in picker order that a probe vouches for, else none.
- * Fable at 1M first, then the last used (DECISIONS, 2026-07-30); the picker
- * took the first probed one every time (MVP 7.1).
+ * The picker took the first probed one every time (MVP 7.1); its order puts
+ * the recommended families first, Opus first since Opus 5.5 is the
+ * recommended default (D-184).
  *
  * @param ordered Already in picker order.
  */

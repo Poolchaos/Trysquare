@@ -14,7 +14,7 @@
  * when that bills per token or may, unless `--per-token` says it may spend.
  *
  *   npm run demo:fixture -- --fake
- *   npm run demo:fixture -- --model claude-fable-5[1m]
+ *   npm run demo:fixture -- --model claude-fable-5-1
  */
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -47,8 +47,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..");
 const FIXTURES = join(REPO_ROOT, "tests", "fixtures");
 
-/** Cheap, and enough to smoke the plumbing. Quality judgement uses fable. */
-const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
+/** The recommended model (D-184); `--model` picks another. */
+const DEFAULT_MODEL = "claude-opus-5-5";
 
 interface Options {
   model: string;

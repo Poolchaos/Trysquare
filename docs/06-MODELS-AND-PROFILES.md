@@ -108,9 +108,10 @@ available simply probes as unavailable and is shown disabled with its error.
 The table is 2.1.71's. The bundled 2.1.301's own model catalog names
 `claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5-5` and
 `claude-haiku-5-5` as each family's latest, read from its binary on
-2026-10-22; none is among the candidates the app ships, and whether this
-account can use them, and what an alias resolves to on 2.1.301, is
-unmeasured, both needing a probe (D-177).
+2026-10-22. The first three were probed on 2026-10-23 and each answered
+with a 1,000,000-token window, with or without the `[1m]` suffix, which
+Fable 5.1 drops; they are candidates now (D-184). What an alias resolves
+to on 2.1.301 is unmeasured (D-177).
 
 **Two consequences the app must honour:**
 
@@ -142,9 +143,12 @@ candidates render disabled with the error and probe age. A probe older than
 24 hours renders as unknown rather than assumed-good.
 
 Recommended-for-review flags (the maintainer 2026-07-30: Opus and Fable are the
-reliable ones) mark `claude-fable-5[1m]` and `claude-opus-5[1m]` as the
-defaults; everything else available is selectable but carries its profile's
-warning.
+reliable ones; 2026-10-22: Opus 5.5 recommended, D-184) mark `claude-opus-5-5`,
+first and so the default, and `claude-fable-5-1`; everything else available is
+selectable but carries its profile's warning. Haiku is no longer offered: it
+was mechanical-only and could never run a review, and its row is removed at
+start. A candidate's description is taken again at every start, its probe
+result kept.
 
 ### Effort
 

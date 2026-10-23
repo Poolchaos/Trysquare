@@ -19,7 +19,9 @@ import {
   recordProbeOutcome,
   recordProbeSuccess,
   registerCandidate,
+  retireModels,
 } from "@/server/db/repositories/models";
+import { DEFAULT_MODEL_CANDIDATES, RETIRED_MODEL_IDS } from "@/server/engine/probe";
 import { createReview, deleteReview } from "@/server/db/repositories/reviews";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
 
@@ -304,5 +306,65 @@ describe("model registry", () => {
 
     const later = Date.now() + PROBE_FRESHNESS_MS + 1000;
     expect(availabilityOf(getModel(db, fable.id)!, later)).toBe("stale");
+  });
+
+  it("takes a candidate's new description at startup, keeping what its probe found", () => {
+    // Registered once and never again: a database made before a candidate
+    // changed kept the old recommended mark, order and profile for ever
+    // (proof-and-steps plan, WP-B).
+    registerCandidate(db, fable);
+    recordProbeSuccess(db, fable.id, { resolvedId: fable.id, contextWindow: 1_000_000 });
+    registerCandidate(db, {
+      ...fable,
+      displayName: "Fable 5, 1M",
+      profileId: "chunked",
+      recommended: false,
+      sortOrder: 90,
+    });
+    const stored = getModel(db, fable.id)!;
+    expect(stored).toMatchObject({
+      displayName: "Fable 5, 1M",
+      profileId: "chunked",
+      recommended: false,
+      sortOrder: 90,
+      available: true,
+      contextWindow: 1_000_000,
+    });
+    expect(stored.lastProbedAt).not.toBeNull();
+  });
+
+  it("removes a retired candidate's row, and only that", () => {
+    registerCandidate(db, fable);
+    registerCandidate(db, {
+      id: "claude-haiku-4-5-20251001",
+      family: "haiku",
+      displayName: "Haiku 4.5",
+      profileId: "mechanical-only",
+    });
+    retireModels(db, RETIRED_MODEL_IDS);
+    expect(getModel(db, "claude-haiku-4-5-20251001")).toBeUndefined();
+    expect(getModel(db, fable.id)).toBeDefined();
+  });
+
+  it("ships Opus 5.5 first and recommended, Fable 5.1 beside it, Sonnet 5.5 by theme, and no Haiku", () => {
+    // The maintainer, 2026-10-22: Opus 5.5 recommended, the rest offered,
+    // no Haiku (D-184). Each probed usable with a 1M window on 2026-10-23.
+    const first = [...DEFAULT_MODEL_CANDIDATES].sort((a, b) => a.sortOrder - b.sortOrder)[0];
+    expect(first).toMatchObject({ id: "claude-opus-5-5", recommended: true });
+    const byId = new Map(DEFAULT_MODEL_CANDIDATES.map((candidate) => [candidate.id, candidate]));
+    expect(byId.get("claude-opus-5-5")?.profileId).toBe("full-context");
+    expect(byId.get("claude-fable-5-1")).toMatchObject({
+      profileId: "full-context",
+      recommended: true,
+    });
+    expect(byId.get("claude-sonnet-5-5")).toMatchObject({
+      profileId: "chunked",
+      recommended: false,
+    });
+    expect(DEFAULT_MODEL_CANDIDATES.some((candidate) => candidate.family === "haiku")).toBe(false);
+    expect(RETIRED_MODEL_IDS).toContain("claude-haiku-4-5-20251001");
+    expect(
+      DEFAULT_MODEL_CANDIDATES.filter((candidate) => candidate.recommended).map((c) => c.id),
+    ).toEqual(["claude-opus-5-5", "claude-fable-5-1"]);
   });
 });

@@ -22,7 +22,7 @@ import { homedir } from "node:os";
 import type { Db } from "../db/client";
 import { listFindings, statusOf as findingStatusOf } from "../db/repositories/findings";
 import { coverageReport, type CoverageReport } from "../db/repositories/ledger";
-import { registerCandidate } from "../db/repositories/models";
+import { registerCandidate, retireModels } from "../db/repositories/models";
 import { markOrphanedClonesFailed } from "../db/repositories/projects";
 import {
   getReview,
@@ -36,7 +36,7 @@ import {
 import { SETTING_KEYS, readSettingOr } from "../db/repositories/settings";
 import { configuredClaudePath } from "../cli-path";
 import { listForReview, usageTotals } from "../db/repositories/stage-executions";
-import { DEFAULT_MODEL_CANDIDATES } from "../engine/probe";
+import { DEFAULT_MODEL_CANDIDATES, RETIRED_MODEL_IDS } from "../engine/probe";
 import { prepareAndRun, type PrepareAndRunOptions, type RunOutcome } from "../review/service";
 import { createReviewBus, type ReviewListener } from "./bus";
 
@@ -132,6 +132,7 @@ export class JobManager {
     markOrphanedReviewsInterrupted(options.db);
     markOrphanedClonesFailed(options.db);
     for (const candidate of DEFAULT_MODEL_CANDIDATES) registerCandidate(options.db, candidate);
+    retireModels(options.db, RETIRED_MODEL_IDS);
   }
 
   subscribe(reviewId: string, listener: ReviewListener): () => void {

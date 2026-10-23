@@ -347,12 +347,39 @@ export interface ModelCandidate {
  * been observed to be a previous generation.
  */
 export const DEFAULT_MODEL_CANDIDATES: readonly ModelCandidate[] = [
+  // The 5.5 family, each probed usable with a 1M window on 2026-10-23 with
+  // no suffix (D-184): Opus 5.5 first, the default; Fable 5.1 recommended
+  // beside it and the second verifier's pair; Sonnet 5.5 one pass per theme.
+  {
+    id: "claude-opus-5-5",
+    family: "opus",
+    displayName: "Opus 5.5",
+    profileId: "full-context",
+    recommended: true,
+    sortOrder: 1,
+  },
+  {
+    id: "claude-fable-5-1",
+    family: "fable",
+    displayName: "Fable 5.1",
+    profileId: "full-context",
+    recommended: true,
+    sortOrder: 2,
+  },
+  {
+    id: "claude-sonnet-5-5",
+    family: "sonnet",
+    displayName: "Sonnet 5.5",
+    profileId: "chunked",
+    recommended: false,
+    sortOrder: 3,
+  },
   {
     id: "claude-fable-5[1m]",
     family: "fable",
     displayName: "Fable 5 (1M context)",
     profileId: "full-context",
-    recommended: true,
+    recommended: false,
     sortOrder: 10,
   },
   {
@@ -360,7 +387,7 @@ export const DEFAULT_MODEL_CANDIDATES: readonly ModelCandidate[] = [
     family: "opus",
     displayName: "Opus 5 (1M context)",
     profileId: "full-context",
-    recommended: true,
+    recommended: false,
     sortOrder: 20,
   },
   {
@@ -395,14 +422,10 @@ export const DEFAULT_MODEL_CANDIDATES: readonly ModelCandidate[] = [
     recommended: false,
     sortOrder: 60,
   },
-  {
-    id: "claude-haiku-4-5-20251001",
-    family: "haiku",
-    displayName: "Haiku 4.5",
-    // Not offered for judgment: a review it produced could not be trusted to
-    // have applied the protocol, and the whole point is that it did.
-    profileId: "mechanical-only",
-    recommended: false,
-    sortOrder: 70,
-  },
 ];
+
+/**
+ * Candidates the app no longer offers, removed at start. Haiku could never
+ * run a review (mechanical-only) and is not offered at all (D-184).
+ */
+export const RETIRED_MODEL_IDS: readonly string[] = ["claude-haiku-4-5-20251001"];

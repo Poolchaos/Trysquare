@@ -4417,3 +4417,18 @@ verified evidence, in writing, here.
   while S3 ran, its own log saying "Adversarial started" beneath. Shown
   with the fake CLI held in its third call; it now re-reads on each stage
   start, which the server announces only after writing it.
+- 2026-10-23 D-187 DECIDED by the maintainer, each the recommendation:
+  1. The picker says how each model's work is split ("the whole ruleset in
+  one pass", "one pass per rule theme, N passes") with a request count by
+  stage, and makes no token claim: the app cannot total tokens honestly,
+  and a theme-by-theme model re-reads every file once per theme, so "more
+  tokens for Fable" can be false. Rejected: a rough token line.
+  2. "Accuracy may fall on this model" shows on every non-recommended
+  model, probed or not. Rejected: only once probed.
+  3. PG-4: the five-step mockup is approved as shown
+  (https://claude.ai/artifact/Cmn1scDb2prp69XaPiS512), so WP-G may be built.
+- 2026-10-23 WP-B also took out of the journey its passage on falling back
+  from Extra high, which picked Haiku 4.5 as the one offered model that
+  cannot run it; with Haiku retired no offered model reaches that path in
+  the picker, and effortRunsOn keeps its own tests. The route test of a
+  mechanical-only refusal registers its own such model.
