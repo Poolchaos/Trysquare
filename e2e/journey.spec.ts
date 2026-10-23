@@ -345,6 +345,14 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByText(/^@@ -\d+,\d+ \+\d+,\d+ @@/m)).toBeVisible();
     await expect(page.getByRole("heading", { name: "The file as it stands" })).toBeVisible();
     await page.locator("body").press("Enter");
+
+    // And how the verifier proved it: the trigger, each step of the path to
+    // the failure, quoted from the code, and where it looked for a guard
+    // (proof-and-steps plan, WP-C).
+    const proof = page.getByRole("region", { name: "How it was proven" });
+    await expect(proof).toContainText("The changed code is reached as the finding describes.");
+    await expect(proof.getByText(/^1\. app\//)).toBeVisible();
+    await expect(proof).toContainText("Guards searched");
   });
 
   await test.step("after a click, the keyboard still drives the queue", async () => {

@@ -20,6 +20,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { z } from "zod";
 import { Badge, Button, Card, Input, Mono, Problem, Textarea, severityTone } from "@/components/ui";
 import { send } from "@/components/request";
 
@@ -38,6 +39,32 @@ export interface Finding {
   status: string;
   verificationNote: string | null;
   dismissReason: string | null;
+  /** The finder's severity, when the verifier's replaced it (PG-3, D-185). */
+  raisedSeverity?: string | null;
+  /** The verifier's proof as stored, read by proofOf. */
+  proofJson?: string | null;
+}
+
+const proofSchema = z.object({
+  trigger: z.string(),
+  evidence: z.array(
+    z.object({ path: z.string(), lineStart: z.number(), lineEnd: z.number(), quote: z.string() }),
+  ),
+  guardsSearched: z.array(z.string()),
+});
+
+/**
+ * How the verifier proved a finding, every step already checked against the
+ * code (proof-and-steps plan, WP-C); null for a finding without one.
+ */
+function proofOf(finding: Finding): z.infer<typeof proofSchema> | null {
+  if (!finding.proofJson) return null;
+  try {
+    const parsed = proofSchema.safeParse(JSON.parse(finding.proofJson));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }
 
 interface SnapshotRule {
@@ -181,6 +208,7 @@ export function ConfirmationQueue({
   }, []);
 
   const current = queue[Math.min(selected, Math.max(queue.length - 1, 0))];
+  const currentProof = current ? proofOf(current) : null;
   const currentRule = rules?.find((rule) => rule.code === current?.ruleCode);
   const editing = current !== undefined && editingFor === current.id;
   const ruleOpen = current !== undefined && ruleOpenFor === current.id;
@@ -496,6 +524,11 @@ export function ConfirmationQueue({
           <Card className="min-w-0 p-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone={severityTone(current.severity)}>{current.severity}</Badge>
+              {current.raisedSeverity && current.raisedSeverity !== current.severity ? (
+                <span className="text-xs text-[var(--color-ink-muted)]">
+                  Finder said {current.raisedSeverity}
+                </span>
+              ) : null}
               {current.status === "open_question" ? (
                 <Badge tone="question">open question</Badge>
               ) : null}
@@ -629,6 +662,39 @@ export function ConfirmationQueue({
                 <span className="font-medium">Failure mechanism </span>
                 <span className="text-[var(--color-ink-muted)]">{current.mechanism}</span>
               </p>
+            ) : null}
+
+            {currentProof ? (
+              <section
+                aria-label="How it was proven"
+                className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs"
+              >
+                <p>
+                  <span className="font-medium">Proven from </span>
+                  <span className="text-[var(--color-ink-muted)]">{currentProof.trigger}</span>
+                </p>
+                {/* Every step was found at its lines in the checkout before the
+                    finding could be verified; the last is the failure. */}
+                <ol className="mt-2 grid gap-2">
+                  {currentProof.evidence.map((step, index) => (
+                    <li key={index} className="min-w-0">
+                      <Mono className="text-[var(--color-ink-muted)]">
+                        {index + 1}. {step.path}:{step.lineStart}
+                        {step.lineEnd > step.lineStart ? `-${step.lineEnd}` : ""}
+                      </Mono>
+                      <pre className="mt-1 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2">
+                        <code className="font-[family-name:var(--font-mono)]">{step.quote}</code>
+                      </pre>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-2">
+                  <span className="font-medium">Guards searched </span>
+                  <span className="text-[var(--color-ink-muted)]">
+                    {currentProof.guardsSearched.join("; ")}
+                  </span>
+                </p>
+              </section>
             ) : null}
 
             {showContext ? (
