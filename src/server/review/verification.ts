@@ -281,7 +281,12 @@ export async function applySecondVerdicts(
         continue;
       }
     }
-    markOpenQuestion(context.db, proven.finding.id, `The second verifier, ${model}, ${why}`);
+    markOpenQuestion(
+      context.db,
+      proven.finding.id,
+      `The second verifier, ${model}, ${why}`,
+      proofOf(proven.verdict),
+    );
     disagreed += 1;
   }
   return { verified, disagreed };

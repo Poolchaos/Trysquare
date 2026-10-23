@@ -185,14 +185,25 @@ export function markKilled(db: Db, findingId: string, reason: string, by: KillKi
 }
 
 /** Verification could neither confirm nor refute. Surfaced to the user as a question. */
-export function markOpenQuestion(db: Db, findingId: string, whatWouldResolveIt: string): Finding {
+export function markOpenQuestion(
+  db: Db,
+  findingId: string,
+  whatWouldResolveIt: string,
+  /**
+   * The first verifier's proof, when the second did not prove it: kept so the
+   * review can say it was proven once (WP-G). An open question's card shows
+   * no proof.
+   */
+  firstProof?: VerifiedProof,
+): Finding {
+  const proof = firstProof === undefined ? {} : { proofJson: JSON.stringify(firstProof) };
   // Verified again and still unsettled: the status stands, the note is the
   // newer verifier's (WP-D2). Guarded like a transition, so a decision
   // landing meanwhile is not overwritten.
   if (statusOf(requireFinding(db, findingId)) === "open_question") {
     const result = db
       .update(findings)
-      .set({ verificationNote: whatWouldResolveIt, verifiedAt: nowIso() })
+      .set({ verificationNote: whatWouldResolveIt, verifiedAt: nowIso(), ...proof })
       .where(and(eq(findings.id, findingId), eq(findings.status, "open_question")))
       .run();
     if (result.changes === 0) {
@@ -204,6 +215,7 @@ export function markOpenQuestion(db: Db, findingId: string, whatWouldResolveIt: 
   }
   return transitionFinding(db, findingId, "open_question", {
     verificationNote: whatWouldResolveIt,
+    ...proof,
   });
 }
 

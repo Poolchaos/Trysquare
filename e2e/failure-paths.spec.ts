@@ -978,6 +978,86 @@ test("the scan theater follows the review from stage to stage", async ({ page })
     });
     await expect(theater.getByText(/stage 4 of 8/)).toBeVisible();
 
+    // The five steps a person reads (WP-G): the first two done with what
+    // they measured, finding issues the one now.
+    const steps = theater.getByRole("list", { name: "Review steps" });
+    await expect(steps.locator('[aria-current="step"]')).toContainText("Find issues");
+    await expect(steps.getByRole("listitem").nth(0)).toContainText(/Done.*rules frozen/);
+    await expect(steps.getByRole("listitem").nth(1)).toContainText(/Done.*files read/);
+    await expect(steps.getByRole("listitem").nth(4)).toContainText(/Next.*Waiting/);
+    const evidence = join(
+      fileURLToPath(new URL("..", import.meta.url)),
+      "review",
+      `${new Date().toISOString().slice(0, 10)}-e2e`,
+    );
+    mkdirSync(evidence, { recursive: true });
+    const desktop = page.viewportSize();
+    for (const [scheme, name] of [
+      ["light", "steps-live-light"],
+      ["dark", "steps-live-dark"],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.screenshot({ path: join(evidence, `${name}.png`), animations: "disabled" });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: join(evidence, "steps-live-phone.png"), animations: "disabled" });
+    if (desktop) await page.setViewportSize(desktop);
+
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+    await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
+  } finally {
+    rmSync(STALL_TRIGGER, { force: true });
+    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
+  }
+});
+
+test("the scan theater counts the findings while they are proven", async ({ page }) => {
+  // Held in its fifth call, the first verifier: the candidates are raised
+  // and none is proven yet, so each is still to prove (WP-G). The count is
+  // put back as in the test above, even if an assertion fails.
+  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 30_000, skip: 4 }), "utf8");
+  try {
+    await startAReview(page);
+    const theater = page.getByRole("dialog", {
+      name: "Watching the review of feature/rename-prefs into main",
+    });
+    await expect(theater).toBeVisible({ timeout: 60_000 });
+    const steps = theater.getByRole("list", { name: "Review steps" });
+    await expect(steps.locator('[aria-current="step"]')).toContainText("Prove each finding", {
+      timeout: 30_000,
+    });
+    await expect(steps.getByRole("listitem").nth(2)).toContainText(/Done.*candidates raised/);
+    const found = theater.locator('[aria-label="Findings so far"]');
+    await expect(found).toContainText("proven by the first verifier");
+    await expect(found).toContainText("still to prove");
+
+    const evidence = join(
+      fileURLToPath(new URL("..", import.meta.url)),
+      "review",
+      `${new Date().toISOString().slice(0, 10)}-e2e`,
+    );
+    mkdirSync(evidence, { recursive: true });
+    const desktop = page.viewportSize();
+    for (const [scheme, name] of [
+      ["light", "steps-proving-light"],
+      ["dark", "steps-proving-dark"],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.screenshot({ path: join(evidence, `${name}.png`), animations: "disabled" });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await found.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: join(evidence, "steps-proving-phone.png"),
+      animations: "disabled",
+    });
+    if (desktop) await page.setViewportSize(desktop);
+
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();

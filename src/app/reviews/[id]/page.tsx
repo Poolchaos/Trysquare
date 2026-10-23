@@ -48,6 +48,7 @@ import {
   type ManagedPolicy,
 } from "@/components/managed-policy-notice";
 import type { SignIn } from "@/lib/engine/sign-in-command";
+import { STEPS, findingTallies, stepCount, stepStates } from "@/lib/review/steps";
 
 /**
  * The whole pipeline, not only the stages that call a model.
@@ -158,6 +159,8 @@ interface Snapshot {
   project: { id: string; name: string } | null;
   /** Median milliseconds per stage for this model, measured on this machine. */
   stageMedians: Record<string, number>;
+  /** Rules the review is frozen with; null before (WP-G). */
+  rules?: number | null;
   running: boolean;
   queued: boolean;
 }
@@ -1790,6 +1793,18 @@ function ScanTheater({
   const executing = executingStage(snapshot, done);
   const stageIndex = STAGES.findIndex(([stage]) => stage === executing);
   const usual = executing !== null ? snapshot.stageMedians[executing] : undefined;
+  const states = stepStates({
+    stageDone: (stage) => deterministicDone(stage, snapshot, done) || done.has(stage),
+    executing,
+    status: review.status,
+  });
+  const tallies = findingTallies(snapshot.findings);
+  const facts = {
+    rules: snapshot.rules ?? null,
+    files: coverage.totalFiles,
+    tallies,
+    waiting: snapshot.findings.filter((finding) => finding.status === "verified").length,
+  };
   const feedRef = useRef<HTMLDivElement>(null);
   const [cancelling, setCancelling] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -1822,7 +1837,9 @@ function ScanTheater({
       }}
       className="m-0 h-full max-h-none w-full max-w-none border-0 bg-[var(--color-surface)] p-0 text-[var(--color-ink)]"
     >
-      <div className="flex h-full flex-col px-8 py-6">
+      {/* Scrolls on a phone, where the stacked steps would leave the feed a
+          sliver; on a wide screen the feed takes the height that is left. */}
+      <div className="flex h-full flex-col overflow-y-auto px-4 py-6 sm:overflow-y-visible sm:px-8">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <svg viewBox="0 0 16 16" aria-hidden className="h-5 w-5 shrink-0">
@@ -1892,51 +1909,129 @@ function ScanTheater({
           </div>
         ) : null}
 
-        {/* The pipeline as a ruled gauge: eight segments, filled as they land,
-          the live one glowing. */}
-        <div className="mt-5">
-          <div className="flex gap-1.5" aria-hidden>
-            {STAGES.map(([stage]) => {
-              const isDone = deterministicDone(stage, snapshot, done) || done.has(stage);
-              const isCurrent = stage === executing;
-              return (
-                <span
-                  key={stage}
-                  className={`h-1.5 flex-1 rounded-sm ${
-                    isCurrent
-                      ? "pulse bg-[var(--color-accent)]"
-                      : isDone
-                        ? "bg-[var(--color-accent)] opacity-60"
-                        : "gauge-track"
-                  }`}
-                />
-              );
-            })}
-          </div>
-          <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <span className="font-[family-name:var(--font-mono)] text-title font-semibold">
-              {executing !== null && stageIndex !== -1
-                ? `${stageLabel(executing)}`
-                : snapshot.queued
-                  ? "Waiting for the running review"
-                  : "Preparing"}
+        {/* The five steps a person reads, over the eight stages that do the
+          work (WP-G, the approved mockup): what is done, what is running now,
+          what comes next, each with a count the run has measured. */}
+        <ol aria-label="Review steps" className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-5">
+          {STEPS.map((step, index) => {
+            const state = states[index]!;
+            return (
+              <li
+                key={step.title}
+                aria-current={state === "now" ? "step" : undefined}
+                className={`flex flex-col gap-1.5 rounded-lg border p-3 ${
+                  state === "now"
+                    ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)]"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-aside font-bold ${
+                      state === "done"
+                        ? "bg-[var(--color-good-soft)] text-[var(--color-good)]"
+                        : state === "now"
+                          ? "bg-[var(--color-accent)] text-[var(--color-accent-ink)]"
+                          : "bg-[var(--color-surface-sunken)] text-[var(--color-ink-muted)]"
+                    }`}
+                  >
+                    {state === "done" ? "\u2713" : index + 1}
+                  </span>
+                  <span
+                    className={`text-aside font-semibold tracking-wide uppercase ${
+                      state === "done"
+                        ? "text-[var(--color-good)]"
+                        : state === "now"
+                          ? "text-[var(--color-accent)]"
+                          : "text-[var(--color-ink-muted)]"
+                    }`}
+                  >
+                    {state === "done" ? "Done" : state === "now" ? "Now" : "Next"}
+                  </span>
+                </span>
+                <span className="text-body font-semibold">{step.title}</span>
+                <span className="hidden text-aside leading-snug text-[var(--color-ink-muted)] sm:block">
+                  {step.what}
+                </span>
+                <span className="text-aside font-semibold tabular-nums">
+                  {stepCount(index, state, facts)}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="font-[family-name:var(--font-mono)] text-title font-semibold">
+            {executing !== null && stageIndex !== -1
+              ? `${stageLabel(executing)}`
+              : snapshot.queued
+                ? "Waiting for the running review"
+                : "Preparing"}
+          </span>
+          {stageIndex !== -1 ? (
+            <span className="text-body text-[var(--color-ink-muted)]">
+              stage {stageIndex + 1} of {STAGES.length}
+              {/* A stage that divides its work says which division is in
+                flight, so nine requests do not look like one long one. */}
+              {batch ? ` · request ${batch.number} of ${batch.count}` : ""}
+              {usual !== undefined ? ` · usually ${elapsedBetween(0, usual)} here` : ""}
             </span>
-            {stageIndex !== -1 ? (
-              <span className="text-body text-[var(--color-ink-muted)]">
-                stage {stageIndex + 1} of {STAGES.length}
-                {/* A stage that divides its work says which division is in
-                  flight, so nine requests do not look like one long one. */}
-                {batch ? ` · request ${batch.number} of ${batch.count}` : ""}
-                {usual !== undefined ? ` · usually ${elapsedBetween(0, usual)} here` : ""}
-              </span>
-            ) : null}
-            {stageIndex !== -1 ? (
-              <span className="text-body text-[var(--color-ink-faint)]">
-                {STAGES[stageIndex]?.[2]}
-              </span>
-            ) : null}
-          </div>
+          ) : null}
+          {stageIndex !== -1 ? (
+            <span className="text-body text-[var(--color-ink-faint)]">
+              {STAGES[stageIndex]?.[2]}
+            </span>
+          ) : null}
         </div>
+        {/* What proving has found so far, kept apart as the mockup has them:
+          proven, refuted, discarded for quoting what was not there, and what
+          is left. Only once there is something to prove. */}
+        {states[3] !== "next" && tallies.raised > 0 ? (
+          <dl aria-label="Findings so far" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {(
+              [
+                [
+                  "proven by the first verifier",
+                  tallies.provenOnce,
+                  "bg-[var(--color-good-soft)]",
+                  "text-[var(--color-good)]",
+                ],
+                [
+                  "refuted",
+                  tallies.refuted,
+                  "bg-[var(--color-critical-soft)]",
+                  "text-[var(--color-critical)]",
+                ],
+                [
+                  "discarded: the cited code was not there",
+                  tallies.discarded,
+                  "bg-[var(--color-warning-soft)]",
+                  "text-[var(--color-warning)]",
+                ],
+                [
+                  "still to prove",
+                  tallies.toProve,
+                  "bg-[var(--color-question-soft)]",
+                  "text-[var(--color-question)]",
+                ],
+              ] as const
+            ).map(([label, count, ground, ink]) => (
+              <div
+                key={label}
+                className={`flex flex-col-reverse justify-end rounded-md px-3 py-2 ${ground}`}
+              >
+                <dt className="text-aside">{label}</dt>
+                <dd
+                  className={`font-[family-name:var(--font-mono)] text-heading font-bold tabular-nums ${ink}`}
+                >
+                  {count}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
 
         {streaming ? null : (
           // Here too, where a run is watched: the feed below stops while the
@@ -1952,7 +2047,7 @@ function ScanTheater({
           tabIndex={0}
           role="log"
           aria-label="Scan activity"
-          className="mt-5 min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-4 shadow-[inset_0_1px_0_0_var(--color-edge)]"
+          className="mt-5 min-h-64 flex-1 overflow-x-hidden overflow-y-auto rounded-lg sm:min-h-0 border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-4 shadow-[inset_0_1px_0_0_var(--color-edge)]"
         >
           {live.length === 0 ? (
             <p className="text-body text-[var(--color-ink-muted)]">

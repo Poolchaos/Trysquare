@@ -1004,6 +1004,19 @@ describe("the second verifier (WP-E, D-188)", () => {
     );
   });
 
+  it("keeps the first verifier's proof on one the second did not prove", async () => {
+    // So a finished review can say it was proven once (WP-G). The card
+    // shows no proof on an open question.
+    const { finding } = await both({
+      verdicts: [{ ref: "C1", verdict: "killed", note: "The caller parses the body first." }],
+    });
+    expect(statusOf(finding)).toBe("open_question");
+    expect(JSON.parse(finding.proofJson ?? "null")).toMatchObject({
+      trigger: "A request body reaches total() as payload.",
+    });
+    expect(finding.secondProofJson).toBeNull();
+  });
+
   it("leaves one whose rule it says does not apply an open question, not killed", async () => {
     // One verifier cannot override the other (D-188).
     const { finding } = await both({

@@ -469,6 +469,9 @@ describe("the picture a page loads with", () => {
 
     const snapshot = manager.snapshot(reviewId);
     expect(snapshot.review.id).toBe(reviewId);
+    // The rules it was frozen with, which its first step names (WP-G).
+    expect(snapshot.rules).toBe(PROTOCOL.rules.length);
+    expect(manager.snapshot(seedReview()).rules).toBeNull();
     expect(snapshot.stages).toHaveLength(6);
     expect(snapshot.usage.inputTokens).toBe(600);
     expect(snapshot.findings.verified).toBeGreaterThan(0);

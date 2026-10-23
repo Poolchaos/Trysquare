@@ -33,6 +33,7 @@ import {
   transitionReview,
   type RunNote,
 } from "../db/repositories/reviews";
+import { hasReviewSnapshot, readReviewSnapshot } from "../db/repositories/rulesets";
 import { SETTING_KEYS, readSettingOr } from "../db/repositories/settings";
 import { configuredClaudePath } from "../cli-path";
 import { listForReview, usageTotals } from "../db/repositories/stage-executions";
@@ -103,6 +104,8 @@ export interface ReviewSnapshot {
   /** What the ledger says is still outstanding, which is what S6 gates on. */
   coverage: CoverageReport;
   findings: { total: number; verified: number; openQuestions: number; confirmed: number };
+  /** Rules the review is frozen with, which its first step names (WP-G); null before. */
+  rules: number | null;
   running: boolean;
   queued: boolean;
 }
@@ -404,6 +407,7 @@ export class JobManager {
         openQuestions: countOf("open_question"),
         confirmed: countOf("confirmed"),
       },
+      rules: hasReviewSnapshot(db, reviewId) ? readReviewSnapshot(db, reviewId).rules.length : null,
       running: this.active.has(reviewId),
       queued: this.queue.some((entry) => entry.reviewId === reviewId),
     };
