@@ -33,7 +33,7 @@ const BASE: ReportInput = {
   mergeBaseCommit: "b".repeat(40),
   confirmed: [FINDING],
   dismissed: [],
-  openQuestions: [],
+  leftOutUnproven: [],
   coverage: {
     totalFiles: 10,
     totalHunks: 12,
@@ -196,13 +196,22 @@ describe("what the report keeps about the human's decisions", () => {
     expect(report).toContain("Deliberate: the caller already guards this.");
   });
 
-  it("lists open questions separately from findings", () => {
+  it("lists a finding left out unproven apart from the dismissed, with its reason", () => {
+    // It may still be real, so it is not counted as a person rejecting it (D-190).
     const report = renderReport({
       ...BASE,
-      openQuestions: [{ ...FINDING, issue: "Could not be settled from the code." }],
+      leftOutUnproven: [{ ...FINDING, dismissReason: "Could not prove it here." }],
     });
-    expect(report).toContain("## Open questions");
-    expect(report).toContain("Could not be settled from the code.");
+    expect(report).toContain("## Left out unproven");
+    expect(report).toContain("Reason: Could not prove it here.");
+    expect(report).not.toContain("## Dismissed");
+    expect(report).not.toContain("## Open questions");
+    const html = renderReportHtml({
+      ...BASE,
+      leftOutUnproven: [{ ...FINDING, dismissReason: "Could not prove it here." }],
+    });
+    expect(html).toContain("Left out unproven (1)");
+    expect(html).toContain("Left out: Could not prove it here.");
   });
 
   it("quotes the author's description as a claim that was checked", () => {
@@ -249,7 +258,7 @@ describe("the house style the report is held to", () => {
       ...BASE,
       intent: "Rename the prefs field.",
       dismissed: [{ ...FINDING, dismissReason: "Deliberate." }],
-      openQuestions: [{ ...FINDING }],
+      leftOutUnproven: [{ ...FINDING }],
     });
     expect(report).not.toContain(String.fromCharCode(8212));
     expect(report).not.toContain(String.fromCharCode(8211));

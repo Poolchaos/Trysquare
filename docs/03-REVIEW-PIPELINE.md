@@ -230,7 +230,8 @@ read), findings grouped by severity in the exact finding format, out of
 scope notes, final verdict line. Confirmed NITPICK findings are included
 (D-11 supersedes the earlier exclusion: a confirmed finding is a decision
 the human already made). Dismissed findings appear in an appendix with
-their reasons. Export: markdown file to `exports/`
+their reasons, those left out unproven (dismissed open questions) under
+their own heading, apart from the ones a person rejected (D-190). Export: markdown file to `exports/`
 and clipboard. The report footer records: model, ruleset snapshot names and
 versions, commits reviewed, token usage, duration. No em dashes anywhere in
 generated output (enforced by a lint on the renderer and a unit test).

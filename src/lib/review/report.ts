@@ -44,7 +44,8 @@ export interface ReportInput {
 
   confirmed: readonly ReportFinding[];
   dismissed: readonly ReportFinding[];
-  openQuestions: readonly ReportFinding[];
+  /** Dismissed open questions: never proven, so possibly real (D-190). */
+  leftOutUnproven: readonly ReportFinding[];
 
   coverage: {
     totalFiles: number;
@@ -105,30 +106,32 @@ export function renderReport(input: ReportInput): string {
     }
   }
 
-  if (input.openQuestions.length > 0) {
-    lines.push("## Open questions");
+  const leftOut = (heading: string, why: string, findings: readonly ReportFinding[]) => {
+    if (findings.length === 0) return;
+    lines.push(`## ${heading}`);
     lines.push("");
-    lines.push("Raised, checked, and not settled from the code alone.");
+    lines.push(why);
     lines.push("");
-    for (const finding of input.openQuestions) lines.push(...renderFinding(finding));
-  }
-
-  if (input.dismissed.length > 0) {
-    lines.push("## Dismissed");
-    lines.push("");
-    lines.push(
-      "Raised by the review and rejected by a person. Kept because a dismissal is " +
-        "evidence about the engine, not an absence of one.",
-    );
-    lines.push("");
-    for (const finding of input.dismissed) {
+    for (const finding of findings) {
       lines.push(
         `- ${finding.filePath}:${finding.lineStart} ${finding.issue}` +
           (finding.dismissReason ? ` Reason: ${finding.dismissReason}` : ""),
       );
     }
     lines.push("");
-  }
+  };
+  leftOut(
+    "Left out unproven",
+    "Raised by the review, not proven by verification, and left out by a person. " +
+      "Kept apart from the dismissed because each may still be real.",
+    input.leftOutUnproven,
+  );
+  leftOut(
+    "Dismissed",
+    "Raised by the review and rejected by a person. Kept because a dismissal is " +
+      "evidence about the engine, not an absence of one.",
+    input.dismissed,
+  );
 
   lines.push("## How this review was run");
   lines.push("");
@@ -313,7 +316,11 @@ export function renderReportHtml(input: ReportInput): string {
       : "") +
     ".";
 
-  const group = (label: string, findings: readonly ReportFinding[]): string => {
+  const group = (
+    label: string,
+    findings: readonly ReportFinding[],
+    reasonLabel = "Dismissed",
+  ): string => {
     if (findings.length === 0) return "";
     const items = [...findings]
       .sort(
@@ -328,7 +335,7 @@ export function renderReportHtml(input: ReportInput): string {
           ${finding.ruleCode ? `<span class="w">rule ${escapeHtml(finding.ruleCode)}</span>` : ""}
         </p>
         <p class="c">${escapeHtml(finding.comment)}</p>
-        ${finding.dismissReason ? `<p class="w">Dismissed: ${escapeHtml(finding.dismissReason)}</p>` : ""}
+        ${finding.dismissReason ? `<p class="w">${reasonLabel}: ${escapeHtml(finding.dismissReason)}</p>` : ""}
         ${finding.quotedCode ? `<pre><code>${escapeHtml(finding.quotedCode)}</code></pre>` : ""}
       </li>`,
       )
@@ -367,7 +374,7 @@ footer { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: .75
 <p class="c">${escapeHtml(completeness(input))}</p>
 ${input.intent ? `<h3>What the change was for</h3><blockquote>${escapeHtml(input.intent)}</blockquote>` : ""}
 ${group("Confirmed", input.confirmed)}
-${group("Open questions", input.openQuestions)}
+${group("Left out unproven", input.leftOutUnproven, "Left out")}
 ${group("Dismissed", input.dismissed)}
 <footer>${escapeHtml(input.model)} at effort ${escapeHtml(input.effort)}, ${escapeHtml(input.profile)} profile, against ${escapeHtml(input.rulesetName)} v${input.rulesetVersion}.
 Commit ${escapeHtml(input.fromCommit.slice(0, 12))}, merge base ${escapeHtml(input.mergeBaseCommit.slice(0, 12))}.

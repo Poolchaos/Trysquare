@@ -177,7 +177,7 @@ interface ReportData {
   intent?: string | null;
   confirmed: ReportFinding[];
   dismissed: ReportFinding[];
-  openQuestions: ReportFinding[];
+  leftOutUnproven: ReportFinding[];
   coverage: {
     totalFiles: number;
     totalHunks: number;
@@ -1610,9 +1610,14 @@ function RunDetail({
  */
 function RenderedReport({ data }: { data: ReportData }) {
   const groups = [
-    { key: "confirmed", label: "Confirmed", findings: data.confirmed },
-    { key: "open", label: "Open questions", findings: data.openQuestions },
-    { key: "dismissed", label: "Dismissed", findings: data.dismissed },
+    { key: "confirmed", label: "Confirmed", findings: data.confirmed, reason: "" },
+    {
+      key: "unproven",
+      label: "Left out unproven",
+      findings: data.leftOutUnproven,
+      reason: "Left out",
+    },
+    { key: "dismissed", label: "Dismissed", findings: data.dismissed, reason: "Dismissed" },
   ].filter((group) => group.findings.length > 0);
 
   const bySeverity = (findings: ReportFinding[]) => {
@@ -1661,7 +1666,9 @@ function RenderedReport({ data }: { data: ReportData }) {
           <h4 className="text-body font-semibold tracking-wide uppercase text-[var(--color-ink-muted)]">
             {group.label} ({group.findings.length})
           </h4>
-          <ul className="mt-2 grid gap-2">
+          {/* One column no wider than the card: an auto column grew to the
+              longest quoted line, and on a phone every card ran off the screen. */}
+          <ul className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-2">
             {bySeverity(group.findings).map((finding, index) => (
               <li
                 key={`${finding.filePath}-${finding.lineStart}-${index}`}
@@ -1694,7 +1701,7 @@ function RenderedReport({ data }: { data: ReportData }) {
                   <p className="mt-1 text-body text-[var(--color-ink-muted)]">{finding.comment}</p>
                   {finding.dismissReason ? (
                     <p className="mt-1 text-aside text-[var(--color-ink-faint)]">
-                      Dismissed: {finding.dismissReason}
+                      {group.reason}: {finding.dismissReason}
                     </p>
                   ) : null}
                   {finding.quotedCode ? (

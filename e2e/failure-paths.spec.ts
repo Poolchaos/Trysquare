@@ -1123,6 +1123,8 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   await expect(page.getByText("Shift+C", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Confirm", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Dismiss" })).toBeVisible();
+  // Left out, not judged harmless: it was never proven either way (D-190).
+  await expect(page.getByLabel("Why leave it out?")).toBeVisible();
   await page.locator("body").press("Shift+C");
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
@@ -1137,6 +1139,7 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   const openTitle = await title.textContent();
   await page.locator("body").press("G");
   await expect(page.getByText("Finder said CRITICAL", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Why is this not a problem?")).toBeVisible();
   const confirm = page.getByRole("button", { name: "Confirm", exact: true });
   await expect(confirm).toBeVisible();
   const proof = page.getByRole("region", { name: "How it was proven" });

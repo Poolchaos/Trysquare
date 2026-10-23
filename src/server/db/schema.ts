@@ -373,6 +373,12 @@ export const findings = sqliteTable(
      */
     killedBy: text("killed_by"),
     dismissReason: text("dismiss_reason"),
+    /**
+     * The status a dismissed finding had: `open_question` is a finding left
+     * out unproven, which the report keeps apart from the ones a person
+     * rejected (D-190). Null on rows dismissed before the column.
+     */
+    dismissedFrom: text("dismissed_from"),
     createdAt: text("created_at").notNull(),
     verifiedAt: text("verified_at"),
     decidedAt: text("decided_at"),

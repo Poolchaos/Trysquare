@@ -20,10 +20,10 @@ export function buildReportInput(db: Db, reviewId: string): ReportInput {
   const findings = listFindings(db, reviewId);
   const meta = readReviewSnapshotMeta(db, reviewId);
 
-  const of = (status: string): ReportFinding[] =>
+  const of = (status: string, keep: (finding: (typeof findings)[number]) => boolean = () => true) =>
     findings
-      .filter((finding) => statusOf(finding) === status)
-      .map((finding) => ({
+      .filter((finding) => statusOf(finding) === status && keep(finding))
+      .map((finding): ReportFinding => ({
         filePath: finding.filePath,
         lineStart: finding.lineStart,
         lineEnd: finding.lineEnd,
@@ -67,8 +67,8 @@ export function buildReportInput(db: Db, reviewId: string): ReportInput {
     intent: review.intent,
 
     confirmed: of("confirmed"),
-    dismissed: of("dismissed"),
-    openQuestions: of("open_question"),
+    dismissed: of("dismissed", (finding) => finding.dismissedFrom !== "open_question"),
+    leftOutUnproven: of("dismissed", (finding) => finding.dismissedFrom === "open_question"),
 
     coverage: {
       totalFiles: coverage.totalFiles,

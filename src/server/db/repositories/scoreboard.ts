@@ -115,6 +115,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
       reviewId: findings.reviewId,
       status: findings.status,
       killedBy: findings.killedBy,
+      dismissedFrom: findings.dismissedFrom,
       ruleCode: findings.ruleCode,
     })
     .from(findings)
@@ -139,7 +140,9 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     byReview.set(row.reviewId, tally);
 
     if (row.status === "confirmed") confirmed += 1;
-    if (row.status === "dismissed") dismissed += 1;
+    // Left out unproven is not rejected: precision is about findings that
+    // were proven and read (D-190).
+    if (row.status === "dismissed" && row.dismissedFrom !== "open_question") dismissed += 1;
     if (row.status === "killed" && row.killedBy === "quote_check") invented += 1;
 
     // A finding that cited no rule is counted in the totals above but has no

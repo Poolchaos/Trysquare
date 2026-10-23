@@ -37,8 +37,11 @@ import {
 import type { Db } from "@/server/db/client";
 import {
   confirmFinding,
+  createCandidate,
+  dismissFinding,
   listFindings,
   listFindingsByStatus,
+  markOpenQuestion,
   requireFinding,
   statusOf as findingStatusOf,
 } from "@/server/db/repositories/findings";
@@ -386,6 +389,37 @@ describe("running a review to the point a human looks at it", () => {
     expect(report).toContain(`Comment: ${mine}`);
     expect(report).not.toContain(engineWording);
     expect(requireFinding(db, finding!.id).comment).toBe(engineWording);
+  }, 120_000);
+
+  it("reports a dismissed open question apart from the dismissed, with its reason", async () => {
+    // A finding verification could not prove may still be real, so leaving
+    // it out is not a person rejecting it as a false positive (D-190).
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    const [rejected] = listFindingsByStatus(db, reviewId, ["verified"]);
+    dismissFinding(db, rejected!.id, "Handled upstream.");
+    const unproven = createCandidate(db, {
+      reviewId,
+      repo: "primary",
+      filePath: "app/src/orders/save.ts",
+      lineStart: 4,
+      lineEnd: 4,
+      severity: "WARNING",
+      ruleCode: null,
+      issue: "A save may be lost.",
+      comment: "The write is not awaited.",
+      mechanism: "save() returns before the write settles.",
+    });
+    markOpenQuestion(db, unproven.id, "Could not tell whether a caller awaits it.");
+    dismissFinding(db, unproven.id, "Could not prove it; left for the next pass.");
+
+    const input = buildReportInput(db, reviewId);
+    expect(input.leftOutUnproven.map((finding) => finding.dismissReason)).toEqual([
+      "Could not prove it; left for the next pass.",
+    ]);
+    expect(input.dismissed.map((finding) => finding.dismissReason)).toEqual(["Handled upstream."]);
   }, 120_000);
 
   it("finds the seeded defects, at the file and line the manifest states", async () => {

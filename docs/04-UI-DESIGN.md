@@ -104,7 +104,7 @@ denominator renders as a dash rather than as zero, because zero percent
 precision is a claim about findings somebody judged.
 
 - **Stat tiles:** total spend, reviews completed, precision (confirmed vs
-  dismissed) and invention rate (quote-check kills), in large tabular
+  dismissed, a finding left out unproven counting as neither, D-190) and invention rate (quote-check kills), in large tabular
   numerals, each with a sparkline from this machine's own history. A
   sparkline needs two points to be a line and draws nothing below that.
 - **Needs you:** every review awaiting a decision, oldest wait first, each

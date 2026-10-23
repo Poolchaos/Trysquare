@@ -15,7 +15,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { answerOnce } from "./answer-once";
+import { answerOnce, routeUntilStopped } from "./answer-once";
 import { APP_REPO, PROTOCOL_PATH, REFUTED_ISSUE, REFUTED_NOTE } from "./setup";
 
 /**
@@ -695,6 +695,56 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
       "1 hunk(s) were accounted for only by findings that verification refuted.",
     );
     expect(report).not.toContain(REFUTED_ISSUE);
+  });
+
+  await test.step("a finding left out unproven is reported apart from the dismissed", async () => {
+    // The journey's verifier proves every finding it keeps, so its dismissed
+    // one is shown as an open question a person left out (D-190).
+    const stop = await routeUntilStopped(page, "**/api/reviews/*/report", async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        report: { dismissed: unknown[]; leftOutUnproven: unknown[] };
+      };
+      await route.fulfill({
+        response,
+        json: {
+          ...body,
+          report: { ...body.report, dismissed: [], leftOutUnproven: body.report.dismissed },
+        },
+      });
+    });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Left out unproven (1)" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(
+      page.getByText("Left out: Deliberate: the caller already guards this."),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Dismissed \(/ })).toHaveCount(0);
+
+    await page.getByRole("heading", { name: "Left out unproven (1)" }).scrollIntoViewIfNeeded();
+    const desktop = page.viewportSize();
+    for (const [scheme, name] of [
+      ["light", "report-unproven-light"],
+      ["dark", "report-unproven-dark"],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.screenshot({ path: join(EVIDENCE, `${name}.png`), animations: "disabled" });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("heading", { name: "Left out unproven (1)" }).scrollIntoViewIfNeeded();
+    // A quoted line wider than a phone widened the report's whole list, and
+    // every card ran off the screen (graded D on this shot, 2026-10-23).
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    ).toBeLessThanOrEqual(0);
+    await page.screenshot({
+      path: join(EVIDENCE, "report-unproven-phone.png"),
+      animations: "disabled",
+    });
+    if (desktop) await page.setViewportSize(desktop);
+    await stop();
   });
 });
 

@@ -134,7 +134,10 @@ describe("finding verification", () => {
     expect(() => confirmFinding(db, finding.id)).toThrow(OpenQuestionNotConfirmableError);
     expect(() => confirmFinding(db, finding.id)).toThrow(/cannot go into the report/);
     expect(statusOf(requireFinding(db, finding.id))).toBe("open_question");
-    expect(dismissFinding(db, finding.id, "Not reproducible here.").status).toBe("dismissed");
+    const dismissed = dismissFinding(db, finding.id, "Not reproducible here.");
+    expect(dismissed.status).toBe("dismissed");
+    // Left out unproven, not rejected: the report keeps the two apart (D-190).
+    expect(dismissed.dismissedFrom).toBe("open_question");
   });
 });
 
@@ -162,6 +165,7 @@ describe("human decision", () => {
 
     const dismissed = dismissFinding(db, finding.id, "Handled by the retry wrapper.");
     expect(dismissed.dismissReason).toBe("Handled by the retry wrapper.");
+    expect(dismissed.dismissedFrom).toBe("verified");
     expect(dismissed.decidedAt).not.toBeNull();
   });
 

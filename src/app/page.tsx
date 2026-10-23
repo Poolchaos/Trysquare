@@ -273,7 +273,11 @@ export default function HomePage() {
               <StatTile
                 label="Precision"
                 value={percent(board.precision)}
-                note={board.precision === null ? "nothing decided yet" : "confirmed of decided"}
+                note={
+                  board.precision === null
+                    ? "nothing decided yet"
+                    : "confirmed of decided, unproven aside"
+                }
               />
               <StatTile
                 label="Invention rate"

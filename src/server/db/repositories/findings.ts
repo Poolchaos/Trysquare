@@ -64,6 +64,7 @@ export function createCandidate(db: Db, input: CreateCandidateInput): Finding {
     verificationNote: null,
     killedBy: null,
     dismissReason: null,
+    dismissedFrom: null,
     editedComment: null,
     createdAt: nowIso(),
     verifiedAt: null,
@@ -92,6 +93,7 @@ interface TransitionPatch {
   verificationNote?: string | null;
   killedBy?: KillKind;
   dismissReason?: string | null;
+  dismissedFrom?: FindingStatus;
   editedComment?: string | null;
   lineStart?: number;
   lineEnd?: number;
@@ -249,13 +251,20 @@ export class OpenQuestionNotConfirmableError extends Error {
   }
 }
 
-/** Human decision. The reason is kept: dismissals are evidence about the engine. */
+/**
+ * Human decision. The reason is kept: dismissing a verified finding is
+ * evidence about the engine. So is the status it had, since leaving out an
+ * open question rejects nothing (D-190).
+ */
 export function dismissFinding(db: Db, findingId: string, reason: string): Finding {
   if (reason.trim() === "") {
-    throw new Error("A dismissal needs a reason: it is the record of why this was not a problem.");
+    throw new Error("A dismissal needs a reason: it is the record of why it was left out.");
   }
   assertDeciding(db, findingId);
-  return transitionFinding(db, findingId, "dismissed", { dismissReason: reason });
+  return transitionFinding(db, findingId, "dismissed", {
+    dismissReason: reason,
+    dismissedFrom: statusOf(requireFinding(db, findingId)),
+  });
 }
 
 /**

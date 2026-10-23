@@ -13,6 +13,7 @@ import {
   createCandidate,
   dismissFinding,
   markKilled,
+  markOpenQuestion,
   markVerified,
 } from "@/server/db/repositories/findings";
 import { readScoreboard } from "@/server/db/repositories/scoreboard";
@@ -81,6 +82,22 @@ describe("the two rates the product is about", () => {
     waitOnAPerson();
     confirmFinding(db, kept.id);
     dismissFinding(db, dropped.id, "Guarded upstream.");
+
+    expect(readScoreboard(db).precision).toBe(0.5);
+  });
+
+  it("does not count a finding left out unproven as one a person rejected", () => {
+    // Verification never proved it, so leaving it out says nothing about
+    // whether it was worth reading (D-190).
+    const kept = candidate();
+    const dropped = candidate({ issue: "Second" });
+    const unproven = candidate({ issue: "Third" });
+    for (const finding of [kept, dropped]) markVerified(db, finding.id, evidence);
+    markOpenQuestion(db, unproven.id, "Could not tell from the code.");
+    waitOnAPerson();
+    confirmFinding(db, kept.id);
+    dismissFinding(db, dropped.id, "Guarded upstream.");
+    dismissFinding(db, unproven.id, "Could not prove it.");
 
     expect(readScoreboard(db).precision).toBe(0.5);
   });

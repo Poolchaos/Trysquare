@@ -214,6 +214,9 @@ export function ConfirmationQueue({
 
   const current = queue[Math.min(selected, Math.max(queue.length - 1, 0))];
   const currentProof = current ? proofOf(current) : null;
+  // An open question is left out unproven, not judged harmless (D-190).
+  const reasonQuestion =
+    current?.status === "open_question" ? "Why leave it out?" : "Why is this not a problem?";
 
   // A move onto a finding without the control that had the focus, Confirm
   // onto an open question, took the control away and the focus fell to the
@@ -869,7 +872,7 @@ export function ConfirmationQueue({
                   }}
                 >
                   <label className="text-xs font-medium" htmlFor={`dismiss-reason-${current.id}`}>
-                    Why is this not a problem?
+                    {reasonQuestion}
                   </label>
                   <div className="flex flex-wrap items-center gap-2">
                     <Input
@@ -879,7 +882,7 @@ export function ConfirmationQueue({
                       onChange={(event) =>
                         setReasons((all) => ({ ...all, [current.id]: event.target.value }))
                       }
-                      placeholder="Why is this not a problem?"
+                      placeholder={reasonQuestion}
                       className="min-w-40 flex-1"
                     />
                     <Button type="submit" disabled={busy || reason.trim() === ""}>

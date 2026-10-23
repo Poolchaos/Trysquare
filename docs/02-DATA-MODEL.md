@@ -189,6 +189,7 @@ no pending sweep hits past S6.
 | verificationNote                 | text null | S5 outcome detail                                                |
 | killedBy                         | text null | when killed: verification (refuted) or quote_check (D-126)       |
 | dismissReason                    | text null | the user's reason, kept for history                               |
+| dismissedFrom                    | text null | status when dismissed; open_question is left out unproven (D-190) |
 | createdAt, verifiedAt, decidedAt | text      |                                                                  |
 
 Finding status machine:

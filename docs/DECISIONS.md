@@ -4500,3 +4500,15 @@ verified evidence, in writing, here.
   plan brought up to the code; WP-A's `finished` and `failed` stage events
   were not sent, which its row now says, with why. R4, how a dismissed open
   question is recorded and reported, is put to the maintainer.
+- 2026-10-23 D-190 DECIDED by the maintainer (review round R4, the
+  recommendation): a dismissed open question is recorded apart. Its
+  dismiss box asks "Why leave it out?", the finding keeps the status it
+  was dismissed from (`dismissed_from`, migration 0013), and the report
+  lists it under "Left out unproven" with the reason, apart from the
+  dismissed, which are findings a person rejected and so evidence about
+  the engine. For the same reason the scoreboard's precision counts it
+  neither way. The report's "Open questions" section goes: a review
+  completes only once every finding is decided, so it was always empty.
+  Rows dismissed before the column read as dismissed. Rejected: the
+  wording alone, which still counted an unproven finding as a false
+  positive; and leaving it, with verifying again (WP-D2) the only way out.
