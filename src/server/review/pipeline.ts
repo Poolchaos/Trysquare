@@ -20,7 +20,7 @@ import { opaqueChanges } from "@/lib/git/opaque";
 import { unsafeRepoPathReason } from "@/lib/git/repo-path";
 import type { ChangedSymbol } from "@/lib/git/symbols";
 import { insideRoot } from "@/lib/paths";
-import { assertBatchesCoverEverything, planRuleBatches } from "@/lib/rulesets/compose";
+import { assertBatchesCoverEverything, planRuleBatches, renderRule } from "@/lib/rulesets/compose";
 import type { ImportedRule } from "@/lib/rulesets/model";
 import { budgetFor, estimateTokens, fitsBudget, splitToFit } from "@/lib/review/budget";
 import {
@@ -647,6 +647,8 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         severity: finding.severity,
         issue: finding.issue,
         mechanism: finding.mechanism,
+        ruleCode: finding.ruleCode,
+        comment: finding.comment,
       })),
       // The verifier reads only the worktree, which a deleted file has left
       // (D-106), so each one cited comes with it, once.
@@ -655,6 +657,13 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
           const before = input.baseContents?.get(path);
           return before === undefined ? [] : [[path, numberedLines(before)]];
         }),
+      ),
+      // Each cited rule verbatim, once, so whether it applies is judged
+      // against what it says (proof-and-steps plan, WP-C).
+      Object.fromEntries(
+        input.rules
+          .filter((rule) => candidates.some((finding) => finding.ruleCode === rule.code))
+          .map((rule) => [rule.code, renderRule(rule)]),
       ),
     ),
   });

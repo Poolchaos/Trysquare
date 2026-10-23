@@ -315,8 +315,40 @@ describe("the verification prompt", () => {
       severity: "CRITICAL",
       issue: "Unchecked cast",
       mechanism: "payload is asserted rather than parsed",
+      ruleCode: "3" as string | null,
+      comment: "The payload reaches the store unchecked.",
     },
   ];
+
+  // The verifier judged a finding without the rule it cites or the
+  // finder's reasoning, so it could prove the code was there but not that
+  // the rule applied (proof-and-steps plan, WP-C).
+  it("gives each cited rule's text verbatim, once, however many candidates cite it", () => {
+    const rule3 = [
+      "### Rule 3: Parse, never assert",
+      "",
+      "Severity: CRITICAL",
+      "",
+      "Never use `as` on external data.",
+    ].join("\n");
+    const prompt = renderVerificationPrompt(
+      [candidates[0]!, { ...candidates[0]!, ref: "f2", lineStart: 12, lineEnd: 12 }],
+      {},
+      { "3": rule3 },
+    );
+    expect(prompt.split(JSON.stringify(rule3).slice(1, -1)).length - 1).toBe(1);
+  });
+
+  it("asks whether the cited rule applies, or the directives where none is cited", () => {
+    const prompt = renderVerificationPrompt(candidates, {}, { "3": "### Rule 3" }).replace(
+      /\s+/g,
+      " ",
+    );
+    expect(prompt).toContain("whether the rule it cites applies");
+    expect(prompt).toContain("the protocol's directives");
+    // Above the JSON, which the stand-in CLI reads from its first brace.
+    expect(prompt.indexOf("{")).toBe(prompt.indexOf("```json") + 8);
+  });
 
   it("hands over a deleted file's contents once, however many candidates cite it", () => {
     // Once per candidate, a 2,000-line deleted file cited five times made a
@@ -418,6 +450,8 @@ describe("what the author says the change was for", () => {
         severity: "CRITICAL",
         issue: "x",
         mechanism: "y",
+        ruleCode: null,
+        comment: "",
       },
     ]);
     expect(prompt).not.toContain("author-description");

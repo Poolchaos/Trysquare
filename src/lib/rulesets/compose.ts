@@ -56,7 +56,8 @@ const STAGE_INSTRUCTIONS: Record<ReviewStage, string> = {
   s5_verification:
     "For each candidate finding, open the cited file, quote the exact lines, and try to refute " +
     "the finding. Look for a guard, default, or narrowing that already handles it. Report the " +
-    "line numbers you actually found the code at, not the ones you were given.",
+    "line numbers you actually found the code at, not the ones you were given. Judge whether " +
+    "the rule the finding cites, given in the prompt, applies to this code.",
   s6_audit: "Summarise what was reviewed and what was found, for the report.",
 };
 

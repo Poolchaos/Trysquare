@@ -40,6 +40,9 @@ export interface CandidateEntry {
   severity: string;
   issue: string;
   mechanism: string;
+  /** The rule the finder cites, whose text comes with the prompt; null for none. */
+  ruleCode: string | null;
+  comment: string;
 }
 
 export interface StageContentInput {
@@ -402,8 +405,15 @@ function fenced(text: string): string {
 export function renderVerificationPrompt(
   candidates: readonly CandidateEntry[],
   deletedFiles: Readonly<Record<string, readonly string[]>> = {},
+  /**
+   * Each cited rule's text, verbatim, by code, once however many cite it:
+   * without it the verifier could prove the code was there but not that the
+   * rule applied (proof-and-steps plan, WP-C).
+   */
+  rules: Readonly<Record<string, string>> = {},
 ): string {
   const hasDeleted = Object.keys(deletedFiles).length > 0;
+  const hasRules = Object.keys(rules).length > 0;
   if (candidates.length === 0) {
     return "There are no candidate findings to verify. Return an empty verdict list.";
   }
@@ -419,6 +429,11 @@ export function renderVerificationPrompt(
     "the ones given: a quotation from elsewhere in the file is about other code.",
     "The quotation is compared against the file: if it does not match, or the",
     "lines do not overlap, the finding is discarded.",
+    "",
+    "Judge too whether the rule it cites applies to this code: its full text is",
+    "under rules, by the code the candidate gives as ruleCode, along with the",
+    "finder's comment. A candidate citing no rule is judged against the protocol's",
+    "directives in your instructions.",
     ...(hasDeleted
       ? [
           "",
@@ -429,7 +444,15 @@ export function renderVerificationPrompt(
       : []),
     "",
     "```json",
-    JSON.stringify(hasDeleted ? { candidates, deletedFiles } : { candidates }, null, 2),
+    JSON.stringify(
+      {
+        candidates,
+        ...(hasRules ? { rules } : {}),
+        ...(hasDeleted ? { deletedFiles } : {}),
+      },
+      null,
+      2,
+    ),
     "```",
   ].join("\n");
 }

@@ -757,6 +757,37 @@ describe("refusing to accept an incomplete stage", () => {
   });
 });
 
+describe("what the verifier is given", () => {
+  it("is the rule each candidate cites, verbatim, and the finder's comment", async () => {
+    // It was given the path, lines, severity, issue and mechanism only, so it
+    // could prove the code was there but not that the rule applied
+    // (proof-and-steps plan, WP-C).
+    let verification = "";
+    await runReviewPipeline({
+      db,
+      reviewId,
+      worktreeRoot,
+      files: FILES,
+      rules: [{ ...RULES[0]!, ruleText: "RULE-THREE-TEXT: never assert external data." }],
+      profile: "full-context",
+      systemPromptFor: (stage) => `prompt for ${stage}`,
+      run: async (request) => {
+        if (request.stage === "s5_verification") verification = request.prompt;
+        return {
+          output:
+            request.stage === "s5_verification"
+              ? { verdicts: [] }
+              : (BASE_ANSWERS[request.stage as keyof typeof BASE_ANSWERS] ?? {}),
+          sessionId: "s",
+        };
+      },
+    });
+    expect(verification).toContain("RULE-THREE-TEXT: never assert external data.");
+    expect(verification).toContain('"ruleCode": "3"');
+    expect(verification).toContain("payload is not validated before being treated as a User.");
+  });
+});
+
 describe("the quotation check", () => {
   async function verifyWith(
     quote: string,

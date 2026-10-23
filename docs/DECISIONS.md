@@ -4432,3 +4432,14 @@ verified evidence, in writing, here.
   cannot run it; with Haiku retired no offered model reaches that path in
   the picker, and effortRunsOn keeps its own tests. The route test of a
   mechanical-only refusal registers its own such model.
+- 2026-10-23 D-188 DECIDED by the maintainer, each the recommendation, for
+  the proof-and-steps plan's WP-C to WP-E: when both verifiers prove a
+  finding but rate it differently, the first verifier's severity stands,
+  the second's and the finder's shown beside it; when the second verifier
+  says the rule does not apply but the first proved it, the finding is an
+  open question, not killed, so one verifier cannot override the other;
+  a finding citing no rule is judged against the protocol's directives,
+  and one they do not cover is killed. Rejected: the lower rating, and
+  unproven on any severity disagreement; killing on either verifier's
+  "does not apply"; leaving a finding with no rule unjudged. The paired
+  models' windows needed no answer: both probed at 1M on 2026-10-23.

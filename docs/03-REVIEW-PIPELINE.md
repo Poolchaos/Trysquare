@@ -152,8 +152,11 @@ handlers. Output: candidate findings and per-deletion clears.
 
 ### S5 Finding verification (protocol step 6) - FRESH SESSION
 
-Input: candidate findings only (file, lines, issue, mechanism, quoted
-claim). No S2/S3 reasoning is passed. Instruction per finding:
+Input: candidate findings only (file, lines, severity, issue, mechanism, the
+finder's comment and the rule code it cites), with each cited rule's text
+verbatim, once however many cite it (proof-and-steps plan, WP-C). The finder
+gives no quotation to pass on. No S2/S3 reasoning is passed. Instruction per
+finding:
 
 1. Open the actual file at the cited lines in the worktree; quote the code.
    A file the change deleted is not there: its contents before deletion
@@ -163,7 +166,9 @@ claim). No S2/S3 reasoning is passed. Instruction per finding:
    numbers must come from the checked-out file, never the diff.
 3. Hunt neutralizing context: guards, defaults, narrowing, upstream
    handling in surrounding function, callers, types.
-4. Confirm severity against the ruleset's severity definitions.
+4. Judge whether the rule the finding cites applies to this code, a finding
+   citing no rule against the protocol's directives (D-188), and confirm
+   severity against the ruleset's severity definitions.
    Verdict per finding: verified (with quotedCode + confirmed lines), killed
    (with reason), or open_question (with what would resolve it). App code then
    re-checks mechanically: the verdict's lines overlap the candidate's (D-99),
@@ -223,7 +228,7 @@ generated output (enforced by a lint on the renderer and a unit test).
 Order: (1) process directives (prime directive, junior-dev standard,
 procedure for this stage, scope rule, severity model), (2) rule database
 verbatim (S3 only; S1/S2/S4/S5 get the directives plus the rule index of
-codes+titles), (3) stage instruction, (4) output contract with the JSON
+codes+titles, and S5 the text of each rule a candidate cites in its prompt), (3) stage instruction, (4) output contract with the JSON
 schema inlined. Composition is a pure function, `composeSystemPrompt` in
 `lib/rulesets/compose.ts`, covered by explicit assertions on the composed
 text rather than by snapshots.
