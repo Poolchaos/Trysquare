@@ -1075,8 +1075,9 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test
   // before this one leaves awaiting decisions: a review of its own would
   // use up scripted answers the later tests read by count. Its verified
-  // findings are shown as open questions, so with none decided yet,
-  // whichever the queue opens on is one.
+  // criticals are shown as open questions, so with none decided yet, the
+  // queue, worst first, opens on one; its warnings stay verified, each as if
+  // its finder had called it critical.
   const listed = (await (await page.request.get("/api/reviews")).json()) as {
     reviews: { id: string; status: string; findings: { confirmed: number; dismissed: number } }[];
   };
@@ -1093,16 +1094,18 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   const stop = await routeUntilStopped(page, `**/api/reviews/${waiting!.id}`, async (route) => {
     const response = await route.fetch();
     const body = (await response.json()) as {
-      findings: { status: string; verificationNote: string | null }[];
+      findings: { status: string; severity: string; verificationNote: string | null }[];
     };
     await route.fulfill({
       response,
       json: {
         ...body,
         findings: body.findings.map((finding) =>
-          finding.status === "verified"
-            ? { ...finding, status: "open_question", verificationNote: "Could not be settled." }
-            : finding,
+          finding.status !== "verified"
+            ? finding
+            : finding.severity === "WARNING"
+              ? { ...finding, raisedSeverity: "CRITICAL" }
+              : { ...finding, status: "open_question", verificationNote: "Could not be settled." },
         ),
       },
     });
@@ -1126,7 +1129,33 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   );
   expect(confirms).toBe(0);
 
-  // Photographed in both themes and at phone width, for the grade.
+  // A proven one beside it: the verifier's severity, with the finder's next
+  // to it where they differ (PG-3, D-185), and each quoted step reachable by
+  // the keyboard, so a long line scrolls (review round R7, R8).
+  // The card's title, not a severity group's heading, "CRITICAL (6)".
+  const title = page.getByRole("heading", { level: 3 }).filter({ hasNotText: /\(\d+\)$/ });
+  const openTitle = await title.textContent();
+  await page.locator("body").press("G");
+  await expect(page.getByText("Finder said CRITICAL", { exact: true })).toBeVisible();
+  const confirm = page.getByRole("button", { name: "Confirm", exact: true });
+  await expect(confirm).toBeVisible();
+  const proof = page.getByRole("region", { name: "How it was proven" });
+  await expect(proof.getByRole("group", { name: "Step 1, as quoted" })).toHaveAttribute(
+    "tabindex",
+    "0",
+  );
+
+  // Moving from Confirm onto an open question took the button away, and the
+  // focus fell to the page; the finding's title takes it.
+  await confirm.focus();
+  await page.keyboard.press("g");
+  await page.keyboard.press("g");
+  await expect(page.getByTestId("not-proven")).toBeVisible();
+  await expect(title).toHaveText(openTitle!);
+  await expect(title).toBeFocused();
+
+  // Photographed in both themes and at phone width, for the grade, the
+  // title holding the focus.
   const evidence = join(
     fileURLToPath(new URL("..", import.meta.url)),
     "review",

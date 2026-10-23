@@ -205,13 +205,26 @@ export function ConfirmationQueue({
   // Counts every move a person makes through the queue, so a decision whose
   // reply lands later can tell whether they went somewhere in the meantime.
   const moves = useRef(0);
+  const focusedAtMove = useRef<Element | null>(null);
   const moveTo = useCallback((next: number | ((index: number) => number)) => {
     moves.current += 1;
+    focusedAtMove.current = document.activeElement;
     setSelected(next);
   }, []);
 
   const current = queue[Math.min(selected, Math.max(queue.length - 1, 0))];
   const currentProof = current ? proofOf(current) : null;
+
+  // A move onto a finding without the control that had the focus, Confirm
+  // onto an open question, took the control away and the focus fell to the
+  // page, so Tab began again from the top (review round R8). The finding's
+  // title takes it instead.
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    const before = focusedAtMove.current;
+    focusedAtMove.current = null;
+    if (before && before !== document.body && !before.isConnected) titleRef.current?.focus();
+  }, [current?.id]);
   const currentRule = rules?.find((rule) => rule.code === current?.ruleCode);
   const editing = current !== undefined && editingFor === current.id;
   const ruleOpen = current !== undefined && ruleOpenFor === current.id;
@@ -547,7 +560,9 @@ export function ConfirmationQueue({
               </Mono>
             </div>
 
-            <h3 className="mt-2 font-medium">{current.issue}</h3>
+            <h3 ref={titleRef} tabIndex={-1} className="mt-2 font-medium">
+              {current.issue}
+            </h3>
 
             {editing ? (
               <div className="mt-2">
@@ -691,7 +706,14 @@ export function ConfirmationQueue({
                         {index + 1}. {step.path}:{step.lineStart}
                         {step.lineEnd > step.lineStart ? `-${step.lineEnd}` : ""}
                       </Mono>
-                      <pre className="mt-1 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2">
+                      {/* Focusable, as the code panes are, so a long line
+                          scrolls from the keyboard too. */}
+                      <pre
+                        tabIndex={0}
+                        role="group"
+                        aria-label={`Step ${index + 1}, as quoted`}
+                        className="mt-1 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2"
+                      >
                         <code className="font-[family-name:var(--font-mono)]">{step.quote}</code>
                       </pre>
                     </li>
