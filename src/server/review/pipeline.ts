@@ -43,7 +43,12 @@ import {
 import { assertSweepComplete, runSweeps } from "@/lib/review/sweep";
 import type { Db } from "@/server/db/client";
 import { appendRunNote } from "@/server/db/repositories/reviews";
-import { applyVerdicts, parseVerdicts, renderVerificationFor } from "./verification";
+import {
+  applySecondVerdicts,
+  applyVerdicts,
+  parseVerdicts,
+  renderVerificationFor,
+} from "./verification";
 import {
   isDeletionCandidate,
   renderAdversarialPrompt,
@@ -138,6 +143,8 @@ export interface PipelineInput {
   changedSymbols?: readonly ChangedSymbol[] | undefined;
   /** Pre-change file contents, so deletions can be reviewed at all. */
   baseContents?: ReadonlyMap<string, string> | undefined;
+  /** The model that proves every finding S5 proves again, in S5b (WP-E). */
+  secondVerifier: string;
   /**
    * Composes the system prompt. Given a batch's rules when the profile sends
    * fewer than all of them, so the caller keeps ownership of composition.
@@ -164,6 +171,8 @@ export interface PipelineResult {
    * lines missed the candidate's (D-99).
    */
   killedByQuoteCheck: number;
+  /** Proven by S5 and not by the second verifier, so left open questions (WP-E). */
+  secondVerifierDisagreed: number;
   /** How many requests the adversarial stage was divided into. */
   adversarialRequests: number;
   /** Rule/file pairs a narrowing profile deliberately did not check. */
@@ -634,7 +643,32 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   const verdicts = rejecting("s5_verification", () =>
     parseVerdicts(verificationResponse.output, candidates.length),
   );
-  const tally = await applyVerdicts(verifying, candidates, verdicts);
+  const { held, ...tally } = await applyVerdicts(verifying, candidates, verdicts, { hold: true });
+
+  // S5b: every finding S5 proved, proven again on the other strong family,
+  // under the same labels and not shown S5's proof (WP-E, D-188). Before
+  // the sweep below, which would take the findings held here for ones
+  // nobody ruled on. Nothing proved, nothing to ask.
+  let secondVerifierDisagreed = 0;
+  if (held.length > 0) {
+    const secondResponse = await input.run({
+      stage: "s5b_second_verification",
+      systemPrompt: input.systemPromptFor("s5b_second_verification"),
+      prompt: renderVerificationFor(
+        held.map((proven) => proven.finding),
+        verifying,
+        held.map((proven) => proven.ref),
+      ),
+      model: input.secondVerifier,
+    });
+    const secondVerdicts = rejecting("s5b_second_verification", () =>
+      parseVerdicts(secondResponse.output, candidates.length),
+    );
+    const second = await applySecondVerdicts(verifying, held, secondVerdicts, input.secondVerifier);
+    tally.verified = second.verified;
+    tally.openQuestions += second.disagreed;
+    secondVerifierDisagreed = second.disagreed;
+  }
 
   // A candidate the verification stage never ruled on is an outstanding
   // question, not a silent pass.
@@ -650,6 +684,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     coverage,
     candidatesRaised: candidates.length,
     ...tally,
+    secondVerifierDisagreed,
     adversarialRequests: adversarial.requestCount,
     excludedPairs: adversarial.excludedPairs,
   };

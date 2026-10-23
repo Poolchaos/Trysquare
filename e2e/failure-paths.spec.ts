@@ -976,7 +976,7 @@ test("the scan theater follows the review from stage to stage", async ({ page })
     await expect(theater.getByText("Adversarial", { exact: true })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(theater.getByText(/stage 4 of 7/)).toBeVisible();
+    await expect(theater.getByText(/stage 4 of 8/)).toBeVisible();
 
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Cancel", exact: true }).click();

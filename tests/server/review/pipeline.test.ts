@@ -134,6 +134,27 @@ function scripted(
   });
 }
 
+/**
+ * A run whose second verifier agrees with the first: S5b is answered with S5's
+ * own answer, asked of nobody, so a runner that counts or scripts S5 is
+ * unchanged. Every run asks it (WP-E); its disagreements are tested apart.
+ */
+function runAgreed(input: Omit<Parameters<typeof runReviewPipeline>[0], "secondVerifier">) {
+  let first: StageResponse | undefined;
+  return runReviewPipeline({
+    ...input,
+    secondVerifier: "claude-opus-5-5",
+    run: async (request) => {
+      if (request.stage === "s5b_second_verification") {
+        return first ?? { output: { verdicts: [] }, sessionId: "session-s5b" };
+      }
+      const response = await input.run(request);
+      if (request.stage === "s5_verification") first = response;
+      return response;
+    },
+  });
+}
+
 const COMPLETE_ADVERSARIAL = {
   findings: [
     {
@@ -176,7 +197,7 @@ const BASE_ANSWERS = {
 };
 
 function run(answers: Record<string, unknown>, overrides: Record<string, unknown> = {}) {
-  return runReviewPipeline({
+  return runAgreed({
     db,
     reviewId,
     worktreeRoot,
@@ -779,7 +800,7 @@ describe("what the verifier is given", () => {
     // could prove the code was there but not that the rule applied
     // (proof-and-steps plan, WP-C).
     let verification = "";
-    await runReviewPipeline({
+    await runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -814,7 +835,7 @@ describe("the proof a verified finding carries", () => {
     quote,
   });
   function proveWith(verdict: Record<string, unknown>) {
-    return runReviewPipeline({
+    return runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -913,6 +934,115 @@ describe("the proof a verified finding carries", () => {
   });
 });
 
+describe("the second verifier (WP-E, D-188)", () => {
+  const step = (line: number, quote = SOURCE.split("\n")[line - 1]!) => ({
+    path: "app/orders.ts",
+    lineStart: line,
+    lineEnd: line,
+    quote,
+  });
+  const proof = (overrides: Record<string, unknown> = {}) => ({
+    ref: "C1",
+    verdict: "verified",
+    ruleApplies: true,
+    severity: "WARNING",
+    trigger: "A request body reaches total() as payload.",
+    evidence: [step(1), step(2)],
+    guardsSearched: ["total() and its callers, for a parse of payload"],
+    note: "Proven.",
+    ...overrides,
+  });
+  /** A run whose first verifier says `first` and whose second says `second`. */
+  async function both(second: unknown, first: unknown = proof()) {
+    const asked: StageRequest[] = [];
+    const answers: Record<string, unknown> = {
+      ...BASE_ANSWERS,
+      s5_verification: { verdicts: [first] },
+      s5b_second_verification: second,
+    };
+    await runReviewPipeline({
+      db,
+      reviewId,
+      worktreeRoot,
+      files: FILES,
+      rules: RULES,
+      profile: "full-context",
+      systemPromptFor: (stage) => `prompt for ${stage}`,
+      secondVerifier: "claude-opus-5-5",
+      run: async (request) => {
+        asked.push(request);
+        return { output: answers[request.stage] ?? {}, sessionId: `session-${request.stage}` };
+      },
+    });
+    return { asked, finding: listFindings(db, reviewId)[0]! };
+  }
+
+  it("is asked about what the first proved, on its own model, fresh and under the same label", async () => {
+    const { asked } = await both({ verdicts: [proof()] });
+    const second = asked.find((request) => request.stage === "s5b_second_verification")!;
+    expect(second.model).toBe("claude-opus-5-5");
+    expect(second.resumeSessionId).toBeUndefined();
+    expect(second.prompt).toContain('"ref": "C1"');
+    // Not shown the first's proof, which is what makes it independent.
+    expect(second.prompt).not.toContain("A request body reaches total() as payload.");
+  });
+
+  it("verifies a finding both prove, the first's severity standing, the second's kept", async () => {
+    const { finding } = await both({ verdicts: [proof({ severity: "CRITICAL" })] });
+    expect(statusOf(finding)).toBe("verified");
+    expect(finding.severity).toBe("WARNING");
+    expect(JSON.parse(finding.secondProofJson ?? "null")).toMatchObject({ severity: "CRITICAL" });
+  });
+
+  it("leaves one it refutes an open question, naming it", async () => {
+    const { finding } = await both({
+      verdicts: [{ ref: "C1", verdict: "killed", note: "The caller parses the body first." }],
+    });
+    expect(statusOf(finding)).toBe("open_question");
+    expect(finding.verificationNote).toBe(
+      "The second verifier, claude-opus-5-5, refuted it: The caller parses the body first.",
+    );
+  });
+
+  it("leaves one whose rule it says does not apply an open question, not killed", async () => {
+    // One verifier cannot override the other (D-188).
+    const { finding } = await both({
+      verdicts: [proof({ ruleApplies: false, note: "The cast is on internal data." })],
+    });
+    expect(statusOf(finding)).toBe("open_question");
+    expect(finding.verificationNote).toBe(
+      "The second verifier, claude-opus-5-5, found the rule it cites does not apply: " +
+        "The cast is on internal data.",
+    );
+  });
+
+  it("leaves one whose proof does not hold an open question, naming the step", async () => {
+    const { finding } = await both({
+      verdicts: [proof({ evidence: [step(1, "export function sum() {"), step(2)] })],
+    });
+    expect(statusOf(finding)).toBe("open_question");
+    expect(finding.verificationNote).toContain(
+      "The second verifier, claude-opus-5-5, gave a proof that did not hold: Evidence step 1 of 2",
+    );
+  });
+
+  it("leaves one it gives no verdict for an open question", async () => {
+    const { finding } = await both({ verdicts: [] });
+    expect(finding.verificationNote).toBe(
+      "The second verifier, claude-opus-5-5, gave no verdict for it.",
+    );
+  });
+
+  it("is not asked when the first proved nothing", async () => {
+    const { asked, finding } = await both(
+      { verdicts: [] },
+      { ref: "C1", verdict: "killed", note: "Refuted." },
+    );
+    expect(statusOf(finding)).toBe("killed");
+    expect(asked.map((request) => request.stage)).not.toContain("s5b_second_verification");
+  });
+});
+
 describe("the quotation check", () => {
   async function verifyWith(
     quote: string,
@@ -942,7 +1072,7 @@ describe("the quotation check", () => {
       };
     };
 
-    const result = await runReviewPipeline({
+    const result = await runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -1299,7 +1429,7 @@ describe("dividing the adversarial work by profile", () => {
 
   it("makes one request on a full-context model", async () => {
     const seen: string[] = [];
-    const result = await runReviewPipeline({
+    const result = await runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -1315,7 +1445,7 @@ describe("dividing the adversarial work by profile", () => {
 
   it("makes one request per rule theme on a chunked model, and still reconciles", async () => {
     const seen: string[] = [];
-    const result = await runReviewPipeline({
+    const result = await runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -1334,7 +1464,7 @@ describe("dividing the adversarial work by profile", () => {
 
   it("records what a narrowing profile did not check", async () => {
     const seen: string[] = [];
-    const result = await runReviewPipeline({
+    const result = await runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -1405,7 +1535,7 @@ describe("dividing the adversarial work by profile", () => {
 
   it("reports a prompt that cannot fit even alone, rather than sending it silently", async () => {
     const seen: string[] = [];
-    const result = await runReviewPipeline({
+    const result = await runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -1428,7 +1558,7 @@ describe("dividing the adversarial work by profile", () => {
   it("makes a single request when no context window is known", async () => {
     // Guessing at a limit would either waste requests or fail anyway.
     const seen: string[] = [];
-    const result = await runReviewPipeline({
+    const result = await runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -1448,7 +1578,7 @@ describe("cross-repo contract changes", () => {
   ];
 
   function linkedRun(adversarial: unknown) {
-    return runReviewPipeline({
+    return runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -1577,7 +1707,7 @@ describe("cross-repo contract changes", () => {
     // finding, and the only finding is in the primary's own app/orders.ts.
     // A string suffix match took that for backing.
     await expect(
-      runReviewPipeline({
+      runAgreed({
         db,
         reviewId,
         worktreeRoot,
@@ -1689,7 +1819,7 @@ describe("cross-repo contract changes", () => {
 
     function consumerRun(consumersChecked: string[], verdict = "finding", quote = QUOTE) {
       writeFileSync(join(worktreeRoot, "app", "settings.ts"), SETTINGS);
-      return runReviewPipeline({
+      return runAgreed({
         db,
         reviewId,
         worktreeRoot,
@@ -1759,7 +1889,7 @@ describe("cross-repo contract changes", () => {
         verdict,
         reason: "checked",
       });
-      const result = await runReviewPipeline({
+      const result = await runAgreed({
         db,
         reviewId,
         worktreeRoot,
@@ -1847,7 +1977,7 @@ const DELETION_BASE_ANSWERS = {
 };
 
 function runDeleting(s4: unknown, overrides: Record<string, unknown> = {}) {
-  return runReviewPipeline({
+  return runAgreed({
     db,
     reviewId,
     worktreeRoot,
@@ -2059,7 +2189,7 @@ const RISK_ANSWERS: Record<string, unknown> = {
 
 /** Records every prompt, and clears every hunk so any division reconciles. */
 function runRisk(profile: "full-context" | "decomposed", prompts: string[]) {
-  return runReviewPipeline({
+  return runAgreed({
     db,
     reviewId,
     worktreeRoot,
@@ -2169,7 +2299,7 @@ describe("the paths a symbol is spoken of by", () => {
     // in the pipeline still speaking repo-relative paths. The listing now
     // names the file as the model will actually find it.
     const prompts: string[] = [];
-    await runReviewPipeline({
+    await runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -2233,7 +2363,7 @@ describe("the paths a symbol is spoken of by", () => {
     // the expectation passes every fake run and fails every real one. This
     // runner answers the way a model does, by reading the prompt it was
     // given, so any future drift between the two fails here first.
-    const echoed = await runReviewPipeline({
+    const echoed = await runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -2337,7 +2467,7 @@ describe("counting what rests only on refuted findings (D-102)", () => {
     overrides: Record<string, unknown> = {},
   ) {
     writeFileSync(join(worktreeRoot, "app", "long.ts"), SOURCE_LINES.join("\n"));
-    return runReviewPipeline({
+    return runAgreed({
       db,
       reviewId,
       worktreeRoot,
@@ -2445,7 +2575,7 @@ describe("verifying a finding in a file the change deleted (D-106)", () => {
 
   async function verifyDeleted(quotedCode: string) {
     const prompts: string[] = [];
-    const result = await runReviewPipeline({
+    const result = await runAgreed({
       db,
       reviewId,
       worktreeRoot,

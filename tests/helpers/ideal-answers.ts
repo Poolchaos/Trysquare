@@ -93,6 +93,11 @@ export interface VerdictByLine {
   note: string;
   /** The finding's own, which a proven verdict keeps. */
   severity?: string;
+  /**
+   * False for a proof written to fail the quotation check: the finding dies
+   * before the second verifier, which is then not asked about it (WP-E).
+   */
+  holds?: boolean;
 }
 
 /**
@@ -279,6 +284,7 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
         input.misquote && invented
           ? "const somethingThatIsNotThere = true;"
           : lineText(finding.path, finding.lineStart),
+      holds: !(input.misquote && invented),
       note: "Confirmed against the checked-out file.",
     };
   });
@@ -383,6 +389,9 @@ export function idealRunner(
       case "s4_deletions":
         return { output: outputs.s4, sessionId: "gate" };
       case "s5_verification":
+      // The second verifier agrees: asked only about what the first proved,
+      // it gives the same proof (WP-E).
+      case "s5b_second_verification":
         return {
           output: { verdicts: verdictsForPrompt(request.prompt, outputs.s5ByLine) },
           sessionId: "gate-verify",
@@ -411,22 +420,36 @@ export function candidateToken(path: string, lineStart: number): string {
  * a different sequence.
  */
 export function answerSequence(outputs: IdealStageOutputs): unknown[] {
+  const answerFor = (verdicts: readonly VerdictByLine[]) => ({
+    verdicts: verdicts.map((verdict) =>
+      verdictAnswer(
+        candidateToken(verdict.path, verdict.lineStart),
+        verdict,
+        verdict.lineStart,
+        verdict.path,
+      ),
+    ),
+  });
   return [
     outputs.s1,
     outputs.s2,
     outputs.s3,
     outputs.s4,
-    {
-      verdicts: outputs.s5ByLine.map((verdict) =>
-        verdictAnswer(
-          candidateToken(verdict.path, verdict.lineStart),
-          verdict,
-          verdict.lineStart,
-          verdict.path,
-        ),
-      ),
-    },
+    answerFor(outputs.s5ByLine),
+    // The second verifier, asked only about what the first proved, proves
+    // each again (WP-E). Left out when nothing was proved: none is asked.
+    ...secondAnswer(outputs.s5ByLine, answerFor),
   ];
+}
+
+function secondAnswer(
+  verdicts: readonly VerdictByLine[],
+  answerFor: (verdicts: readonly VerdictByLine[]) => unknown,
+): unknown[] {
+  const proved = verdicts.filter(
+    (verdict) => verdict.verdict === "verified" && verdict.holds !== false,
+  );
+  return proved.length === 0 ? [] : [answerFor(proved)];
 }
 
 /** Materialises an answer sequence as 001.json, 002.json, and so on. */

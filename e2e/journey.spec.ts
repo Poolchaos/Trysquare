@@ -324,6 +324,21 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(stages.getByText("Prepare")).toBeVisible();
     await expect(stages.getByText("Audit")).toBeVisible();
     await expect(stages.getByText(/fresh,.*cached,.*out, \$/).first()).toBeVisible();
+    // The second verifier, a stage of its own on the other strong family (WP-E).
+    await expect(stages.getByText("Second verifier", { exact: true })).toBeVisible();
+    mkdirSync(EVIDENCE, { recursive: true });
+    const desktop = page.viewportSize();
+    for (const [scheme, name] of [
+      ["light", "stages-light"],
+      ["dark", "stages-dark"],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await stages.screenshot({ path: join(EVIDENCE, `${name}.png`), animations: "disabled" });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await stages.screenshot({ path: join(EVIDENCE, "stages-phone.png"), animations: "disabled" });
+    if (desktop) await page.setViewportSize(desktop);
 
     // Left as a reader finds it, so the screenshot below photographs the
     // queue-first layout rather than this test's own expansion.

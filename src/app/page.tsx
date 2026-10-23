@@ -86,6 +86,7 @@ const STAGE_ORDER = [
   "s3_adversarial",
   "s4_deletions",
   "s5_verification",
+  "s5b_second_verification",
   "s6_audit",
 ];
 
@@ -96,6 +97,7 @@ const STAGE_NAMES: Record<string, string> = {
   s3_adversarial: "Adversarial",
   s4_deletions: "Deletions",
   s5_verification: "Verification",
+  s5b_second_verification: "Second verifier",
   s6_audit: "Audit",
 };
 

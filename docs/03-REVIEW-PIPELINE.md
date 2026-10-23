@@ -190,6 +190,21 @@ finding:
    looser would let a paraphrase pass as a quotation. A mechanical mismatch
    kills the finding regardless of the AI verdict.
 
+### S5b Second verification (WP-E, D-185, D-188) - FRESH SESSION
+
+Every finding S5 proved, and whose proof the program's checks held, is held
+unmarked and asked about again on the other strong family: an Opus review by
+claude-fable-5-1, any other by claude-opus-5-5, frozen on the review as
+`verifier_model` when it first runs. Same contract and checks as S5, under
+the same labels, and not shown S5's proof, which is what makes it
+independent. Both proofs holding verifies the finding, S5's severity
+standing and S5b's proof kept beside it (`second_proof_json`); anything
+else, a refutation, an open question, a rule it says does not apply, a
+proof that does not hold, or no verdict, makes it an open question that
+names the second verifier and why, so neither verifier overrides the other.
+With nothing proven by S5, S5b is not asked. A stage of its own, so it is
+checkpointed, replayed on resume and named in the run view.
+
 ### S6 Coverage self-audit (protocol step 7; deterministic + AI summary)
 
 App code asserts the invariants: all hunks dispositioned, all sweep hits

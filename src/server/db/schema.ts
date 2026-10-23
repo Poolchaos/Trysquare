@@ -168,6 +168,12 @@ export const reviews = sqliteTable(
      * Null means it was decided to be unknown, not that it is undecided.
      */
     contextWindow: integer("context_window"),
+    /**
+     * The model that proves every verified finding again (WP-E), frozen with
+     * the ruleset so a resume asks the same one. Null until the review first
+     * runs.
+     */
+    verifierModel: text("verifier_model"),
 
     status: text("status").notNull(),
     currentStage: text("current_stage"),
@@ -370,6 +376,8 @@ export const findings = sqliteTable(
      * before the column.
      */
     proofJson: text("proof_json"),
+    /** The second verifier's proof, which agreed with the first (WP-E). Null otherwise. */
+    secondProofJson: text("second_proof_json"),
     status: text("status").notNull().default("candidate"),
     verificationNote: text("verification_note"),
     /**

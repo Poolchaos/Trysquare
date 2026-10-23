@@ -147,6 +147,7 @@ function runScripted() {
   return runReviewPipeline({
     db,
     reviewId,
+    secondVerifier: "claude-opus-5-5",
     worktreeRoot,
     files: entries(),
     rules: PROTOCOL.ruleset.rules,
@@ -195,7 +196,8 @@ describe("a review driven through the CLI boundary", () => {
     expect(result.coverage.unresolvedCandidates).toBe(0);
   }, 120_000);
 
-  it("asks its five questions, one process each", async () => {
+  it("asks its six questions, one process each", async () => {
+    // The sixth the second verifier's, on the other strong family (WP-E).
     const { stagesSeen } = await runScripted();
 
     expect(stagesSeen).toEqual([
@@ -204,8 +206,9 @@ describe("a review driven through the CLI boundary", () => {
       "s3_adversarial",
       "s4_deletions",
       "s5_verification",
+      "s5b_second_verification",
     ]);
-    expect(callsMade()).toBe(5);
+    expect(callsMade()).toBe(6);
   }, 120_000);
 
   it("keeps the verification stage out of the shared session", async () => {
@@ -221,6 +224,7 @@ describe("a review driven through the CLI boundary", () => {
       expect(calls[index]?.includes("--resume"), `call ${index + 1} should resume`).toBe(true);
     }
     expect(calls[4]?.includes("--resume"), "verification must start fresh").toBe(false);
+    expect(calls[5]?.includes("--resume"), "the second verifier must start fresh").toBe(false);
     expect(runner.chainSessionId()).toBeDefined();
   }, 120_000);
 

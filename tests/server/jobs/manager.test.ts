@@ -415,6 +415,7 @@ describe("what a watcher is told", () => {
       "s3_adversarial",
       "s4_deletions",
       "s5_verification",
+      "s5b_second_verification",
     ]);
   }, 120_000);
 
@@ -468,8 +469,8 @@ describe("the picture a page loads with", () => {
 
     const snapshot = manager.snapshot(reviewId);
     expect(snapshot.review.id).toBe(reviewId);
-    expect(snapshot.stages).toHaveLength(5);
-    expect(snapshot.usage.inputTokens).toBe(500);
+    expect(snapshot.stages).toHaveLength(6);
+    expect(snapshot.usage.inputTokens).toBe(600);
     expect(snapshot.findings.verified).toBeGreaterThan(0);
     expect(snapshot.running).toBe(false);
   }, 120_000);
@@ -666,7 +667,7 @@ describe("verifying an open question again (WP-D2, review round 2)", () => {
     gone.abort();
 
     await expect(manager.verifyAgain(findingId, gone.signal)).rejects.toThrow();
-    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("5");
+    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("6");
   }, 120_000);
 });
 

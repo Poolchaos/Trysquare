@@ -4589,3 +4589,22 @@ verified evidence, in writing, here.
   after a probe; checking again in prepareAndRun, which would make every
   run seed the model for no added safety (a lapsed model fails its stage,
   which can be resumed).
+- 2026-10-23 WP-E2 step 2: the second verifier is a stage of its own,
+  `s5b_second_verification`, after S5 and before the audit, in a fresh
+  session on the paired model frozen on the review (`verifier_model`,
+  migration 0015 with `findings.second_proof_json`). S5's proven findings
+  are held unmarked; S5b is asked about exactly those, under S5's labels,
+  not shown S5's proof; both proofs holding verifies a finding with S5's
+  severity, and anything else from S5b leaves an open question naming it
+  and why (D-188). With nothing proven, S5b is not asked, and a finished
+  review shows the stage done. The second verifier is a required input of
+  the pipeline, with no path that lets S5's proof stand alone; the
+  pipeline tests of other stages run through a helper that has it agree
+  by giving S5's answer again, its disagreements tested apart, and a
+  service test holds a run to six calls, the sixth on the paired model.
+  Rejected: an optional second verifier skipped when left out, which made
+  passing the tests a way around it (the maintainer's "dont remove
+  functionality to pass tests", 2026-10-23). A run is now
+  six calls, so the counts its tests hold were raised by one, each for
+  that reason. Mode B prints the second verifier's command on its own
+  model.

@@ -65,6 +65,11 @@ const STAGES = [
   ["s3_adversarial", "Adversarial", "Hunt against the rules"],
   ["s4_deletions", "Deletions", "Account for what the change removed"],
   ["s5_verification", "Verification", "Re-check every candidate in a fresh session"],
+  [
+    "s5b_second_verification",
+    "Second verifier",
+    "Prove each verified finding again on the other strong family",
+  ],
   ["s6_audit", "Audit", "Refuse to finish while anything is undispositioned"],
 ] as const;
 
@@ -225,6 +230,11 @@ function deterministicDone(stage: string, snapshot: Snapshot, done: ReadonlySet<
       ["verifying", "awaiting_confirmation", "complete"].includes(snapshot.review.status)
     );
   }
+  // Not asked when the first verifier proved nothing; a review that reached a
+  // person has passed it either way (WP-E).
+  if (stage === "s5b_second_verification") {
+    return ["awaiting_confirmation", "complete"].includes(snapshot.review.status);
+  }
   if (stage === "s6_audit") {
     if (["awaiting_confirmation", "complete"].includes(snapshot.review.status)) return true;
     const { coverage } = snapshot;
@@ -249,7 +259,12 @@ function deterministicDone(stage: string, snapshot: Snapshot, done: ReadonlySet<
 function executingStage(snapshot: Snapshot, done: ReadonlySet<string>): string | null {
   if (!snapshot.running) return null;
   const stage = snapshot.review.currentStage ?? "s0_prepare";
+  // After S5 the second verifier runs, or, when S5 proved nothing, the
+  // audit: the stage is stamped only when it runs.
   if (stage === "s5_verification" && done.has("s5_verification")) return "s6_audit";
+  if (stage === "s5b_second_verification" && done.has("s5b_second_verification")) {
+    return "s6_audit";
+  }
   return stage;
 }
 

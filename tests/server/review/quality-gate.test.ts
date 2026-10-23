@@ -178,6 +178,7 @@ function runGate(
   return runReviewPipeline({
     db,
     reviewId,
+    secondVerifier: "claude-opus-5-5",
     worktreeRoot: activeWorktree,
     files,
     rules: PROTOCOL.ruleset.rules,

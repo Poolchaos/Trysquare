@@ -318,6 +318,7 @@ describe("running a review to the point a human looks at it", () => {
       "s3_adversarial",
       "s4_deletions",
       "s5_verification",
+      "s5b_second_verification",
     ]);
     expect(seen.every((e) => e.kind === "live")).toBe(true);
   }, 120_000);
@@ -455,13 +456,15 @@ describe("running a review to the point a human looks at it", () => {
       "s3_adversarial",
       "s4_deletions",
       "s5_verification",
+      "s5b_second_verification",
     ]);
     expect(rows.every((row) => row.status === "succeeded")).toBe(true);
     expect(rows.every((row) => row.promptHash.length === 64)).toBe(true);
 
     const review = requireReview(db, reviewId);
-    expect(review.usageInputTokens).toBe(500);
-    expect(review.costEquivalentUsd).toBeCloseTo(0.021, 5);
+    expect(review.usageInputTokens).toBe(600);
+    // Six calls at 0.0042 each, the second verifier the sixth.
+    expect(review.costEquivalentUsd).toBeCloseTo(0.0252, 5);
   }, 120_000);
 
   it("leaves the bundle and the logs behind as evidence", async () => {
@@ -590,7 +593,8 @@ describe("verifying an open question again (proof-and-steps plan, WP-D2)", () =>
     await expect(again(finding.id)).resolves.toMatchObject({ status: "open_question" });
     expect(requireFinding(db, finding.id).verificationNote).toBe("Still could not tell.");
     await expect(again(finding.id)).resolves.toMatchObject({ status: "verified" });
-    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("7");
+    // Six for the run, its second verifier included, and one for each press.
+    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("8");
   }, 120_000);
 
   it("refuses a finding that is not an open question, asking nothing", async () => {
@@ -598,7 +602,7 @@ describe("verifying an open question again (proof-and-steps plan, WP-D2)", () =>
     const [proven] = listFindingsByStatus(db, reviewId, ["verified"]);
 
     await expect(again(proven!.id)).rejects.toThrow(NotAnOpenQuestionError);
-    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("5");
+    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("6");
   }, 120_000);
 });
 
@@ -640,6 +644,7 @@ describe("the interactive engine", () => {
       "s3_adversarial",
       "s4_deletions",
       "s5_verification",
+      "s5b_second_verification",
     ] as const;
 
     // Each call names its own files, `<stage>-<id>-prompt.md` and the
@@ -1041,8 +1046,9 @@ describe("when a review cannot finish", () => {
     // Seeded once per review, not once per run. A second set of ledger rows
     // would double every number the coverage report states about the change.
     expect(listLedgerFiles(db, reviewId)).toHaveLength(appFiles.length);
-    // Two stages replayed, three paid for, and the earlier spend still counted.
-    expect(requireReview(db, reviewId).usageInputTokens).toBe(spentAfterPause + 300);
+    // Two stages replayed, four paid for, the second verifier the fourth, and
+    // the earlier spend still counted.
+    expect(requireReview(db, reviewId).usageInputTokens).toBe(spentAfterPause + 400);
   }, 180_000);
 
   it("recovers by resume when its own reconciliation rejected an answer", async () => {
@@ -1284,6 +1290,25 @@ describe("cancelling a run", () => {
   }, 120_000);
 });
 
+describe("the second verifier (WP-E)", () => {
+  it("is asked last, on the other strong family, frozen on the review", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    const calls = recordedArgv();
+    const modelOf = (args: string[]) => args[args.indexOf("--model") + 1];
+    expect(calls).toHaveLength(6);
+    expect(modelOf(calls[4]!)).toBe("claude-fable-5[1m]");
+    expect(modelOf(calls[5]!)).toBe("claude-opus-5-5");
+    expect(requireReview(db, reviewId).verifierModel).toBe("claude-opus-5-5");
+    // Every finding the first proved, the second proved again.
+    const verified = listFindingsByStatus(db, reviewId, ["verified"]);
+    expect(verified.length).toBeGreaterThan(0);
+    expect(verified.every((finding) => finding.secondProofJson !== null)).toBe(true);
+  }, 120_000);
+});
+
 describe("how hard the model is asked to think", () => {
   it("sends the effort the review was created with, on every stage", async () => {
     const reviewId = seedReview({ effort: "max" });
@@ -1292,7 +1317,7 @@ describe("how hard the model is asked to think", () => {
     await run(reviewId);
 
     const calls = recordedArgv();
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(6);
     for (const [index, args] of calls.entries()) {
       expect(args[args.indexOf("--effort") + 1], `call ${index + 1}`).toBe("max");
     }
@@ -1402,9 +1427,9 @@ describe("what the run actually cost", () => {
     await run(reviewId);
 
     const review = requireReview(db, reviewId);
-    expect(review.usageInputTokens).toBe(500);
-    expect(review.usageCacheCreationTokens).toBe(5 * 300);
-    expect(review.usageCacheReadTokens).toBe(5 * 2000);
+    expect(review.usageInputTokens).toBe(600);
+    expect(review.usageCacheCreationTokens).toBe(6 * 300);
+    expect(review.usageCacheReadTokens).toBe(6 * 2000);
   }, 120_000);
 
   it("adds up to the same totals the stage rows hold", async () => {
@@ -1480,7 +1505,7 @@ describe("what a run is allowed to spend", () => {
     await run(reviewId);
 
     const calls = recordedArgv();
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(6);
     for (const [index, args] of calls.entries()) {
       expect(args[args.indexOf("--max-budget-usd") + 1], `call ${index + 1}`).toBe("15");
     }

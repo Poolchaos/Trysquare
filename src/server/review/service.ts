@@ -70,11 +70,13 @@ import {
   deleteReview,
   requireReview,
   setContextWindow,
+  setVerifierModel,
   setCurrentStage,
   statusOf,
   transitionReview,
 } from "../db/repositories/reviews";
 import { availabilityOf } from "@/lib/models/availability";
+import { pairedVerifierFor } from "@/lib/models/pairing";
 import { getModel } from "../db/repositories/models";
 import {
   hasReviewSnapshot,
@@ -261,6 +263,11 @@ export async function prepareAndRun(
     );
   }
   const snapshot = readReviewSnapshot(db, reviewId);
+  // Frozen as the ruleset is, so a resume asks the same second verifier; a
+  // review that first ran before the column takes it now (WP-E).
+  const verifierModel =
+    review.verifierModel ?? pairedVerifierFor(getModel(db, review.model)?.family);
+  if (review.verifierModel === null) setVerifierModel(db, reviewId, verifierModel);
   // Read before the review is marked running: an unreadable value fails the
   // start here, rather than leaving a row that says running with nothing
   // behind it.
@@ -385,6 +392,7 @@ export async function prepareAndRun(
       ...(contextWindow === undefined ? {} : { contextWindow }),
       changedSymbols: bundle.inventory.changedExportedSymbols,
       baseContents,
+      secondVerifier: verifierModel,
       systemPromptFor: (stage, batch) =>
         composeSystemPrompt({
           directives: snapshot.directives,

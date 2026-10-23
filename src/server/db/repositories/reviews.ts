@@ -93,6 +93,7 @@ export function createReview(db: Db, input: CreateReviewInput): Review {
     usageCacheCreationTokens: 0,
     usageCacheReadTokens: 0,
     contextWindow: null,
+    verifierModel: null,
     engineMode: input.engineMode,
     status: "draft" satisfies ReviewStatus,
     currentStage: null,
@@ -196,6 +197,10 @@ export function transitionReview(
  */
 export function setContextWindow(db: Db, reviewId: string, window: number | null): void {
   db.update(reviews).set({ contextWindow: window }).where(eq(reviews.id, reviewId)).run();
+}
+
+export function setVerifierModel(db: Db, reviewId: string, model: string): void {
+  db.update(reviews).set({ verifierModel: model }).where(eq(reviews.id, reviewId)).run();
 }
 
 /** Adds a stage's usage to the review totals. Never touches status. */

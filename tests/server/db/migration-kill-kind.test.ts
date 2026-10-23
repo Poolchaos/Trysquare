@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDb, type Db } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
-import { seedProject, seedReview } from "./helpers";
+import { seedProject } from "./helpers";
 
 const MIGRATIONS = fileURLToPath(new URL("../../../drizzle", import.meta.url));
 
@@ -48,7 +48,18 @@ afterEach(() => {
 describe("findings killed before the kind of kill was recorded (migration 0011)", () => {
   it("are told apart by the note the pipeline wrote", () => {
     runMigrations(db, migrationsBefore("0011_"));
-    const reviewId = seedReview(db, seedProject(db).id).id;
+    // Written as the release before wrote it: the repository writes the
+    // columns of now, which a database at 0010 does not have (0015's
+    // verifier_model the first on reviews).
+    const reviewId = "R1";
+    db.$client
+      .prepare(
+        `INSERT INTO reviews (id, project_id, from_branch, from_commit, into_branch, into_commit,
+           merge_base_commit, model, profile_id, engine_mode, status, created_at)
+         VALUES (?, ?, 'feature/x', ?, 'main', ?, ?, 'claude-fable-5[1m]', 'full-context',
+           'headless', 'awaiting_confirmation', '2026-10-01')`,
+      )
+      .run(reviewId, seedProject(db).id, "a".repeat(40), "b".repeat(40), "c".repeat(40));
     const insert = db.$client.prepare(
       `INSERT INTO findings (id, review_id, repo, file_path, line_start, line_end, severity,
          issue, comment, mechanism, status, verification_note, created_at)

@@ -58,6 +58,15 @@ const STAGE_INSTRUCTIONS: Record<ReviewStage, string> = {
     "the finding. Look for a guard, default, or narrowing that already handles it. Report the " +
     "line numbers you actually found the code at, not the ones you were given. Judge whether " +
     "the rule the finding cites, given in the prompt, applies to this code.",
+  // The same work, said to be the second look: independent, so it is not
+  // shown the first verifier's proof (WP-E).
+  s5b_second_verification:
+    "You are the second, independent verifier: another verifier has already proven each of " +
+    "these findings, and you are not shown its proof. For each candidate finding, open the " +
+    "cited file, quote the exact lines, and try to refute the finding. Look for a guard, " +
+    "default, or narrowing that already handles it. Report the line numbers you actually " +
+    "found the code at, not the ones you were given. Judge whether the rule the finding " +
+    "cites, given in the prompt, applies to this code.",
   s6_audit: "Summarise what was reviewed and what was found, for the report.",
 };
 

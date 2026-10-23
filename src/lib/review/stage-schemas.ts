@@ -183,6 +183,7 @@ const STAGE_SCHEMAS = {
   s3_adversarial: adversarialStageSchema,
   s4_deletions: deletionStageSchema,
   s5_verification: verificationStageSchema,
+  s5b_second_verification: verificationStageSchema,
   // The audit stage produces prose for the report rather than structured
   // findings, so it reuses the simplest shape; nothing reads its output.
   s6_audit: riskStageSchema,

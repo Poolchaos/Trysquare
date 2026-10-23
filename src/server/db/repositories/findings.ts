@@ -60,6 +60,7 @@ export function createCandidate(db: Db, input: CreateCandidateInput): Finding {
     mechanism: input.mechanism,
     quotedCode: "",
     proofJson: null,
+    secondProofJson: null,
     status: "candidate" satisfies FindingStatus,
     verificationNote: null,
     killedBy: null,
@@ -99,6 +100,7 @@ interface TransitionPatch {
   lineEnd?: number;
   severity?: Severity;
   proofJson?: string;
+  secondProofJson?: string;
 }
 
 function transitionFinding(
@@ -146,6 +148,8 @@ export function markVerified(
      * D-185). The pipeline always gives one.
      */
     proof?: VerifiedProof;
+    /** The second verifier's, which agreed; its severity is shown, not taken (D-188). */
+    secondProof?: VerifiedProof;
   },
 ): Finding {
   if (evidence.quotedCode.trim() === "") {
@@ -162,6 +166,9 @@ export function markVerified(
     ...(evidence.proof === undefined
       ? {}
       : { severity: evidence.proof.severity, proofJson: JSON.stringify(evidence.proof) }),
+    ...(evidence.secondProof === undefined
+      ? {}
+      : { secondProofJson: JSON.stringify(evidence.secondProof) }),
   });
 }
 
