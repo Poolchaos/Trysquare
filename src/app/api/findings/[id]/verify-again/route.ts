@@ -2,9 +2,9 @@
  * Verifies an open question again: one new request, in a fresh session, held
  * to S5's checks (proof-and-steps plan, WP-D2).
  *
- * A paid request, so refused unless the page said so first, and answered
- * when the request is: one stage under the stage timeout, which a closed tab
- * aborts. The job manager counts it against the reviews at once, as they
+ * Paid requests, so refused unless the page said so first, and answered
+ * when they are: the first verifier and, if it proves the finding, the
+ * second, each under the stage timeout, which a closed tab aborts. The job manager counts it against the reviews at once, as they
  * share one usage limit, and stops it with a drain (review round 2).
  */
 
@@ -17,6 +17,7 @@ import {
 } from "@/server/cli-readiness";
 import { failed, handler, isNamed, ok, readJson } from "@/server/api/respond";
 import { assertCanVerifyAgain } from "@/server/review/service";
+import { secondVerifierNotReady } from "@/server/db/repositories/models";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,11 @@ export async function POST(
     const { id } = await context.params;
     const input = await readJson(request, body);
     try {
-      assertCanVerifyAgain(db, id, dataDir);
+      const { review } = assertCanVerifyAgain(db, id, dataDir);
+      // Both verifiers are asked; the second must be able to answer before the
+      // first is paid for (review round 3).
+      const unverifiable = secondVerifierNotReady(db, review.model, review.verifierModel);
+      if (unverifiable !== null) throw unverifiable;
       const readiness = await cliReadiness(db);
       if (readiness.refusal) throw cliNotReady(readiness);
       const unshown = billingNotShown(readiness, input.billingShown, "This request");

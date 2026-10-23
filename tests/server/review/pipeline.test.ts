@@ -1033,6 +1033,13 @@ describe("the second verifier (WP-E, D-188)", () => {
     );
   });
 
+  it("takes a label spelled as the first verifier's parser takes it", async () => {
+    // S5 reads "c1" as C1; an exact match left a proof both gave unread,
+    // and the finding open for no verdict (review round 3).
+    const { finding } = await both({ verdicts: [proof({ ref: "c1" })] });
+    expect(statusOf(finding)).toBe("verified");
+  });
+
   it("is not asked when the first proved nothing", async () => {
     const { asked, finding } = await both(
       { verdicts: [] },

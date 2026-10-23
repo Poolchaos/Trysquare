@@ -643,11 +643,11 @@ function NewReview() {
   // Every finding the first verifier proves is proven again on the other
   // strong family (WP-E), which the server refuses to start without. Read
   // from the models here, not the pre-flight, so a probe in the list above
-  // counts at once. Mode B's stages run in the person's own session.
+  // counts at once. In Mode B too: its command names the paired model.
   const pairedId = pairedVerifierFor(models.find((row) => row.id === model)?.family);
   const paired = models.find((row) => row.id === pairedId);
   const secondVerifier = secondVerifierReadiness(pairedId, paired?.availability);
-  const verifierMissing = model !== "" && engineMode === "headless" && !secondVerifier.usable;
+  const verifierMissing = model !== "" && !secondVerifier.usable;
   // Started anyway, the run stopped at its sweep, which will not pass a
   // pattern it could not run (5.14, audit U11).
   const wouldRefuse = preflight !== null && preflight.sweepProblems.length > 0;
@@ -1173,9 +1173,7 @@ function NewReview() {
                   <Row label="Changed exports" value={String(preflight.changedSymbols)} />
                 ) : null}
                 <Row label="Model requests" value={String(preflight.requests)} />
-                {engineMode === "headless" ? (
-                  <Row label="Second verifier" value={paired?.displayName ?? pairedId} />
-                ) : null}
+                <Row label="Second verifier" value={paired?.displayName ?? pairedId} />
                 <Row
                   label="Estimated tokens"
                   value={preflight.estimatedTokens.toLocaleString("en-US")}

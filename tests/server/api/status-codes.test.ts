@@ -318,6 +318,14 @@ describe("a step the state machine does not allow", () => {
     const noCheckout = await asked(unproven.id, { costShown: true });
     expect(noCheckout.status).toBe(409);
     expect(await codeOf(noCheckout)).toBe("VerifyAgainUnavailableError");
+    // With its checkout there, refused for the second verifier, never probed
+    // here, before the first paid call is made (review round 3).
+    const { worktreeRootDir } = await import("@/lib/paths");
+    const { mkdirSync } = await import("node:fs");
+    mkdirSync(worktreeRootDir(dataDir, review.id), { recursive: true });
+    const unverifiable = await asked(unproven.id, { costShown: true });
+    expect(unverifiable.status).toBe(409);
+    expect(await codeOf(unverifiable)).toBe("SecondVerifierUnavailable");
 
     expect((await routes.confirm.POST(post(), params(finding.id))).status).toBe(200);
     const again = await routes.confirm.POST(post(), params(finding.id));

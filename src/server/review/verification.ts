@@ -261,7 +261,8 @@ export async function applySecondVerdicts(
   let verified = 0;
   let disagreed = 0;
   for (const proven of held) {
-    const second = verdicts.find((verdict) => verdict.ref === proven.ref);
+    // By the label as S5 reads it, "c1" for C1, or a proof both gave goes unread.
+    const second = verdicts.find((verdict) => indexOfRef(verdict.ref) === indexOfRef(proven.ref));
     let why: string | null;
     if (second === undefined) why = "gave no verdict for it.";
     else if (second.verdict === "killed") why = `refuted it: ${second.note || "no reason given."}`;

@@ -4617,3 +4617,15 @@ verified evidence, in writing, here.
   the minutes. The card names both verifiers on a finding they proved,
   and shows the second's rating beside the first's where they differ
   (D-188).
+- 2026-10-23 Review round 3 (over WP-E1 and WP-E2's three steps): the
+  second verifier now reads a label as the first does ("c1" as C1), where
+  an exact match left a proof both gave unread and the finding open (F1).
+  A verify-again is refused before its first paid call while the second
+  verifier cannot run, where the first's call was spent and the second's
+  then failed (F2). Mode B is held to D-185 at create and Start as a
+  headless review is, and its screen lists the second verifier: its
+  command names the paired model, which WP-E1 left unchecked (F3). Start
+  judges the review's frozen second verifier, which a resume runs (F4). A
+  verify-again on a review from before migration 0015 freezes the
+  verifier it asked, so the card names both (F5). 02, 06 and a gauge
+  comment brought up to the code (F6).

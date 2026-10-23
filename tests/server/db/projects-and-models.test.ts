@@ -18,6 +18,7 @@ import {
   recordProbeFailure,
   recordProbeOutcome,
   recordProbeSuccess,
+  secondVerifierNotReady,
   registerCandidate,
   retireModels,
 } from "@/server/db/repositories/models";
@@ -332,6 +333,16 @@ describe("model registry", () => {
       contextWindow: 1_000_000,
     });
     expect(stored.lastProbedAt).not.toBeNull();
+  });
+
+  it("judges a review's frozen second verifier, not one paired again", () => {
+    // A resume runs the frozen model, so Start asks after that one.
+    const opus = DEFAULT_MODEL_CANDIDATES.find((candidate) => candidate.id === "claude-opus-5-5")!;
+    registerCandidate(db, opus);
+    recordProbeSuccess(db, opus.id, { resolvedId: opus.id, contextWindow: 1_000_000 });
+    expect(secondVerifierNotReady(db, "claude-fable-5[1m]")).toBeNull();
+    const refused = secondVerifierNotReady(db, "claude-fable-5[1m]", "claude-fable-5-1");
+    expect(refused?.status).toBe(409);
   });
 
   it("removes a retired candidate's row, and only that", () => {

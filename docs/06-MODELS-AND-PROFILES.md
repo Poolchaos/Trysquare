@@ -169,10 +169,12 @@ refused at the API for every model.
 
 Every finding the first verifier proves is proven again on the other strong
 family (PG-1 (a), D-185): an Opus review by claude-fable-5-1, any other by
-claude-opus-5-5 (`lib/models/pairing.ts`). A headless review is refused at
-create and at Start, 409 SecondVerifierUnavailable, while that model has no
-probe vouching for it now, and the new-review screen keeps Start off with a
-Probe button for it beside the reason (WP-E1). Both paired models probed at
+claude-opus-5-5 (`lib/models/pairing.ts`), frozen on the review when it
+first runs. A review, headless or Mode B, is refused at create and at Start,
+and a verify-again before its first paid call, 409 SecondVerifierUnavailable,
+while that model has no probe vouching for it now; the new-review screen
+keeps Start off with a Probe button for it beside the reason (WP-E1, review
+round 3). Both paired models probed at
 1M on 2026-10-23 (D-188).
 
 ## 3. Review profiles (the model-dependent pipeline)

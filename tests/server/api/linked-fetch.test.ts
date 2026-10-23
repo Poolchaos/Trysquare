@@ -43,6 +43,8 @@ afterAll(async () => {
 
 async function linkedPair(name: string) {
   const { db } = (await import("@/server/runtime")).runtime();
+  // A Mode B review's second verifier is held to a probe too (D-185).
+  (await import("../db/helpers")).probeSecondVerifier(db);
   const { createProject, linkDependency, setCloneStatus } =
     await import("@/server/db/repositories/projects");
   const make = (suffix: string) => {

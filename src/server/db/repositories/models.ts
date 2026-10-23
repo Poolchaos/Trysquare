@@ -156,19 +156,30 @@ export function getModel(db: Db, id: string): ModelRow | undefined {
 }
 
 /** The model that proves a review's findings again, as its probe stands now (D-185). */
-export function secondVerifierOf(db: Db, model: string, now: number = Date.now()): SecondVerifier {
-  const paired = pairedVerifierFor(getModel(db, model)?.family);
+export function secondVerifierOf(
+  db: Db,
+  model: string,
+  /** The review's, once frozen: a resume runs that one, not one paired again. */
+  frozen?: string | null,
+  now: number = Date.now(),
+): SecondVerifier {
+  const paired = frozen ?? pairedVerifierFor(getModel(db, model)?.family);
   const row = getModel(db, paired);
   return secondVerifierReadiness(paired, row ? availabilityOf(row, now) : undefined);
 }
 
 /**
  * The 409 for a review whose second verifier cannot run, or null. Asked at
- * create and at Start, as the CLI is, so a review is neither left a draft
- * nor started to fail at its last stage.
+ * create, at Start and before a verify-again, in either engine mode, so a
+ * review is neither left a draft nor started, and no paid request is sent,
+ * to fail at the second verifier.
  */
-export function secondVerifierNotReady(db: Db, model: string): Response | null {
-  const verifier = secondVerifierOf(db, model);
+export function secondVerifierNotReady(
+  db: Db,
+  model: string,
+  frozen?: string | null,
+): Response | null {
+  const verifier = secondVerifierOf(db, model, frozen);
   if (verifier.usable) return null;
   return Response.json(
     {

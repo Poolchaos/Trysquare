@@ -1892,7 +1892,7 @@ function ScanTheater({
           </div>
         ) : null}
 
-        {/* The pipeline as a ruled gauge: seven segments, filled as they land,
+        {/* The pipeline as a ruled gauge: eight segments, filled as they land,
           the live one glowing. */}
         <div className="mt-5">
           <div className="flex gap-1.5" aria-hidden>

@@ -522,6 +522,8 @@ export async function verifyAgain(
     if (held.length > 0) {
       const verifierModel =
         review.verifierModel ?? pairedVerifierFor(getModel(db, review.model)?.family);
+      // Frozen now if it was not, so the card can name it afterwards.
+      if (review.verifierModel === null) setVerifierModel(db, review.id, verifierModel);
       assertNotCancelled(options.signal);
       const second = await runner.run({
         stage: "s5b_second_verification",

@@ -105,6 +105,7 @@ Ruleset-scoped non-rule content composed into every review prompt.
 | linkedMergeBaseCommit               | text null    |                                            |
 | model                               | text         | full model id, FK to models.id             |
 | profileId                           | text         | review profile actually used (see 06)      |
+| verifierModel                       | text null    | the second verifier, frozen at first run   |
 | engineMode                          | text         | headless, interactive                      |
 | status                              | text         | see state machine                          |
 | currentStage                        | text null    |                                            |
@@ -131,7 +132,7 @@ past review was judged against.
 | Column                                       | Type      | Notes                                                                              |
 | -------------------------------------------- | --------- | ---------------------------------------------------------------------------------- |
 | id, reviewId                                 |           |                                                                                    |
-| stage                                        | text      | s1_risk, s2_comprehension, s3_adversarial, s4_deletions, s5_verification, s6_audit |
+| stage                                        | text      | s1_risk to s5_verification, s5b_second_verification, s6_audit                      |
 | attempt                                      | int       |                                                                                    |
 | sessionId                                    | text null | CLI session id for resume                                                          |
 | status                                       | text      | succeeded or failed. The enum also carries running and cancelled; nothing writes them, because a row is written only once a stage settles |
@@ -186,6 +187,7 @@ no pending sweep hits past S6.
 | mechanism                        | text      | traced input -> wrong output path (internal, shown in UI)        |
 | quotedCode                       | text      | exact lines quoted at verification time                          |
 | proofJson                        | text null | the verifier's proof, every step checked (WP-C, D-189)           |
+| secondProofJson                  | text null | the second verifier's proof, which agreed (WP-E)                 |
 | status                           | text      | candidate, verified, killed, open_question, confirmed, dismissed |
 | verificationNote                 | text null | S5 outcome detail                                                |
 | killedBy                         | text null | when killed: verification (refuted) or quote_check (D-126)       |

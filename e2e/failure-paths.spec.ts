@@ -3055,6 +3055,31 @@ test("the new-review screen asks the CLI once, for both engines", async ({ page 
   await expect(terminal).toContainText(
     "These commands run in your own terminal, with its environment, which this app cannot see",
   );
+  // Its second verifier's command names the paired model, so it is listed
+  // here as for a headless review (D-185, review round 3).
+  const examined = page.getByText("What this review will examine", { exact: true }).locator("..");
+  await expect(examined.getByText("Second verifier", { exact: true })).toBeVisible();
+  const evidence = join(
+    fileURLToPath(new URL("..", import.meta.url)),
+    "review",
+    `${new Date().toISOString().slice(0, 10)}-e2e`,
+  );
+  mkdirSync(evidence, { recursive: true });
+  const desktop = page.viewportSize();
+  for (const [scheme, name] of [
+    ["light", "mode-b-preflight-light"],
+    ["dark", "mode-b-preflight-dark"],
+  ] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await examined.screenshot({ path: join(evidence, `${name}.png`), animations: "disabled" });
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await examined.screenshot({
+    path: join(evidence, "mode-b-preflight-phone.png"),
+    animations: "disabled",
+  });
+  if (desktop) await page.setViewportSize(desktop);
   await page.getByTestId("engine-mode").selectOption("headless");
   await expect(terminal).toHaveCount(0);
   expect(asked).toEqual([""]);

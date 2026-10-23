@@ -86,11 +86,15 @@ export async function POST(
     // (MVP 6.2, review of the 6.2 changes). The interactive engine starts no
     // CLI.
     // The second verifier, free, before the CLI is asked (WP-E): a Resume
-    // too, since a probe may have lapsed since the review was made.
-    const asked = judged === "startable" && review.engineMode === "headless";
-    const unverifiable = asked ? secondVerifierNotReady(db, review.model) : null;
+    // too, since a probe may have lapsed since the review was made, and in
+    // Mode B too. The frozen one, which a resume runs.
+    const unverifiable =
+      judged === "startable"
+        ? secondVerifierNotReady(db, review.model, review.verifierModel)
+        : null;
     if (unverifiable !== null) throw unverifiable;
-    const readiness = asked ? await cliReadiness(db) : null;
+    const readiness =
+      judged === "startable" && review.engineMode === "headless" ? await cliReadiness(db) : null;
     if (readiness?.refusal) throw cliNotReady(readiness);
     const unshown = readiness === null ? null : billingNotShown(readiness, input.billingShown);
     if (unshown !== null) throw unshown;

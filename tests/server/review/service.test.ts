@@ -584,6 +584,18 @@ describe("verifying an open question again (proof-and-steps plan, WP-D2)", () =>
     );
   }, 120_000);
 
+  it("freezes the second verifier it asked on a review from before the column", async () => {
+    // So the card can name both verifiers afterwards (review round 3).
+    const { reviewId, finding } = await leaveOneOpen((verdict) => [
+      answer(verdict),
+      answer(verdict),
+    ]);
+    db.update(reviews).set({ verifierModel: null }).where(eq(reviews.id, reviewId)).run();
+
+    await expect(again(finding.id)).resolves.toMatchObject({ status: "verified" });
+    expect(requireReview(db, reviewId).verifierModel).toBe("claude-opus-5-5");
+  }, 120_000);
+
   it("leaves it open when the second verifier does not agree, naming it", async () => {
     const { finding } = await leaveOneOpen((verdict) => [
       answer(verdict),

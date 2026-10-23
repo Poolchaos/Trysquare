@@ -453,6 +453,30 @@ describe("creating a review", () => {
     }
   }, 120_000);
 
+  it("refuses an interactive review on the same terms (D-185)", async () => {
+    // Its second verifier's command names the paired model, so that model is
+    // held to a probe as a headless run's is (review round 3).
+    const { db } = (await import("@/server/runtime")).runtime();
+    const { recordProbeFailure } = await import("@/server/db/repositories/models");
+    const { probeSecondVerifier } = await import("../db/helpers");
+    recordProbeFailure(db, "claude-opus-5-5", "Not available to this account.");
+    try {
+      const response = await routes.reviews.POST(
+        post("http://localhost/api/reviews", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          model: "claude-fable-5[1m]",
+          engineMode: "interactive",
+        }),
+      );
+      expect(response.status).toBe(409);
+      expect(((await response.json()) as { code: string }).code).toBe("SecondVerifierUnavailable");
+    } finally {
+      probeSecondVerifier(db);
+    }
+  }, 120_000);
+
   it("refuses a review whose second verifier has not probed usable, naming it", async () => {
     // Every finding it proves is proven again on the other strong family
     // (PG-1 (a), D-185), so a review that could not finish is not made.

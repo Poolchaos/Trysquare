@@ -127,9 +127,9 @@ export function POST(request: Request): Promise<Response> {
     // engine starts no CLI.
     const headless = (input.engineMode ?? "headless") === "headless";
     // The second verifier first: free, and a review it cannot finish is
-    // not worth asking the CLI about (WP-E). Mode B's stages run in the
-    // person's own session, which is asked nothing here.
-    const unverifiable = headless ? secondVerifierNotReady(db, input.model) : null;
+    // not worth asking the CLI about (WP-E). In Mode B too: its second
+    // verifier's command names the paired model (D-185, review round 3).
+    const unverifiable = secondVerifierNotReady(db, input.model);
     if (unverifiable !== null) throw unverifiable;
     const readiness = headless ? await cliReadiness(db) : null;
     if (readiness?.refusal) throw cliNotReady(readiness);
