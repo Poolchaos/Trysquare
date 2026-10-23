@@ -47,10 +47,15 @@ Goals:
    confirmed into the report.
 3. A second, independent verifier on a different strong model.
 4. The run shown as five steps a person reads, with live counts.
+5. The design of what a branch builds checked too (the maintainer,
+   2026-10-23, D-191): the project's own tests and e2e run on a throwaway
+   copy of the branch, each screenshot graded A to D, and a failing test
+   or a C or D a finding like any other, proven and confirmed.
 
 Non-goals: new splitting modes (the profiles stay as they are, D-184
-item 3); executing code or tests to reproduce a finding (the read-only law
-in `CLAUDE.md` section 8 stands); a model the app has not probed.
+item 3); an AI stage executing anything (the read-only law in `CLAUDE.md`
+section 8 stands: in WP-I the app runs the project's own commands, and a
+model only reads what they produced); a model the app has not probed.
 
 ## 2. What exists (read 2026-10-22, the evidence for each claim)
 
@@ -96,6 +101,8 @@ in `CLAUDE.md` section 8 stands); a model the app has not probed.
 | WP-F | The picker and pre-flight say what each model gets: "the whole ruleset in one pass", "one pass per rule theme, N passes", or "each file against the rules that apply to it"; a plain line on the non-recommended ones that accuracy may fall; and a request count that includes every stage, the splits and the second verifier, not S3's batches alone. | WP-B, WP-E | TODO |
 | WP-G | Five steps a person reads, mapped onto the stages: Understand the rules (S0's frozen ruleset and sweeps), Understand the change (S1, S2), Find issues (S3, S4), Prove each finding (S5, the quote check, the second verifier), Report (S6, your confirmation, the report). Labelled on the bar, live counts per step (candidates raised, proven, refuted, discarded by the quote check, open), and the same five steps summarised on a finished review, refuted and discarded told apart. Design shown to the maintainer before it is built (PG-4). | WP-A, WP-E, PG-4 | TODO |
 | WP-H | Fresh evidence: the fixture reviewed on the new engine with Opus 5.5 on Windows, scored against the key, every finding's evidence path read. | WP-B to WP-G; maintainer go on spend | TODO |
+| WP-I | The design checked (D-191), one step per diff, each screen it adds shot and graded A to D as all frontend work is. I1: per project, off until turned on, the commands to run (install, tests, e2e), the folder the e2e saves screenshots to, and the path of the project's design standard; turning it on says plainly that it runs the branch's code on this machine. I2: a throwaway copy of the branch per review, apart from the read-only review worktree, in which app code alone runs those commands, each under a time limit, its output kept and the copy removed after; one new server module is the only one that spawns them, and `CLAUDE.md`'s laws say so. I3: a test command that fails is a finding, its evidence the command's exit code and the output quoted, checked by the app. I4: a stage grades every screenshot A to D against the A to D definitions and the project's standard, the model reading each image with Read alone; a C or D is a finding carrying the image, its grade and what is off; the second verifier grades it too and both must agree it is C or D, or it is an open question. A project with no e2e command gets "design not checked" in the report, never a grade. I5: the pre-flight counts the new requests and images, the steps view shows them in Find issues and Prove each finding, and the confirmation card shows the screenshot. I6: a fixture with screens and planted design defects (overflow, low contrast, clipped text) beside clean screens, with a key, proven end to end on the fake engine. | WP-H; PG-5 | TODO |
+| WP-J | Fresh evidence for WP-I: the design fixture reviewed with Opus 5.5 on Windows, scored against its key, every grade read against its screenshot. | WP-I; maintainer go on spend | TODO |
 
 ## 4. Decision gates (maintainer)
 
@@ -115,6 +122,12 @@ in `CLAUDE.md` section 8 stands); a model the app has not probed.
   the rule does not apply kills the finding.
 - **PG-4: the steps view.** A mockup of the five steps, live and finished,
   in both themes, shown before WP-G is built.
+- **PG-5: how WP-I gets the screens.** (a) The project's own e2e command,
+  grading the screenshots it saves; the project knows its routes, states,
+  themes and widths, and how to sign in. (b) Trysquare starts the app and
+  shoots a list of URLs itself. (c) Both. Recommended: (a), the
+  maintainer's "start e2e tests or something" (2026-10-23); (b) cannot
+  reach a state behind a click or a sign-in.
 
 ## 5. Cost, said before it is spent
 
@@ -124,7 +137,8 @@ model, uncached; S5 is one request for every candidate today, by the code
 (`src/server/review/pipeline.ts:632-663`). WP-H is one fixture
 run; MVP 7.3's cost $5.2976 cost-equivalent on Fable without a second
 verifier. No figure is claimed for the second verifier's cost until WP-H
-measures it.
+measures it. WP-I adds a grading request for the screenshots on each
+verifier, images included; its cost is claimed only once WP-J measures it.
 
 ## 6. Review cadence
 

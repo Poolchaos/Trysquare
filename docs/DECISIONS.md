@@ -4692,3 +4692,17 @@ verified evidence, in writing, here.
   before this round whose verifiers disagreed kept no first proof on that
   open question, so its summary counts it not proven once; no real-model
   review has run since WP-E, so only fixture runs are affected.
+- 2026-10-23 D-191 DECIDED (the maintainer): a review also checks the
+  design of what the branch builds, inside the proof-and-steps plan as
+  WP-I, its real-model proof WP-J; "I want it part of this as this is my
+  project". The branch's code runs in a throwaway copy of it, apart from
+  the review worktree, which stays read-only, and only for a project that
+  has turned it on; a failing test, or a screenshot graded C or D, is a
+  finding, proven by both verifiers and confirmed by the person like any
+  other; WP-H runs first. The plan's non-goal "executing code or tests"
+  becomes "an AI stage executing anything": the read-only law for models
+  stands, and the commands are run by app code. Rejected: a Docker
+  container (needs Docker, slows every run, and this is a private tool);
+  a report section of grades outside verification (a grade nobody proved
+  is the unproven finding this plan exists to stop). Open: PG-5, how the
+  screens are found, recommended the project's own e2e.

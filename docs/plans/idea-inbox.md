@@ -94,6 +94,9 @@ pulled deliberately.
 Kept so the record of what was captured, and where it went, survives. Removing
 the line entirely would lose the trail.
 
+- 2026-10-23 (maintainer) A review that also runs the project's tests and
+  photographs its screens, grading the design A to D. PULLED the same day
+  into the proof-and-steps plan as WP-I and WP-J (D-191).
 - 2026-07-31 Reasoning effort is per review (low/medium/high/max, default
   high). BUILT in commit f91c208, the same commit that filed this line, so it
   was a note rather than an idea. The fact about the CLI accepting exactly
