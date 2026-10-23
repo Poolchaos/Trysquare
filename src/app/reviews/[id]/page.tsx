@@ -1192,7 +1192,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             )}
           </div>
 
-          <aside className="grid min-w-0 gap-4 self-start">
+          <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 self-start">
             {/* The two figures a person actually checks, at the weight the
                 mock gives them; the token breakdown stays, beneath, at the
                 weight it deserves. */}
@@ -1265,8 +1265,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                     // Engine output is arbitrary text, including whole JSON
                     // answers on one line. Without a wrap rule it widened its
                     // container until the page itself scrolled sideways, which
-                    // 04 forbids outright.
-                    <li key={index} className="leading-5 break-words">
+                    // 04 forbids outright. Anywhere, not break-word: that
+                    // wrapped it on screen but still sized a phone's column
+                    // to the longest path (CI on Linux, 2026-10-23).
+                    <li key={index} className="leading-5 [overflow-wrap:anywhere]">
                       {entry.kind === "stage" ? (
                         <span className="text-[var(--color-ink)]">
                           {stageLabel(entry.stage)}{" "}
@@ -1702,7 +1704,7 @@ function RunDetail({
               divided its work survives a reload. */}
           <ul className="grid gap-2">
             {snapshot.notes.map((note, index) => (
-              <li key={`${note.at}-${index}`} className="text-aside break-words">
+              <li key={`${note.at}-${index}`} className="text-aside [overflow-wrap:anywhere]">
                 <span className="text-[var(--color-ink-muted)]">
                   {new Date(note.at).toLocaleTimeString()}
                 </span>{" "}
@@ -2203,7 +2205,7 @@ function ScanTheater({
           ) : (
             <ul className="grid gap-0.5 text-dense">
               {live.slice(-120).map((entry, index) => (
-                <li key={index} className="leading-6 break-words">
+                <li key={index} className="leading-6 [overflow-wrap:anywhere]">
                   {entry.kind === "stage" ? (
                     <span className="font-medium text-[var(--color-ink)]">
                       {stageLabel(entry.stage)}{" "}
