@@ -193,6 +193,18 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.getByText("Advanced", { exact: true }).click();
     // Every request each profile would make, not S3's alone (WP-F).
     await expect(page.getByText("Requests by profile", { exact: true })).toBeVisible();
+    // The totals are at the chosen model's window, which a probe gave (review round 4).
+    const fold = page.getByText("Requests by profile", { exact: true }).locator("..");
+    await expect(fold).toContainText("At this model's window; a smaller one may split more.");
+    mkdirSync(EVIDENCE, { recursive: true });
+    for (const [scheme, name] of [
+      ["light", "profiles-light"],
+      ["dark", "profiles-dark"],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await fold.screenshot({ path: join(EVIDENCE, `${name}.png`), animations: "disabled" });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
 
     // Choosing a weaker profile is reflected in the numbers before anything
     // is spent: the preview and the run read the same resolution.

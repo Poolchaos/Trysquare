@@ -40,6 +40,7 @@ export function countRequests(input: {
 
   let groups = 0;
   let split = false;
+  let oversized = false;
   for (const batch of plan.batches) {
     const fit = fitBatch(
       batch.files,
@@ -49,6 +50,9 @@ export function countRequests(input: {
     );
     groups += fit.groups.length;
     if (fit.kind === "split") split = true;
+    if (fit.kind === "alone" || (fit.kind === "split" && fit.oversized.length > 0)) {
+      oversized = true;
+    }
   }
-  return planRequests({ passes: plan.batches.length, groups, split });
+  return planRequests({ passes: plan.batches.length, groups, split, oversized });
 }

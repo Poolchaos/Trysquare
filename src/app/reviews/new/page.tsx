@@ -104,6 +104,8 @@ interface Preflight {
   passes: number;
   /** A batch was split to fit the window, so the S3 count is an estimate. */
   requestsSplit: boolean;
+  /** A file is too large for the window on its own, and is sent anyway. */
+  requestsOversized: boolean;
   passesByProfile: Record<string, number>;
 }
 
@@ -212,6 +214,9 @@ function NewReview() {
     setEffort(effortRunsOn(id, chosenEffort as ReviewEffort) ? chosenEffort : "high");
   }
   const [intent, setIntent] = useState("");
+  // What the pre-flight sizes: taken when the field is left, so it is not
+  // asked again, a fetch each time, on every keystroke (review round 4).
+  const [intentSized, setIntentSized] = useState("");
   // "" means the model's own profile; anything else is a deliberate downgrade
   // sent with both the pre-flight and the creation, so the numbers previewed
   // are the numbers the run will have.
@@ -380,7 +385,8 @@ function NewReview() {
 
   const usableModels = models.filter((row) => isSelectable(row.availability));
   // The first recommended in picker order, the recommended default (D-184).
-  const recommendedName = models.find((row) => row.recommended)?.displayName ?? null;
+  const recommendedName =
+    models.find((row) => row.recommended && isSelectable(row.availability))?.displayName ?? null;
   const unprobed = models.filter((row) => !isSelectable(row.availability));
   // Everything, until one model can actually run a review. Before that the
   // unprobed rows are the whole point of the panel.
@@ -501,6 +507,7 @@ function NewReview() {
     intoBranch,
     rulesetId,
     model,
+    ...(intentSized === "" ? {} : { intent: intentSized }),
     ...(profileOverride === "" ? {} : { profileId: profileOverride }),
     ...(included && linkFrom && linkIntoBranch
       ? { linked: { projectId: included, fromBranch: linkFrom, intoBranch: linkIntoBranch } }
@@ -1015,6 +1022,7 @@ function NewReview() {
               rows={3}
               value={intent}
               onChange={(event) => setIntent(event.target.value)}
+              onBlur={() => setIntentSized(intent.trim())}
               placeholder="Rename the prefs field and migrate every consumer."
             />
           </Field>
@@ -1068,6 +1076,11 @@ function NewReview() {
               {preflight ? (
                 <div className="text-xs text-[var(--color-ink-muted)]">
                   <p className="mb-1 font-medium text-[var(--color-ink)]">Requests by profile</p>
+                  {preflight.contextWindow === null ? null : (
+                    <p className="mb-1">
+                      At this model&apos;s window; a smaller one may split more.
+                    </p>
+                  )}
                   <ul className="grid gap-0.5">
                     {Object.entries(preflight.requestsByProfile).map(([name, count]) => (
                       <li key={name} className="flex justify-between gap-4 tabular-nums">
@@ -1268,6 +1281,12 @@ function NewReview() {
                   {preflight.passes === 1 ? "pass" : "passes"}, split into{" "}
                   {preflight.requestsByStage.s3_adversarial} requests to fit this model&apos;s
                   window. The split is estimated, so the run may make a few more or fewer.
+                </p>
+              ) : null}
+              {preflight.requestsOversized ? (
+                <p className="mt-3 text-xs text-[var(--color-warning)]">
+                  A file is larger than this model&apos;s usable window on its own. It is sent
+                  anyway, and the model may not read all of it.
                 </p>
               ) : null}
 

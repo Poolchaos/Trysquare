@@ -84,6 +84,7 @@ afterEach(() => {
 async function adversarialRequestsSent(
   profile: ReviewProfile,
   contextWindow: number | undefined,
+  intent?: string,
 ): Promise<number> {
   const asked: StageRequest[] = [];
   await runReviewPipeline({
@@ -94,6 +95,7 @@ async function adversarialRequestsSent(
     rules: RULES,
     profile,
     ...(contextWindow === undefined ? {} : { contextWindow }),
+    ...(intent === undefined ? {} : { intent }),
     systemPromptFor: (_stage, batch) => systemFor(batch?.rules ?? RULES),
     secondVerifier: "claude-opus-5-5",
     run: async (request) => {
@@ -108,9 +110,9 @@ async function adversarialRequestsSent(
   return asked.filter((request) => request.stage === "s3_adversarial").length;
 }
 
-function counted(profile: ReviewProfile, contextWindow: number | undefined) {
+function counted(profile: ReviewProfile, contextWindow: number | undefined, intent?: string) {
   return countRequests({
-    content: { files: FILES, sweepHits: [] },
+    content: { files: FILES, sweepHits: [], ...(intent === undefined ? {} : { intent }) },
     files: FILES.map((entry) => `${entry.slug}/${entry.file.path}`),
     rules: RULES,
     profile,
@@ -120,6 +122,8 @@ function counted(profile: ReviewProfile, contextWindow: number | undefined) {
 }
 
 describe("the requests a review is said to make", () => {
+  // Decomposed sends one file per request, so no window splits it: its case
+  // holds the count to the run, not the split (review round 4).
   for (const profile of ["full-context", "chunked", "decomposed"] as const) {
     for (const contextWindow of [undefined, 1_000]) {
       it(`are the adversarial requests a ${profile} run sends, window ${contextWindow ?? "unknown"}`, async () => {
@@ -143,6 +147,25 @@ describe("the requests a review is said to make", () => {
     });
     expect(plan.total).toBe(6);
     expect(plan.split).toBe(false);
+  });
+
+  it("count the intent every adversarial prompt carries, as the run does", async () => {
+    // Left out, a long intent made the run split a batch the count kept
+    // whole (review round 4).
+    const intent = "Rename the field. ".repeat(60);
+    const plan = counted("full-context", 2_000, intent);
+    expect(plan.byStage.s3_adversarial).toBeGreaterThan(
+      counted("full-context", 2_000).byStage.s3_adversarial,
+    );
+    expect(plan.byStage.s3_adversarial).toBe(
+      await adversarialRequestsSent("full-context", 2_000, intent),
+    );
+  });
+
+  it("say when a file is too large for the window on its own", () => {
+    // Sent anyway, as the run notes; the count said nothing (review round 4).
+    expect(counted("decomposed", 300).oversized).toBe(true);
+    expect(counted("decomposed", undefined).oversized).toBe(false);
   });
 
   it("say when a batch was split to fit the window, which makes the count an estimate", () => {

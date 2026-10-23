@@ -4655,3 +4655,15 @@ verified evidence, in writing, here.
   says the second verifier is asked only when verification proves a
   finding and any request may need one more, and, when the window splits
   the work, how many passes became how many requests, as an estimate.
+- 2026-10-23 Review round 4 (over WP-F): the pre-flight sizes the intent,
+  which every adversarial prompt carries, taken when its field is left so
+  the pre-flight is not asked again on every keystroke; it qualifies the
+  dependency's changed symbols as the run does; it says when a file is too
+  large for the window on its own, which it reported as fitting
+  (`requestsOversized`, and `withinWindow` false); the per-profile totals
+  say they are at the chosen model's window; and "is recommended" names
+  only a model that can be picked now. RUNBOOK says why a split count is an
+  estimate: the run orders files by the risk its first stage finds, which
+  the pre-flight cannot know. The decomposed profile sends one file per
+  request, so no window splits it; its case holds the count to the run.
+  04's pre-flight line brought up to the screen.

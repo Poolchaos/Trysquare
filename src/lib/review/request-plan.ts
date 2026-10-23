@@ -20,9 +20,16 @@ export interface RequestPlan {
   total: number;
   /** A batch was split to fit the window, so the S3 count is an estimate. */
   split: boolean;
+  /** A file is too large for the window on its own, and is sent anyway. */
+  oversized: boolean;
 }
 
-export function planRequests(s3: { passes: number; groups: number; split: boolean }): RequestPlan {
+export function planRequests(s3: {
+  passes: number;
+  groups: number;
+  split: boolean;
+  oversized: boolean;
+}): RequestPlan {
   const byStage: Record<ModelStage, number> = {
     s1_risk: 1,
     s2_comprehension: 1,
@@ -32,5 +39,5 @@ export function planRequests(s3: { passes: number; groups: number; split: boolea
     s5b_second_verification: 1,
   };
   const total = Object.values(byStage).reduce((sum, count) => sum + count, 0);
-  return { byStage, passes: s3.passes, total, split: s3.split };
+  return { byStage, passes: s3.passes, total, split: s3.split, oversized: s3.oversized };
 }

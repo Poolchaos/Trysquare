@@ -44,6 +44,8 @@ const body = z
     rulesetId: z.string().min(1),
     model: reviewModelSchema,
     profileId: reviewProfileSchema.optional(),
+    // In every adversarial prompt, so sized with it (review round 4).
+    intent: z.string().optional(),
     linked: z
       .object({
         projectId: z.string().min(1),
@@ -133,10 +135,15 @@ export function POST(request: Request): Promise<Response> {
     // only the hits in its files, so unqualified ones were never sized.
     const slugOf = (repo: string) =>
       repo === "linked" && linkedSide ? linkedSide.slug : primary.slug;
+    // Symbols under the dependency's slug, as the run qualifies them.
+    const symbols = changedSymbols.map((symbol) =>
+      linkedSide ? { ...symbol, path: `${linkedSide.slug}/${symbol.path}` } : symbol,
+    );
     const content = {
       files: entries,
+      ...(input.intent === undefined || input.intent.trim() === "" ? {} : { intent: input.intent }),
       sweepHits: sweep.hits.map((hit) => ({ ...hit, path: `${slugOf(hit.repo)}/${hit.path}` })),
-      ...(changedSymbols.length === 0 ? {} : { changedSymbols }),
+      ...(symbols.length === 0 ? {} : { changedSymbols: symbols }),
     };
 
     const model = getModel(db, input.model);
@@ -207,13 +214,14 @@ export function POST(request: Request): Promise<Response> {
       changedSymbols: changedSymbols.length,
       estimatedTokens: estimate,
       contextWindow: window,
-      // Whether the run fits each request in the window without splitting a
-      // rule batch, as the run itself decides it.
-      withinWindow: window === null ? null : !requests.split,
+      // Whether every request fits the window as it stands: no rule batch split,
+      // and no file too large on its own.
+      withinWindow: window === null ? null : !requests.split && !requests.oversized,
       requests: requests.total,
       requestsByStage: requests.byStage,
       passes: requests.passes,
       requestsSplit: requests.split,
+      requestsOversized: requests.oversized,
       requestsByProfile,
       passesByProfile,
       excludedPairs: plan.excluded.length,

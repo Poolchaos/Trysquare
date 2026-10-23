@@ -149,7 +149,8 @@ Every step below is free until you press Start review.
    were fetched, file and hunk counts, sweep hits, changed exported symbols,
    an estimated token count, and the number of model requests over every
    stage: one each, the adversarial stage's rule batches split to fit the
-   model's window as the run splits them (an estimate when it splits), and
+   model's window (an estimate when it splits, since the run orders files by
+   the risk its first stage finds), a file too large for the window said, and
    the second verifier's, made only when the first proves a finding. Any
    request can need one more if its answer comes back in the wrong shape.
    Two lines about

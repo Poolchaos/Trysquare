@@ -157,8 +157,9 @@ probe error and age; a probe-now action sits in the picker). Engine mode and
 a deliberate profile downgrade live in an advanced fold; default headless.
 Primary action: Start review.
 Pre-flight summary: commits pinned, merge base, files/hunks counts, sweep
-hit count, composed prompt token estimate vs the model's context window,
-the selected profile, and its estimated request count. Choosing a model
+hit count, composed prompt token estimate, the selected profile, every
+request by stage, and whether the model's window splits the work or a file
+is too large for it on its own. Choosing a model
 whose profile is weaker than `full-context` states plainly that the review
 will run as more, smaller requests and why.
 

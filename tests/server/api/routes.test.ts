@@ -1013,6 +1013,7 @@ describe("looking before you pay", () => {
         requests: number;
         requestsByStage: Record<string, number>;
         requestsSplit: boolean;
+        requestsOversized: boolean;
         withinWindow: boolean | null;
       };
     };
@@ -1025,8 +1026,34 @@ describe("looking before you pay", () => {
     const split = await ask();
     expect(split.requestsSplit).toBe(true);
     expect(split.withinWindow).toBe(false);
+    expect(split.requestsOversized).toBe(false);
     expect(split.requestsByStage.s3_adversarial).toBeGreaterThan(1);
     expect(split.requests).toBe(5 + split.requestsByStage.s3_adversarial!);
+
+    // The intent goes into every adversarial prompt, so it is sized too,
+    // where the pre-flight used to leave it out (review round 4).
+    const withIntent = (await (
+      await routes.preflight.POST(
+        post("http://localhost/api/reviews/preflight", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          rulesetId,
+          model: "claude-opus-5[1m]",
+          intent: "Rename the prefs field and migrate every consumer. ".repeat(40),
+        }),
+      )
+    ).json()) as { estimatedTokens: number };
+    expect(withIntent.estimatedTokens).toBeGreaterThan(split.estimatedTokens);
+
+    // A window too small for any one file: each is sent anyway, and said so.
+    recordProbeSuccess(db, "claude-opus-5[1m]", {
+      resolvedId: "claude-opus-5[1m]",
+      contextWindow: 100,
+    });
+    const tiny = await ask();
+    expect(tiny.requestsOversized).toBe(true);
+    expect(tiny.withinWindow).toBe(false);
   }, 120_000);
 
   it("says which branch it could not find, rather than a bare failure", async () => {
