@@ -10,6 +10,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ZodError } from "zod";
 import { parseUnifiedDiff } from "@/lib/git/diff";
 import { DeletionsNotAccountedError, StageDidNotAccountError } from "@/lib/review/coverage";
 import type { Db } from "@/server/db/client";
@@ -888,9 +889,27 @@ describe("the proof a verified finding carries", () => {
     expect(finding.verificationNote).toContain("does not overlap the cited line 2");
   });
 
+  it("kills a proof that ends in another file, even at overlapping lines", async () => {
+    await proveWith({ evidence: [step(1), { ...step(2), path: "app/other.ts" }] });
+    const finding = listFindings(db, reviewId)[0]!;
+    expect(finding.killedBy).toBe("quote_check");
+    expect(finding.verificationNote).toBe(
+      "The proof ends in app/other.ts, not in the cited app/orders.ts.",
+    );
+  });
+
   it("is refused without a step, or without a search for a guard", async () => {
-    await expect(proveWith({ evidence: [] })).rejects.toThrow();
-    await expect(proveWith({ guardsSearched: [] })).rejects.toThrow();
+    // By the field left empty: a bare rejection passed on any throw at all.
+    for (const field of ["evidence", "guardsSearched"]) {
+      const refused: unknown = await proveWith({ [field]: [] }).then(
+        () => null,
+        (error: unknown) => error,
+      );
+      expect(refused).toBeInstanceOf(ZodError);
+      expect((refused as ZodError).issues.map((issue) => issue.path.join("."))).toEqual([
+        `verdicts.0.${field}`,
+      ]);
+    }
   });
 });
 
