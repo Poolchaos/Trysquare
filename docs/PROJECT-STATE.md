@@ -8,17 +8,21 @@ Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
 ## Status
 
 - 2026-10-23: the proof-and-steps plan (`plans/PROOF-AND-STEPS-PLAN.md`)
-  is in build (D-186): WP-A to WP-E are DONE, with three review rounds
+  is in build (D-186): WP-A to WP-G are DONE, with five review rounds
   over them (in DECISIONS). Opus 5.5 is the recommended default and Haiku
   is retired; a verified finding carries a proof the app checks step by
   step, and is proven again by a second verifier on the other strong
   family, both agreeing; an open question cannot be confirmed, can be
   verified again as a paid request said before it is sent, and one left
-  out is reported apart from the dismissed (D-190). Next is WP-F, what the
-  picker and pre-flight say each model gets.
-  `./verify.sh --e2e` exits 0 at 6587dff with 1241 unit tests passing, 10
-  skipped, and 101 browser tests; CI last passed all three at fec78cc (run
-  39956627327).
+  out is reported apart from the dismissed (D-190). The picker and
+  pre-flight say what each model gets and count every request a review
+  makes; the run is shown as five steps, live and once finished. Next is
+  WP-H, the fixture on Opus 5.5, waiting for the maintainer's go on
+  spend; then WP-I, the design of what a branch builds checked too
+  (D-191), and WP-J, its real-model proof.
+  `./verify.sh --e2e` exits 0 at f657fd1 with 1273 unit tests passing, 10
+  skipped, and 103 browser tests; CI passed all three at f657fd1 (run
+  39985920272).
 - 2026-10-22: every row of the MVP (`plans/MVP-PLAN.md`) is DONE but 7.4,
   the maintainer's own review, which they drive, with 3.7's hand-drive of
   Mode B folded into it. 4.2 found chained stages running under the first
