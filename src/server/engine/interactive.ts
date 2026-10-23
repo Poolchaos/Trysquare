@@ -220,11 +220,10 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
 
     // The same refusal a headless stage makes: a review stored before review
     // creation checked aliases must not hand a person `--model opus`.
-    if (!isFullModelId(options.model)) {
-      throw new StageFailedError(
-        "spawn",
-        `Refused to start the stage: ${aliasRefusal(options.model)}`,
-      );
+    // The request's own, the second verifier's, over the review's (WP-E).
+    const model = request.model ?? options.model;
+    if (!isFullModelId(model)) {
+      throw new StageFailedError("spawn", `Refused to start the stage: ${aliasRefusal(model)}`);
     }
 
     await mkdir(options.exchangeDir, { recursive: true });
@@ -246,7 +245,7 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
         prompt: request.prompt,
         answerPath,
         worktreeRoot: options.worktreeRoot,
-        model: options.model,
+        model,
       }),
     );
 
@@ -256,7 +255,7 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
     const commands = launchCommandsFor(
       cli,
       options.worktreeRoot,
-      launchArgsFor({ model: options.model, exchangeDir: options.exchangeDir, files }),
+      launchArgsFor({ model, exchangeDir: options.exchangeDir, files }),
     );
     options.onEvent?.(request.stage, {
       kind: "text",

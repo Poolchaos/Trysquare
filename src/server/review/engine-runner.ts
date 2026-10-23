@@ -176,7 +176,7 @@ export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
     const outcome = await runStage({
       prompt: request.prompt,
       systemPrompt,
-      model: options.model,
+      model: request.model ?? options.model,
       outputFormat: "stream-json",
       ...(options.effort === undefined ? {} : { effort: options.effort }),
       ...(options.maxBudgetUsd === undefined ? {} : { maxBudgetUsd: options.maxBudgetUsd }),
@@ -230,7 +230,7 @@ export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
         "change any judgement you already made; only fix the shape.",
       ].join("\n"),
       systemPrompt,
-      model: options.model,
+      model: request.model ?? options.model,
       outputFormat: "stream-json",
       ...(options.effort === undefined ? {} : { effort: options.effort }),
       ...(options.maxBudgetUsd === undefined ? {} : { maxBudgetUsd: options.maxBudgetUsd }),

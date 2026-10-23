@@ -107,6 +107,29 @@ describe("the file a person is handed", () => {
     expect(readFileSync(filesFor(ask).system, "utf8")).toBe("You are a reviewer.");
   });
 
+  it("prints a request's own model over the review's", async () => {
+    // The second verifier runs on the other strong family (WP-E).
+    const said: string[] = [];
+    const reviewer = createInteractiveEngine({
+      exchangeDir: join(dir, "bundle"),
+      worktreeRoot: join(dir, "worktree"),
+      model: "claude-fable-5[1m]",
+      directives: [],
+      rules: [],
+      timeoutMs: 5_000,
+      pollMs: 25,
+      claudePath: FAKE_CLI,
+      onEvent: (_stage, event) => {
+        if (event.kind === "text") said.push(event.text);
+      },
+    });
+    answerLater(JSON.stringify({ files: [] }));
+    await reviewer.run({ ...ask, model: "claude-opus-5-5" });
+
+    expect(said[0]).toContain("claude-opus-5-5");
+    expect(said[0]).not.toContain("claude-fable-5[1m]");
+  });
+
   it("tells the person the command and the CLI version it needs, starting nothing itself", async () => {
     // Mode B spawns nothing, a version check included: it names the CLI and
     // says what the command needs, and the person runs it.

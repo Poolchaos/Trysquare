@@ -90,6 +90,8 @@ export interface StageRequest {
   fresh?: true;
   /** The one finding the request is about, recorded on its row; never sent. */
   findingId?: string;
+  /** Asked of this model rather than the review's: the second verifier's (WP-E). */
+  model?: string;
 }
 
 export interface StageResponse {

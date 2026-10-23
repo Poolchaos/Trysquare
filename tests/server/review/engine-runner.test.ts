@@ -154,6 +154,27 @@ describe("driving the CLI", () => {
     delete process.env.FAKE_CLAUDE_RECORD;
   });
 
+  it("asks a request's own model over the review's", async () => {
+    // The second verifier runs on the other strong family (WP-E).
+    process.env.FAKE_CLAUDE_SCENARIO = "json-result";
+    process.env.FAKE_CLAUDE_RESULT = JSON.stringify({ verdicts: [] });
+    const recordPath = join(workDir, "record-model.json");
+    process.env.FAKE_CLAUDE_RECORD = recordPath;
+
+    await makeRunner().run({
+      stage: "s5_verification",
+      systemPrompt: "s",
+      prompt: "p",
+      model: "claude-opus-5-5",
+    });
+
+    const record = JSON.parse((await import("node:fs")).readFileSync(recordPath, "utf8")) as {
+      args: string[];
+    };
+    expect(record.args[record.args.indexOf("--model") + 1]).toBe("claude-opus-5-5");
+    delete process.env.FAKE_CLAUDE_RECORD;
+  });
+
   it("runs verification in a fresh session, with no sight of the earlier reasoning", async () => {
     // A verifier that can see the argument for a finding is not an
     // independent check on it.
