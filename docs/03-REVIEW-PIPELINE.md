@@ -9,23 +9,22 @@ deterministic; the AI does judgment, code does bookkeeping.**
 
 ## Not built yet
 
-This document specifies the target. Verified against the code on 2026-08-03,
+This document specifies the target. Verified against the code on 2026-10-23,
 these parts of it do not exist yet. They stay here as requirements rather
-than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
-is named.
+than being edited away.
 
-- Giving S4 the pre-change file contents. The bundle writes `base/` and
-  nothing reads it back, so a deleted file is reviewed from its diff rather
-  than from what it contained. U3.
-- Reconciling S4 answers. The stage returns `reviewedDeletions` and the
-  pipeline discards it, then marks every file reviewed unconditionally, which
-  makes the deleted-file invariant unfalsifiable. U3.
-- Ordering later stages high-risk first (section 1). S1 risk tags are stored
-  and never read. U12.
 - Sweeping whole changed files where the protocol asks for it (section 0.4).
-  Sweeps run over added lines only. Unowned.
-- Showing the verbatim rule text and the diff hunk during confirmation
-  (section 7), and bulk dismissal by rule. U7.
+  Sweeps run over added lines only (`lib/review/sweep.ts`), and a rule has
+  no way to ask for more. Unowned.
+- Bulk dismissal by rule (section 7). A finding is dismissed one at a time,
+  by id. Unowned: U7 built the rule text and the diff hunk in confirmation
+  and did not take this on.
+
+Trued up 2026-10-23: three items listed here since 2026-08-03 are built and
+gone from this list. S4 reads each deleted file's pre-change copy from
+`base/` (U3), its `reviewedDeletions` are reconciled against the files it
+was shown and a file closes only on that evidence (U3), and the stages after
+S1 work its risk-tagged files first (U12).
 
 ## 0. S0 Prepare (deterministic app code, no AI)
 
