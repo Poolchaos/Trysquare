@@ -275,8 +275,8 @@ export default function HomePage() {
                 value={percent(board.precision)}
                 note={
                   board.precision === null
-                    ? "nothing decided yet"
-                    : "confirmed of decided, unproven aside"
+                    ? "no proven finding decided yet"
+                    : "confirmed of the proven findings decided"
                 }
               />
               <StatTile

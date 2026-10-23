@@ -8,14 +8,15 @@ Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
 ## Status
 
 - 2026-10-23: the proof-and-steps plan (`plans/PROOF-AND-STEPS-PLAN.md`)
-  is in build (D-186): WP-A, WP-B, WP-C and WP-D1 are DONE, then a review
-  round over them (R1 to R10 in DECISIONS). Opus 5.5 is the recommended
-  default and Haiku is retired; a verified finding carries a proof the app
-  checks step by step; an open question cannot be confirmed, and one left
-  out is reported apart from the dismissed (D-190). Next is WP-D2.
-  `./verify.sh --e2e` exits 0 at 5b2893b with 1208 unit tests passing, 10
-  skipped, and 101 browser tests; CI last passed all three at 0a3a3ae (run
-  39921418416).
+  is in build (D-186): WP-A to WP-D are DONE, with two review rounds over
+  them (in DECISIONS). Opus 5.5 is the recommended default and Haiku is
+  retired; a verified finding carries a proof the app checks step by step;
+  an open question cannot be confirmed, can be verified again as a paid
+  request said before it is sent, and one left out is reported apart from
+  the dismissed (D-190). Next is WP-E, the second verifier.
+  `./verify.sh --e2e` exits 0 at 75789ce with 1222 unit tests passing, 10
+  skipped, and 101 browser tests; CI last passed all three at 7b6d489 (run
+  39936635146).
 - 2026-10-22: every row of the MVP (`plans/MVP-PLAN.md`) is DONE but 7.4,
   the maintainer's own review, which they drive, with 3.7's hand-drive of
   Mode B folded into it. 4.2 found chained stages running under the first
@@ -156,7 +157,7 @@ are accepted; anything else is refused by name.
   it can run one; `real-path.ts` - a path resolved through its links.
 - `src/server/api/` - one response shape for every route.
 - `src/proxy.ts` - the request guard in front of every route (MVP WP 2.3).
-- `src/app/api/` - 35 route handlers. `src/app/` - 9 screens, plus a root
+- `src/app/api/` - 36 route handlers. `src/app/` - 9 screens, plus a root
   error boundary, a not-found page, and a metadata layout per segment.
 - `src/components/` - the shared UI vocabulary, the top bar, and the
   confirmation queue.

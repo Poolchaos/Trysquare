@@ -4569,3 +4569,9 @@ verified evidence, in writing, here.
   finding's title (F8). The notice is one live region, mounted empty, and
   clears on a move or a decision (F9); a decision clears a stale move's
   focus (F12). A dismissed open question is badged "left out" (F13).
+- 2026-10-23 Review round 2, F11: the precision tile said "nothing decided
+  yet" when every decision was a finding left out unproven, which D-190
+  counts neither way, and "confirmed of decided, unproven aside" was
+  terse. It says "no proven finding decided yet" and "confirmed of the
+  proven findings decided". F14: PROJECT-STATE counts 36 route handlers
+  and names WP-E next; the plan's WP-D row is DONE with its commits.
