@@ -429,6 +429,8 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(proof).toContainText("The changed code is reached as the finding describes.");
     await expect(proof.getByText(/^1\. app\//)).toBeVisible();
     await expect(proof).toContainText("Guards searched");
+    // Proven by both verifiers, each in a session of its own (WP-E).
+    await expect(proof).toContainText("Proven by claude-fable-5[1m] and again by claude-opus-5-5");
   });
 
   await test.step("after a click, the keyboard still drives the queue", async () => {

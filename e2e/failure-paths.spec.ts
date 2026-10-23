@@ -1228,9 +1228,16 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   await expect(dialog).toHaveCount(0);
   await expect(verifyButton).toBeFocused();
   await verifyButton.click();
-  await expect(dialog).toContainText("This sends one new request to claude-fable-5[1m]");
-  await expect(dialog).toContainText(/It can take up to \d+ minutes\./);
+  // Both verifiers, as in a run (WP-E): the second only if the first proves it.
+  await expect(dialog).toContainText(
+    "This asks claude-fable-5[1m] again in a fresh session and, if it proves the finding, " +
+      "claude-opus-5-5 too: up to two requests",
+  );
+  await expect(dialog).toContainText(/Each can take up to \d+ minutes\./);
   expect(sent).toHaveLength(0);
+  // From the top: the dialog taking the focus scrolls the page, and a body
+  // capture of a scrolled page draws the fixed top bar out of place.
+  await page.evaluate(() => window.scrollTo(0, 0));
   for (const [scheme, name] of [
     ["light", "verify-again-light"],
     ["dark", "verify-again-dark"],
@@ -1252,13 +1259,13 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   const sendRequest = page.getByRole("button", { name: "Send request" });
   await sendRequest.click();
   await expect(page.getByText(/^This request will cost API usage, billed per token/)).toBeVisible();
-  await expect(dialog).toContainText("uses your Claude usage, billed per token.");
+  await expect(dialog).toContainText("using your Claude usage, billed per token.");
 
   // In flight: the finding cannot be dismissed nor the review completed, and
   // the dialog says how long it can take and that leaving stops it.
   await page.getByLabel("Why leave it out?").fill("Asked while it was out.");
   await sendRequest.click();
-  await expect(dialog).toContainText("Waiting for the answer, up to");
+  await expect(dialog).toContainText("Waiting for the answer.");
   await expect(dialog).toContainText("Leaving this page stops the request.");
   await expect(page.getByRole("button", { name: "Dismiss" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Complete review" })).toBeDisabled();

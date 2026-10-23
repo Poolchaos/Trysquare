@@ -114,6 +114,8 @@ interface Snapshot {
     effort: string;
     intent: string | null;
     engineMode: string;
+    /** The model that proves each finding again (WP-E); null before it first ran. */
+    verifierModel?: string | null;
     pausedReason: string | null;
     pausedResetsAt: number | null;
     mergedDetectedAt: string | null;
@@ -1142,6 +1144,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 <ConfirmationQueue
                   reviewId={id}
                   model={review.model}
+                  verifierModel={review.verifierModel ?? null}
                   findings={findings}
                   onChanged={() => void reload()}
                   onCheckoutLeft={setCheckoutLeft}

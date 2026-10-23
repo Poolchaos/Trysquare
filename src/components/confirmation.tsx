@@ -46,9 +46,13 @@ export interface Finding {
   raisedSeverity?: string | null;
   /** The verifier's proof as stored, read by proofOf. */
   proofJson?: string | null;
+  /** The second verifier's, which agreed (WP-E). */
+  secondProofJson?: string | null;
 }
 
 const proofSchema = z.object({
+  /** The verifier's own rating; the second's is shown beside the first's (D-188). */
+  severity: z.string().optional(),
   trigger: z.string(),
   evidence: z.array(
     z.object({ path: z.string(), lineStart: z.number(), lineEnd: z.number(), quote: z.string() }),
@@ -60,10 +64,10 @@ const proofSchema = z.object({
  * How the verifier proved a finding, every step already checked against the
  * code (proof-and-steps plan, WP-C); null for a finding without one.
  */
-function proofOf(finding: Finding): z.infer<typeof proofSchema> | null {
-  if (!finding.proofJson) return null;
+function proofOf(json: string | null | undefined): z.infer<typeof proofSchema> | null {
+  if (!json) return null;
   try {
-    const parsed = proofSchema.safeParse(JSON.parse(finding.proofJson));
+    const parsed = proofSchema.safeParse(JSON.parse(json));
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
@@ -111,6 +115,7 @@ function severityRank(severity: string): number {
 export function ConfirmationQueue({
   reviewId,
   model,
+  verifierModel,
   findings,
   onChanged,
   onCheckoutLeft,
@@ -118,6 +123,8 @@ export function ConfirmationQueue({
   reviewId: string;
   /** The model a verify-again asks, named before it is sent. */
   model: string;
+  /** The model that proves each finding again (WP-E), null before the review first ran. */
+  verifierModel: string | null;
   findings: Finding[];
   onChanged: () => void | Promise<void>;
   /** Completed, but the review's checkout would not go: the server's note saying so. */
@@ -236,7 +243,8 @@ export function ConfirmationQueue({
   }, []);
 
   const current = queue[Math.min(selected, Math.max(queue.length - 1, 0))];
-  const currentProof = current ? proofOf(current) : null;
+  const currentProof = current ? proofOf(current.proofJson) : null;
+  const secondProof = current ? proofOf(current.secondProofJson) : null;
   // An open question is left out unproven, not judged harmless (D-190).
   const reasonQuestion =
     current?.status === "open_question" ? "Why leave it out?" : "Why is this not a problem?";
@@ -688,6 +696,11 @@ export function ConfirmationQueue({
                   Finder said {current.raisedSeverity}
                 </span>
               ) : null}
+              {secondProof?.severity && secondProof.severity !== current.severity ? (
+                <span className="text-xs text-[var(--color-ink-muted)]">
+                  Second verifier said {secondProof.severity}
+                </span>
+              ) : null}
               {current.status === "open_question" ? (
                 <Badge tone="question">open question</Badge>
               ) : null}
@@ -868,6 +881,15 @@ export function ConfirmationQueue({
                     {currentProof.guardsSearched.join("; ")}
                   </span>
                 </p>
+                {/* Both verifiers, each in a session of its own (WP-E). */}
+                {secondProof && verifierModel ? (
+                  <p className="mt-2">
+                    <span className="font-medium">Proven by </span>
+                    <span className="text-[var(--color-ink-muted)]">
+                      <Mono>{model}</Mono> and again by <Mono>{verifierModel}</Mono>
+                    </span>
+                  </p>
+                ) : null}
               </section>
             ) : null}
 
@@ -1027,23 +1049,24 @@ export function ConfirmationQueue({
                       {againTerms ? (
                         <p>
                           <span className="font-medium">Verify this finding again? </span>
-                          This sends one new request to <Mono>{model}</Mono>, in a fresh session,
-                          and uses your Claude usage
+                          This asks <Mono>{model}</Mono> again in a fresh session and, if it proves
+                          the finding,{" "}
+                          {verifierModel ? <Mono>{verifierModel}</Mono> : "the second verifier"}{" "}
+                          too: up to two requests, using your Claude usage
                           {againTerms.billing?.state === "perToken"
                             ? ", billed per token"
                             : againTerms.billing?.state === "maybePerToken"
                               ? ", which may be billed per token"
                               : ""}
-                          . It can take up to {againTerms.minutes} minutes. If it is proven, you can
-                          confirm it; if not, it stays an open question.
+                          . Each can take up to {againTerms.minutes} minutes. If both prove it, you
+                          can confirm it; if not, it stays an open question.
                         </p>
                       ) : (
                         <p className="text-[var(--color-ink-muted)]">Reading what it costs.</p>
                       )}
                       {againBusy && againTerms ? (
                         <p className="text-[var(--color-ink-muted)]">
-                          Waiting for the answer, up to {againTerms.minutes} minutes. Leaving this
-                          page stops the request.
+                          Waiting for the answer. Leaving this page stops the request.
                         </p>
                       ) : null}
                     </div>

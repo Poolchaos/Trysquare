@@ -563,16 +563,45 @@ describe("verifying an open question again (proof-and-steps plan, WP-D2)", () =>
     verifyAgain(db, findingId, { dataDir, claudePath: FAKE_CLI });
 
   it("proves an open question that the new answer proves, and keeps its proof", async () => {
-    const { reviewId, finding } = await leaveOneOpen((verdict) => [answer(verdict)]);
+    // Proven by both verifiers, as a finding in a run is (WP-E).
+    const { reviewId, finding } = await leaveOneOpen((verdict) => [
+      answer(verdict),
+      answer(verdict),
+    ]);
 
     await expect(again(finding.id)).resolves.toMatchObject({ status: "verified" });
     const proven = requireFinding(db, finding.id);
     expect(findingStatusOf(proven)).toBe("verified");
     expect(proven.proofJson).not.toBeNull();
-    // A request like any other: recorded, and charged to the review.
-    expect(
-      listForReview(db, reviewId).filter((row) => row.stage === "s5_verification"),
-    ).toHaveLength(2);
+    expect(proven.secondProofJson).not.toBeNull();
+    // Requests like any other: recorded, and charged to the review.
+    const rows = listForReview(db, reviewId);
+    expect(rows.filter((row) => row.stage === "s5_verification")).toHaveLength(2);
+    expect(rows.filter((row) => row.stage === "s5b_second_verification")).toHaveLength(2);
+    const args = recordedArgv();
+    expect(args[args.length - 1]![args[args.length - 1]!.indexOf("--model") + 1]).toBe(
+      "claude-opus-5-5",
+    );
+  }, 120_000);
+
+  it("leaves it open when the second verifier does not agree, naming it", async () => {
+    const { finding } = await leaveOneOpen((verdict) => [
+      answer(verdict),
+      {
+        verdicts: [
+          {
+            ref: candidateToken(verdict.path, verdict.lineStart),
+            verdict: "killed",
+            note: "A caller already checks this.",
+          },
+        ],
+      },
+    ]);
+
+    await expect(again(finding.id)).resolves.toMatchObject({ status: "open_question" });
+    expect(requireFinding(db, finding.id).verificationNote).toBe(
+      "The second verifier, claude-opus-5-5, refuted it: A caller already checks this.",
+    );
   }, 120_000);
 
   it("holds the new answer to the quotation check", async () => {
@@ -582,19 +611,23 @@ describe("verifying an open question again (proof-and-steps plan, WP-D2)", () =>
 
     await expect(again(finding.id)).resolves.toMatchObject({ status: "killed" });
     expect(requireFinding(db, finding.id).killedBy).toBe("quote_check");
+    // Nothing proved, so the second verifier is not asked.
+    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("7");
   }, 120_000);
 
   it("asks again on a second press rather than replaying the first answer", async () => {
     const { finding } = await leaveOneOpen((verdict) => [
       answer({ ...verdict, verdict: "open_question", note: "Still could not tell." }),
       answer(verdict),
+      answer(verdict),
     ]);
 
     await expect(again(finding.id)).resolves.toMatchObject({ status: "open_question" });
     expect(requireFinding(db, finding.id).verificationNote).toBe("Still could not tell.");
     await expect(again(finding.id)).resolves.toMatchObject({ status: "verified" });
-    // Six for the run, its second verifier included, and one for each press.
-    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("8");
+    // Six for the run; one for the first press, unsettled; two for the second,
+    // proven by both verifiers.
+    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("9");
   }, 120_000);
 
   it("refuses a finding that is not an open question, asking nothing", async () => {

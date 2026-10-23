@@ -104,7 +104,12 @@ import type { ReviewEngine } from "../engine/adapter";
 import { createInteractiveEngine } from "../engine/interactive";
 import { createEngineRunner } from "./engine-runner";
 import { runReviewPipeline, type PipelineResult, type StageRequest } from "./pipeline";
-import { applyVerdicts, parseVerdicts, renderVerificationFor } from "./verification";
+import {
+  applySecondVerdicts,
+  applyVerdicts,
+  parseVerdicts,
+  renderVerificationFor,
+} from "./verification";
 
 /** Twenty minutes. A stage that reads a large change set is not quick. */
 const DEFAULT_STAGE_TIMEOUT_MINUTES = 20;
@@ -505,11 +510,38 @@ export async function verifyAgain(
       findingId: finding.id,
     });
     const verdicts = parseVerdicts(response.output, 1);
-    const tally = await applyVerdicts(context, [finding], verdicts);
+    const { held, ...tally } = await applyVerdicts(context, [finding], verdicts, { hold: true });
     // No verdict for it, or only for a ref it was not given: still open, and
     // the old note would read as this answer's.
     if (tally.verified + tally.killed + tally.openQuestions === 0) {
       markOpenQuestion(db, finding.id, "Verification returned no verdict for this finding.");
+    }
+    // Proven by the first, then asked of the second, as in a run: a finding
+    // proven again is proven by both, or left open naming the one that did
+    // not agree (WP-E, D-188). Fresh too, so a press never replays.
+    if (held.length > 0) {
+      const verifierModel =
+        review.verifierModel ?? pairedVerifierFor(getModel(db, review.model)?.family);
+      assertNotCancelled(options.signal);
+      const second = await runner.run({
+        stage: "s5b_second_verification",
+        systemPrompt: composeSystemPrompt({
+          directives: snapshot.directives,
+          rules: snapshot.rules,
+          stage: "s5b_second_verification",
+          includeFullRules: false,
+          outputContract: outputContractFor(stageSchemaFor("s5b_second_verification")),
+        }),
+        prompt: renderVerificationFor(
+          held.map((proven) => proven.finding),
+          context,
+          held.map((proven) => proven.ref),
+        ),
+        model: verifierModel,
+        fresh: true,
+        findingId: finding.id,
+      });
+      await applySecondVerdicts(context, held, parseVerdicts(second.output, 1), verifierModel);
     }
     const after = findingStatusOf(requireFinding(db, finding.id));
     appendRunNote(db, review.id, {

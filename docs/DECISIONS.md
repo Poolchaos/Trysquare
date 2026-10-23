@@ -4608,3 +4608,12 @@ verified evidence, in writing, here.
   six calls, so the counts its tests hold were raised by one, each for
   that reason. Mode B prints the second verifier's command on its own
   model.
+- 2026-10-23 WP-E2 step 3: verifying an open question again asks both
+  verifiers, as a run does: the first in a fresh session and, if it proves
+  the finding, the second on the review's frozen verifier model, also
+  fresh. Proven by both, it can be confirmed; anything else leaves it
+  open, naming the verifier that did not agree. The dialog says so, up to
+  two requests and each one's timeout; the waiting line no longer repeats
+  the minutes. The card names both verifiers on a finding they proved,
+  and shows the second's rating beside the first's where they differ
+  (D-188).

@@ -640,17 +640,20 @@ describe("verifying an open question again (WP-D2, review round 2)", () => {
   it("leaves its call out of the run's stages, its cost on the review", async () => {
     // The panel took the last S5 row for the stage, so a one-finding call's
     // cost, time or failure stood in for the run's (review round 2, F6).
+    // Two calls, each verifier's: proven again is proven by both (WP-E).
+    const proven = (verdict: VerdictByLine) => ({
+      verdicts: [
+        verdictAnswer(
+          candidateToken(verdict.path, verdict.lineStart),
+          verdict,
+          verdict.lineStart,
+          verdict.path,
+        ),
+      ],
+    });
     const { reviewId, findingId } = await withAnOpenQuestion((verdict) => [
-      {
-        verdicts: [
-          verdictAnswer(
-            candidateToken(verdict.path, verdict.lineStart),
-            verdict,
-            verdict.lineStart,
-            verdict.path,
-          ),
-        ],
-      },
+      proven(verdict),
+      proven(verdict),
     ]);
     const before = manager.snapshot(reviewId);
 
