@@ -15,7 +15,7 @@ import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { expect, test, type Locator, type Route } from "@playwright/test";
 import { answerOnce, routeUntilStopped } from "./answer-once";
-import { APP_REPO, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
+import { APP_REPO, COUNTER_FILE, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
 
 /** Unix seconds, and deliberately a fixed moment so the banner is checkable. */
 const RESETS_AT = 1785408600;
@@ -952,6 +952,34 @@ test("the scan theater is a dialog the keyboard stays in", async ({ page }) => {
   // And the stall goes with it: left armed, the usage-limit test after this
   // stalled in its first stage and never reached its limit.
   rmSync(STALL_TRIGGER, { force: true });
+});
+
+test("the scan theater follows the review from stage to stage", async ({ page }) => {
+  // It re-read the review only when its status changed, which a running
+  // review's does not between Risk and Verification, so it named Risk while
+  // the later stages ran (proof-and-steps plan, WP-A). Held in its third
+  // model call, the adversarial stage.
+  // The two calls let through use up scripted answers, which every later
+  // review reads by count, so the count is put back once this one is
+  // cancelled; the held call un-counts itself.
+  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 30_000, skip: 2 }), "utf8");
+  await startAReview(page);
+  const theater = page.getByRole("dialog", {
+    name: "Watching the review of feature/rename-prefs into main",
+  });
+  await expect(theater).toBeVisible({ timeout: 60_000 });
+  await expect(theater.getByText("Adversarial", { exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(theater.getByText(/stage 4 of 7/)).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+  await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
+  rmSync(STALL_TRIGGER, { force: true });
+  writeFileSync(COUNTER_FILE, callsBefore, "utf8");
 });
 
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({

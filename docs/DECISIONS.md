@@ -4405,3 +4405,15 @@ verified evidence, in writing, here.
   verifier answering that the rule does not apply kills it. Rejected: the
   lower of the two, and treating a disagreement as unproven.
   PG-4, the steps view's mockup, is still to be shown.
+- 2026-10-23 D-186 DECIDED by the maintainer ("mock plan and implement"):
+  the proof-and-steps plan is built now, reversing D-184 item 4's order;
+  G1 is then judged on the plan's fresh fixture run (WP-H) rather than on
+  MVP 7.3's. The PG-4 mockup of the five steps, live in both themes and
+  finished, is shown first, and WP-G waits on its approval. WP-H spends,
+  so its go is asked before it runs.
+- 2026-10-23 WP-A (proof-and-steps plan): the run view re-read the review
+  only when its status changed, which a running review's does not between
+  Risk and Verification, so the scan theater named Risk, stage 2 of 7,
+  while S3 ran, its own log saying "Adversarial started" beneath. Shown
+  with the fake CLI held in its third call; it now re-reads on each stage
+  start, which the server announces only after writing it.

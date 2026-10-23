@@ -582,8 +582,13 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       if (parsed.kind === "done") runEnded = true;
 
       // Durable facts are written before they are announced, so a read here
-      // always finds the row already changed.
-      if (parsed.kind === "status" || parsed.kind === "done") void reload();
+      // always finds the row already changed. A stage's start too: the
+      // status does not change between Risk and Verification, and read on
+      // status alone the page named Risk while the later stages ran
+      // (proof-and-steps plan, WP-A).
+      if (parsed.kind === "status" || parsed.kind === "done" || parsed.kind === "stage") {
+        void reload();
+      }
     });
 
     // The server let this stream go because the page fell behind, and says so

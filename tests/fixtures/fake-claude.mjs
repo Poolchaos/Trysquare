@@ -462,6 +462,12 @@ switch (scenario) {
       } catch {
         stall = null;
       }
+      // `skip` lets that many calls through first, so a test can hold a
+      // review in a later stage than the first.
+      if (stall && Number(stall.skip ?? 0) > 0) {
+        writeFileSync(stallFile, JSON.stringify({ ...stall, skip: Number(stall.skip) - 1 }));
+        stall = null;
+      }
       if (stall) {
         rmSync(stallFile, { force: true });
         // Un-counted, so the answer this call would have used is still there
