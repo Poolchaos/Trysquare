@@ -91,8 +91,8 @@ interface FileContext {
 }
 
 const UNDECIDED = new Set(["verified", "open_question"]);
-// Only a proven finding can go into the report; an open question is
-// dismissed, or verified again (PG-2 (a), D-185).
+// Only a proven finding can go into the report; an open question can only
+// be dismissed (PG-2 (a), D-185).
 const CONFIRMABLE = new Set(["verified"]);
 
 /** Worst first: a queue is worked from the top, so the top must be the worst. */

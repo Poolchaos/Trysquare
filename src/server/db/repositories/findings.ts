@@ -243,7 +243,7 @@ export class OpenQuestionNotConfirmableError extends Error {
   constructor(readonly findingId: string) {
     super(
       "This finding is an open question: verification could not prove it, so it cannot go " +
-        "into the report. Dismiss it, or verify it again.",
+        "into the report. Dismiss it.",
     );
     this.name = "OpenQuestionNotConfirmableError";
   }

@@ -192,7 +192,7 @@ no pending sweep hits past S6.
 Finding status machine:
 `candidate -> verified | killed | open_question` (S5, fresh session);
 `verified -> confirmed | dismissed` (the maintainer only, S7 UI);
-`open_question -> confirmed | dismissed` (surfaced to the maintainer as questions).
+`open_question -> dismissed` (unproven, so never confirmed: PG-2 (a), D-185).
 Killed findings are kept for engine-quality metrics, and listed with their
 reasons under the review's run detail (D-97).
 

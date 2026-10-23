@@ -4480,3 +4480,8 @@ verified evidence, in writing, here.
   other code. The prompt now says what each field holds, that the steps
   run from the trigger to the failure, the last in the cited file over the
   cited lines, and what is discarded, as 03 already said it did.
+- 2026-10-23 Review round R3: WP-D1's refusal told the person to "Dismiss
+  it, or verify it again", and its comments, 03 and 02 said the same or
+  still allowed confirming, while verifying again (WP-D2) is not built.
+  Each now says only what can be done, dismiss it; WP-D2 adds the other
+  way back when it lands.

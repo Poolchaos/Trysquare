@@ -297,7 +297,8 @@ describe("a step the state machine does not allow", () => {
     expect(refused.status).toBe(409);
     const body = (await refused.json()) as { code: string; error: string };
     expect(body.code).toBe("OpenQuestionNotConfirmableError");
-    expect(body.error).toMatch(/Dismiss it, or verify it again/);
+    // Only what can be done: verifying an open question again is not built.
+    expect(body.error).toMatch(/cannot go into the report\. Dismiss it\.$/);
 
     expect((await routes.confirm.POST(post(), params(finding.id))).status).toBe(200);
     const again = await routes.confirm.POST(post(), params(finding.id));
