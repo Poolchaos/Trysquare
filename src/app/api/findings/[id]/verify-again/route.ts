@@ -4,12 +4,11 @@
  *
  * A paid request, so refused unless the page said so first, and answered
  * when the request is: one stage under the stage timeout, which a closed tab
- * aborts. Run as a job instead, it would need the queue and a stream for one
- * question a person is waiting on.
+ * aborts. The job manager counts it against the reviews at once, as they
+ * share one usage limit, and stops it with a drain (review round 2).
  */
 
 import { z } from "zod";
-import { configuredClaudePath } from "@/server/cli-path";
 import {
   billingNotShown,
   billingShownSchema,
@@ -17,7 +16,7 @@ import {
   cliReadiness,
 } from "@/server/cli-readiness";
 import { failed, handler, isNamed, ok, readJson } from "@/server/api/respond";
-import { assertCanVerifyAgain, verifyAgain } from "@/server/review/service";
+import { assertCanVerifyAgain } from "@/server/review/service";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +31,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   return handler(async () => {
-    const { db, dataDir } = runtime();
+    const { db, dataDir, manager } = runtime();
     const { id } = await context.params;
     const input = await readJson(request, body);
     try {
@@ -41,15 +40,24 @@ export async function POST(
       if (readiness.refusal) throw cliNotReady(readiness);
       const unshown = billingNotShown(readiness, input.billingShown);
       if (unshown !== null) throw unshown;
-      return ok(
-        await verifyAgain(db, id, {
-          dataDir,
-          claudePath: configuredClaudePath(db),
-          signal: request.signal,
-        }),
-      );
+      return ok(await manager.verifyAgain(id, request.signal));
     } catch (error) {
       if (isNamed(error, "ReviewNotDecidingError")) return failed(error, 409);
+      // The request's own failures, said for what they are: the server did
+      // not fail (review round 2, F4).
+      if (isNamed(error, "StageFailedError")) {
+        const { errorClass } = error as { errorClass?: unknown };
+        return failed(error, errorClass === "limit" ? 429 : 503);
+      }
+      if (isNamed(error, "ZodError") || isNamed(error, "VerdictsMismatchError")) {
+        return Response.json(
+          {
+            error: `The verifier's answer could not be used, so the finding is still an open question: ${error instanceof Error ? error.message : String(error)}`,
+            code: "VerifierAnswerUnusable",
+          },
+          { status: 502 },
+        );
+      }
       throw error;
     }
   });

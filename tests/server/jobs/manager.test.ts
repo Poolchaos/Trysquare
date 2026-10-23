@@ -35,6 +35,8 @@ import {
   ReviewNotStartableError,
 } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
+import { listFindingsByStatus } from "@/server/db/repositories/findings";
+import { VerifyAgainUnavailableError } from "@/server/review/service";
 import {
   answerSequence,
   buildIdealStageOutputs,
@@ -548,6 +550,98 @@ describe("coming back from a restart", () => {
     expect(replayed).toEqual(["s1_risk", "s2_comprehension"]);
     expect(requireReview(db, reviewId).status).toBe("awaiting_confirmation");
   }, 240_000);
+});
+
+describe("verifying an open question again (WP-D2, review round 2)", () => {
+  /** A finished review whose verifier left its first finding open. */
+  async function withAnOpenQuestion() {
+    const outputs = buildIdealStageOutputs({
+      files: fixture.appFiles.map((file) => ({ repo: "primary" as const, slug: "app", file })),
+      manifest: {
+        ...fixture.manifest,
+        defects: fixture.manifest.defects.filter((defect) => defect.kind !== "cross-repo"),
+      },
+      worktreeRoot: fixture.referenceRoot,
+      rules: PROTOCOL.rules,
+    });
+    const [first, ...rest] = outputs.s5ByLine;
+    writeAnswersDir(
+      join(dataDir, "answers"),
+      answerSequence({
+        ...outputs,
+        s5ByLine: [{ ...first!, verdict: "open_question", note: "Could not tell." }, ...rest],
+      }),
+    );
+    const reviewId = seedReview();
+    start(reviewId);
+    await manager.settled(reviewId);
+    const [finding] = listFindingsByStatus(db, reviewId, ["open_question"]);
+    return { reviewId, findingId: finding!.id };
+  }
+
+  /** In flight until its signal or a drain stops it: the CLI never answers. */
+  function hold(findingId: string, signal?: AbortSignal) {
+    process.env.FAKE_CLAUDE_SCENARIO = "hang";
+    const pending = manager.verifyAgain(findingId, signal);
+    pending.catch(() => {});
+    return pending;
+  }
+
+  it("counts against the reviews at once, so a review started meanwhile waits", async () => {
+    // Two at once share one usage limit, which is why the setting exists.
+    const { findingId } = await withAnOpenQuestion();
+    const stop = new AbortController();
+    const pending = hold(findingId, stop.signal);
+
+    const other = seedReview();
+    expect(start(other)).toBe("queued");
+
+    stop.abort();
+    await expect(pending).rejects.toThrow();
+    expect(manager.isRunning(other)).toBe(true);
+  }, 120_000);
+
+  it("is refused while a review runs, or another is verified again", async () => {
+    const { findingId } = await withAnOpenQuestion();
+    hold(findingId);
+    await expect(manager.verifyAgain(findingId)).rejects.toThrow(VerifyAgainUnavailableError);
+
+    await manager.drain();
+    const running = seedReview();
+    start(running);
+    await expect(manager.verifyAgain(findingId)).rejects.toThrow(/A review is running/);
+  }, 120_000);
+
+  it("keeps its review from being decided, completed or deleted meanwhile", async () => {
+    // Completing removed the checkout the verifier was reading, and a
+    // decision on the finding made the paid answer land nowhere.
+    const { reviewId, findingId } = await withAnOpenQuestion();
+    hold(findingId);
+
+    expect(() => manager.assertNotVerifyingAgain(reviewId)).toThrow(/being verified again/);
+    expect(manager.beginDelete(reviewId, { evenQueued: true })).toBe(false);
+    expect(manager.isRunning(reviewId)).toBe(true);
+  }, 120_000);
+
+  it("is stopped by a shutdown, the finding left open", async () => {
+    const { reviewId, findingId } = await withAnOpenQuestion();
+    const pending = hold(findingId);
+
+    await manager.drain(SHUTDOWN);
+    await expect(pending).rejects.toThrow();
+    expect(listFindingsByStatus(db, reviewId, ["open_question"])).toHaveLength(1);
+    expect(() => manager.assertNotVerifyingAgain(reviewId)).not.toThrow();
+  }, 120_000);
+
+  it("asks nothing for a request already abandoned", async () => {
+    // A tab closed before the CLI started still ran it, and paid.
+    const { findingId } = await withAnOpenQuestion();
+    const gone = new AbortController();
+    gone.abort();
+
+    await expect(manager.verifyAgain(findingId, gone.signal)).rejects.toThrow();
+    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("5");
+  }, 120_000);
 });
 
 describe("the run directory", () => {

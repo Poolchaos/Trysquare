@@ -38,7 +38,14 @@ import { configuredClaudePath } from "../cli-path";
 import { listForReview, usageTotals } from "../db/repositories/stage-executions";
 import { RETIRED_MODEL_IDS } from "@/lib/models/model-id";
 import { DEFAULT_MODEL_CANDIDATES } from "../engine/probe";
-import { prepareAndRun, type PrepareAndRunOptions, type RunOutcome } from "../review/service";
+import {
+  assertCanVerifyAgain,
+  prepareAndRun,
+  verifyAgain,
+  VerifyAgainUnavailableError,
+  type PrepareAndRunOptions,
+  type RunOutcome,
+} from "../review/service";
 import { createReviewBus, type ReviewListener } from "./bus";
 
 /** One at a time. Two reviews share one account's rate limit and one disk. */
@@ -111,6 +118,15 @@ export class JobManager {
   private readonly queue: { reviewId: string; options: PrepareAndRunOptions }[] = [];
   /** Reviews a delete has claimed; see beginDelete. */
   private readonly deleting = new Set<string>();
+  /**
+   * Open questions being verified again, by review (WP-D2). Each is a CLI
+   * call like a run's, so it counts against the reviews at once and stops
+   * with a drain.
+   */
+  private readonly verifying = new Map<
+    string,
+    { findingId: string; controller: AbortController; settled: Promise<unknown> }
+  >();
   private db: Db | undefined;
   private dataDir: string | undefined;
   private claudePath: string | undefined;
@@ -144,8 +160,58 @@ export class JobManager {
     return this.bus.listenerCount(reviewId);
   }
 
+  /** Running, or one of its findings being verified again. */
   isRunning(reviewId: string): boolean {
-    return this.active.has(reviewId);
+    return this.active.has(reviewId) || this.verifying.has(reviewId);
+  }
+
+  /**
+   * Refuses what would pull a review from under a verify-again: a decision
+   * on the finding being verified, whose paid answer would land nowhere, or
+   * completing it, which removes the checkout the verifier reads. Other
+   * findings can be decided meanwhile.
+   */
+  assertNotVerifyingAgain(reviewId: string, findingId?: string): void {
+    const verifying = this.verifying.get(reviewId);
+    if (!verifying || (findingId !== undefined && verifying.findingId !== findingId)) return;
+    throw new VerifyAgainUnavailableError(
+      "A finding of this review is being verified again. Wait for its answer.",
+    );
+  }
+
+  /**
+   * Verifies an open question again, as one CLI call counted against the
+   * reviews at once (review round 2, F2). A signal that aborts, a closed tab,
+   * stops it, and so does a drain.
+   */
+  async verifyAgain(findingId: string, signal?: AbortSignal): Promise<{ status: string }> {
+    const db = this.requireDb();
+    const dataDir = this.dataDir ?? resolveDataDir(process.env, homedir());
+    const { review } = assertCanVerifyAgain(db, findingId, dataDir);
+    this.assertNotVerifyingAgain(review.id);
+    if (this.active.size + this.verifying.size >= this.maxConcurrent()) {
+      throw new VerifyAgainUnavailableError(
+        `${this.active.size > 0 ? "A review is running" : "Another finding is being verified again"}, ` +
+          "and Settings allows that many at once, as they share one usage limit. Try again when " +
+          "it ends.",
+      );
+    }
+
+    const controller = new AbortController();
+    const forward = () => controller.abort(signal?.reason);
+    if (signal?.aborted) forward();
+    else signal?.addEventListener("abort", forward, { once: true });
+    const settled = verifyAgain(db, findingId, {
+      dataDir,
+      claudePath: this.claudePath ?? configuredClaudePath(db),
+      signal: controller.signal,
+    }).finally(() => {
+      signal?.removeEventListener("abort", forward);
+      this.verifying.delete(review.id);
+      this.startQueued();
+    });
+    this.verifying.set(review.id, { findingId, controller, settled });
+    return settled;
   }
 
   isQueued(reviewId: string): boolean {
@@ -165,7 +231,7 @@ export class JobManager {
     // Claimed once only: a second delete's claim, released as it finished,
     // freed the review while the first still removed it (review of the
     // D-166 fixes).
-    if (this.active.has(reviewId) || this.deleting.has(reviewId)) return false;
+    if (this.isRunning(reviewId) || this.deleting.has(reviewId)) return false;
     if (this.isQueued(reviewId)) {
       if (!options.evenQueued) return false;
       this.dequeue(reviewId);
@@ -199,7 +265,7 @@ export class JobManager {
     const judged = this.judge(reviewId, options);
     if (judged !== "startable") return judged;
 
-    if (this.active.size >= this.maxConcurrent()) {
+    if (this.active.size + this.verifying.size >= this.maxConcurrent()) {
       this.queue.push({ reviewId, options });
       return "queued";
     }
@@ -312,8 +378,10 @@ export class JobManager {
    */
   async drain(reason?: unknown): Promise<void> {
     this.queue.length = 0;
-    for (const [, run] of this.active) run.controller.abort(reason);
-    await Promise.allSettled([...this.active.values()].map((run) => run.settled));
+    for (const [, run] of [...this.active, ...this.verifying]) run.controller.abort(reason);
+    await Promise.allSettled(
+      [...this.active.values(), ...this.verifying.values()].map((run) => run.settled),
+    );
   }
 
   snapshot(reviewId: string): ReviewSnapshot {
@@ -472,7 +540,7 @@ export class JobManager {
    * review queued behind room the person had just made (4.23).
    */
   startQueued(): void {
-    while (this.active.size < this.maxConcurrent()) {
+    while (this.active.size + this.verifying.size < this.maxConcurrent()) {
       const next = this.queue.shift();
       if (!next) return;
 

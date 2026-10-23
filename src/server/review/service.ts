@@ -439,9 +439,6 @@ export class VerifyAgainUnavailableError extends Error {
   }
 }
 
-/** One at a time per review: its runner answers one question at a time. */
-const verifyingAgain = new Set<string>();
-
 /**
  * Asks verification about one open question again, in a fresh session, and
  * holds the answer to S5's checks (proof-and-steps plan, WP-D2). Proven, it
@@ -456,7 +453,6 @@ export async function verifyAgain(
   const dataDir = options.dataDir ?? resolveDataDir(process.env, homedir());
   const { finding, review, worktreeRoot } = assertCanVerifyAgain(db, findingId, dataDir);
 
-  verifyingAgain.add(review.id);
   try {
     const snapshot = readReviewSnapshot(db, review.id);
     const { contents: baseContents } = await readBaseContents(
@@ -484,6 +480,9 @@ export async function verifyAgain(
       options,
       alone: true,
     });
+    // A request abandoned before the CLI started, a tab closed or a drain,
+    // asks nothing: the engine stops a call in flight, not one not yet made.
+    assertNotCancelled(options.signal);
     const response = await runner.run({
       stage: "s5_verification",
       systemPrompt: composeSystemPrompt({
@@ -498,7 +497,9 @@ export async function verifyAgain(
     });
     const verdicts = parseVerdicts(response.output, 1);
     const tally = await applyVerdicts(context, [finding], verdicts);
-    if (verdicts.length === 0) {
+    // No verdict for it, or only for a ref it was not given: still open, and
+    // the old note would read as this answer's.
+    if (tally.verified + tally.killed + tally.openQuestions === 0) {
       markOpenQuestion(db, finding.id, "Verification returned no verdict for this finding.");
     }
     const after = findingStatusOf(requireFinding(db, finding.id));
@@ -510,8 +511,14 @@ export async function verifyAgain(
         (tally.killedByQuoteCheck > 0 ? ", its proof not matching the code." : "."),
     });
     return { status: after };
-  } finally {
-    verifyingAgain.delete(review.id);
+  } catch (error) {
+    appendRunNote(db, review.id, {
+      kind: "note",
+      message:
+        `Verifying ${finding.filePath}:${finding.lineStart} again did not finish, so it is ` +
+        `still an open question: ${error instanceof Error ? error.message : String(error)}`,
+    });
+    throw error;
   }
 }
 
@@ -538,15 +545,15 @@ export function assertCanVerifyAgain(db: Db, findingId: string, dataDir: string)
   }
   const worktreeRoot = worktreeRootDir(dataDir, review.id);
   // Without the checkout every step would read as unreadable and the finding
-  // would be killed for a missing file, not for its proof.
-  if (!existsSync(worktreeRoot)) {
+  // would be killed for a missing file, not for its proof. Each repository's,
+  // not only the folder that holds them (review round 2, F15).
+  const slugs = new Set(listLedgerFiles(db, review.id).map((file) => file.path.split("/")[0]!));
+  if (
+    !existsSync(worktreeRoot) ||
+    [...slugs].some((slug) => !existsSync(worktreeRepoDir(dataDir, review.id, slug)))
+  ) {
     throw new VerifyAgainUnavailableError(
       "This review's checkout is gone, so there is no code to verify the finding against.",
-    );
-  }
-  if (verifyingAgain.has(review.id)) {
-    throw new VerifyAgainUnavailableError(
-      "A finding of this review is being verified again already. Wait for its answer.",
     );
   }
 

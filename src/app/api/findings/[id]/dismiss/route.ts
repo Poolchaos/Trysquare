@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { dismissFinding } from "@/server/db/repositories/findings";
+import { dismissFinding, requireFinding } from "@/server/db/repositories/findings";
 import { failed, handler, isNamed, ok, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -25,7 +25,10 @@ export async function POST(
     const { id } = await context.params;
     const { reason } = await readJson(request, body);
     try {
-      return ok({ finding: dismissFinding(runtime().db, id, reason) });
+      const { db, manager } = runtime();
+      // Not while its paid verify-again is out: the answer would land nowhere.
+      manager.assertNotVerifyingAgain(requireFinding(db, id).reviewId, id);
+      return ok({ finding: dismissFinding(db, id, reason) });
     } catch (error) {
       if (isNamed(error, "ReviewNotDecidingError")) return failed(error, 409);
       throw error;

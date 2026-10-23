@@ -41,6 +41,9 @@ export async function POST(
       );
     }
 
+    // Completing removes the checkout a verify-again is reading.
+    manager.assertNotVerifyingAgain(id);
+
     const undecided = listAwaitingDecision(db, id);
     if (undecided.length > 0) {
       return Response.json(

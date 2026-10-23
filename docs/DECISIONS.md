@@ -4537,3 +4537,18 @@ verified evidence, in writing, here.
   Its other button is "Not now", not "Cancel", which names the review's
   own cancel. What the request found is said above the queue, since a
   refuted finding leaves it.
+- 2026-10-23 Review round 2 (over D-190 and WP-D2), its verify-again
+  findings on the server. F2: a verify-again ran outside the job manager,
+  beside a running review, though the reviews-at-once setting exists
+  because they share one usage limit; the manager now runs it, counts it
+  against that setting (a review started meanwhile waits in line, and one
+  is refused while a review runs), and its drain stops it on shutdown (F3).
+  F1: deciding the finding being verified, or completing its review, which
+  removes the checkout the verifier reads, is refused meanwhile, and so is
+  deleting the review; other findings can be decided. F7: a request
+  abandoned before the CLI started asks nothing. F4: a usage limit answers
+  429, a timeout or cancel 503, an answer that cannot be used 502, each
+  noted on the run, not 500. F5: an answer with no verdict for the finding
+  is noted as such. F15: each repository's checkout is checked, not only
+  the folder that holds them. Supersedes WP-D2 step 2's "rejected: running
+  it as a manager job": the manager runs it, still answered synchronously.
