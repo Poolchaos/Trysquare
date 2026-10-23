@@ -13,14 +13,11 @@
  * spending model usage or depending on what a model happens to say today.
  */
 
-import { readFile } from "node:fs/promises";
-import { sep } from "node:path";
 import type { RepoRole, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
 import { opaqueChanges } from "@/lib/git/opaque";
 import { unsafeRepoPathReason } from "@/lib/git/repo-path";
 import type { ChangedSymbol } from "@/lib/git/symbols";
-import { insideRoot } from "@/lib/paths";
-import { assertBatchesCoverEverything, planRuleBatches, renderRule } from "@/lib/rulesets/compose";
+import { assertBatchesCoverEverything, planRuleBatches } from "@/lib/rulesets/compose";
 import type { ImportedRule } from "@/lib/rulesets/model";
 import { budgetFor, estimateTokens, fitsBudget, splitToFit } from "@/lib/review/budget";
 import {
@@ -28,14 +25,12 @@ import {
   assertReconciled,
   citesHunk,
   citesLine,
-  rangesOverlap,
   reconcileAdversarial,
   reconcileDeletions,
   type HunkRef,
   type SweepRef,
   type SymbolRef,
 } from "@/lib/review/coverage";
-import { describeStep, firstFailingStep } from "@/lib/review/evidence";
 import { byRiskOrder, riskOrderedPaths } from "@/lib/review/risk-order";
 import { ruleCodeReader } from "@/lib/review/rule-codes";
 import {
@@ -44,29 +39,24 @@ import {
   comprehensionStageSchema,
   deletionStageSchema,
   riskStageSchema,
-  verificationStageSchema,
 } from "@/lib/review/stage-schemas";
 import { assertSweepComplete, runSweeps } from "@/lib/review/sweep";
 import type { Db } from "@/server/db/client";
 import { appendRunNote } from "@/server/db/repositories/reviews";
-import { realPath } from "@/server/real-path";
+import { applyVerdicts, parseVerdicts, renderVerificationFor } from "./verification";
 import {
   isDeletionCandidate,
-  numberedLines,
   renderAdversarialPrompt,
   renderComprehensionPrompt,
   renderDeletionPrompt,
   renderRiskPrompt,
-  renderVerificationPrompt,
   type ChangedFileEntry,
   type StageContentInput,
 } from "./content";
 import {
   createCandidate,
   listUnresolvedCandidates,
-  markKilled,
   markOpenQuestion,
-  markVerified,
 } from "@/server/db/repositories/findings";
 import {
   assertCoverageComplete,
@@ -169,16 +159,6 @@ export interface PipelineResult {
   adversarialRequests: number;
   /** Rule/file pairs a narrowing profile deliberately did not check. */
   excludedPairs: number;
-}
-
-/** The label a candidate is given in the verification prompt. */
-function refFor(index: number): string {
-  return `C${index + 1}`;
-}
-
-function indexOfRef(ref: string): number {
-  const parsed = Number.parseInt(ref.replace(/^C/i, ""), 10);
-  return Number.isFinite(parsed) ? parsed - 1 : -1;
 }
 
 /** Paths in the ledger are qualified by repository, as the model sees them. */
@@ -631,146 +611,27 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
 
   // S5: verification, in a fresh session with no access to the reasoning that
   // produced the candidates.
+  const verifying = {
+    db,
+    worktreeRoot: input.worktreeRoot,
+    baseContents: input.baseContents,
+    rules: input.rules,
+  };
   const verificationResponse = await input.run({
     stage: "s5_verification",
     systemPrompt: input.systemPromptFor("s5_verification"),
-    prompt: renderVerificationPrompt(
-      candidates.map((finding, index) => ({
-        // Positional, because the candidate order is fixed by the stage
-        // answers that produced it, and those are replayed byte for byte.
-        // A database id here would change on every resume and the
-        // verification stage could never be replayed.
-        ref: refFor(index),
-        path: finding.filePath,
-        lineStart: finding.lineStart,
-        lineEnd: finding.lineEnd,
-        severity: finding.severity,
-        issue: finding.issue,
-        mechanism: finding.mechanism,
-        ruleCode: finding.ruleCode,
-        comment: finding.comment,
-      })),
-      // The verifier reads only the worktree, which a deleted file has left
-      // (D-106), so each one cited comes with it, once.
-      Object.fromEntries(
-        [...new Set(candidates.map((finding) => finding.filePath))].flatMap((path) => {
-          const before = input.baseContents?.get(path);
-          return before === undefined ? [] : [[path, numberedLines(before)]];
-        }),
-      ),
-      // Each cited rule verbatim, once, so whether it applies is judged
-      // against what it says (proof-and-steps plan, WP-C).
-      Object.fromEntries(
-        input.rules
-          .filter((rule) => candidates.some((finding) => finding.ruleCode === rule.code))
-          .map((rule) => [rule.code, renderRule(rule)]),
-      ),
-    ),
+    prompt: renderVerificationFor(candidates, verifying),
   });
-  const verification = rejecting("s5_verification", () => {
-    const parsed = verificationStageSchema.parse(verificationResponse.output);
-    assertVerdictsMatch(parsed.verdicts, candidates.length);
-    return parsed;
-  });
-
-  let verified = 0;
-  let killed = 0;
-  let openQuestions = 0;
-  let killedByQuoteCheck = 0;
-
-  for (const verdict of verification.verdicts) {
-    const finding = candidates[indexOfRef(verdict.ref)];
-    if (!finding) continue;
-
-    if (verdict.verdict === "killed") {
-      markKilled(db, finding.id, verdict.note || "Refuted during verification.", "verification");
-      killed += 1;
-      continue;
-    }
-    if (verdict.verdict === "open_question") {
-      markOpenQuestion(db, finding.id, verdict.note || "Could not be settled from the code.");
-      openQuestions += 1;
-      continue;
-    }
-
-    // A finding the rule it cites does not cover is not a violation of it,
-    // however real the code (proof-and-steps plan, WP-C).
-    if (!verdict.ruleApplies) {
-      markKilled(
-        db,
-        finding.id,
-        `The verifier found that the rule it cites does not apply: ` +
-          `${verdict.note || "no reason given"}`,
-        "verification",
-      );
-      killed += 1;
-      continue;
-    }
-
-    // The last step is the failure, the code the finding is about. The
-    // verifier may correct where it sits, but not move the finding onto
-    // other code: a true quotation of lines the finding is not about
-    // verified it, and the finding then moved to them (D-99).
-    const failure = verdict.evidence[verdict.evidence.length - 1]!;
-    if (failure.path !== finding.filePath || !rangesOverlap(finding, failure)) {
-      markKilled(
-        db,
-        finding.id,
-        failure.path !== finding.filePath
-          ? `The proof ends in ${failure.path}, not in the cited ${finding.filePath}.`
-          : `Verification quoted ${spanOf(failure)}, which does not overlap the cited ` +
-              `${spanOf(finding)}.`,
-        "quote_check",
-      );
-      killed += 1;
-      killedByQuoteCheck += 1;
-      continue;
-    }
-
-    // The verifier says it proved the finding. The program now checks every
-    // step of that proof against the code, because a citation that does not
-    // match is not evidence, however confident the wording. A deleted file
-    // is checked against what it held, the only copy there is (D-106).
-    const contents = new Map<string, string | null>();
-    for (const path of new Set(verdict.evidence.map((step) => step.path))) {
-      contents.set(
-        path,
-        input.baseContents?.get(path) ?? (await readFileIfPossible(input.worktreeRoot, path)),
-      );
-    }
-    const failing = firstFailingStep(verdict.evidence, contents);
-    if (failing !== null) {
-      markKilled(
-        db,
-        finding.id,
-        `${describeStep(verdict.evidence, failing.index)} ${failing.reason}.`,
-        "quote_check",
-      );
-      killed += 1;
-      killedByQuoteCheck += 1;
-      continue;
-    }
-
-    markVerified(db, finding.id, {
-      quotedCode: failure.quote,
-      lineStart: failure.lineStart,
-      lineEnd: failure.lineEnd,
-      note: verdict.note,
-      proof: {
-        severity: verdict.severity,
-        trigger: verdict.trigger,
-        evidence: verdict.evidence,
-        guardsSearched: verdict.guardsSearched,
-      },
-    });
-    verified += 1;
-  }
+  const verdicts = rejecting("s5_verification", () =>
+    parseVerdicts(verificationResponse.output, candidates.length),
+  );
+  const tally = await applyVerdicts(verifying, candidates, verdicts);
 
   // A candidate the verification stage never ruled on is an outstanding
   // question, not a silent pass.
   for (const stranded of listUnresolvedCandidates(db, reviewId)) {
     markOpenQuestion(db, stranded.id, "Verification returned no verdict for this finding.");
-    openQuestions += 1;
+    tally.openQuestions += 1;
   }
 
   // S6: nothing may be outstanding.
@@ -779,10 +640,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   return {
     coverage,
     candidatesRaised: candidates.length,
-    verified,
-    killed,
-    openQuestions,
-    killedByQuoteCheck,
+    ...tally,
     adversarialRequests: adversarial.requestCount,
     excludedPairs: adversarial.excludedPairs,
   };
@@ -1039,41 +897,6 @@ function assertSymbolVerdictsAreBacked(output: AdversarialStageOutput): void {
   if (problems.length > 0) throw new SymbolVerdictUnbackedError(problems);
 }
 
-export class VerdictsMismatchError extends Error {
-  constructor(readonly problems: readonly string[]) {
-    super(
-      `The verification stage's verdicts do not match the candidates it was asked about: ` +
-        `${problems.join("; ")}. A candidate takes one verdict, so the answer is ` +
-        `refused.`,
-    );
-    this.name = "VerdictsMismatchError";
-  }
-}
-
-/**
- * No candidate is given two verdicts. The second was applied as a second
- * state change and threw outside the checks that strike a refused answer, so
- * every resume replayed it (4.17). A verdict for no candidate is left aside
- * as before: its candidate goes to the person as an open question.
- */
-function assertVerdictsMatch(verdicts: readonly { ref: string }[], candidateCount: number): void {
-  const problems: string[] = [];
-  const named = new Map<number, string>();
-  for (const verdict of verdicts) {
-    const index = indexOfRef(verdict.ref);
-    if (index < 0 || index >= candidateCount) continue;
-    const earlier = named.get(index);
-    if (earlier !== undefined) {
-      problems.push(
-        `${refFor(index)} was given more than one verdict (as ${earlier} and ${verdict.ref})`,
-      );
-      continue;
-    }
-    named.set(index, verdict.ref);
-  }
-  if (problems.length > 0) throw new VerdictsMismatchError(problems);
-}
-
 export class FindingPathError extends Error {
   constructor(
     readonly path: string,
@@ -1138,12 +961,6 @@ function findingAt(
   return candidates.find((finding) => finding.filePath === path && citesLine(finding, line));
 }
 
-function spanOf(range: { lineStart: number; lineEnd: number }): string {
-  return range.lineStart === range.lineEnd
-    ? `line ${range.lineStart}`
-    : `lines ${range.lineStart} to ${range.lineEnd}`;
-}
-
 function repositoriesOf(input: PipelineInput): readonly { slug: string; repo: RepoRole }[] {
   if (input.repositories) return input.repositories;
   const bySlug = new Map(input.files.map((entry) => [entry.slug, entry.repo]));
@@ -1182,22 +999,4 @@ function hunksCoveredBy(
   return listHunks(db, ledgerFile.id)
     .filter((hunk) => citesHunk(finding, hunk))
     .map((hunk) => ({ path: finding.path, hunkIndex: hunk.hunkIndex }));
-}
-
-async function readFileIfPossible(root: string, qualifiedPath: string): Promise<string | null> {
-  try {
-    // A path a model named is contained like one from a diff: one that leaves
-    // the worktree reads as unreadable, and the finding citing it is killed.
-    // By where it really is, and read from there: a link the change
-    // committed passes the text check and led the read wherever it pointed,
-    // as it did the context route's (D-142, D-143; D-181 item 1).
-    const [target, realRoot] = await Promise.all([
-      realPath(insideRoot(root, qualifiedPath)),
-      realPath(root),
-    ]);
-    if (target !== realRoot && !target.startsWith(realRoot + sep)) return null;
-    return await readFile(target, "utf8");
-  } catch {
-    return null;
-  }
 }

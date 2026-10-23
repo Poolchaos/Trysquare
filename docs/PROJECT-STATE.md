@@ -144,9 +144,10 @@ are accepted; anything else is refused by name.
 - `src/server/engine/` - the only code that spawns claude, plus the
   `ReviewEngine` seam and the interactive (Mode B) engine, which spawns
   nothing and exchanges prompt and answer files with a person's own session.
-- `src/server/review/` - the pipeline, the engine runner, the checkpointing
-  runner that makes a resumed stage free, the service that runs a review from
-  a row, merged detection, and the report assembler.
+- `src/server/review/` - the pipeline, the verification stage's prompt and
+  the checks on its verdicts, the engine runner, the checkpointing runner
+  that makes a resumed stage free, the service that runs a review from a
+  row, merged detection, and the report assembler.
 - `src/server/jobs/` - the event bus, the job manager, and the SSE stream.
 - `src/server/projects/` - cloning a project in the background.
 - `src/server/runtime.ts` - the one door to the database and the job
