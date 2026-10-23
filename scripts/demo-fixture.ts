@@ -41,6 +41,7 @@ import { probeModel, readCliStatus } from "@/server/engine/probe";
 import { configuredClaudePath } from "@/server/cli-path";
 import { pairedVerifierFor } from "@/lib/models/pairing";
 import { demoRefusal, describeSignIn } from "./lib/demo-billing";
+import { findsDefect } from "./lib/demo-score";
 import { JobManager } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
 
@@ -82,13 +83,15 @@ interface Defect {
   line: number;
   severity: string;
   kind: string;
+  /** Where the change was made, for a defect whose harm is elsewhere (D-195). */
+  changeSite?: { repo: string; file: string; line: number | null };
 }
 
 /** The two worktree slugs the demo checks the repositories out under. */
 const APP_SLUG = "app";
 const CORE_SLUG = "shared-core";
 
-function qualifiedPath(defect: Defect): string {
+function qualifiedPath(defect: { repo: string; file: string }): string {
   return `${defect.repo === "app" ? APP_SLUG : CORE_SLUG}/${defect.file}`;
 }
 
@@ -348,12 +351,18 @@ function scoreAgainstManifest(
     // MISSED for ever, and it would have read as a model that could not see
     // across the two repositories rather than a scorer that could not.
     const path = qualifiedPath(defect);
-    const where = `${path}:${defect.line}`;
-    // Within two lines: a reviewer that cites the guard rather than the line
-    // it guards has still found the defect.
-    const hit = verified.find(
-      (finding) => finding.filePath === path && Math.abs(finding.lineStart - defect.line) <= 2,
-    );
+    const site = defect.changeSite;
+    const where =
+      `${path}:${defect.line}` +
+      (site === undefined
+        ? ""
+        : ` or ${qualifiedPath(site)}${site.line === null ? "" : `:${site.line}`}`);
+    const keyed = {
+      path,
+      line: defect.line,
+      ...(site === undefined ? {} : { changeSite: { path: qualifiedPath(site), line: site.line } }),
+    };
+    const hit = verified.find((finding) => findsDefect(finding, keyed));
     (hit ? found : missed).push({ id: defect.id, where });
   }
 

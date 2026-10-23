@@ -390,6 +390,9 @@ const DEFECTS = [
     marker: "await retryOnce(",
     kind: "deleted-file",
     deletedFile: "src/orders/retry.ts",
+    // Or the deleted module itself, the change, its proof running to this
+    // caller (D-195); anywhere in it, a deleted file having no lines left.
+    changeSite: { repo: "app", file: "src/orders/retry.ts" },
     ruleCode: "12",
     // CRITICAL, and the file must keep sorting after src/auth/guard.ts:
     // e2e/journey.spec.ts asserts hunk context for the first-sorted CRITICAL
@@ -420,6 +423,9 @@ const DEFECTS = [
     file: "src/settings/prefs.ts",
     // Unique to the consumer function: the import line has no "* 1000".
     marker: "DEFAULT_TIMEOUT_SECONDS * 1000",
+    // Or the constant, the change, its proof running to this consumer: both
+    // real-model runs cited it there (D-195).
+    changeSite: { repo: "shared-core", file: "types.ts", marker: "DEFAULT_TIMEOUT_SECONDS = 5" },
     ruleCode: "14",
     severity: "WARNING",
     description:
@@ -591,6 +597,22 @@ export function buildSeededRepos(root) {
       kind: "addition",
       ...defect,
       line: lineOf(defect.repo === "app" ? appDir : coreDir, defect.file, defect.marker),
+      ...(defect.changeSite === undefined
+        ? {}
+        : {
+            changeSite: {
+              repo: defect.changeSite.repo,
+              file: defect.changeSite.file,
+              line:
+                defect.changeSite.marker === undefined
+                  ? null
+                  : lineOf(
+                      defect.changeSite.repo === "app" ? appDir : coreDir,
+                      defect.changeSite.file,
+                      defect.changeSite.marker,
+                    ),
+            },
+          }),
     })),
     cleanFiles: CLEAN_FILES,
     changedSymbols: CHANGED_SYMBOLS,

@@ -4757,3 +4757,13 @@ verified evidence, in writing, here.
   The S5 prompt, the check, the schema's comment and 03 say the new rule.
   Rejected: keeping the rule, and only rewording the prompt, which already
   said it plainly and was broken three times in eleven.
+- 2026-10-23 D-195 DECIDED (the maintainer, from D-193): the fixture's key
+  accepts the place a change was made, as well as where its harm shows,
+  for the two defects whose change is in another file: the shortened
+  default at shared-core/types.ts:7 beside the consumer prefs.ts:8, and the
+  deleted module anywhere in app/src/orders/retry.ts beside its caller
+  dispatch.ts:4. Both real-model runs (MVP 7.3, WP-H) cited them at the
+  change with a proof running to the harm, and the key counted them
+  missed. The matching is scripts/lib/demo-score.ts, tested. Scored again
+  under it, WP-H's verified findings are 8/11, the three still missed being
+  the three open questions D-194 addresses. Rejected: keeping the key.
