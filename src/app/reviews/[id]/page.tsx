@@ -932,7 +932,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               </Button>
             ) : null}
             {review.status === "awaiting_confirmation" && queueRows.length > 0 ? (
-              <span className="mr-2 flex items-center gap-2 text-dense">
+              // Its own row on a phone, so the buttons after it stay together.
+              <span className="mr-2 flex w-full items-center gap-2 text-dense sm:w-auto">
                 <span className="text-[var(--color-ink-muted)] tabular-nums">
                   {decidedRows} of {queueRows.length} decided
                 </span>

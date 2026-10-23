@@ -21,7 +21,7 @@ export function PageHeader({
           <div className="mt-1 text-body text-[var(--color-ink-muted)]">{subtitle}</div>
         ) : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
   );
 }

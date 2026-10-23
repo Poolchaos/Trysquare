@@ -616,7 +616,9 @@ export function ConfirmationQueue({
           : "No findings."}
       </p>
 
-      <div className="grid gap-4 lg:grid-cols-[20rem_1fr]">
+      {/* Bounded on a phone too: a bare grid sized its one column to the
+          widest path, and Linux fonts pushed the queue off the screen. */}
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
         <nav aria-label="Findings" tabIndex={0} className="lg:max-h-[42rem] lg:overflow-y-auto">
           {SEVERITY_ORDER.filter((severity) =>
             queue.some((finding) => finding.severity.toUpperCase() === severity),
@@ -628,7 +630,7 @@ export function ConfirmationQueue({
                   ({queue.filter((finding) => finding.severity.toUpperCase() === severity).length})
                 </span>
               </h3>
-              <ul className="grid gap-1">
+              <ul className="grid grid-cols-[minmax(0,1fr)] gap-1">
                 {queue.map((finding, index) =>
                   finding.severity.toUpperCase() === severity ? (
                     <li key={finding.id}>
@@ -710,7 +712,7 @@ export function ConfirmationQueue({
                   {current.dismissedFrom === "open_question" ? "left out" : "dismissed"}
                 </Badge>
               ) : null}
-              <Mono className="text-xs text-[var(--color-ink-muted)]">
+              <Mono className="min-w-0 text-xs break-all text-[var(--color-ink-muted)]">
                 {current.filePath}:{current.lineStart}
                 {current.lineEnd > current.lineStart ? `-${current.lineEnd}` : ""}
               </Mono>

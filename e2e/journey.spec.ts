@@ -16,6 +16,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { answerOnce, routeUntilStopped } from "./answer-once";
+import { sidewaysOverflow } from "./overflow";
 import { APP_REPO, PROTOCOL_PATH, REFUTED_ISSUE, REFUTED_NOTE } from "./setup";
 
 /**
@@ -452,9 +453,8 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     }
     await page.emulateMedia({ colorScheme: "light" });
     await page.setViewportSize({ width: 390, height: 844 });
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
-    ).toBeLessThanOrEqual(0);
+    const sideways = await sidewaysOverflow(page);
+    expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
     await shoot("summary-phone");
     if (desktop) await page.setViewportSize(desktop);
   });
@@ -911,9 +911,8 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.getByRole("heading", { name: "Left out unproven (1)" }).scrollIntoViewIfNeeded();
     // A quoted line wider than a phone widened the report's whole list, and
     // every card ran off the screen (graded D on this shot, 2026-10-23).
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
-    ).toBeLessThanOrEqual(0);
+    const sideways = await sidewaysOverflow(page);
+    expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
     await page.screenshot({
       path: join(EVIDENCE, "report-unproven-phone.png"),
       animations: "disabled",
