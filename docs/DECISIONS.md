@@ -4713,3 +4713,35 @@ verified evidence, in writing, here.
   is reported as having its design not checked. Rejected: Trysquare
   driving the app from a list of URLs, which cannot reach a state behind a
   click or a sign-in, and doing both.
+- 2026-10-23 D-193 WP-H's run, read (the proof-and-steps plan's fresh
+  evidence; the G1 verdict stays the maintainer's). The fixture reviewed
+  through the CLI, signed in through a subscription, on claude-opus-5-5
+  with claude-fable-5-1 the second verifier, both probed at a 1,000,000
+  token window: 11 candidates raised, one for each of the 11 planted
+  defects, 8 proven by both verifiers, 3 open questions, none refuted, none
+  discarded by the quotation check, none in the two clean files;
+  $3.1545 cost-equivalent, 122 fresh input, 34,911 output, 99,816 cache
+  write and 143,960 cached read tokens, 344.4s. The key scores 7/11. Of its
+  four misses, two are raised where the change was made, not where the key
+  looks: the shortened default at shared-core/types.ts:7, proven by both,
+  its proof running from app/src/settings/prefs.ts:1 and :7-8 to the
+  constant, and the deleted module at app/src/orders/retry.ts, its first
+  proof running from app/src/orders/dispatch.ts:1 and :4 to the deleted
+  file; MVP 7.3 showed the same of its two misses. The deleted module and
+  the other two misses, the removed await and the timezone boundary, are
+  the three open questions: in each
+  the first verifier's proof held and the second's was refused, because
+  its last step was not at the cited lines (save.ts line 5 for line 4,
+  period.ts line 3 for line 2, and dispatch.ts for retry.ts). The S5
+  prompt states that rule ("The last step is the failure itself, in the
+  file the candidate cites"); Opus 5.5 kept it in all 11, Fable 5.1 broke
+  it in 3, ending each proof at the consequence rather than the cited
+  code. So the three real defects are not proven by both and cannot be
+  confirmed without verifying again. The eight proven by both were read
+  proof by proof: each first proof traces a path that ends at the cited
+  lines; two second proofs, guard.ts and total.ts, quote only the cited
+  function, a proof of where rather than of a path. A refused second
+  proof is not kept, only its note. Questions for the maintainer: whether
+  the proof rule should require the cited lines on the path rather than
+  at its end, and whether the key should accept the change site for the
+  two defects whose harm is in another file.

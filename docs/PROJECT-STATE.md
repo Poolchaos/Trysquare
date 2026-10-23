@@ -16,10 +16,12 @@ Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
   verified again as a paid request said before it is sent, and one left
   out is reported apart from the dismissed (D-190). The picker and
   pre-flight say what each model gets and count every request a review
-  makes; the run is shown as five steps, live and once finished. Next is
-  WP-H, the fixture on Opus 5.5, waiting for the maintainer's go on
-  spend; then WP-I, the design of what a branch builds checked too
-  (D-191), and WP-J, its real-model proof.
+  makes; the run is shown as five steps, live and once finished. WP-H ran
+  the fixture on Opus 5.5 with Fable 5.1 second (D-193): all 11 defects
+  raised, 8 proven by both, 3 open questions where Fable 5.1 ended its
+  proof off the cited lines, 7/11 by the key. Next is WP-I, the design of
+  what a branch builds checked too (D-191, D-192), and WP-J, its
+  real-model proof.
   `./verify.sh --e2e` exits 0 at f657fd1 with 1273 unit tests passing, 10
   skipped, and 103 browser tests; CI passed all three at f657fd1 (run
   39985920272).

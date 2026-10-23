@@ -19,6 +19,11 @@ Notes:
   evidence is recorded; the half that judges whether findings are worth
   reading needs a real model, which costs the maintainer's usage. Nothing in
   this repository will mark this gate passed, and a run of the fake cannot.
+  Added 2026-10-23, the proof-and-steps plan's WP-H on the maintainer's
+  go: Opus 5.5 with Fable 5.1 the second verifier, all 11 planted defects
+  raised, 8 proven by both, 3 open questions, 7/11 by the key, nothing in
+  the clean files, $3.1545 in 344.4s; read in D-193, evidence in
+  `review/2026-10-23-fg2/173944-claude-opus-5-5/`.
 
 - Evidence under `review/` is gitignored and therefore exists only on the
   machine that produced it, currently the maintainer's. A reader cloning this
