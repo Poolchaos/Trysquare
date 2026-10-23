@@ -388,6 +388,22 @@ describe("the verification prompt", () => {
     );
   });
 
+  it("says what a verified finding's proof must hold, as the app checks it", () => {
+    // The schema the stage sees names the fields but not their rules, and a
+    // proof listed from the failure back to the trigger was killed as a
+    // quotation of other code (review round R2).
+    const prompt = renderVerificationPrompt(candidates).replace(/\s+/g, " ");
+    for (const field of ["ruleApplies", "severity", "trigger", "evidence", "guardsSearched"]) {
+      expect(prompt).toContain(`${field}:`);
+    }
+    expect(prompt).toContain("from the trigger to the failure, in that order");
+    expect(prompt).toContain(
+      "The last step is the failure itself, in the file the candidate cites",
+    );
+    expect(prompt).toContain("leave one you cannot settle as an open question");
+    expect(prompt.indexOf("{")).toBe(prompt.indexOf("```json") + 8);
+  });
+
   it("handles having nothing to verify", () => {
     expect(renderVerificationPrompt([])).toContain("no candidate findings");
   });

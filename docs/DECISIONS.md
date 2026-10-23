@@ -4472,3 +4472,11 @@ verified evidence, in writing, here.
   pre-flight, which held no model rule of its own, refuses an alias as the
   start does. Rejected: treating a retired id as mechanical-only, whose
   message says it is registered when it is not.
+- 2026-10-23 Review round R2: WP-C2 checked a proof the verifier was never
+  told the rules of. The S5 prompt still asked for one quotation, and the
+  output contract it sees is the schema's JSON form, which names the
+  fields but carries none of their comments, so a proof listed from the
+  failure back to the trigger would have been killed as a quotation of
+  other code. The prompt now says what each field holds, that the steps
+  run from the trigger to the failure, the last in the cited file over the
+  cited lines, and what is discarded, as 03 already said it did.
