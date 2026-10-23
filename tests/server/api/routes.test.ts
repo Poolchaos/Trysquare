@@ -941,6 +941,8 @@ describe("looking before you pay", () => {
       sweepLiterals: string[];
       estimatedTokens: number;
       requests: number;
+      requestsByStage: Record<string, number>;
+      requestsSplit: boolean;
       contextWindow: number | null;
     };
 
@@ -961,7 +963,18 @@ describe("looking before you pay", () => {
     // Every pattern in this protocol is a real regex, so none is read as text.
     expect(body.sweepLiterals).toEqual([]);
     expect(body.estimatedTokens).toBeGreaterThan(0);
-    expect(body.requests).toBeGreaterThanOrEqual(1);
+    // Every request the run makes, not S3's rule batches alone, which was
+    // four short of every run (WP-F): one each, and full-context's one pass.
+    expect(body.requestsByStage).toEqual({
+      s1_risk: 1,
+      s2_comprehension: 1,
+      s3_adversarial: 1,
+      s4_deletions: 1,
+      s5_verification: 1,
+      s5b_second_verification: 1,
+    });
+    expect(body.requests).toBe(6);
+    expect(body.requestsSplit).toBe(false);
     // No probe has run in this suite, so the window is honestly unknown
     // rather than guessed at.
     expect(body.contextWindow).toBeNull();
@@ -970,6 +983,50 @@ describe("looking before you pay", () => {
     const reviews = (await (await routes.reviews.GET()).json()) as { reviews: unknown[] };
     const after = (await (await routes.reviews.GET()).json()) as { reviews: unknown[] };
     expect(after.reviews.length).toBe(reviews.reviews.length);
+  }, 120_000);
+
+  it("counts the requests a window splits the work into, and says it split", async () => {
+    // A model probed with a window one token short of the whole prompt: the
+    // run splits its one batch, so the count does too (WP-F). On a model of
+    // its own, so the suite's unprobed Fable stays unknown.
+    const { db } = (await import("@/server/runtime")).runtime();
+    const { recordProbeSuccess } = await import("@/server/db/repositories/models");
+    const protocol = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/x", { name: "Split rules", tier: "global", markdown: protocol }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+    const ask = async () => {
+      const answered = await routes.preflight.POST(
+        post("http://localhost/api/reviews/preflight", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          rulesetId,
+          model: "claude-opus-5[1m]",
+        }),
+      );
+      return (await answered.json()) as {
+        estimatedTokens: number;
+        requests: number;
+        requestsByStage: Record<string, number>;
+        requestsSplit: boolean;
+        withinWindow: boolean | null;
+      };
+    };
+    const unknown = await ask();
+    expect(unknown.requestsSplit).toBe(false);
+    recordProbeSuccess(db, "claude-opus-5[1m]", {
+      resolvedId: "claude-opus-5[1m]",
+      contextWindow: Math.floor((unknown.estimatedTokens - 1) / 0.8),
+    });
+    const split = await ask();
+    expect(split.requestsSplit).toBe(true);
+    expect(split.withinWindow).toBe(false);
+    expect(split.requestsByStage.s3_adversarial).toBeGreaterThan(1);
+    expect(split.requests).toBe(5 + split.requestsByStage.s3_adversarial!);
   }, 120_000);
 
   it("says which branch it could not find, rather than a bare failure", async () => {

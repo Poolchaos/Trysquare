@@ -147,7 +147,12 @@ Every step below is free until you press Start review.
 4. **Read the pre-flight.** It appears once the branches, ruleset and model
    are chosen, and costs nothing: the commits it would pin and when their refs
    were fetched, file and hunk counts, sweep hits, changed exported symbols,
-   an estimated token count and the number of model requests. Two lines about
+   an estimated token count, and the number of model requests over every
+   stage: one each, the adversarial stage's rule batches split to fit the
+   model's window as the run splits them (an estimate when it splits), and
+   the second verifier's, made only when the first proves a finding. Any
+   request can need one more if its answer comes back in the wrong shape.
+   Two lines about
    the sweep are worth reading before you start. A pattern that is not a valid
    regular expression, which is how most people write `new Date(` or
    `console.log(`, is searched for as literal text and listed here saying so;

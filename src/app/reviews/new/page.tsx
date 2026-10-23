@@ -1022,9 +1022,7 @@ function NewReview() {
 
               {preflight ? (
                 <div className="text-xs text-[var(--color-ink-muted)]">
-                  <p className="mb-1 font-medium text-[var(--color-ink)]">
-                    Adversarial requests by profile
-                  </p>
+                  <p className="mb-1 font-medium text-[var(--color-ink)]">Requests by profile</p>
                   <ul className="grid gap-0.5">
                     {Object.entries(preflight.requestsByProfile).map(([name, count]) => (
                       <li key={name} className="flex justify-between gap-4 tabular-nums">

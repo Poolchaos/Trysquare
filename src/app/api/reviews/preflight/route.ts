@@ -17,7 +17,7 @@ import { REVIEW_PROFILES, reviewProfileSchema } from "@/lib/domain/enums";
 import type { ParsedFile } from "@/lib/git/diff";
 import { changedExportedSymbols } from "@/lib/git/symbols";
 import { repoSlug } from "@/lib/git/url";
-import { estimateTokens, budgetFor } from "@/lib/review/budget";
+import { estimateTokens } from "@/lib/review/budget";
 import { outputContractFor, stageSchemaFor } from "@/lib/review/stage-schemas";
 import { runSweeps } from "@/lib/review/sweep";
 import { composeSystemPrompt, planRuleBatches } from "@/lib/rulesets/compose";
@@ -30,6 +30,7 @@ import { loadRuleset } from "@/server/db/repositories/rulesets";
 import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
 import { git } from "@/server/gitops/run";
 import { renderAdversarialPrompt, type ChangedFileEntry } from "@/server/review/content";
+import { countRequests } from "@/server/review/request-count";
 import { failed, handler, ok, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -128,14 +129,50 @@ export function POST(request: Request): Promise<Response> {
 
     const paths = entries.map((entry) => `${entry.slug}/${entry.file.path}`);
     const plan = planRuleBatches(ruleset.rules, paths, profile);
+    // Under their qualified paths, as the run holds them: the prompt keeps
+    // only the hits in its files, so unqualified ones were never sized.
+    const slugOf = (repo: string) =>
+      repo === "linked" && linkedSide ? linkedSide.slug : primary.slug;
+    const content = {
+      files: entries,
+      sweepHits: sweep.hits.map((hit) => ({ ...hit, path: `${slugOf(hit.repo)}/${hit.path}` })),
+      ...(changedSymbols.length === 0 ? {} : { changedSymbols }),
+    };
 
-    // What each profile would cost in requests, so a downgrade is an informed
-    // choice rather than a guess (docs/06 section 3).
+    const model = getModel(db, input.model);
+    const window =
+      model && availabilityOf(model) === "available" ? (model.contextWindow ?? null) : null;
+
+    // Every request the run will make, by the run's own division of the work:
+    // each rule batch fitted to the window against its own system prompt, as
+    // the run composes it (WP-F). Per profile too, so a downgrade is an
+    // informed choice rather than a guess (docs/06 section 3).
+    const countFor = (candidate: typeof profile) =>
+      countRequests({
+        content,
+        files: paths,
+        rules: ruleset.rules,
+        profile: candidate,
+        contextWindow: window ?? undefined,
+        systemPromptFor: (rules) =>
+          composeSystemPrompt({
+            directives: ruleset.directives,
+            rules,
+            stage: "s3_adversarial",
+            includeFullRules: true,
+            outputContract: outputContractFor(stageSchemaFor("s3_adversarial")),
+          }),
+      });
+    const requests = countFor(profile);
+    const judgmentProfiles = REVIEW_PROFILES.filter(isJudgmentProfile);
+    const byProfile = judgmentProfiles.map(
+      (candidate) => [candidate, countFor(candidate)] as const,
+    );
     const requestsByProfile = Object.fromEntries(
-      REVIEW_PROFILES.filter(isJudgmentProfile).map((candidate) => [
-        candidate,
-        planRuleBatches(ruleset.rules, paths, candidate).batches.length,
-      ]),
+      byProfile.map(([name, count]) => [name, count.total]),
+    );
+    const passesByProfile = Object.fromEntries(
+      byProfile.map(([name, count]) => [name, count.passes]),
     );
 
     // The heaviest prompt the run would send, which is what decides whether it
@@ -147,16 +184,8 @@ export function POST(request: Request): Promise<Response> {
       includeFullRules: true,
       outputContract: outputContractFor(stageSchemaFor("s3_adversarial")),
     });
-    const prompt = renderAdversarialPrompt({
-      files: entries,
-      sweepHits: sweep.hits.map((hit) => ({ ...hit, path: hit.path })),
-      ...(changedSymbols.length === 0 ? {} : { changedSymbols }),
-    });
+    const prompt = renderAdversarialPrompt(content);
     const estimate = estimateTokens(systemPrompt) + estimateTokens(prompt);
-
-    const model = getModel(db, input.model);
-    const window =
-      model && availabilityOf(model) === "available" ? (model.contextWindow ?? null) : null;
 
     return ok({
       pins: {
@@ -178,9 +207,15 @@ export function POST(request: Request): Promise<Response> {
       changedSymbols: changedSymbols.length,
       estimatedTokens: estimate,
       contextWindow: window,
-      withinWindow: window === null ? null : estimate <= budgetFor(window),
-      requests: plan.batches.length,
+      // Whether the run fits each request in the window without splitting a
+      // rule batch, as the run itself decides it.
+      withinWindow: window === null ? null : !requests.split,
+      requests: requests.total,
+      requestsByStage: requests.byStage,
+      passes: requests.passes,
+      requestsSplit: requests.split,
       requestsByProfile,
+      passesByProfile,
       excludedPairs: plan.excluded.length,
       profile,
       modelProfile: registeredProfile.success ? registeredProfile.data : null,

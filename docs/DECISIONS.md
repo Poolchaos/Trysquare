@@ -4629,3 +4629,20 @@ verified evidence, in writing, here.
   verify-again on a review from before migration 0015 freezes the
   verifier it asked, so the card names both (F5). 02, 06 and a gauge
   comment brought up to the code (F6).
+- 2026-10-23 WP-F step 2 (proof-and-steps plan): the pre-flight counts
+  every request a run makes, where it counted S3's rule batches alone,
+  four short of every run and blind to a batch split to fit the window.
+  `countRequests` divides the work as the run does, each rule batch fitted
+  to the window by `fitBatch` against its own system prompt, and a test
+  holds it to the adversarial requests a run actually sends on each
+  profile, with and without a window that splits. It answers the total,
+  each stage's count, the passes, whether a batch was split (the count is
+  then an estimate), and totals per profile; `withinWindow` is now whether
+  the run splits. The sweep hits it sizes are qualified, as the run's
+  are; unqualified, the prompt dropped them. The second verifier's one
+  request is counted, made only when the first proves a finding. 06's
+  profile table said verification is batched, or per finding, on the
+  narrower profiles, and decomposed splits per hunk; the code sends one S5
+  request, then one S5b, on every profile, and splits by file, so the
+  table now says that. The screen's "Adversarial requests by profile"
+  became "Requests by profile", its numbers now every stage's.

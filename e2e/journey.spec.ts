@@ -191,7 +191,8 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
 
   await test.step("the advanced fold offers only honest downgrades", async () => {
     await page.getByText("Advanced", { exact: true }).click();
-    await expect(page.getByText("Adversarial requests by profile")).toBeVisible();
+    // Every request each profile would make, not S3's alone (WP-F).
+    await expect(page.getByText("Requests by profile", { exact: true })).toBeVisible();
 
     // Choosing a weaker profile is reflected in the numbers before anything
     // is spent: the preview and the run read the same resolution.
