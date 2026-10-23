@@ -115,8 +115,8 @@ export interface HeldProof {
 
 /**
  * What the program checks of a proof, whichever verifier gave it: the rule
- * applies, the last step is the failure at the cited lines, and every step
- * is the code at its lines.
+ * applies, a step is at the cited lines, and every step is the code at its
+ * lines.
  */
 async function checkProof(
   context: VerificationContext,
@@ -134,20 +134,22 @@ async function checkProof(
     };
   }
 
-  // The last step is the failure, the code the finding is about. The
-  // verifier may correct where it sits, but not move the finding onto
-  // other code: a true quotation of lines the finding is not about
-  // verified it, and the finding then moved to them (D-99).
-  const failure = verdict.evidence[verdict.evidence.length - 1]!;
-  if (failure.path !== finding.filePath || !rangesOverlap(finding, failure)) {
+  // The path passes through the code the finding is about, and may end
+  // where the failure shows: the cause at line 4, the harm at line 5 (D-194,
+  // from WP-H, where the last step had to be the cited lines and three real
+  // defects were left open). The verifier may correct where that code sits,
+  // but not move the finding onto other code: a true quotation of lines the
+  // finding is not about verified it, and the finding then moved (D-99).
+  if (citedStep(finding, verdict.evidence) === undefined) {
+    const inFile = verdict.evidence.filter((step) => step.path === finding.filePath);
     return {
       ok: false,
       by: "quote_check",
       why:
-        failure.path !== finding.filePath
-          ? `The proof ends in ${failure.path}, not in the cited ${finding.filePath}.`
-          : `Verification quoted ${spanOf(failure)}, which does not overlap the cited ` +
-            `${spanOf(finding)}.`,
+        inFile.length === 0
+          ? `The proof never passes through the cited ${finding.filePath}.`
+          : `Verification quoted ${inFile.map(spanOf).join(" and ")}, which does not ` +
+            `overlap the cited ${spanOf(finding)}.`,
     };
   }
 
@@ -182,12 +184,18 @@ function proofOf(verdict: ProvenVerdict) {
   };
 }
 
+/** The first step at the cited lines, which checkProof requires there is. */
+function citedStep(finding: Finding, evidence: ProvenVerdict["evidence"]) {
+  return evidence.find((step) => step.path === finding.filePath && rangesOverlap(finding, step));
+}
+
 function markProven(context: VerificationContext, held: HeldProof, second?: ProvenVerdict): void {
-  const failure = held.verdict.evidence[held.verdict.evidence.length - 1]!;
+  // Where the proof found the cited code, which may correct its lines.
+  const cited = citedStep(held.finding, held.verdict.evidence)!;
   markVerified(context.db, held.finding.id, {
-    quotedCode: failure.quote,
-    lineStart: failure.lineStart,
-    lineEnd: failure.lineEnd,
+    quotedCode: cited.quote,
+    lineStart: cited.lineStart,
+    lineEnd: cited.lineEnd,
     note: held.verdict.note,
     proof: proofOf(held.verdict),
     ...(second === undefined ? {} : { secondProof: proofOf(second) }),

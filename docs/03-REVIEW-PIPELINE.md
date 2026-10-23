@@ -172,12 +172,14 @@ finding:
    resolve it), or verified, which must carry its proof (proof-and-steps
    plan, WP-C): whether the cited rule applies, its own severity, the
    trigger, the evidence, an ordered path of steps from the trigger to the
-   failure, each a file, its lines and the code there quoted, the last step
-   being the failure itself, and where it searched for a guard. App code
-   then re-checks mechanically: a rule that does not apply refutes the
-   finding; the last step is in the cited file and overlaps the cited lines
-   (D-99); and every step's quotation matches the worktree file (a deleted
-   file's copy before deletion) at its lines once both sides are
+   failure, each a file, its lines and the code there quoted, one step at
+   the cited code and the path free to go on to where the failure shows,
+   and where it searched for a guard. App code then re-checks
+   mechanically: a rule that does not apply refutes the finding; a step is
+   in the cited file and overlaps the cited lines, the finding taking its
+   lines from that step (D-99, D-194); and every step's quotation matches
+   the worktree file (a deleted file's copy before deletion) at its lines
+   once both sides are
    normalised, the first that does not naming itself in the note. The
    verifier's severity stands, the finder's kept beside it (PG-3, D-185);
    the proof is stored with the finding.

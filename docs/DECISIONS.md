@@ -4745,3 +4745,15 @@ verified evidence, in writing, here.
   the proof rule should require the cited lines on the path rather than
   at its end, and whether the key should accept the change site for the
   two defects whose harm is in another file.
+- 2026-10-23 D-194 DECIDED (the maintainer, from D-193): a verified
+  finding's proof must pass through the cited lines, one of its steps in
+  the cited file overlapping them, and may end wherever the failure shows;
+  it no longer has to end there. D-99's guard stands, since a proof that
+  never reaches the cited code still proves nothing about the finding,
+  and the finding takes its lines from the step at the cited code. WP-H's
+  second verifier ended three proofs at the harm (save.ts line 5 for the
+  removed await at line 4, period.ts line 3, the dispatch.ts caller of a
+  deleted module), and the old rule left those three real defects open.
+  The S5 prompt, the check, the schema's comment and 03 say the new rule.
+  Rejected: keeping the rule, and only rewording the prompt, which already
+  said it plainly and was broken three times in eleven.

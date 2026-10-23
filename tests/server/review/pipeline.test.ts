@@ -902,20 +902,33 @@ describe("the proof a verified finding carries", () => {
     expect(finding.verificationNote).toContain("The cast is on internal data.");
   });
 
-  it("kills a proof that ends somewhere other than the cited lines", async () => {
-    // The last step is the failure, the code the finding is about (D-99).
+  it("holds a proof that passes through the cited lines and ends where the failure shows", async () => {
+    // The cause at the cited line, the harm after it (D-194): WP-H's second
+    // verifier proved three real defects so, and the old rule left them open.
     await proveWith({ evidence: [step(2), step(1)] });
     const finding = listFindings(db, reviewId)[0]!;
-    expect(finding.killedBy).toBe("quote_check");
-    expect(finding.verificationNote).toContain("does not overlap the cited line 2");
+    expect(statusOf(finding)).toBe("verified");
+    // Its lines are where the proof found the cited code, not the last step.
+    expect([finding.lineStart, finding.lineEnd]).toEqual([2, 2]);
   });
 
-  it("kills a proof that ends in another file, even at overlapping lines", async () => {
-    await proveWith({ evidence: [step(1), { ...step(2), path: "app/other.ts" }] });
+  it("kills a proof that never reaches the cited lines", async () => {
+    // Still the guard of D-99: a true quotation of other code proves nothing
+    // about this finding.
+    await proveWith({ evidence: [step(1)] });
     const finding = listFindings(db, reviewId)[0]!;
     expect(finding.killedBy).toBe("quote_check");
     expect(finding.verificationNote).toBe(
-      "The proof ends in app/other.ts, not in the cited app/orders.ts.",
+      "Verification quoted line 1, which does not overlap the cited line 2.",
+    );
+  });
+
+  it("kills a proof that never passes through the cited file, even at overlapping lines", async () => {
+    await proveWith({ evidence: [{ ...step(2), path: "app/other.ts" }] });
+    const finding = listFindings(db, reviewId)[0]!;
+    expect(finding.killedBy).toBe("quote_check");
+    expect(finding.verificationNote).toBe(
+      "The proof never passes through the cited app/orders.ts.",
     );
   });
 

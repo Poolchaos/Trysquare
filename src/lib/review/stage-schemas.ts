@@ -132,7 +132,7 @@ export const verificationStageSchema = z.object({
       // Proven, not asserted (proof-and-steps plan, WP-C): whether the cited
       // rule applies, the verifier's own severity, the trigger, and the path
       // from it to the failure, every step quoted and checked against the
-      // code, the last step being the failure itself.
+      // code, one step at the cited lines (D-194).
       z.object({
         ref: verdictRef,
         verdict: z.literal("verified"),

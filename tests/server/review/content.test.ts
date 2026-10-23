@@ -384,7 +384,7 @@ describe("the verification prompt", () => {
     // The pipeline discards a quotation of other code (D-99), so the stage is
     // told before it answers.
     expect(renderVerificationPrompt(candidates).replace(/\s+/g, " ")).toContain(
-      "Those lines must overlap the ones given",
+      "at lines that overlap the ones given",
     );
   });
 
@@ -397,9 +397,10 @@ describe("the verification prompt", () => {
       expect(prompt).toContain(`${field}:`);
     }
     expect(prompt).toContain("from the trigger to the failure, in that order");
-    expect(prompt).toContain(
-      "The last step is the failure itself, in the file the candidate cites",
-    );
+    // One step at the cited code, the path free to end where the failure
+    // shows (D-194).
+    expect(prompt).toContain("One step is the code the candidate cites, in its file");
+    expect(prompt).toContain("The path may go on past it to where the failure shows");
     expect(prompt).toContain("leave one you cannot settle as an open question");
     expect(prompt.indexOf("{")).toBe(prompt.indexOf("```json") + 8);
   });

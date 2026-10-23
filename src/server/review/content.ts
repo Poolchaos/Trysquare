@@ -437,13 +437,14 @@ export function renderVerificationPrompt(
     "- evidence: the path from the trigger to the failure, in that order, a step",
     "  for each place it passes through: the path, the lines, and the code there",
     "  quoted exactly as it appears in the file. Report the line numbers you",
-    "  actually found it at, not the ones given below. The last step is the",
-    "  failure itself, in the file the candidate cites. Those lines must overlap",
-    "  the ones given: a quotation from elsewhere in the file is about other code.",
+    "  actually found it at, not the ones given below. One step is the code the",
+    "  candidate cites, in its file, at lines that overlap the ones given: a",
+    "  quotation from elsewhere in the file is about other code. The path may go",
+    "  on past it to where the failure shows, in that file or another.",
     "- guardsSearched: where you looked for a guard, default or narrowing that",
     "  would stop it.",
     "Every step's quotation is compared against the file. If one does not match,",
-    "or the last step is in another file or does not overlap the lines given, the",
+    "or no step is in the cited file at lines that overlap the ones given, the",
     "finding is discarded.",
     ...(hasDeleted
       ? [
