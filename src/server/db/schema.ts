@@ -256,6 +256,13 @@ export const stageExecutions = sqliteTable(
     logPath: text("log_path"),
     startedAt: text("started_at").notNull(),
     endedAt: text("ended_at"),
+    /**
+     * The one finding a request was about, when it was about one: verifying
+     * an open question again (WP-D2). Such a row is not the stage's run, so
+     * the run's stages and their usual durations leave it out; its cost is
+     * the review's like any other (review round 2).
+     */
+    findingId: text("finding_id"),
   },
   (table) => [
     index("stage_executions_review_idx").on(table.reviewId, table.stage),

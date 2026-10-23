@@ -494,6 +494,7 @@ export async function verifyAgain(
       }),
       prompt: renderVerificationFor([finding], context),
       fresh: true,
+      findingId: finding.id,
     });
     const verdicts = parseVerdicts(response.output, 1);
     const tally = await applyVerdicts(context, [finding], verdicts);

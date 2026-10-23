@@ -328,6 +328,26 @@ describe("how long a stage usually takes here", () => {
     expect(stageDurationMedians(db, "claude-fable-5[1m]").get("s1_risk")).toBe(20_000);
   });
 
+  it("leaves out one finding verified again, which is not the stage's usual work", () => {
+    // A one-finding verification is seconds where the stage over a whole
+    // change set is minutes, and pulled the stage's estimate down.
+    for (const seconds of [100, 110, 120]) timed(reviewId, "s5_verification", seconds);
+    for (const seconds of [5, 6, 7]) {
+      recordAttempt(db, {
+        reviewId,
+        stage: "s5_verification",
+        promptHash: `again-${seconds}`,
+        attempt: 1,
+        status: "succeeded",
+        usage,
+        findingId: "F1",
+        startedAt: "2026-08-17T10:00:00.000Z",
+        endedAt: new Date(Date.parse("2026-08-17T10:00:00.000Z") + seconds * 1000).toISOString(),
+      });
+    }
+    expect(stageDurationMedians(db, "claude-fable-5[1m]").get("s5_verification")).toBe(110_000);
+  });
+
   it("takes the middle sample, so one stalled stage cannot move it", () => {
     // The mean of these is 155s, which no run has ever taken. The median is
     // 20s, which three of them did.

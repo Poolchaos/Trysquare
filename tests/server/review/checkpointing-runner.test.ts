@@ -142,6 +142,17 @@ describe("replaying what has already been answered", () => {
     expect(getReview(db, reviewId)?.usageInputTokens).toBe(2 * usage.inputTokens);
   });
 
+  it("records the finding a one-finding request was about", async () => {
+    // So the stage's own record of the run is not taken for it (review round 2).
+    const engine = fakeEngine(() => ({ output: { verdicts: [] }, sessionId: "s-1", usage }));
+    const runner = createCheckpointingRunner({ db, reviewId, inner: engine.inner });
+
+    await runner.run(ask({ stage: "s5_verification", fresh: true, findingId: "F1" }));
+
+    expect(listForReview(db, reviewId).map((row) => row.findingId)).toEqual(["F1"]);
+    expect(engine.asked[0]).not.toHaveProperty("findingId");
+  });
+
   it("asks again when the question changed", async () => {
     // A prompt only changes when the change set, the rules, or the batching
     // did. Answering the new question with the old answer would be a lie the

@@ -88,6 +88,8 @@ export interface StageRequest {
    * finding again wants a new look, not the last one replayed (WP-D2).
    */
   fresh?: true;
+  /** The one finding the request is about, recorded on its row; never sent. */
+  findingId?: string;
 }
 
 export interface StageResponse {

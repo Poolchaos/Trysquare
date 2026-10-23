@@ -40,7 +40,10 @@ import { VerifyAgainUnavailableError } from "@/server/review/service";
 import {
   answerSequence,
   buildIdealStageOutputs,
+  candidateToken,
+  verdictAnswer,
   writeAnswersDir,
+  type VerdictByLine,
 } from "../../helpers/ideal-answers";
 import { buildFixture, type SeededFixture } from "../../helpers/seeded-fixture";
 import { makeTestDb, type TestDb } from "../db/helpers";
@@ -554,7 +557,7 @@ describe("coming back from a restart", () => {
 
 describe("verifying an open question again (WP-D2, review round 2)", () => {
   /** A finished review whose verifier left its first finding open. */
-  async function withAnOpenQuestion() {
+  async function withAnOpenQuestion(after: (verdict: VerdictByLine) => unknown[] = () => []) {
     const outputs = buildIdealStageOutputs({
       files: fixture.appFiles.map((file) => ({ repo: "primary" as const, slug: "app", file })),
       manifest: {
@@ -565,13 +568,13 @@ describe("verifying an open question again (WP-D2, review round 2)", () => {
       rules: PROTOCOL.rules,
     });
     const [first, ...rest] = outputs.s5ByLine;
-    writeAnswersDir(
-      join(dataDir, "answers"),
-      answerSequence({
+    writeAnswersDir(join(dataDir, "answers"), [
+      ...answerSequence({
         ...outputs,
         s5ByLine: [{ ...first!, verdict: "open_question", note: "Could not tell." }, ...rest],
       }),
-    );
+      ...after(first!),
+    ]);
     const reviewId = seedReview();
     start(reviewId);
     await manager.settled(reviewId);
@@ -631,6 +634,29 @@ describe("verifying an open question again (WP-D2, review round 2)", () => {
     await expect(pending).rejects.toThrow();
     expect(listFindingsByStatus(db, reviewId, ["open_question"])).toHaveLength(1);
     expect(() => manager.assertNotVerifyingAgain(reviewId)).not.toThrow();
+  }, 120_000);
+
+  it("leaves its call out of the run's stages, its cost on the review", async () => {
+    // The panel took the last S5 row for the stage, so a one-finding call's
+    // cost, time or failure stood in for the run's (review round 2, F6).
+    const { reviewId, findingId } = await withAnOpenQuestion((verdict) => [
+      {
+        verdicts: [
+          verdictAnswer(
+            candidateToken(verdict.path, verdict.lineStart),
+            verdict,
+            verdict.lineStart,
+            verdict.path,
+          ),
+        ],
+      },
+    ]);
+    const before = manager.snapshot(reviewId);
+
+    await expect(manager.verifyAgain(findingId)).resolves.toMatchObject({ status: "verified" });
+    const after = manager.snapshot(reviewId);
+    expect(after.stages).toEqual(before.stages);
+    expect(after.usage.costEquivalentUsd).toBeGreaterThan(before.usage.costEquivalentUsd);
   }, 120_000);
 
   it("asks nothing for a request already abandoned", async () => {

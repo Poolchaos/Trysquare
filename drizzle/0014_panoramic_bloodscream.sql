@@ -1,0 +1,1 @@
+ALTER TABLE `stage_executions` ADD `finding_id` text;

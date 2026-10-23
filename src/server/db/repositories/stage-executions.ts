@@ -9,7 +9,7 @@
  * that place is the checkpointing runner.
  */
 
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { newId, nowIso } from "@/lib/ids";
 import type { ReviewStage, StageErrorClass, StageStatus } from "@/lib/domain/enums";
 import type { Db } from "../client";
@@ -46,6 +46,7 @@ export interface RecordAttemptInput {
   logPath?: string | null;
   startedAt?: string;
   endedAt?: string | null;
+  findingId?: string | null;
 }
 
 export function recordAttempt(db: Db, input: RecordAttemptInput): StageExecution {
@@ -69,6 +70,7 @@ export function recordAttempt(db: Db, input: RecordAttemptInput): StageExecution
     logPath: input.logPath ?? null,
     startedAt: input.startedAt ?? now,
     endedAt: input.endedAt === undefined ? now : input.endedAt,
+    findingId: input.findingId ?? null,
   };
   db.insert(stageExecutions).values(row).run();
   return row;
@@ -249,7 +251,14 @@ export function stageDurationMedians(db: Db, model: string): Map<string, number>
     })
     .from(stageExecutions)
     .innerJoin(reviews, eq(stageExecutions.reviewId, reviews.id))
-    .where(and(eq(reviews.model, model), eq(stageExecutions.status, "succeeded")))
+    .where(
+      and(
+        eq(reviews.model, model),
+        eq(stageExecutions.status, "succeeded"),
+        // One finding verified again is seconds of work, not the stage's.
+        isNull(stageExecutions.findingId),
+      ),
+    )
     .all();
 
   const byStage = new Map<string, number[]>();

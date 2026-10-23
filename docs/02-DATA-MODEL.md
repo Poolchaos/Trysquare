@@ -138,6 +138,7 @@ past review was judged against.
 | inputTokens, outputTokens, costEquivalentUsd |           | from result event                                                                  |
 | errorClass, errorText, logPath               |           |                                                                                    |
 | startedAt, endedAt                           | text      |                                                                                    |
+| findingId                                    | text null | the one finding a verify-again asked about; such rows are not the stage's run       |
 
 ### ledger_files
 

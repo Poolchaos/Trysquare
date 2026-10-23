@@ -4552,3 +4552,11 @@ verified evidence, in writing, here.
   is noted as such. F15: each repository's checkout is checked, not only
   the folder that holds them. Supersedes WP-D2 step 2's "rejected: running
   it as a manager job": the manager runs it, still answered synchronously.
+- 2026-10-23 Review round 2, F6: a verify-again's call was recorded as an
+  ordinary S5 attempt, and the Stages panel takes a stage's last attempt as
+  its status, cost and time, so a one-finding call that failed painted a
+  finished run's Verification red, and one that succeeded stood in for the
+  run's; its seconds also pulled down S5's usual duration. A row now names
+  the finding a request was about (`finding_id`, migration 0014); the
+  snapshot's stages and the duration medians leave such rows out, and
+  their cost stays on the review. Said in the run notes instead.

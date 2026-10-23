@@ -137,7 +137,7 @@ are accepted; anything else is refused by name.
   arithmetic, ruleset import with a fidelity gate, prompt composition, batch
   planning, the report renderer, the request guard, and matching an error by
   the name its class sets.
-- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0013, and
+- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0014, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings and stage executions.
 - `src/server/gitops/` - the only code that spawns git.
@@ -170,7 +170,7 @@ are accepted; anything else is refused by name.
 - `tests/` - unit and integration tests. `e2e/` - the browser journey, the
   failure paths, the theme and screenshot pass with the axe accessibility
   pass, and the shutdown pass.
-  `drizzle/` - fourteen committed migrations.
+  `drizzle/` - fifteen committed migrations.
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and

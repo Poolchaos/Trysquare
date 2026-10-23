@@ -393,7 +393,8 @@ export class JobManager {
 
     return {
       review,
-      stages: listForReview(db, reviewId),
+      // The run's own: a finding verified again is said in the run notes.
+      stages: listForReview(db, reviewId).filter((row) => row.findingId === null),
       notes: readRunNotes(review),
       usage: usageTotals(db, reviewId),
       coverage: coverageReport(db, reviewId),

@@ -131,6 +131,7 @@ export function createCheckpointingRunner(
   // and silently misattribute their cost.
   let pending: AttemptReport[] = [];
   let inFlight: ReviewStage | null = null;
+  let aboutFinding: string | null = null;
 
   const noteAttempt = (report: AttemptReport): void => {
     pending.push(report);
@@ -161,6 +162,7 @@ export function createCheckpointingRunner(
       errorText: input.errorText ?? null,
       logPath: options.logPathFor?.(input.stage) ?? null,
       startedAt: input.startedAt,
+      findingId: aboutFinding,
     });
     if (input.usage) addReviewUsage(db, reviewId, input.usage);
   };
@@ -199,6 +201,8 @@ export function createCheckpointingRunner(
     const firstAttempt = nextAttemptNumber(db, reviewId, request.stage, promptHash);
     pending = [];
     inFlight = request.stage;
+    const { findingId, ...asked } = request;
+    aboutFinding = findingId ?? null;
     options.onLiveAttempt?.(
       request.stage,
       request.batchNumber !== undefined && request.batchCount !== undefined
@@ -208,7 +212,7 @@ export function createCheckpointingRunner(
 
     try {
       const response = await options.inner({
-        ...request,
+        ...asked,
         ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
       });
 
