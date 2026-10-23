@@ -4485,3 +4485,18 @@ verified evidence, in writing, here.
   still allowed confirming, while verifying again (WP-D2) is not built.
   Each now says only what can be done, dismiss it; WP-D2 adds the other
   way back when it lands.
+- 2026-10-23 Review round R5 to R10, the rest of the round over WP-A to
+  WP-D1 (R1 to R3 above). R5: the stage-to-stage theater test restored
+  the scripted answers' count only when it passed, so one failure became
+  nine (measured, failure-paths alone: 9 failed against 1); it restores
+  in a finally (64d021d). R6: the unproven-finding test borrows the
+  usage-limit test's review, a review of its own shifting every later
+  test's answers; it now picks one with nothing decided and says so when
+  there is none (64d021d). R7, R8: "Finder said" had no browser test; a
+  move that took Confirm away dropped the focus to the page, and a proof's
+  quoted steps could not be scrolled from the keyboard (e842508). R9: the
+  proof's schema refusals are tested by field, and a proof ending in
+  another file has a test (0a3a3ae). R10: 02, 06, PROJECT-STATE and the
+  plan brought up to the code; WP-A's `finished` and `failed` stage events
+  were not sent, which its row now says, with why. R4, how a dismissed open
+  question is recorded and reported, is put to the maintainer.

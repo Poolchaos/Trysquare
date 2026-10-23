@@ -176,13 +176,15 @@ no pending sweep hits past S6.
 | filePath                         | text      | repo-relative within that repo, from the checked-out branch      |
 | lineStart, lineEnd               | int       | verified against worktree file in S5                             |
 | raisedLineStart, raisedLineEnd   | int null  | as raised, before S5 corrected them; coverage counts these (D-102) |
-| severity                         | text      |                                                                  |
+| severity                         | text      | the verifier's once verified (PG-3, D-185)                       |
+| raisedSeverity                   | text null | the finder's, kept beside it; null on rows from before 0012      |
 | ruleCode                         | text null | which rule it violates, if rule-based                            |
 | issue                            | text      | one-line statement                                               |
 | comment                          | text      | protocol finding format, <= 4 sentences                          |
 | editedComment                    | text null | the person's rewrite at confirm time; the report prefers it       |
 | mechanism                        | text      | traced input -> wrong output path (internal, shown in UI)        |
 | quotedCode                       | text      | exact lines quoted at verification time                          |
+| proofJson                        | text null | the verifier's proof, every step checked (WP-C, D-189)           |
 | status                           | text      | candidate, verified, killed, open_question, confirmed, dismissed |
 | verificationNote                 | text null | S5 outcome detail                                                |
 | killedBy                         | text null | when killed: verification (refuted) or quote_check (D-126)       |
