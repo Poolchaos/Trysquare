@@ -91,6 +91,38 @@ export interface VerdictByLine {
   verdict: "verified" | "killed" | "open_question";
   quotedCode: string;
   note: string;
+  /** The finding's own, which a proven verdict keeps. */
+  severity?: string;
+}
+
+/**
+ * A verdict in the shape S5 answers with: a proven one carries its proof,
+ * here one step, the cited line quoted, which is the failure itself
+ * (proof-and-steps plan, WP-C).
+ */
+export function verdictAnswer(
+  ref: string,
+  verdict: VerdictByLine | undefined,
+  lineStart: number,
+  path: string,
+): Record<string, unknown> {
+  if (verdict === undefined || verdict.verdict !== "verified") {
+    return {
+      ref,
+      verdict: verdict?.verdict ?? "open_question",
+      note: verdict?.note ?? "No verdict was prepared for this candidate.",
+    };
+  }
+  return {
+    ref,
+    verdict: "verified",
+    ruleApplies: true,
+    severity: verdict.severity ?? "WARNING",
+    trigger: "The changed code is reached as the finding describes.",
+    evidence: [{ path, lineStart, lineEnd: lineStart, quote: verdict.quotedCode }],
+    guardsSearched: ["The surrounding function and its callers, for a guard."],
+    note: verdict.note,
+  };
 }
 
 export interface IdealStageOutputs {
@@ -238,6 +270,7 @@ export function buildIdealStageOutputs(input: IdealAnswerInput): IdealStageOutpu
     return {
       path: finding.path,
       lineStart: finding.lineStart,
+      severity: String(finding.severity),
       verdict: "verified",
       // Quoted from the file, which is what makes the check pass. When asked
       // to misquote, the reviewer reports plausible code that is not at those
@@ -331,14 +364,7 @@ export function verdictsForPrompt(
     const wanted = byLine.find(
       (verdict) => verdict.path === candidate.path && verdict.lineStart === candidate.lineStart,
     );
-    return {
-      ref: candidate.ref,
-      verdict: wanted?.verdict ?? "open_question",
-      quotedCode: wanted?.quotedCode ?? "",
-      lineStart: candidate.lineStart,
-      lineEnd: candidate.lineStart,
-      note: wanted?.note ?? "No verdict was prepared for this candidate.",
-    };
+    return verdictAnswer(candidate.ref, wanted, candidate.lineStart, candidate.path);
   });
 }
 
@@ -391,14 +417,14 @@ export function answerSequence(outputs: IdealStageOutputs): unknown[] {
     outputs.s3,
     outputs.s4,
     {
-      verdicts: outputs.s5ByLine.map((verdict) => ({
-        ref: candidateToken(verdict.path, verdict.lineStart),
-        verdict: verdict.verdict,
-        quotedCode: verdict.quotedCode,
-        lineStart: verdict.lineStart,
-        lineEnd: verdict.lineStart,
-        note: verdict.note,
-      })),
+      verdicts: outputs.s5ByLine.map((verdict) =>
+        verdictAnswer(
+          candidateToken(verdict.path, verdict.lineStart),
+          verdict,
+          verdict.lineStart,
+          verdict.path,
+        ),
+      ),
     },
   ];
 }

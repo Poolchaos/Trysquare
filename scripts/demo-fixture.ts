@@ -262,11 +262,15 @@ async function main(): Promise<number> {
     file: finding.filePath,
     lines: [finding.lineStart, finding.lineEnd],
     severity: finding.severity,
+    raisedSeverity: finding.raisedSeverity,
     ruleCode: finding.ruleCode,
     issue: finding.issue,
     comment: finding.comment,
     mechanism: finding.mechanism,
     quotedCode: finding.quotedCode,
+    // The verifier's trigger and evidence path, each step checked against
+    // the code, read for the verdict (proof-and-steps plan, WP-C).
+    proof: finding.proofJson === null ? null : (JSON.parse(finding.proofJson) as unknown),
     verificationNote: finding.verificationNote,
   }));
   writeFileSync(join(outDir, "findings.json"), `${JSON.stringify(findingRows, null, 2)}\n`);

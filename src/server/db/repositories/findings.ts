@@ -15,6 +15,7 @@ import {
   assertFindingTransition,
   findingStatusSchema,
 } from "@/lib/domain/state-machines";
+import type { EvidenceStep } from "@/lib/review/evidence";
 import type { Db } from "../client";
 import { findings, reviews } from "../schema";
 
@@ -52,11 +53,13 @@ export function createCandidate(db: Db, input: CreateCandidateInput): Finding {
     raisedLineStart: input.lineStart,
     raisedLineEnd: input.lineEnd,
     severity: input.severity,
+    raisedSeverity: input.severity,
     ruleCode: input.ruleCode ?? null,
     issue: input.issue,
     comment: input.comment,
     mechanism: input.mechanism,
     quotedCode: "",
+    proofJson: null,
     status: "candidate" satisfies FindingStatus,
     verificationNote: null,
     killedBy: null,
@@ -92,6 +95,8 @@ interface TransitionPatch {
   editedComment?: string | null;
   lineStart?: number;
   lineEnd?: number;
+  severity?: Severity;
+  proofJson?: string;
 }
 
 function transitionFinding(
@@ -128,7 +133,18 @@ function transitionFinding(
 export function markVerified(
   db: Db,
   findingId: string,
-  evidence: { quotedCode: string; lineStart: number; lineEnd: number; note?: string },
+  evidence: {
+    quotedCode: string;
+    lineStart: number;
+    lineEnd: number;
+    note?: string;
+    /**
+     * The verifier's proof, every step already checked against the code; its
+     * severity replaces the finder's, which raisedSeverity keeps (PG-3,
+     * D-185). The pipeline always gives one.
+     */
+    proof?: VerifiedProof;
+  },
 ): Finding {
   if (evidence.quotedCode.trim() === "") {
     throw new Error(
@@ -141,7 +157,17 @@ export function markVerified(
     lineStart: evidence.lineStart,
     lineEnd: evidence.lineEnd,
     verificationNote: evidence.note ?? null,
+    ...(evidence.proof === undefined
+      ? {}
+      : { severity: evidence.proof.severity, proofJson: JSON.stringify(evidence.proof) }),
   });
+}
+
+export interface VerifiedProof {
+  severity: Severity;
+  trigger: string;
+  evidence: readonly EvidenceStep[];
+  guardsSearched: readonly string[];
 }
 
 /** Verification refuted it, or the quoted code did not match the file. */

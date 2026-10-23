@@ -338,7 +338,10 @@ export const findings = sqliteTable(
      */
     raisedLineStart: integer("raised_line_start"),
     raisedLineEnd: integer("raised_line_end"),
+    /** The verifier's, once verified; the finder's is kept in raisedSeverity (PG-3, D-185). */
     severity: text("severity").notNull(),
+    /** The severity the finding was raised with. Null on rows from before the column. */
+    raisedSeverity: text("raised_severity"),
     ruleCode: text("rule_code"),
     issue: text("issue").notNull(),
     comment: text("comment").notNull(),
@@ -353,6 +356,13 @@ export const findings = sqliteTable(
     mechanism: text("mechanism").notNull(),
     /** Quoted at verification time and byte-compared against the file. */
     quotedCode: text("quoted_code").notNull().default(""),
+    /**
+     * The verifier's proof as JSON: the trigger, the evidence path, every step
+     * of it checked against the code, and where it searched for a guard
+     * (proof-and-steps plan, WP-C). Null before verification and on rows from
+     * before the column.
+     */
+    proofJson: text("proof_json"),
     status: text("status").notNull().default("candidate"),
     verificationNote: text("verification_note"),
     /**

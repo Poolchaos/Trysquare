@@ -80,6 +80,30 @@ function rule(code: string, tags: string[], sweepPatterns: string[] = []) {
 
 const RULES = [rule("3", ["typescript"], ["\\bas\\b"])];
 
+/**
+ * A proven verdict in S5's shape: one step, the cited code, which is the
+ * failure itself (proof-and-steps plan, WP-C).
+ */
+function proven(
+  ref: string,
+  quote: string | undefined,
+  lineStart: number,
+  lineEnd = lineStart,
+  path = "app/orders.ts",
+  note = "Proven.",
+) {
+  return {
+    ref,
+    verdict: "verified",
+    ruleApplies: true,
+    severity: "CRITICAL",
+    trigger: "A payload reaches the changed code.",
+    evidence: [{ path, lineStart, lineEnd, quote: quote ?? "" }],
+    guardsSearched: ["The function and its callers, for a guard."],
+    note,
+  };
+}
+
 let ctx: TestDb;
 let db: Db;
 let reviewId: string;
@@ -169,16 +193,7 @@ describe("a complete run", () => {
     const result = await run({
       ...BASE_ANSWERS,
       s5_verification: {
-        verdicts: [
-          {
-            ref: "",
-            verdict: "verified",
-            quotedCode: "  const user = payload as User;",
-            lineStart: 2,
-            lineEnd: 2,
-            note: "Confirmed against the file.",
-          },
-        ],
+        verdicts: [proven("", "  const user = payload as User;", 2)],
       },
     });
     // The scripted verdict names no candidate, so it matches nothing and the
@@ -788,6 +803,97 @@ describe("what the verifier is given", () => {
   });
 });
 
+describe("the proof a verified finding carries", () => {
+  // One quotation proved the cited code was there, not the path from a
+  // trigger to the failure (proof-and-steps plan, WP-C).
+  const step = (line: number, quote = SOURCE.split("\n")[line - 1]!) => ({
+    path: "app/orders.ts",
+    lineStart: line,
+    lineEnd: line,
+    quote,
+  });
+  function proveWith(verdict: Record<string, unknown>) {
+    return runReviewPipeline({
+      db,
+      reviewId,
+      worktreeRoot,
+      files: FILES,
+      rules: RULES,
+      profile: "full-context",
+      systemPromptFor: (stage) => `prompt for ${stage}`,
+      run: scripted({
+        ...BASE_ANSWERS,
+        s5_verification: {
+          verdicts: [
+            {
+              ref: "C1",
+              verdict: "verified",
+              ruleApplies: true,
+              severity: "WARNING",
+              trigger: "A request body reaches total() as payload.",
+              evidence: [step(1), step(2)],
+              guardsSearched: ["total() and its callers, for a parse of payload"],
+              note: "Proven.",
+              ...verdict,
+            },
+          ],
+        },
+      }),
+    });
+  }
+
+  it("stores the verifier's severity and its whole path, the finder's severity beside it", async () => {
+    const result = await proveWith({});
+    expect(result.verified).toBe(1);
+    const finding = listFindings(db, reviewId)[0]!;
+    expect(statusOf(finding)).toBe("verified");
+    expect(finding.severity).toBe("WARNING");
+    expect(finding.raisedSeverity).toBe("CRITICAL");
+    expect(finding.quotedCode).toBe("  const user = payload as User;");
+    const proof = JSON.parse(finding.proofJson ?? "null") as {
+      trigger: string;
+      evidence: { lineStart: number }[];
+      guardsSearched: string[];
+    };
+    expect(proof.trigger).toBe("A request body reaches total() as payload.");
+    expect(proof.evidence.map((entry) => entry.lineStart)).toEqual([1, 2]);
+    expect(proof.guardsSearched).toHaveLength(1);
+  });
+
+  it("kills a finding whose first step is not in the code, naming that step", async () => {
+    const result = await proveWith({
+      evidence: [step(1, "export function sum(items: Item[]) {"), step(2)],
+    });
+    expect(result.killedByQuoteCheck).toBe(1);
+    const finding = listFindings(db, reviewId)[0]!;
+    expect(finding.killedBy).toBe("quote_check");
+    expect(finding.verificationNote).toContain(
+      "Evidence step 1 of 2 (app/orders.ts line 1) did not match the file",
+    );
+  });
+
+  it("refutes a finding whose cited rule does not apply", async () => {
+    await proveWith({ ruleApplies: false, note: "The cast is on internal data." });
+    const finding = listFindings(db, reviewId)[0]!;
+    expect(statusOf(finding)).toBe("killed");
+    expect(finding.killedBy).toBe("verification");
+    expect(finding.verificationNote).toContain("The cast is on internal data.");
+  });
+
+  it("kills a proof that ends somewhere other than the cited lines", async () => {
+    // The last step is the failure, the code the finding is about (D-99).
+    await proveWith({ evidence: [step(2), step(1)] });
+    const finding = listFindings(db, reviewId)[0]!;
+    expect(finding.killedBy).toBe("quote_check");
+    expect(finding.verificationNote).toContain("does not overlap the cited line 2");
+  });
+
+  it("is refused without a step, or without a search for a guard", async () => {
+    await expect(proveWith({ evidence: [] })).rejects.toThrow();
+    await expect(proveWith({ guardsSearched: [] })).rejects.toThrow();
+  });
+});
+
 describe("the quotation check", () => {
   async function verifyWith(
     quote: string,
@@ -800,17 +906,12 @@ describe("the quotation check", () => {
         return {
           output: {
             verdicts: [
-              {
-                // The first candidate, by the label the prompt gives it. No
-                // database read is needed, because the label does not depend
-                // on ids that change between runs.
-                ref: "C1",
-                verdict,
-                quotedCode: quote,
-                lineStart,
-                lineEnd,
-                note: "checked",
-              },
+              // The first candidate, by the label the prompt gives it. No
+              // database read is needed, because the label does not depend
+              // on ids that change between runs.
+              verdict === "verified"
+                ? proven("C1", quote, lineStart, lineEnd, "app/orders.ts", "checked")
+                : { ref: "C1", verdict, note: "checked" },
             ],
           },
           sessionId: "s",
@@ -967,14 +1068,10 @@ describe("a hunk with one finding refuted and another standing", () => {
       { ...COMPLETE_ADVERSARIAL.findings[0]!, lineStart: 3, lineEnd: 3, issue: "Float sum" },
     ],
   };
-  const verdict = (ref: string, line: number, verdict: "verified" | "killed") => ({
-    ref,
-    verdict,
-    quotedCode: SOURCE.split("\n")[line - 1],
-    lineStart: line,
-    lineEnd: line,
-    note: verdict === "killed" ? "Refuted." : "checked",
-  });
+  const verdict = (ref: string, line: number, verdict: "verified" | "killed") =>
+    verdict === "verified"
+      ? proven(ref, SOURCE.split("\n")[line - 1], line, line, "app/orders.ts", "checked")
+      : { ref, verdict, note: "Refuted." };
 
   it("counts the hunk as standing, and the hit as refuted when its own finding fell", async () => {
     const result = await run({
@@ -1016,14 +1113,10 @@ describe("a verdict that never arrives", () => {
 });
 
 describe("verdicts that do not match the candidates asked about (4.17)", () => {
-  const verdict = (ref: string, kind: "verified" | "killed") => ({
-    ref,
-    verdict: kind,
-    quotedCode: "  const user = payload as User;",
-    lineStart: 2,
-    lineEnd: 2,
-    note: kind === "killed" ? "Refuted." : "checked",
-  });
+  const verdict = (ref: string, kind: "verified" | "killed") =>
+    kind === "verified"
+      ? proven(ref, "  const user = payload as User;", 2, 2, "app/orders.ts", "checked")
+      : { ref, verdict: kind, note: "Refuted." };
 
   async function verifyingWith(verdicts: unknown[]) {
     const struck: string[] = [];
@@ -1597,16 +1690,7 @@ describe("cross-repo contract changes", () => {
             ],
           },
           s5_verification: {
-            verdicts: [
-              {
-                ref: "C1",
-                verdict: "verified",
-                quotedCode: quote,
-                lineStart: 2,
-                lineEnd: 2,
-                note: "read",
-              },
-            ],
+            verdicts: [proven("C1", quote, 2, 2, "app/settings.ts", "read")],
           },
         }),
       });
@@ -2216,14 +2300,17 @@ describe("counting what rests only on refuted findings (D-102)", () => {
     verdictKind: "verified" | "killed",
     lineStart: number,
     lineEnd: number,
-  ) => ({
-    ref,
-    verdict: verdictKind,
-    quotedCode: SOURCE_LINES.slice(lineStart - 1, lineEnd).join("\n"),
-    lineStart,
-    lineEnd,
-    note: verdictKind === "killed" ? "Refuted." : "checked",
-  });
+  ) =>
+    verdictKind === "verified"
+      ? proven(
+          ref,
+          SOURCE_LINES.slice(lineStart - 1, lineEnd).join("\n"),
+          lineStart,
+          lineEnd,
+          "app/long.ts",
+          "checked",
+        )
+      : { ref, verdict: verdictKind, note: "Refuted." };
 
   function runOneHunk(
     s3: (batch: number) => Record<string, unknown>,
@@ -2283,16 +2370,7 @@ describe("counting what rests only on refuted findings (D-102)", () => {
         findings: [{ ...COMPLETE_ADVERSARIAL.findings[0]!, lineStart: 2, lineEnd: 3 }],
       },
       s5_verification: {
-        verdicts: [
-          {
-            ref: "C1",
-            verdict: "verified",
-            quotedCode: SOURCE.split("\n")[2],
-            lineStart: 3,
-            lineEnd: 3,
-            note: "checked",
-          },
-        ],
+        verdicts: [proven("C1", SOURCE.split("\n")[2], 3, 3, "app/orders.ts", "checked")],
       },
     });
     expect(result.verified).toBe(1);
@@ -2363,9 +2441,7 @@ describe("verifying a finding in a file the change deleted (D-106)", () => {
           ...DELETION_BASE_ANSWERS,
           s4_deletions: { findings: [GUARD_GONE], reviewedDeletions: [ACCOUNTED] },
           s5_verification: {
-            verdicts: [
-              { ref: "C1", verdict: "verified", quotedCode, lineStart: 2, lineEnd: 2, note: "ok" },
-            ],
+            verdicts: [proven("C1", quotedCode, 2, 2, "app/legacy.ts", "ok")],
           },
         };
         return { sessionId: "s", output: answers[request.stage] ?? {} };

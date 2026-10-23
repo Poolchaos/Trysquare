@@ -35,7 +35,7 @@ import {
   type SweepRef,
   type SymbolRef,
 } from "@/lib/review/coverage";
-import { checkQuotedCode, describeMismatch } from "@/lib/review/quote-match";
+import { describeStep, firstFailingStep } from "@/lib/review/evidence";
 import { byRiskOrder, riskOrderedPaths } from "@/lib/review/risk-order";
 import { ruleCodeReader } from "@/lib/review/rule-codes";
 import {
@@ -693,15 +693,33 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       continue;
     }
 
-    // The verifier may correct where the code sits, but not move the finding
-    // onto other code: a true quotation of lines the finding is not about
+    // A finding the rule it cites does not cover is not a violation of it,
+    // however real the code (proof-and-steps plan, WP-C).
+    if (!verdict.ruleApplies) {
+      markKilled(
+        db,
+        finding.id,
+        `The verifier found that the rule it cites does not apply: ` +
+          `${verdict.note || "no reason given"}`,
+        "verification",
+      );
+      killed += 1;
+      continue;
+    }
+
+    // The last step is the failure, the code the finding is about. The
+    // verifier may correct where it sits, but not move the finding onto
+    // other code: a true quotation of lines the finding is not about
     // verified it, and the finding then moved to them (D-99).
-    if (!rangesOverlap(finding, verdict)) {
+    const failure = verdict.evidence[verdict.evidence.length - 1]!;
+    if (failure.path !== finding.filePath || !rangesOverlap(finding, failure)) {
       markKilled(
         db,
         finding.id,
-        `Verification quoted ${spanOf(verdict)}, which does not overlap the cited ` +
-          `${spanOf(finding)}.`,
+        failure.path !== finding.filePath
+          ? `The proof ends in ${failure.path}, not in the cited ${finding.filePath}.`
+          : `Verification quoted ${spanOf(failure)}, which does not overlap the cited ` +
+              `${spanOf(finding)}.`,
         "quote_check",
       );
       killed += 1;
@@ -709,33 +727,23 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       continue;
     }
 
-    // The verifier says it confirmed the finding. The program now checks that
-    // claim against the file, because a citation that does not match the code
-    // is not evidence, however confident the wording.
-    // A deleted file is checked against what it held, the only copy there is:
-    // read from the worktree, every finding in one was killed as unreadable
-    // (D-106).
-    const contents =
-      input.baseContents?.get(finding.filePath) ??
-      (await readFileIfPossible(input.worktreeRoot, finding.filePath));
-    if (contents === null) {
-      markKilled(
-        db,
-        finding.id,
-        `The cited file could not be read: ${finding.filePath}`,
-        "quote_check",
+    // The verifier says it proved the finding. The program now checks every
+    // step of that proof against the code, because a citation that does not
+    // match is not evidence, however confident the wording. A deleted file
+    // is checked against what it held, the only copy there is (D-106).
+    const contents = new Map<string, string | null>();
+    for (const path of new Set(verdict.evidence.map((step) => step.path))) {
+      contents.set(
+        path,
+        input.baseContents?.get(path) ?? (await readFileIfPossible(input.worktreeRoot, path)),
       );
-      killed += 1;
-      killedByQuoteCheck += 1;
-      continue;
     }
-
-    const check = checkQuotedCode(contents, verdict.lineStart, verdict.lineEnd, verdict.quotedCode);
-    if (!check.matches) {
+    const failing = firstFailingStep(verdict.evidence, contents);
+    if (failing !== null) {
       markKilled(
         db,
         finding.id,
-        `The quotation did not match the file: ${describeMismatch(check.reason)}.`,
+        `${describeStep(verdict.evidence, failing.index)} ${failing.reason}.`,
         "quote_check",
       );
       killed += 1;
@@ -744,10 +752,16 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     }
 
     markVerified(db, finding.id, {
-      quotedCode: verdict.quotedCode,
-      lineStart: verdict.lineStart,
-      lineEnd: verdict.lineEnd,
+      quotedCode: failure.quote,
+      lineStart: failure.lineStart,
+      lineEnd: failure.lineEnd,
       note: verdict.note,
+      proof: {
+        severity: verdict.severity,
+        trigger: verdict.trigger,
+        evidence: verdict.evidence,
+        guardsSearched: verdict.guardsSearched,
+      },
     });
     verified += 1;
   }

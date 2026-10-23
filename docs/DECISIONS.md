@@ -4443,3 +4443,15 @@ verified evidence, in writing, here.
   unproven on any severity disagreement; killing on either verifier's
   "does not apply"; leaving a finding with no rule unjudged. The paired
   models' windows needed no answer: both probed at 1M on 2026-10-23.
+- 2026-10-23 D-189 BUILT (WP-C2): a verified verdict carries its proof,
+  checked by the app. Choices made building it: the one top-level quotation
+  is replaced by the evidence path's last step, the failure itself, so D-99's
+  overlap rule moves onto it unchanged and there are not two quotations to
+  disagree; guardsSearched needs at least one entry, an empty list meaning
+  the hunt for a guard did not happen, which the schema refuses and the
+  engine's one repair round can mend; an empty quotation is let through the
+  schema to the quote check, which kills that one finding, since refused by
+  the schema it failed every other finding's answer with it (as the
+  quality gate's line-past-the-end finding showed). The verifier's
+  severity is written to the finding and the finder's kept in
+  raised_severity, the proof in proof_json (migration 0012).

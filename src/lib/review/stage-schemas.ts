@@ -107,24 +107,46 @@ export const deletionStageSchema = z.object({
   ),
 });
 
+/** One step of a proof: the code at those lines, quoted exactly. */
+const evidenceStepSchema = z.object({
+  path: z.string().min(1),
+  lineStart: z.number().int().positive(),
+  lineEnd: z.number().int().positive(),
+  // Empty is let through to the quote check, which kills that one finding:
+  // refused here, it failed every other finding's answer with it.
+  quote: z.string(),
+});
+
+/**
+ * Which candidate a verdict answers, by the label the prompt gave it.
+ *
+ * Deliberately not a database id. Candidates are recreated whenever a review
+ * is resumed, so an id would make the question different every time and the
+ * stage could never be replayed.
+ */
+const verdictRef = z.string();
+
 export const verificationStageSchema = z.object({
   verdicts: z.array(
-    z.object({
-      /**
-       * Which candidate this answers, by the label the prompt gave it.
-       *
-       * Deliberately not a database id. Candidates are recreated whenever a
-       * review is resumed, so an id would make the question different every
-       * time and the stage could never be replayed.
-       */
-      ref: z.string(),
-      verdict: z.enum(["verified", "killed", "open_question"]),
-      /** Required for a verified finding: it is what gets byte-checked. */
-      quotedCode: z.string(),
-      lineStart: z.number().int().positive(),
-      lineEnd: z.number().int().positive(),
-      note: z.string(),
-    }),
+    z.discriminatedUnion("verdict", [
+      // Proven, not asserted (proof-and-steps plan, WP-C): whether the cited
+      // rule applies, the verifier's own severity, the trigger, and the path
+      // from it to the failure, every step quoted and checked against the
+      // code, the last step being the failure itself.
+      z.object({
+        ref: verdictRef,
+        verdict: z.literal("verified"),
+        ruleApplies: z.boolean(),
+        severity: z.enum(SEVERITIES),
+        trigger: z.string().min(1),
+        evidence: z.array(evidenceStepSchema).min(1),
+        /** Where it looked for a guard that would prevent the failure. */
+        guardsSearched: z.array(z.string().min(1)).min(1),
+        note: z.string(),
+      }),
+      z.object({ ref: verdictRef, verdict: z.literal("killed"), note: z.string() }),
+      z.object({ ref: verdictRef, verdict: z.literal("open_question"), note: z.string() }),
+    ]),
   ),
 });
 

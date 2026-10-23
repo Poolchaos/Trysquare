@@ -169,11 +169,19 @@ finding:
 4. Judge whether the rule the finding cites applies to this code, a finding
    citing no rule against the protocol's directives (D-188), and confirm
    severity against the ruleset's severity definitions.
-   Verdict per finding: verified (with quotedCode + confirmed lines), killed
-   (with reason), or open_question (with what would resolve it). App code then
-   re-checks mechanically: the verdict's lines overlap the candidate's (D-99),
-   the cited lines exist in the file, and quotedCode matches the worktree
-   file at those lines once both sides are normalised.
+   Verdict per finding: killed (with reason), open_question (with what would
+   resolve it), or verified, which must carry its proof (proof-and-steps
+   plan, WP-C): whether the cited rule applies, its own severity, the
+   trigger, the evidence, an ordered path of steps from the trigger to the
+   failure, each a file, its lines and the code there quoted, the last step
+   being the failure itself, and where it searched for a guard. App code
+   then re-checks mechanically: a rule that does not apply refutes the
+   finding; the last step is in the cited file and overlaps the cited lines
+   (D-99); and every step's quotation matches the worktree file (a deleted
+   file's copy before deletion) at its lines once both sides are
+   normalised, the first that does not naming itself in the note. The
+   verifier's severity stands, the finder's kept beside it (PG-3, D-185);
+   the proof is stored with the finding.
    Normalisation forgives only what carries no meaning: CRLF, trailing
    whitespace, a trailing newline, lost common indentation, a byte-order
    mark at the start of the file, and the width the file's tabs were shown
