@@ -4706,3 +4706,10 @@ verified evidence, in writing, here.
   a report section of grades outside verification (a grade nobody proved
   is the unproven finding this plan exists to stop). Open: PG-5, how the
   screens are found, recommended the project's own e2e.
+- 2026-10-23 D-192 DECIDED (the maintainer, PG-5): WP-I takes its screens
+  from the project's own e2e command and grades the screenshots it saves;
+  "only screenshots if it has e2e tests". Trysquare does not start a
+  project's app or shoot URLs itself, and a project with no e2e command
+  is reported as having its design not checked. Rejected: Trysquare
+  driving the app from a list of URLs, which cannot reach a state behind a
+  click or a sign-in, and doing both.
