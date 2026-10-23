@@ -219,6 +219,22 @@ export function markOpenQuestion(
   });
 }
 
+/**
+ * The first verifier's proof on a finding still held for the second (WP-E),
+ * so a review watched live can count it proven once while the second works
+ * (WP-G). The status stays candidate: only both proofs verify it.
+ */
+export function holdFirstProof(db: Db, findingId: string, proof: VerifiedProof): void {
+  const result = db
+    .update(findings)
+    .set({ proofJson: JSON.stringify(proof) })
+    .where(and(eq(findings.id, findingId), eq(findings.status, "candidate")))
+    .run();
+  if (result.changes === 0) {
+    throw new Error(`Finding "${findingId}" is no longer a candidate; its proof was not held.`);
+  }
+}
+
 export class ReviewNotDecidingError extends Error {
   constructor(
     readonly reviewId: string,

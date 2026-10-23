@@ -16,9 +16,11 @@ import { describeStep, firstFailingStep } from "@/lib/review/evidence";
 import { verificationStageSchema } from "@/lib/review/stage-schemas";
 import type { Db } from "@/server/db/client";
 import {
+  holdFirstProof,
   markKilled,
   markOpenQuestion,
   markVerified,
+  statusOf,
   type Finding,
 } from "@/server/db/repositories/findings";
 import type { KillKind } from "@/lib/domain/enums";
@@ -238,8 +240,14 @@ export async function applyVerdicts(
     }
 
     const proven = { finding, ref: refFor(index), verdict };
-    if (options.hold) held.push(proven);
-    else markProven(context, proven);
+    if (options.hold) {
+      // In a run, so the live view counts it proven once meanwhile; an open
+      // question verified again keeps its status until both have answered.
+      if (statusOf(finding) === "candidate") {
+        holdFirstProof(context.db, finding.id, proofOf(verdict));
+      }
+      held.push(proven);
+    } else markProven(context, proven);
     tally.verified += 1;
   }
   return { ...tally, held };

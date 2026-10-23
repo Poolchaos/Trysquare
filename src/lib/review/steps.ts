@@ -60,8 +60,13 @@ export function stepStates(input: {
 
 export interface FindingTallies {
   raised: number;
-  /** The first verifier's proof held. */
+  /**
+   * A first verifier's proof held, whatever became of it after: the second
+   * may since have disagreed, or a person dismissed it.
+   */
   provenOnce: number;
+  /** Proven by the first verifier and not since an open question. */
+  proven: number;
   /** Both verifiers' proofs held. */
   provenTwice: number;
   /** Not proven: an open question, or one left out unproven (D-190). */
@@ -70,10 +75,16 @@ export interface FindingTallies {
   refuted: number;
   /** Its quotation was not the code at those lines. */
   discarded: number;
-  /** Still a candidate, not yet ruled on. */
+  /** Proven by the first verifier and held for the second (WP-E). */
+  withSecond: number;
+  /** Still a candidate the first verifier has not proven. */
   toProve: number;
 }
 
+/**
+ * What became of each finding. proven, refuted, discarded, open and toProve
+ * divide what was raised, each finding in exactly one.
+ */
 export function findingTallies(
   findings: readonly {
     status: string;
@@ -85,20 +96,28 @@ export function findingTallies(
 ): FindingTallies {
   const count = (keep: (finding: (typeof findings)[number]) => boolean) =>
     findings.filter(keep).length;
+  const isOpen = (finding: (typeof findings)[number]) =>
+    finding.status === "open_question" ||
+    (finding.status === "dismissed" && finding.dismissedFrom === "open_question");
+  // Proven by its status too: rows from before proofs were kept have none
+  // (0012). A dismissal from before its origin was kept (0013) cannot say.
+  const wasProven = (finding: (typeof findings)[number]) =>
+    finding.status === "verified" ||
+    finding.status === "confirmed" ||
+    (finding.status === "dismissed" && finding.dismissedFrom === "verified") ||
+    (finding.status !== "killed" && Boolean(finding.proofJson));
   return {
     raised: findings.length,
-    provenOnce: count((finding) => Boolean(finding.proofJson)),
+    provenOnce: count(wasProven),
+    proven: count((finding) => wasProven(finding) && !isOpen(finding)),
     provenTwice: count((finding) => Boolean(finding.secondProofJson)),
-    open: count(
-      (finding) =>
-        finding.status === "open_question" ||
-        (finding.status === "dismissed" && finding.dismissedFrom === "open_question"),
-    ),
+    open: count(isOpen),
     refuted: count((finding) => finding.status === "killed" && finding.killedBy === "verification"),
     discarded: count(
       (finding) => finding.status === "killed" && finding.killedBy === "quote_check",
     ),
-    toProve: count((finding) => finding.status === "candidate"),
+    withSecond: count((finding) => finding.status === "candidate" && Boolean(finding.proofJson)),
+    toProve: count((finding) => finding.status === "candidate" && !finding.proofJson),
   };
 }
 
@@ -119,22 +138,24 @@ export interface StepUsage {
 /**
  * Each step's requests and the time they took. A stage row is one request
  * (stage-executions.ts), retries and failures included, since each was sent;
- * the app-code steps write none.
+ * the app-code steps write none. The rows one call writes share its start
+ * and end as each is written, so a call is timed once, to its last row.
  */
 export function stepUsage(
   rows: readonly { stage: string; startedAt: string; endedAt: string | null }[],
 ): StepUsage[] {
   return STEPS.map((step) => {
     const mine = rows.filter((row) => (step.stages as readonly string[]).includes(row.stage));
+    const calls = new Map<string, number>();
+    for (const row of mine) {
+      if (row.endedAt === null) continue;
+      const key = `${row.stage} ${row.startedAt}`;
+      const ms = Math.max(0, Date.parse(row.endedAt) - Date.parse(row.startedAt));
+      calls.set(key, Math.max(calls.get(key) ?? 0, ms));
+    }
     return {
       requests: mine.length,
-      ms: mine.reduce(
-        (sum, row) =>
-          row.endedAt === null
-            ? sum
-            : sum + Math.max(0, Date.parse(row.endedAt) - Date.parse(row.startedAt)),
-        0,
-      ),
+      ms: [...calls.values()].reduce((sum, ms) => sum + ms, 0),
     };
   });
 }
@@ -188,20 +209,28 @@ export function stepCount(index: number, state: StepState, facts: StepFacts): st
   const { tallies } = facts;
   switch (index) {
     case 0:
-      return facts.rules === null ? "Freezing the ruleset" : `${facts.rules} rules frozen`;
+      return facts.rules === null
+        ? "Freezing the ruleset"
+        : `${counted(facts.rules, "rule", "rules")} frozen`;
     case 1:
-      return state === "done" ? `${facts.files} files read` : `Reading ${facts.files} files`;
+      return state === "done"
+        ? `${counted(facts.files, "file", "files")} read`
+        : `Reading ${counted(facts.files, "file", "files")}`;
     case 2:
       // Running, it has raised what it has so far, which is not yet a result.
       if (state === "now") {
-        return tallies.raised === 0 ? "Walking the rules" : `${tallies.raised} candidates so far`;
+        return tallies.raised === 0
+          ? "Walking the rules"
+          : `${counted(tallies.raised, "candidate", "candidates")} so far`;
       }
-      return `${tallies.raised} candidates raised`;
+      return `${counted(tallies.raised, "candidate", "candidates")} raised`;
     case 3:
-      return state === "done"
-        ? `${tallies.provenTwice} proven by both verifiers`
+      if (state === "done") return `${tallies.provenTwice} proven by both verifiers`;
+      // Once the first has ruled on every one, the second is proving the rest.
+      return tallies.toProve === 0 && tallies.withSecond > 0
+        ? `${tallies.withSecond} with the second verifier`
         : `${tallies.toProve} to prove`;
     default:
-      return state === "done" ? "Reported" : `${facts.waiting} wait for you`;
+      return state === "done" ? "Reported" : `${counted(facts.waiting, "waits", "wait")} for you`;
   }
 }

@@ -405,20 +405,28 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(
       summary.getByRole("heading", { name: "How the findings were proven" }),
     ).toBeVisible();
-    for (const label of ["Raised", "Proven once", "Proven by both", "Open question"]) {
-      await expect(
-        summary.getByRole("term").filter({ hasText: new RegExp(`^${label}$`) }),
-      ).toBeVisible();
+    // The journey's run: ten raised, the first verifier proving nine and
+    // refuting one, the second agreeing on all nine.
+    for (const [label, count] of [
+      ["Raised", "10"],
+      ["Proven once", "9"],
+      ["Proven by both", "9"],
+      ["Open question", "0"],
+    ] as const) {
+      const term = summary.getByRole("term").filter({ hasText: new RegExp(`^${label}$`) });
+      await expect(term).toBeVisible();
+      await expect(term.locator("..").getByRole("definition").first()).toHaveText(count);
     }
     const steps = summary.getByRole("listitem");
     await expect(steps).toHaveCount(5);
     await expect(steps.nth(0)).toContainText(/\d+ rules frozen for this review/);
     await expect(steps.nth(0)).toContainText("no requests");
-    await expect(steps.nth(2)).toContainText(/\d+ candidates? raised/);
+    await expect(steps.nth(2)).toContainText("10 candidates raised");
     await expect(steps.nth(3)).toContainText(
-      /refuted, .* discarded for quoting code that was not there/,
+      "9 proven by both verifiers, no open questions, 1 refuted, none discarded for quoting code that was not there.",
     );
-    await expect(steps.nth(3)).toContainText(/\d+ requests?$/);
+    // S5 and S5b, one request each.
+    await expect(steps.nth(3)).toContainText(/, 2 requests$/);
     await expect(steps.nth(4)).toContainText("Your confirmation, then the report.");
 
     // Clipped from the whole page at the top: an element shot scrolls it

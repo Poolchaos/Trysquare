@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { REVIEW_STAGES } from "@/lib/domain/enums";
 import {
   STEPS,
   findingTallies,
@@ -31,16 +32,9 @@ describe("the five steps", () => {
       "Prove each finding",
       "Report",
     ]);
-    expect(STEPS.flatMap((step) => step.stages)).toEqual([
-      "s0_prepare",
-      "s1_risk",
-      "s2_comprehension",
-      "s3_adversarial",
-      "s4_deletions",
-      "s5_verification",
-      "s5b_second_verification",
-      "s6_audit",
-    ]);
+    // S0, then every stage the pipeline has: a new stage fails this until it
+    // is given a step.
+    expect(STEPS.flatMap((step) => step.stages)).toEqual(["s0_prepare", ...REVIEW_STAGES]);
   });
 });
 
@@ -104,16 +98,29 @@ describe("what became of the findings", () => {
       finding({ status: "killed", killedBy: "verification" }),
       finding({ status: "killed", killedBy: "quote_check" }),
       finding({ status: "candidate" }),
+      // Proven by the first and held for the second (WP-E): proven so far.
+      finding({ status: "candidate", proofJson: "{}" }),
+      // From before proofs were kept (0012): proven by its status.
+      finding({ status: "verified" }),
+      finding({ status: "dismissed", dismissedFrom: "verified" }),
+      // Verified again and refuted: its old proof is not a proof now.
+      finding({ status: "killed", killedBy: "verification", proofJson: "{}" }),
     ]);
     expect(tallies).toEqual({
-      raised: 8,
-      provenOnce: 3,
+      raised: 12,
+      provenOnce: 6,
+      proven: 5,
       provenTwice: 2,
       open: 3,
-      refuted: 1,
+      refuted: 2,
       discarded: 1,
+      withSecond: 1,
       toProve: 1,
     });
+    // The live view's five divide what was raised, each finding once.
+    expect(
+      tallies.proven + tallies.refuted + tallies.discarded + tallies.open + tallies.toProve,
+    ).toBe(tallies.raised);
   });
 });
 
@@ -124,10 +131,12 @@ describe("what each step says it did", () => {
     tallies: {
       raised: 11,
       provenOnce: 11,
+      proven: 10,
       provenTwice: 10,
       open: 1,
       refuted: 0,
       discarded: 0,
+      withSecond: 0,
       toProve: 0,
     },
     waiting: 10,
@@ -150,6 +159,30 @@ describe("what each step says it did", () => {
     expect(stepCount(2, "now", facts)).toBe("11 candidates so far");
   });
 
+  it("says the second verifier is at work once the first has ruled on all", () => {
+    const second = { ...facts, tallies: { ...facts.tallies, withSecond: 7, toProve: 0 } };
+    expect(stepCount(3, "now", second)).toBe("7 with the second verifier");
+    // While the first still has some, those are what is left to prove.
+    const first = { ...facts, tallies: { ...facts.tallies, withSecond: 7, toProve: 2 } };
+    expect(stepCount(3, "now", first)).toBe("2 to prove");
+  });
+
+  it("counts one as one", () => {
+    const one = {
+      ...facts,
+      rules: 1,
+      files: 1,
+      tallies: { ...facts.tallies, raised: 1 },
+      waiting: 1,
+    };
+    expect(stepCount(0, "done", one)).toBe("1 rule frozen");
+    expect(stepCount(1, "done", one)).toBe("1 file read");
+    expect(stepCount(1, "now", one)).toBe("Reading 1 file");
+    expect(stepCount(2, "now", one)).toBe("1 candidate so far");
+    expect(stepCount(2, "done", one)).toBe("1 candidate raised");
+    expect(stepCount(4, "now", one)).toBe("1 waits for you");
+  });
+
   it("says nothing it does not know", () => {
     // A review whose ruleset was never frozen has no count to give.
     expect(stepCount(0, "now", { ...facts, rules: null })).toBe("Freezing the ruleset");
@@ -163,10 +196,12 @@ describe("what each step came to", () => {
     tallies: {
       raised: 11,
       provenOnce: 11,
+      proven: 10,
       provenTwice: 10,
       open: 1,
       refuted: 0,
       discarded: 0,
+      withSecond: 0,
       toProve: 0,
     },
     waiting: 10,

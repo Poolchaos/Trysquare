@@ -1428,7 +1428,9 @@ function ReportPanel({
 function FinishedSummary({ snapshot }: { snapshot: Snapshot }) {
   const { review } = snapshot;
   const tallies = findingTallies(snapshot.findings);
-  const secondVerifier = Boolean(review.verifierModel);
+  // Asked in this run: a review from before the second verifier has no S5b
+  // rows, though verifying one finding again since may have named one.
+  const secondVerifier = snapshot.stages.some((row) => row.stage === "s5b_second_verification");
   const facts = {
     rules: snapshot.rules ?? null,
     files: snapshot.coverage.totalFiles,
@@ -1916,7 +1918,12 @@ function ScanTheater({
   const stageIndex = STAGES.findIndex(([stage]) => stage === executing);
   const usual = executing !== null ? snapshot.stageMedians[executing] : undefined;
   const states = stepStates({
-    stageDone: (stage) => deterministicDone(stage, snapshot, done) || done.has(stage),
+    // Past the second verifier once the audit runs, asked or not: when the
+    // first proves nothing it is never asked.
+    stageDone: (stage) =>
+      deterministicDone(stage, snapshot, done) ||
+      done.has(stage) ||
+      (stage === "s5b_second_verification" && executing === "s6_audit"),
     executing,
     status: review.status,
   });
@@ -2112,12 +2119,16 @@ function ScanTheater({
           what is left, which add up to what was raised. Only once there is
           something to prove. */}
         {states[3] !== "next" && tallies.raised > 0 ? (
-          <dl aria-label="Findings so far" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <dl
+            role="group"
+            aria-label="Findings so far"
+            className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5"
+          >
             {(
               [
                 [
                   "proven by the first verifier",
-                  tallies.provenOnce,
+                  tallies.proven,
                   "bg-[var(--color-good-soft)]",
                   "text-[var(--color-good)]",
                   "",

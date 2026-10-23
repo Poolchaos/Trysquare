@@ -1014,59 +1014,99 @@ test("the scan theater follows the review from stage to stage", async ({ page })
   }
 });
 
-test("the scan theater counts the findings while they are proven", async ({ page }) => {
-  // Held in its fifth call, the first verifier: the candidates are raised
-  // and none is proven yet, so each is still to prove (WP-G). The count is
-  // put back as in the test above, even if an assertion fails.
-  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
-  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 30_000, skip: 4 }), "utf8");
-  try {
-    await startAReview(page);
-    const theater = page.getByRole("dialog", {
-      name: "Watching the review of feature/rename-prefs into main",
-    });
-    await expect(theater).toBeVisible({ timeout: 60_000 });
-    const steps = theater.getByRole("list", { name: "Review steps" });
-    await expect(steps.locator('[aria-current="step"]')).toContainText("Prove each finding", {
-      timeout: 30_000,
-    });
-    await expect(steps.getByRole("listitem").nth(2)).toContainText(/Done.*candidates raised/);
-    const found = theater.locator('[aria-label="Findings so far"]');
-    await expect(found).toContainText("proven by the first verifier");
-    await expect(found).toContainText("still to prove");
+for (const held of [
+  {
+    // Held in its fifth call, the first verifier: every candidate raised,
+    // none ruled on yet.
+    what: "the first",
+    skip: 4,
+    card: "10 to prove",
+    tiles: [
+      ["proven by the first verifier", "0"],
+      ["refuted", "0"],
+      ["discarded: the cited code was not there", "0"],
+      ["open question", "0"],
+      ["still to prove", "10"],
+    ],
+    shots: "steps-proving",
+  },
+  {
+    // Held in its sixth, the second verifier: the first has proven nine and
+    // refuted one, which this view read as none proven (review round 5).
+    what: "the second",
+    skip: 5,
+    card: "9 with the second verifier",
+    tiles: [
+      ["proven by the first verifier", "9"],
+      ["refuted", "1"],
+      ["discarded: the cited code was not there", "0"],
+      ["open question", "0"],
+      ["still to prove", "0"],
+    ],
+    shots: "steps-second",
+  },
+] as const) {
+  test(`the scan theater counts the findings while ${held.what} verifier works`, async ({
+    page,
+  }) => {
+    // WP-G. The count is put back as in the test above, even if an
+    // assertion fails.
+    const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+    writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 30_000, skip: held.skip }), "utf8");
+    try {
+      await startAReview(page);
+      const theater = page.getByRole("dialog", {
+        name: "Watching the review of feature/rename-prefs into main",
+      });
+      await expect(theater).toBeVisible({ timeout: 60_000 });
+      const steps = theater.getByRole("list", { name: "Review steps" });
+      const current = steps.locator('[aria-current="step"]');
+      await expect(current).toContainText("Prove each finding", { timeout: 30_000 });
+      await expect(current).toContainText(held.card, { timeout: 30_000 });
+      await expect(steps.getByRole("listitem").nth(2)).toContainText("10 candidates raised");
+      const found = theater.getByRole("group", { name: "Findings so far" });
+      for (const [label, count] of held.tiles) {
+        await expect(
+          found
+            .locator("div")
+            .filter({ has: page.getByText(label, { exact: true }) })
+            .getByRole("definition"),
+        ).toHaveText(count);
+      }
 
-    const evidence = join(
-      fileURLToPath(new URL("..", import.meta.url)),
-      "review",
-      `${new Date().toISOString().slice(0, 10)}-e2e`,
-    );
-    mkdirSync(evidence, { recursive: true });
-    const desktop = page.viewportSize();
-    for (const [scheme, name] of [
-      ["light", "steps-proving-light"],
-      ["dark", "steps-proving-dark"],
-    ] as const) {
-      await page.emulateMedia({ colorScheme: scheme });
-      await page.screenshot({ path: join(evidence, `${name}.png`), animations: "disabled" });
+      const evidence = join(
+        fileURLToPath(new URL("..", import.meta.url)),
+        "review",
+        `${new Date().toISOString().slice(0, 10)}-e2e`,
+      );
+      mkdirSync(evidence, { recursive: true });
+      const desktop = page.viewportSize();
+      for (const scheme of ["light", "dark"] as const) {
+        await page.emulateMedia({ colorScheme: scheme });
+        await page.screenshot({
+          path: join(evidence, `${held.shots}-${scheme}.png`),
+          animations: "disabled",
+        });
+      }
+      await page.emulateMedia({ colorScheme: "light" });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await found.scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: join(evidence, `${held.shots}-phone.png`),
+        animations: "disabled",
+      });
+      if (desktop) await page.setViewportSize(desktop);
+
+      await page.keyboard.press("Escape");
+      await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+      await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
+    } finally {
+      rmSync(STALL_TRIGGER, { force: true });
+      writeFileSync(COUNTER_FILE, callsBefore, "utf8");
     }
-    await page.emulateMedia({ colorScheme: "light" });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await found.scrollIntoViewIfNeeded();
-    await page.screenshot({
-      path: join(evidence, "steps-proving-phone.png"),
-      animations: "disabled",
-    });
-    if (desktop) await page.setViewportSize(desktop);
-
-    await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Cancel", exact: true }).click();
-    await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
-    await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
-  } finally {
-    rmSync(STALL_TRIGGER, { force: true });
-    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
-  }
-});
+  });
+}
 
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
   page,

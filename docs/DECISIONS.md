@@ -4667,3 +4667,28 @@ verified evidence, in writing, here.
   the pre-flight cannot know. The decomposed profile sends one file per
   request, so no window splits it; its case holds the count to the run.
   04's pre-flight line brought up to the screen.
+- 2026-10-23 Review round 5 (over WP-G, a103e07 and 1a91c99), two
+  read-only reviewers, each finding read again in the code before it was
+  acted on. The live tally said none proven by the first verifier for the
+  whole of the second verifier's stage: S5's proven findings are held for
+  S5b (WP-E) and stayed candidates without a proof. The first proof is now
+  written onto the held candidate, which stays a candidate until both
+  prove it (`holdFirstProof`), and the card says how many are with the
+  second verifier. The five live tallies were not a partition (a
+  disagreement counted proven and open): they now divide what was raised,
+  each finding once. A dismissed open question carrying the first proof
+  showed "How it was proven" on its card; it no longer does. A retried
+  call was timed once per row it wrote, its rows sharing one start: a
+  call is timed once. Proven once also counts by status, for rows from
+  before proofs were kept (0012); a dismissal from before its origin was
+  kept (0013) cannot say, and is not counted. Whether a review had a
+  second verifier is read from its own S5b rows, since verifying one
+  finding again names a verifier model on an older review. The proving
+  step is shown done while the audit runs when S5 proved nothing and S5b
+  was never asked. Step counts say one rule, one file, one candidate. The
+  findings-so-far list is a named group. The tests now assert every count
+  (they asserted labels), held once in each verifier, and the step list
+  is checked against `REVIEW_STAGES`. Left as it stands: a review finished
+  before this round whose verifiers disagreed kept no first proof on that
+  open question, so its summary counts it not proven once; no real-model
+  review has run since WP-E, so only fixture runs are affected.

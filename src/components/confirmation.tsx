@@ -842,9 +842,11 @@ export function ConfirmationQueue({
               </p>
             ) : null}
 
-            {/* A finding verification could not settle claims no proof, though
-                one was kept from a verifier that gave it. */}
-            {currentProof && current.status !== "open_question" ? (
+            {/* An open question claims no proof, left out or not (D-190),
+                though one was kept from the verifier that gave it. */}
+            {currentProof &&
+            current.status !== "open_question" &&
+            current.dismissedFrom !== "open_question" ? (
               <section
                 aria-label="How it was proven"
                 className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs"

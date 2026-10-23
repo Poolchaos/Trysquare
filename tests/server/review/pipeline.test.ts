@@ -955,6 +955,7 @@ describe("the second verifier (WP-E, D-188)", () => {
   /** A run whose first verifier says `first` and whose second says `second`. */
   async function both(second: unknown, first: unknown = proof()) {
     const asked: StageRequest[] = [];
+    let duringSecond: ReturnType<typeof listFindings> = [];
     const answers: Record<string, unknown> = {
       ...BASE_ANSWERS,
       s5_verification: { verdicts: [first] },
@@ -971,10 +972,11 @@ describe("the second verifier (WP-E, D-188)", () => {
       secondVerifier: "claude-opus-5-5",
       run: async (request) => {
         asked.push(request);
+        if (request.stage === "s5b_second_verification") duringSecond = listFindings(db, reviewId);
         return { output: answers[request.stage] ?? {}, sessionId: `session-${request.stage}` };
       },
     });
-    return { asked, finding: listFindings(db, reviewId)[0]! };
+    return { asked, duringSecond, finding: listFindings(db, reviewId)[0]! };
   }
 
   it("is asked about what the first proved, on its own model, fresh and under the same label", async () => {
@@ -1002,6 +1004,16 @@ describe("the second verifier (WP-E, D-188)", () => {
     expect(finding.verificationNote).toBe(
       "The second verifier, claude-opus-5-5, refuted it: The caller parses the body first.",
     );
+  });
+
+  it("holds the first verifier's proof on the candidate while the second works", async () => {
+    // So the live view counts it proven once meanwhile (WP-G); it is still
+    // a candidate until both have proven it.
+    const { duringSecond } = await both({ verdicts: [proof()] });
+    expect(statusOf(duringSecond[0]!)).toBe("candidate");
+    expect(JSON.parse(duringSecond[0]!.proofJson ?? "null")).toMatchObject({
+      trigger: "A request body reaches total() as payload.",
+    });
   });
 
   it("keeps the first verifier's proof on one the second did not prove", async () => {
