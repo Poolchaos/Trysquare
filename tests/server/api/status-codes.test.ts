@@ -213,6 +213,7 @@ describe("an error thrown by another copy of its module", () => {
       [new findings.FindingNotFoundError("x"), 404],
       [new models.ModelNotFoundError("x"), 404],
       [new machines.IllegalTransitionError("review", "complete", "running", []), 409],
+      [new findings.OpenQuestionNotConfirmableError("x"), 409],
       [new machines.InvalidCloneTransitionError("ready", "pending"), 409],
       [new projects.CloneNotReadyError("x", "cloning"), 409],
       [new manager.ReviewNotStartableError("x", "cancelled"), 409],
@@ -243,7 +244,8 @@ describe("a step the state machine does not allow", () => {
     const { db } = runtime();
     const { createProject } = await import("@/server/db/repositories/projects");
     const { createReview, transitionReview } = await import("@/server/db/repositories/reviews");
-    const { createCandidate, markVerified } = await import("@/server/db/repositories/findings");
+    const { createCandidate, markOpenQuestion, markVerified } =
+      await import("@/server/db/repositories/findings");
     const project = createProject(db, {
       name: "app",
       gitUrl: "git@example.com:acme/app.git",
@@ -273,9 +275,29 @@ describe("a step the state machine does not allow", () => {
       mechanism: "A mechanism.",
     });
     markVerified(db, finding.id, { quotedCode: "x", lineStart: 1, lineEnd: 1 });
+    // Unproven: verification could not settle it, so it may not be reported
+    // (PG-2 (a), D-185). It answered 200 and went into the report.
+    const unproven = createCandidate(db, {
+      reviewId: review.id,
+      repo: "primary",
+      filePath: "app/a.ts",
+      lineStart: 2,
+      lineEnd: 2,
+      severity: "WARNING",
+      issue: "Another issue.",
+      comment: "A comment.",
+      mechanism: "A mechanism.",
+    });
+    markOpenQuestion(db, unproven.id, "Could not be settled from the code.");
     for (const status of ["running", "verifying", "awaiting_confirmation"] as const) {
       transitionReview(db, review.id, status);
     }
+
+    const refused = await routes.confirm.POST(post(), params(unproven.id));
+    expect(refused.status).toBe(409);
+    const body = (await refused.json()) as { code: string; error: string };
+    expect(body.code).toBe("OpenQuestionNotConfirmableError");
+    expect(body.error).toMatch(/Dismiss it, or verify it again/);
 
     expect((await routes.confirm.POST(post(), params(finding.id))).status).toBe(200);
     const again = await routes.confirm.POST(post(), params(finding.id));

@@ -856,10 +856,12 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 {snapshot.project.name}
               </a>
             ) : null}
-            <span className="flex items-center gap-2">
-              <Mono>{review.fromBranch}</Mono>
+            {/* Wraps between the names, not inside one: kept on one row, a
+                phone broke the branch mid-word with "into main" beside it. */}
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              <Mono className="min-w-0 break-all">{review.fromBranch}</Mono>
               <span className="text-[var(--color-ink-faint)]">into</span>
-              <Mono>{review.intoBranch}</Mono>
+              <Mono className="min-w-0 break-all">{review.intoBranch}</Mono>
             </span>
           </span>
         }

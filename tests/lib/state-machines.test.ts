@@ -106,8 +106,10 @@ describe("finding status machine", () => {
     expect(canTransitionFinding("verified", "confirmed")).toBe(true);
   });
 
-  it("lets an open question be resolved either way by a human", () => {
-    expect(canTransitionFinding("open_question", "confirmed")).toBe(true);
+  it("lets an open question be dismissed, never confirmed: only proven findings are reported", () => {
+    // PG-2 (a), D-185: a finding verification could not prove stays out of
+    // the report; it is dismissed, or verified again.
+    expect(canTransitionFinding("open_question", "confirmed")).toBe(false);
     expect(canTransitionFinding("open_question", "dismissed")).toBe(true);
   });
 

@@ -11,8 +11,9 @@
  * these can start a review without repeating the setup.
  */
 
-import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test, type Locator, type Route } from "@playwright/test";
 import { answerOnce, routeUntilStopped } from "./answer-once";
 import { APP_REPO, COUNTER_FILE, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
@@ -1062,6 +1063,82 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   // The pause is over, so the banner is gone rather than lingering as a
   // warning about something that has already been dealt with.
   await expect(page.getByText(/The limit clears at/)).toBeHidden();
+});
+
+test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
+  // Only proven findings reach the report: an open question is dismissed, or
+  // verified again (PG-2 (a), D-185). The usage-limit test before this one
+  // leaves a review awaiting decisions; its findings are shown as open
+  // questions here, so whichever is first in the queue is one.
+  const listed = (await (await page.request.get("/api/reviews")).json()) as {
+    reviews: { id: string; status: string }[];
+  };
+  const waiting = listed.reviews.find((review) => review.status === "awaiting_confirmation");
+  expect(waiting, "a review awaiting decisions").toBeDefined();
+  const stop = await routeUntilStopped(page, `**/api/reviews/${waiting!.id}`, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as {
+      findings: { status: string; verificationNote: string | null }[];
+    };
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        findings: body.findings.map((finding) =>
+          finding.status === "verified"
+            ? { ...finding, status: "open_question", verificationNote: "Could not be settled." }
+            : finding,
+        ),
+      },
+    });
+  });
+  let confirms = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.endsWith("/confirm")) confirms += 1;
+  });
+  await page.goto(`/reviews/${waiting!.id}`);
+  await expect(page.getByTestId("not-proven")).toContainText(
+    "Not proven, so it cannot go into the report.",
+  );
+  await expect(page.getByText("Verification: Could not be settled.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "How it was proven" })).toHaveCount(0);
+  await expect(page.getByText("Shift+C", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Confirm", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Dismiss" })).toBeVisible();
+  await page.locator("body").press("Shift+C");
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  expect(confirms).toBe(0);
+
+  // Photographed in both themes and at phone width, for the grade.
+  const evidence = join(
+    fileURLToPath(new URL("..", import.meta.url)),
+    "review",
+    `${new Date().toISOString().slice(0, 10)}-e2e`,
+  );
+  mkdirSync(evidence, { recursive: true });
+  const desktop = page.viewportSize();
+  for (const [scheme, name] of [
+    ["light", "unproven-light"],
+    ["dark", "unproven-dark"],
+  ] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.locator("body").screenshot({
+      path: join(evidence, `${name}.png`),
+      animations: "disabled",
+      caret: "hide",
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("body").screenshot({
+    path: join(evidence, "unproven-phone.png"),
+    animations: "disabled",
+    caret: "hide",
+  });
+  if (desktop) await page.setViewportSize(desktop);
+  await stop();
 });
 
 test("cancelling a running review stops it and says so", async ({ page }) => {

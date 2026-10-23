@@ -216,7 +216,10 @@ fields, quoted code with surrounding context from the worktree, the diff
 hunk, mechanism, rule text it violates. Actions: confirm, dismiss (reason
 required, stored), edit-then-confirm (comment wording only; file/lines are
 immutable post-verification). Bulk actions exist only for dismiss-by-rule.
-Nothing reaches the report without an explicit confirm.
+Nothing reaches the report without an explicit confirm, and only a proven
+(verified) finding can be confirmed: an open question is dismissed, or
+verified again, never confirmed (PG-2 (a), D-185); the card shows the
+verifier's proof, and the finder's severity where the verifier's differs.
 
 ## 3. S8 Report (deterministic)
 

@@ -12,6 +12,7 @@ import {
   markKilled,
   markOpenQuestion,
   markVerified,
+  OpenQuestionNotConfirmableError,
   ReviewNotDecidingError,
   requireFinding,
   statusOf,
@@ -125,11 +126,15 @@ describe("finding verification", () => {
     expect(statusOf(requireFinding(db, finding.id))).toBe("killed");
   });
 
-  it("surfaces an open question for a human to resolve", () => {
+  it("surfaces an open question for a human to dismiss, never to confirm", () => {
+    // PG-2 (a), D-185: only proven findings reach the report.
     const finding = candidate();
     markOpenQuestion(db, finding.id, "Needs the caller in another repo to confirm the shape.");
     expect(listAwaitingDecision(db, reviewId)).toHaveLength(1);
-    expect(confirmFinding(db, finding.id).status).toBe("confirmed");
+    expect(() => confirmFinding(db, finding.id)).toThrow(OpenQuestionNotConfirmableError);
+    expect(() => confirmFinding(db, finding.id)).toThrow(/cannot go into the report/);
+    expect(statusOf(requireFinding(db, finding.id))).toBe("open_question");
+    expect(dismissFinding(db, finding.id, "Not reproducible here.").status).toBe("dismissed");
   });
 });
 

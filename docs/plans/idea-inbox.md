@@ -76,6 +76,10 @@ pulled deliberately.
   signal, exit and uncaught-error tracing in the server that recorded only
   its start. Not leftover unit-test processes (none lingered, and unit then
   e2e passed). Next occurrence: trace again before guessing at a cause.
+  Again on Windows CI, 2026-10-23, run 39910556621 at 14594de: for 30
+  seconds the server answered none of one test's API requests (the trace
+  holds the page and its scripts, no API response), then answered the next
+  test in 0.8 s; macOS and Linux passed. Re-run to see if it recurs.
 - 2026-10-22: README's three screenshots (docs/images) were last taken in
   c09b2ad on 2026-08-25, and the screens have changed since, last in
   3169502. Re-shoot them from the theme pass and compare (D-179).

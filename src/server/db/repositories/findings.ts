@@ -225,10 +225,28 @@ export function confirmFinding(
   options: { comment?: string | undefined } = {},
 ): Finding {
   assertDeciding(db, findingId);
+  if (statusOf(requireFinding(db, findingId)) === "open_question") {
+    throw new OpenQuestionNotConfirmableError(findingId);
+  }
   const replacement = options.comment?.trim() ?? "";
   const original = requireFinding(db, findingId).comment;
   const edited = replacement === "" || replacement === original.trim() ? null : replacement;
   return transitionFinding(db, findingId, "confirmed", { editedComment: edited });
+}
+
+/**
+ * An open question is a finding verification could not prove, and only proven
+ * findings reach the report (PG-2 (a), D-185). Said as such, not as a bare
+ * illegal transition, so the person knows what they can do instead.
+ */
+export class OpenQuestionNotConfirmableError extends Error {
+  constructor(readonly findingId: string) {
+    super(
+      "This finding is an open question: verification could not prove it, so it cannot go " +
+        "into the report. Dismiss it, or verify it again.",
+    );
+    this.name = "OpenQuestionNotConfirmableError";
+  }
 }
 
 /** Human decision. The reason is kept: dismissals are evidence about the engine. */

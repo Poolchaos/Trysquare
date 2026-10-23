@@ -292,11 +292,31 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
 
   await test.step("the queue mid-decision is photographed for the design review", async () => {
     mkdirSync(EVIDENCE, { recursive: true });
+    // From the top: the top bar is fixed, and a body capture of a scrolled
+    // page drew it across the middle of the screen, over the queue.
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.locator("body").screenshot({
       path: join(EVIDENCE, "journey-confirmation.png"),
       animations: "disabled",
       caret: "hide",
     });
+    // The card with its proof in the other theme and at phone width too,
+    // graded with the rest (proof-and-steps plan, WP-C).
+    const desktop = page.viewportSize();
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.locator("body").screenshot({
+      path: join(EVIDENCE, "journey-confirmation-dark.png"),
+      animations: "disabled",
+      caret: "hide",
+    });
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator("body").screenshot({
+      path: join(EVIDENCE, "journey-confirmation-phone.png"),
+      animations: "disabled",
+      caret: "hide",
+    });
+    if (desktop) await page.setViewportSize(desktop);
   });
 
   await test.step("the active finding carries what the decision needs", async () => {

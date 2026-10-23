@@ -4455,3 +4455,11 @@ verified evidence, in writing, here.
   quality gate's line-past-the-end finding showed). The verifier's
   severity is written to the finding and the finder's kept in
   raised_severity, the proof in proof_json (migration 0012).
+- 2026-10-23 WP-D1 (proof-and-steps plan, PG-2 (a), D-185): an open
+  question cannot be confirmed. The state machine no longer allows it,
+  confirming one answers 409 OpenQuestionNotConfirmableError, "verification
+  could not prove it, so it cannot go into the report. Dismiss it, or verify
+  it again.", and the card offers only Dismiss, with no Confirm by button or
+  Shift+C, and says under the verifier's note why. The state-machine and
+  repository tests that allowed it were changed to the decision, not bent to
+  pass: each says what it now holds and why.

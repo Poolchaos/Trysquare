@@ -91,6 +91,9 @@ interface FileContext {
 }
 
 const UNDECIDED = new Set(["verified", "open_question"]);
+// Only a proven finding can go into the report; an open question is
+// dismissed, or verified again (PG-2 (a), D-185).
+const CONFIRMABLE = new Set(["verified"]);
 
 /** Worst first: a queue is worked from the top, so the top must be the worst. */
 const SEVERITY_ORDER = ["CRITICAL", "WARNING", "NITPICK"];
@@ -368,11 +371,15 @@ export function ConfirmationQueue({
       // finding in front of it, and no decision can be taken back (5.5,
       // MG-6, D-132). Shift decides, not the letter's case: Caps Lock turns
       // Shift+C into "c" and a bare c into "C".
-      else if (event.shiftKey && event.key.toLowerCase() === "c" && UNDECIDED.has(current.status)) {
+      else if (
+        event.shiftKey &&
+        event.key.toLowerCase() === "c" &&
+        CONFIRMABLE.has(current.status)
+      ) {
         if (!busy) void act(current, "confirm", drafts[current.id]);
       } else if (event.key === "d" && UNDECIDED.has(current.status)) {
         reasonRef.current?.focus();
-      } else if (event.key === "e" && UNDECIDED.has(current.status)) {
+      } else if (event.key === "e" && CONFIRMABLE.has(current.status)) {
         setEditingFor(current.id);
         // After the textarea exists, or there is nothing to focus.
         queueMicrotask(() => editRef.current?.focus());
@@ -664,7 +671,9 @@ export function ConfirmationQueue({
               </p>
             ) : null}
 
-            {currentProof ? (
+            {/* A finding verification could not settle claims no proof, though
+                one was kept from a verifier that gave it. */}
+            {currentProof && current.status !== "open_question" ? (
               <section
                 aria-label="How it was proven"
                 className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs"
@@ -793,20 +802,35 @@ export function ConfirmationQueue({
 
             {UNDECIDED.has(current.status) ? (
               <div className="mt-4 grid gap-3 border-t border-[var(--color-border)] pt-3">
+                {CONFIRMABLE.has(current.status) ? null : (
+                  <p className="text-xs" data-testid="not-proven">
+                    <span className="font-medium">
+                      Not proven, so it cannot go into the report.{" "}
+                    </span>
+                    {/* Why is said above it, as every finding's note is. */}
+                    <span className="text-[var(--color-ink-muted)]">
+                      Dismiss it with a reason below.
+                    </span>
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="primary"
-                    disabled={busy}
-                    onClick={() => void act(current, "confirm", drafts[current.id])}
-                  >
-                    Confirm
-                  </Button>
-                  <Button
-                    variant="quiet"
-                    onClick={() => setEditingFor(editing ? null : current.id)}
-                  >
-                    {editing ? "Stop editing" : "Edit comment"}
-                  </Button>
+                  {CONFIRMABLE.has(current.status) ? (
+                    <>
+                      <Button
+                        variant="primary"
+                        disabled={busy}
+                        onClick={() => void act(current, "confirm", drafts[current.id])}
+                      >
+                        Confirm
+                      </Button>
+                      <Button
+                        variant="quiet"
+                        onClick={() => setEditingFor(editing ? null : current.id)}
+                      >
+                        {editing ? "Stop editing" : "Edit comment"}
+                      </Button>
+                    </>
+                  ) : null}
                   <Button
                     variant="quiet"
                     onClick={() => setContextFor(showContext ? null : current.id)}
@@ -849,9 +873,15 @@ export function ConfirmationQueue({
 
       <footer className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-aside text-[var(--color-ink-faint)]">
         <Key label="j / k" action="next / previous" />
-        <Key label="Shift+C" action="confirm" />
+        {/* Only what works on the finding in front: an open question has no
+            confirm and no comment to edit (PG-2 (a), D-185). */}
+        {current && !CONFIRMABLE.has(current.status) ? null : (
+          <Key label="Shift+C" action="confirm" />
+        )}
         <Key label="d" action="dismiss" />
-        <Key label="e" action="edit comment" />
+        {current && !CONFIRMABLE.has(current.status) ? null : (
+          <Key label="e" action="edit comment" />
+        )}
         <Key label="enter" action="show code" />
         <Key label="g g" action="first" />
         <Key label="G" action="last" />
