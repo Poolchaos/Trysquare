@@ -11,7 +11,12 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { SELECTABLE_REVIEW_EFFORTS, type ReviewEffort } from "@/lib/domain/enums";
+import {
+  SELECTABLE_REVIEW_EFFORTS,
+  reviewProfileSchema,
+  type ReviewEffort,
+} from "@/lib/domain/enums";
+import { whatTheModelGets } from "@/lib/review/profiles";
 import { effortRunsOn } from "@/lib/models/effort-support";
 import { pairedVerifierFor, secondVerifierReadiness } from "@/lib/models/pairing";
 import {
@@ -93,7 +98,24 @@ interface Preflight {
   modelProfile: string | null;
   downgradedFrom: string | null;
   requestsByProfile: Record<string, number>;
+  /** Every stage's requests (WP-F). */
+  requestsByStage: Record<string, number>;
+  /** S3's rule batches before any split to fit the window. */
+  passes: number;
+  /** A batch was split to fit the window, so the S3 count is an estimate. */
+  requestsSplit: boolean;
+  passesByProfile: Record<string, number>;
 }
+
+/** The stages that ask a model, as the run screen names them. */
+const REQUEST_STAGES = [
+  ["s1_risk", "Risk"],
+  ["s2_comprehension", "Comprehension"],
+  ["s3_adversarial", "Adversarial"],
+  ["s4_deletions", "Deletions"],
+  ["s5_verification", "Verification"],
+  ["s5b_second_verification", "Second verifier"],
+] as const;
 
 interface Model {
   id: string;
@@ -357,6 +379,8 @@ function NewReview() {
   }, [projectId, refreshCount]);
 
   const usableModels = models.filter((row) => isSelectable(row.availability));
+  // The first recommended in picker order, the recommended default (D-184).
+  const recommendedName = models.find((row) => row.recommended)?.displayName ?? null;
   const unprobed = models.filter((row) => !isSelectable(row.availability));
   // Everything, until one model can actually run a review. Before that the
   // unprobed rows are the whole point of the panel.
@@ -931,6 +955,27 @@ function NewReview() {
                                 .filter(Boolean)
                                 .join(", ")}
                         </span>
+                        {/* How its work is divided, with no claim about tokens (D-187). */}
+                        {(() => {
+                          const parsed = reviewProfileSchema.safeParse(row.profileId);
+                          const gets = parsed.success
+                            ? whatTheModelGets(
+                                parsed.data,
+                                preflight?.passesByProfile?.[parsed.data],
+                              )
+                            : null;
+                          return gets === null ? null : (
+                            <span className="mt-0.5 block text-xs text-[var(--color-ink-muted)]">
+                              {gets}
+                            </span>
+                          );
+                        })()}
+                        {row.recommended ? null : (
+                          <span className="mt-0.5 block text-xs text-[var(--color-warning)]">
+                            Accuracy may fall on this model.
+                            {recommendedName ? ` ${recommendedName} is recommended.` : ""}
+                          </span>
+                        )}
                       </span>
                       {!selectable ? (
                         <Button
@@ -1192,6 +1237,17 @@ function NewReview() {
                 ) : null}
               </dl>
 
+              <div data-testid="requests-by-stage" className="mt-3 text-xs">
+                <p className="font-medium">Requests by stage</p>
+                <p className="text-[var(--color-ink-muted)]">
+                  {REQUEST_STAGES.map(
+                    ([stage, label]) => `${label} ${preflight.requestsByStage[stage] ?? 0}`,
+                  ).join(", ")}
+                  . The second verifier is asked only if verification proves a finding, and any
+                  request can need one more if its answer comes back in the wrong shape.
+                </p>
+              </div>
+
               {emptyHalves.length > 0 ? (
                 <div className="mt-3">
                   <Problem>
@@ -1206,10 +1262,12 @@ function NewReview() {
                   This model has not been probed, so its context window is unknown and the review
                   will send each batch as one request without splitting.
                 </p>
-              ) : preflight.withinWindow === false ? (
+              ) : preflight.requestsSplit ? (
                 <p className="mt-3 text-xs text-[var(--color-warning)]">
-                  The prompt is larger than this model&apos;s usable window, so the review will be
-                  split into more, smaller requests.
+                  The adversarial work is {preflight.passes}{" "}
+                  {preflight.passes === 1 ? "pass" : "passes"}, split into{" "}
+                  {preflight.requestsByStage.s3_adversarial} requests to fit this model&apos;s
+                  window. The split is estimated, so the run may make a few more or fewer.
                 </p>
               ) : null}
 

@@ -8,7 +8,12 @@
 
 import { describe, expect, it } from "vitest";
 import { REVIEW_PROFILES } from "@/lib/domain/enums";
-import { isJudgmentProfile, profileRank, resolveProfile } from "@/lib/review/profiles";
+import {
+  isJudgmentProfile,
+  profileRank,
+  resolveProfile,
+  whatTheModelGets,
+} from "@/lib/review/profiles";
 
 describe("profile strength", () => {
   it("ranks the enum from most to least of the protocol per request", () => {
@@ -108,5 +113,17 @@ describe("resolving a review's profile", () => {
       requested: "chunked",
     });
     expect(result).toMatchObject({ ok: true, downgradedFrom: null });
+  });
+});
+
+describe("what each model gets, said in the picker (WP-F, D-187)", () => {
+  it("says how the work is divided, with no claim about tokens", () => {
+    expect(whatTheModelGets("full-context")).toBe("The whole ruleset in one pass.");
+    expect(whatTheModelGets("chunked")).toBe("One pass per rule theme.");
+    expect(whatTheModelGets("chunked", 8)).toBe("One pass per rule theme, 8 passes.");
+    expect(whatTheModelGets("decomposed", 1)).toBe(
+      "Each file against the rules that apply to it, 1 pass.",
+    );
+    expect(whatTheModelGets("mechanical-only")).toBeNull();
   });
 });

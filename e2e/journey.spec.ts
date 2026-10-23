@@ -249,6 +249,45 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.getByRole("button", { name: "Probe Opus 5.5" }).click();
     await expect(waiting).toBeHidden({ timeout: 30_000 });
     await expect(start).toBeEnabled();
+
+    // What each model gets, and every request the run will make (WP-F, D-187).
+    const fableRow = page
+      .getByTestId("model-picker")
+      .locator("li")
+      .filter({ hasText: "Fable 5 (1M context)" });
+    await expect(fableRow).toContainText("The whole ruleset in one pass.");
+    await expect(fableRow).toContainText(
+      "Accuracy may fall on this model. Opus 5.5 is recommended.",
+    );
+    // By its name exactly: the Fable row names Opus 5.5 as recommended.
+    const opusRow = page
+      .getByTestId("model-picker")
+      .locator("li")
+      .filter({ has: page.getByText("Opus 5.5", { exact: true }) });
+    await expect(opusRow).not.toContainText("Accuracy may fall");
+    await expect(page.getByTestId("requests-by-stage")).toContainText(
+      "Risk 1, Comprehension 1, Adversarial 1, Deletions 1, Verification 1, Second verifier 1",
+    );
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const shotDesktop = page.viewportSize();
+    for (const [scheme, name] of [
+      ["light", "picker-light"],
+      ["dark", "picker-dark"],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.locator("body").screenshot({
+        path: join(EVIDENCE, `${name}.png`),
+        animations: "disabled",
+        caret: "hide",
+      });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page
+      .getByTestId("requests-by-stage")
+      .evaluate((element) => element.scrollIntoView({ block: "center" }));
+    await page.screenshot({ path: join(EVIDENCE, "picker-phone.png"), animations: "disabled" });
+    if (shotDesktop) await page.setViewportSize(shotDesktop);
     await expect(page.getByRole("radio", { name: /^Fable 5 \(1M context\)/ })).toBeChecked();
   });
 

@@ -104,3 +104,17 @@ export function resolveProfile(input: ResolveProfileInput): ProfileResolution {
     downgradedFrom: input.requested === modelProfile ? null : modelProfile,
   };
 }
+
+/**
+ * How a profile divides a model's work, said in the picker so a person
+ * choosing a model knows what it will be given (WP-F, D-187). No tokens: the
+ * app cannot total them before a run, and a theme-by-theme model reads every
+ * file once per theme. `passes` is the pre-flight's, absent before one.
+ */
+export function whatTheModelGets(profile: ReviewProfile, passes?: number): string | null {
+  const count = passes === undefined ? "" : `, ${passes} ${passes === 1 ? "pass" : "passes"}`;
+  if (profile === "full-context") return "The whole ruleset in one pass.";
+  if (profile === "chunked") return `One pass per rule theme${count}.`;
+  if (profile === "decomposed") return `Each file against the rules that apply to it${count}.`;
+  return null;
+}

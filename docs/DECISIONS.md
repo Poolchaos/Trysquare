@@ -4646,3 +4646,12 @@ verified evidence, in writing, here.
   request, then one S5b, on every profile, and splits by file, so the
   table now says that. The screen's "Adversarial requests by profile"
   became "Requests by profile", its numbers now every stage's.
+- 2026-10-23 WP-F step 3 (D-187): each model in the picker says how its
+  work is divided, "The whole ruleset in one pass.", "One pass per rule
+  theme, N passes." or "Each file against the rules that apply to it, N
+  passes.", N from the pre-flight once there is one, and no token claim.
+  Every model not recommended says "Accuracy may fall on this model." and
+  names the recommended default. The pre-flight lists requests by stage,
+  says the second verifier is asked only when verification proves a
+  finding and any request may need one more, and, when the window splits
+  the work, how many passes became how many requests, as an estimate.
