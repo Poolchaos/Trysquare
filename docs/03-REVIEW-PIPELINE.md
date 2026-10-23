@@ -221,7 +221,9 @@ Nothing reaches the report without an explicit confirm, and only a proven
 verified again, never confirmed (PG-2 (a), D-185). Verifying again asks S5
 about that one finding in a fresh session, never replayed from a stored
 answer, and holds the answer to the same checks (proof-and-steps plan,
-WP-D2); the card shows the
+WP-D2). The card says what that request costs, the model, the billing
+and the stage timeout, and sends nothing until Send request is pressed;
+the card shows the
 verifier's proof, and the finder's severity where the verifier's differs.
 
 ## 3. S8 Report (deterministic)

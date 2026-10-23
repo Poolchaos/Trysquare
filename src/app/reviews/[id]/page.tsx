@@ -1122,6 +1122,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               <>
                 <ConfirmationQueue
                   reviewId={id}
+                  model={review.model}
                   findings={findings}
                   onChanged={() => void reload()}
                   onCheckoutLeft={setCheckoutLeft}

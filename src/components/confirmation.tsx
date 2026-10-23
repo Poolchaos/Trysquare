@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { Badge, Button, Card, Input, Mono, Problem, Textarea, severityTone } from "@/components/ui";
 import { send } from "@/components/request";
+import { billingOf, type Billing } from "@/components/billing-notice";
 
 export interface Finding {
   id: string;
@@ -107,11 +108,14 @@ function severityRank(severity: string): number {
 
 export function ConfirmationQueue({
   reviewId,
+  model,
   findings,
   onChanged,
   onCheckoutLeft,
 }: {
   reviewId: string;
+  /** The model a verify-again asks, named before it is sent. */
+  model: string;
   findings: Finding[];
   onChanged: () => void | Promise<void>;
   /** Completed, but the review's checkout would not go: the server's note saying so. */
@@ -161,6 +165,15 @@ export function ConfirmationQueue({
   const [ruleOpenFor, setRuleOpenFor] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Verifying an open question again (WP-D2): which finding's dialog is
+  // open, what it costs as read when it opened, and what the last one found.
+  const [againFor, setAgainFor] = useState<string | null>(null);
+  const [againTerms, setAgainTerms] = useState<{
+    minutes: number;
+    billing: Billing | null;
+  } | null>(null);
+  const [againBusy, setAgainBusy] = useState(false);
+  const [againNotice, setAgainNotice] = useState("");
   const reasonRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
   // The first half of a `g g`. Held in a ref because a pending key is not
@@ -254,6 +267,76 @@ export function ConfirmationQueue({
       cancelled = true;
     };
   }, [reviewId, rulesAttempt]);
+
+  /** Opens the dialog, reading what a request costs before Send can be pressed. */
+  async function askAgain(finding: Finding) {
+    setError("");
+    setAgainNotice("");
+    setAgainTerms(null);
+    setAgainFor(finding.id);
+    const [settings, auth] = await Promise.all([
+      send<{ settings: Record<string, unknown> }>(
+        "/api/settings",
+        {},
+        "What verifying again costs could not be read",
+      ),
+      send<{ cli?: { state?: unknown; authMethod?: unknown } }>(
+        "/api/auth",
+        {},
+        "How verifying again bills could not be read",
+      ),
+    ]);
+    // Without both, the dialog could not say what Send costs, so it closes.
+    if (!settings.ok) {
+      setAgainFor(null);
+      setError(settings.error);
+      return;
+    }
+    if (!auth.ok) {
+      setAgainFor(null);
+      setError(auth.error);
+      return;
+    }
+    const minutes = settings.body.settings.stageTimeoutMinutes;
+    setAgainTerms({
+      minutes: typeof minutes === "number" ? minutes : 20,
+      billing: billingOf(auth.body.cli, undefined),
+    });
+  }
+
+  async function sendAgain(finding: Finding) {
+    setError("");
+    setAgainBusy(true);
+    try {
+      const sent = await send<{ status: string }>(
+        `/api/findings/${finding.id}/verify-again`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            costShown: true,
+            ...(againTerms?.billing ? { billingShown: againTerms.billing.state } : {}),
+          }),
+        },
+        "The finding could not be verified again",
+      );
+      if (!sent.ok) {
+        setError(sent.error);
+        return;
+      }
+      setAgainFor(null);
+      const named = finding.issue.replace(/\.$/, "");
+      setAgainNotice(
+        sent.body.status === "verified"
+          ? `Proven: ${named}. It can be confirmed now.`
+          : sent.body.status === "killed"
+            ? `Refuted: ${named}. Its proof did not hold, so it has left the queue.`
+            : `Still not settled: ${named}. The verifier's newer note is on the card.`,
+      );
+      await onChanged();
+    } finally {
+      setAgainBusy(false);
+    }
+  }
 
   const act = useCallback(
     async (finding: Finding, action: "confirm" | "dismiss", detail?: string) => {
@@ -467,6 +550,13 @@ export function ConfirmationQueue({
         <div className="mb-3">
           <Problem>{error}</Problem>
         </div>
+      ) : null}
+      {/* A refuted finding leaves the queue, so what the request found is
+          said here rather than only on a card that may be gone. */}
+      {againNotice ? (
+        <p className="mb-3 text-dense" role="status" data-testid="verified-again">
+          {againNotice}
+        </p>
       ) : null}
 
       {/* Named rather than read out wholesale: moving through a queue should
@@ -834,7 +924,7 @@ export function ConfirmationQueue({
                     </span>
                     {/* Why is said above it, as every finding's note is. */}
                     <span className="text-[var(--color-ink-muted)]">
-                      Dismiss it with a reason below.
+                      Dismiss it with a reason below, or verify it again.
                     </span>
                   </p>
                 )}
@@ -862,7 +952,57 @@ export function ConfirmationQueue({
                   >
                     {showContext ? "Hide code" : "Show code"}
                   </Button>
+                  {current.status === "open_question" && againFor !== current.id ? (
+                    <Button
+                      variant="quiet"
+                      disabled={againBusy}
+                      onClick={() => void askAgain(current)}
+                    >
+                      Verify again
+                    </Button>
+                  ) : null}
                 </div>
+                {current.status === "open_question" && againFor === current.id ? (
+                  // Said before anything is sent: it is a paid request (WP-D2).
+                  <div
+                    role="group"
+                    aria-label="Verify again"
+                    className="grid gap-2 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 text-xs"
+                  >
+                    {againTerms ? (
+                      <p>
+                        <span className="font-medium">Verify this finding again? </span>
+                        This sends one new request to <Mono>{model}</Mono>, in a fresh session, and
+                        uses your Claude usage
+                        {againTerms.billing?.state === "perToken"
+                          ? ", billed per token"
+                          : againTerms.billing?.state === "maybePerToken"
+                            ? ", which may be billed per token"
+                            : ""}
+                        . It can take up to {againTerms.minutes} minutes. If it is proven, you can
+                        confirm it; if not, it stays an open question.
+                      </p>
+                    ) : (
+                      <p className="text-[var(--color-ink-muted)]">Reading what it costs.</p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="primary"
+                        disabled={againTerms === null || againBusy}
+                        onClick={() => void sendAgain(current)}
+                      >
+                        {againBusy ? "Verifying" : "Send request"}
+                      </Button>
+                      <Button
+                        variant="quiet"
+                        disabled={againBusy}
+                        onClick={() => setAgainFor(null)}
+                      >
+                        Not now
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
 
                 <form
                   className="grid gap-1.5"

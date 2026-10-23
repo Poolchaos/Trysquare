@@ -4529,3 +4529,11 @@ verified evidence, in writing, here.
   running it as a manager job, which would need the queue and a stream
   for one question a person is waiting on. The page's button and dialog
   are step 3.
+- 2026-10-23 WP-D2 step 3: an open question's card offers Verify again,
+  which opens a dialog in the card saying what the request costs (one new
+  request to the review's model in a fresh session, the Claude usage it
+  draws and whether it bills per token, as /api/auth says, and the stage
+  timeout from Settings) and sends nothing until Send request is pressed.
+  Its other button is "Not now", not "Cancel", which names the review's
+  own cancel. What the request found is said above the queue, since a
+  refuted finding leaves it.

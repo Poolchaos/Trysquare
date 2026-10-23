@@ -1091,17 +1091,19 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
     waiting,
     "a review awaiting decisions, none made yet (left by the usage-limit test)",
   ).toBeDefined();
+  // Verified again below: shown as it is, proven (WP-D2).
+  const provenAgain = new Set<string>();
   const stop = await routeUntilStopped(page, `**/api/reviews/${waiting!.id}`, async (route) => {
     const response = await route.fetch();
     const body = (await response.json()) as {
-      findings: { status: string; severity: string; verificationNote: string | null }[];
+      findings: { id: string; status: string; severity: string; verificationNote: string | null }[];
     };
     await route.fulfill({
       response,
       json: {
         ...body,
         findings: body.findings.map((finding) =>
-          finding.status !== "verified"
+          finding.status !== "verified" || provenAgain.has(finding.id)
             ? finding
             : finding.severity === "WARNING"
               ? { ...finding, raisedSeverity: "CRITICAL" }
@@ -1185,6 +1187,74 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
     caret: "hide",
   });
   if (desktop) await page.setViewportSize(desktop);
+
+  // Verified again: a paid request, so what it costs is said, and nothing is
+  // sent, until Send is pressed (WP-D2). Answered here as the server answers
+  // a proof that holds; the server's side is unit-tested.
+  const sent: unknown[] = [];
+  const stopVerifying = await routeUntilStopped(
+    page,
+    "**/api/findings/*/verify-again",
+    async (route) => {
+      sent.push(route.request().postDataJSON());
+      provenAgain.add(new URL(route.request().url()).pathname.split("/")[3]!);
+      await route.fulfill({ json: { status: "verified" } });
+    },
+  );
+  await page.getByRole("button", { name: "Verify again" }).click();
+  const dialog = page.getByRole("group", { name: "Verify again" });
+  await expect(dialog).toContainText("This sends one new request to claude-fable-5[1m]");
+  await expect(dialog).toContainText(/It can take up to \d+ minutes\./);
+  expect(sent).toHaveLength(0);
+  for (const [scheme, name] of [
+    ["light", "verify-again-light"],
+    ["dark", "verify-again-dark"],
+  ] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.locator("body").screenshot({
+      path: join(evidence, `${name}.png`),
+      animations: "disabled",
+      caret: "hide",
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await dialog.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(evidence, "verify-again-phone.png"), animations: "disabled" });
+  if (desktop) await page.setViewportSize(desktop);
+
+  await page.getByRole("button", { name: "Send request" }).click();
+  await expect(page.getByTestId("verified-again")).toHaveText(
+    `Proven: ${openTitle!.replace(/\.$/, "")}. It can be confirmed now.`,
+  );
+  await expect(page.getByRole("button", { name: "Confirm", exact: true })).toBeVisible();
+  expect(sent).toEqual([expect.objectContaining({ costShown: true })]);
+  // From the top: a body capture of a scrolled page draws the fixed top bar
+  // across the middle of it.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  for (const [scheme, name] of [
+    ["light", "verified-again-light"],
+    ["dark", "verified-again-dark"],
+  ] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.locator("body").screenshot({
+      path: join(evidence, `${name}.png`),
+      animations: "disabled",
+      caret: "hide",
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  // Centred, clear of the fixed top bar an edge scroll leaves it under.
+  await page
+    .getByTestId("verified-again")
+    .evaluate((notice) => notice.scrollIntoView({ block: "center" }));
+  await page.screenshot({
+    path: join(evidence, "verified-again-phone.png"),
+    animations: "disabled",
+  });
+  if (desktop) await page.setViewportSize(desktop);
+  await stopVerifying();
   await stop();
 });
 
