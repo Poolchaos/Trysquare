@@ -176,6 +176,13 @@ refuses one too.
 
 ### Review run (live)
 
+- Five steps across the scan theater, over the eight stages (WP-G):
+  Understand the rules (S0), Understand the change (S1, S2), Find issues
+  (S3, S4), Prove each finding (S5, S5b), Report (S6 and the person). Each
+  is done, now or next with one count the run has measured; a step not
+  begun says Waiting. While proving, the findings so far: proven by the
+  first verifier, refuted, discarded for quoting code that was not there,
+  open question, still to prove, which add up to what was raised.
 - Stage timeline (S0-S6) with per-stage status, duration, token usage.
 - Coverage panel: files/hunks dispositioned counters climbing live, risk
   tags per file, chain files read.
@@ -196,6 +203,11 @@ rule text), mechanism, quoted code rendered inside real file context
 (worktree lines, exact line numbers) plus the diff hunk. Confirm / dismiss
 (reason required) / edit comment. Progress bar: n of m decided. Finishing
 renders the report.
+
+Above the queue, and above the report once complete, the finished review in
+its five steps (WP-G): how the findings were proven (raised, proven once,
+proven by both, open question) and what each step came to, refuted told
+apart from discarded, with the time and requests its stage rows recorded.
 
 ### Report
 

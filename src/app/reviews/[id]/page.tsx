@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { use, useEffect, useRef, useState } from "react";
+import { type ReactNode, use, useEffect, useRef, useState } from "react";
 import {
   canTransitionReview,
   isResumableReview,
@@ -48,7 +48,14 @@ import {
   type ManagedPolicy,
 } from "@/components/managed-policy-notice";
 import type { SignIn } from "@/lib/engine/sign-in-command";
-import { STEPS, findingTallies, stepCount, stepStates } from "@/lib/review/steps";
+import {
+  STEPS,
+  findingTallies,
+  stepCount,
+  stepResult,
+  stepStates,
+  stepUsage,
+} from "@/lib/review/steps";
 
 /**
  * The whole pipeline, not only the stages that call a model.
@@ -1142,6 +1149,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
              * subject. Waiting on a decision: the queue is the subject and the
              * finished run folds behind a summary. Complete: the report is.
              */}
+            {["awaiting_confirmation", "complete"].includes(review.status) ? (
+              <FinishedSummary snapshot={snapshot} />
+            ) : null}
             {review.status === "awaiting_confirmation" && reported.length > 0 ? (
               <>
                 <ConfirmationQueue
@@ -1406,6 +1416,118 @@ function ReportPanel({
           </pre>
         </Card>
       )}
+    </section>
+  );
+}
+
+/**
+ * A finished review in the five steps it ran in (WP-G, the approved mockup):
+ * how the findings came to be proven, then what each step came to and what
+ * it spent, from the review's own stage rows.
+ */
+function FinishedSummary({ snapshot }: { snapshot: Snapshot }) {
+  const { review } = snapshot;
+  const tallies = findingTallies(snapshot.findings);
+  const secondVerifier = Boolean(review.verifierModel);
+  const facts = {
+    rules: snapshot.rules ?? null,
+    files: snapshot.coverage.totalFiles,
+    tallies,
+    waiting: snapshot.findings.filter((finding) => finding.status === "verified").length,
+    status: review.status,
+    secondVerifier,
+  };
+  const usage = stepUsage(snapshot.stages);
+  const funnel: [string, number, ReactNode, string][] = [
+    ["Raised", tallies.raised, "Candidates the rules turned up", "bg-[var(--color-accent)]"],
+    [
+      "Proven once",
+      tallies.provenOnce,
+      "A path from trigger to failure, quoted and found in the code",
+      "bg-[var(--color-good)]",
+    ],
+    ...(secondVerifier
+      ? ([
+          [
+            "Proven by both",
+            tallies.provenTwice,
+            <>
+              The second verifier, <Mono className="whitespace-nowrap">{review.verifierModel}</Mono>
+              , agreed
+            </>,
+            "bg-[var(--color-good)]",
+          ],
+        ] as [string, number, ReactNode, string][])
+      : []),
+    [
+      "Open question",
+      tallies.open,
+      secondVerifier
+        ? "Not proven by both, so it cannot be confirmed"
+        : "Not proven, so it cannot be confirmed",
+      "bg-[var(--color-question)]",
+    ],
+  ];
+
+  return (
+    <section aria-label="How the review went" className="mb-6 grid gap-4">
+      <Card className="p-4">
+        <h2 className="mb-3 text-heading font-medium">How the findings were proven</h2>
+        <dl
+          className={`grid grid-cols-2 gap-x-4 gap-y-4 ${secondVerifier ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
+        >
+          {funnel.map(([label, count, note, bar]) => (
+            // Read as label, count, note; shown count first, as the mockup has it.
+            <div key={label} className="flex flex-col gap-1.5">
+              <dt className="order-2 text-body font-semibold">{label}</dt>
+              <dd className="order-1 font-[family-name:var(--font-mono)] text-title font-bold tabular-nums">
+                {count}
+              </dd>
+              <dd className="order-3 flex flex-col gap-1.5 text-aside leading-snug text-[var(--color-ink-muted)]">
+                <span aria-hidden className="gauge-track block h-2 overflow-hidden rounded-sm">
+                  <span
+                    className={`block h-full rounded-sm ${bar}`}
+                    style={{
+                      width: `${tallies.raised === 0 ? 0 : (count / tallies.raised) * 100}%`,
+                    }}
+                  />
+                </span>
+                <span>{note}</span>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
+      <div>
+        <h2 className="mb-2 text-heading font-medium">The five steps</h2>
+        <ol className="grid gap-2">
+          {STEPS.map((step, index) => {
+            const spent = usage[index]!;
+            return (
+              <li
+                key={step.title}
+                className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:grid-cols-[1.5rem_minmax(0,11rem)_minmax(0,1fr)_9rem]"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-6 w-6 items-center justify-center self-center rounded-full bg-[var(--color-good-soft)] text-aside font-bold text-[var(--color-good)]"
+                >
+                  {index + 1}
+                </span>
+                <span className="text-body font-semibold">{step.title}</span>
+                <span className="col-start-2 text-dense text-[var(--color-ink-muted)] sm:col-start-auto">
+                  {stepResult(index, facts)}
+                </span>
+                <span className="col-start-2 text-aside text-[var(--color-ink-muted)] tabular-nums sm:col-start-auto sm:text-right">
+                  {spent.requests === 0
+                    ? "no requests"
+                    : `${spent.ms < 1000 ? "under a second" : elapsedBetween(0, spent.ms)}, ${spent.requests} ${spent.requests === 1 ? "request" : "requests"}`}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </section>
   );
 }
@@ -1759,7 +1881,7 @@ function RenderedReport({ data }: { data: ReportData }) {
  *
  * A review is minutes of real work, and the ordinary page showed it as one
  * pulsing dot beside a sidebar log. While a run is live this takes over:
- * the stages as a ruled gauge across the top, the current stage named large
+ * the five steps a person reads across the top, the current stage named large
  * with what it usually takes on this machine, the engine's activity
  * streaming center-stage, and the clock and the meter running where they can
  * be seen from across a room. Every figure on it is the run's own.
@@ -1986,10 +2108,11 @@ function ScanTheater({
           ) : null}
         </div>
         {/* What proving has found so far, kept apart as the mockup has them:
-          proven, refuted, discarded for quoting what was not there, and what
-          is left. Only once there is something to prove. */}
+          proven, refuted, discarded for quoting what was not there, open, and
+          what is left, which add up to what was raised. Only once there is
+          something to prove. */}
         {states[3] !== "next" && tallies.raised > 0 ? (
-          <dl aria-label="Findings so far" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <dl aria-label="Findings so far" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
             {(
               [
                 [
@@ -1997,30 +2120,42 @@ function ScanTheater({
                   tallies.provenOnce,
                   "bg-[var(--color-good-soft)]",
                   "text-[var(--color-good)]",
+                  "",
                 ],
                 [
                   "refuted",
                   tallies.refuted,
                   "bg-[var(--color-critical-soft)]",
                   "text-[var(--color-critical)]",
+                  "",
                 ],
                 [
                   "discarded: the cited code was not there",
                   tallies.discarded,
                   "bg-[var(--color-warning-soft)]",
                   "text-[var(--color-warning)]",
+                  "",
+                ],
+                [
+                  "open question",
+                  tallies.open,
+                  "bg-[var(--color-question-soft)]",
+                  "text-[var(--color-question)]",
+                  "",
                 ],
                 [
                   "still to prove",
                   tallies.toProve,
-                  "bg-[var(--color-question-soft)]",
-                  "text-[var(--color-question)]",
+                  "bg-[var(--color-surface-raised)] shadow-[inset_0_0_0_1px_var(--color-border)]",
+                  "text-[var(--color-ink)]",
+                  // The fifth, alone on its row on a phone.
+                  "col-span-2 sm:col-span-1",
                 ],
               ] as const
-            ).map(([label, count, ground, ink]) => (
+            ).map(([label, count, ground, ink, span]) => (
               <div
                 key={label}
-                className={`flex flex-col-reverse justify-end rounded-md px-3 py-2 ${ground}`}
+                className={`flex flex-col-reverse justify-end rounded-md px-3 py-2 ${ground} ${span}`}
               >
                 <dt className="text-aside">{label}</dt>
                 <dd

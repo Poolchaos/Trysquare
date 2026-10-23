@@ -111,6 +111,77 @@ export interface StepFacts {
   waiting: number;
 }
 
+export interface StepUsage {
+  requests: number;
+  ms: number;
+}
+
+/**
+ * Each step's requests and the time they took. A stage row is one request
+ * (stage-executions.ts), retries and failures included, since each was sent;
+ * the app-code steps write none.
+ */
+export function stepUsage(
+  rows: readonly { stage: string; startedAt: string; endedAt: string | null }[],
+): StepUsage[] {
+  return STEPS.map((step) => {
+    const mine = rows.filter((row) => (step.stages as readonly string[]).includes(row.stage));
+    return {
+      requests: mine.length,
+      ms: mine.reduce(
+        (sum, row) =>
+          row.endedAt === null
+            ? sum
+            : sum + Math.max(0, Date.parse(row.endedAt) - Date.parse(row.startedAt)),
+        0,
+      ),
+    };
+  });
+}
+
+const counted = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const noneOr = (n: number, rest: string) => `${n === 0 ? "none" : n} ${rest}`;
+
+/**
+ * What each step came to on a review that has reached a person. Reviews from
+ * before the second verifier (WP-E) have no verifier model, and their proven
+ * findings were proven once.
+ */
+export function stepResult(
+  index: number,
+  facts: StepFacts & { status: string; secondVerifier: boolean },
+): string {
+  const { tallies } = facts;
+  switch (index) {
+    case 0:
+      return facts.rules === null
+        ? "The sweeps marked every line a rule names."
+        : `${facts.rules} rules frozen for this review, and the sweeps marked every line a rule names.`;
+    case 1:
+      return facts.files === 1
+        ? "1 changed file classed by risk and read with what it calls into."
+        : `${facts.files} changed files classed by risk and read with what they call into.`;
+    case 2:
+      return `${tallies.raised === 0 ? "No candidates" : counted(tallies.raised, "candidate", "candidates")} raised, and every change and deletion accounted for.`;
+    case 3: {
+      if (tallies.raised === 0) return "Nothing to prove.";
+      const proven = facts.secondVerifier
+        ? noneOr(tallies.provenTwice, "proven by both verifiers")
+        : noneOr(tallies.provenOnce, "proven");
+      const open =
+        tallies.open === 0
+          ? "no open questions"
+          : counted(tallies.open, "open question", "open questions");
+      const line = `${proven}, ${open}, ${noneOr(tallies.refuted, "refuted")}, ${noneOr(tallies.discarded, "discarded")} for quoting code that was not there.`;
+      return line.charAt(0).toUpperCase() + line.slice(1);
+    }
+    default:
+      return facts.status === "complete"
+        ? "Coverage audited, every finding decided, and the report written."
+        : "Coverage audited. Your confirmation, then the report.";
+  }
+}
+
 /** The one line each step's card shows. */
 export function stepCount(index: number, state: StepState, facts: StepFacts): string {
   if (state === "next") return "Waiting";

@@ -4,7 +4,14 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { STEPS, findingTallies, stepCount, stepStates } from "@/lib/review/steps";
+import {
+  STEPS,
+  findingTallies,
+  stepCount,
+  stepResult,
+  stepStates,
+  stepUsage,
+} from "@/lib/review/steps";
 
 const finding = (overrides: Record<string, unknown>) => ({
   status: "verified",
@@ -146,5 +153,87 @@ describe("what each step says it did", () => {
   it("says nothing it does not know", () => {
     // A review whose ruleset was never frozen has no count to give.
     expect(stepCount(0, "now", { ...facts, rules: null })).toBe("Freezing the ruleset");
+  });
+});
+
+describe("what each step came to", () => {
+  const facts = {
+    rules: 14,
+    files: 13,
+    tallies: {
+      raised: 11,
+      provenOnce: 11,
+      provenTwice: 10,
+      open: 1,
+      refuted: 0,
+      discarded: 0,
+      toProve: 0,
+    },
+    waiting: 10,
+    status: "awaiting_confirmation",
+    secondVerifier: true,
+  };
+
+  it("says each step's result, refuted and discarded told apart", () => {
+    expect(STEPS.map((_, index) => stepResult(index, facts))).toEqual([
+      "14 rules frozen for this review, and the sweeps marked every line a rule names.",
+      "13 changed files classed by risk and read with what they call into.",
+      "11 candidates raised, and every change and deletion accounted for.",
+      "10 proven by both verifiers, 1 open question, none refuted, none discarded for quoting code that was not there.",
+      "Coverage audited. Your confirmation, then the report.",
+    ]);
+    const mixed = {
+      ...facts,
+      tallies: { ...facts.tallies, provenTwice: 0, open: 2, refuted: 3, discarded: 1 },
+    };
+    expect(stepResult(3, mixed)).toBe(
+      "None proven by both verifiers, 2 open questions, 3 refuted, 1 discarded for quoting code that was not there.",
+    );
+    expect(stepResult(4, { ...facts, status: "complete" })).toBe(
+      "Coverage audited, every finding decided, and the report written.",
+    );
+  });
+
+  it("does not claim a second verifier a review never had", () => {
+    expect(stepResult(3, { ...facts, secondVerifier: false })).toMatch(/^11 proven, /);
+  });
+
+  it("says plainly when there was nothing", () => {
+    const empty = {
+      ...facts,
+      rules: null,
+      files: 1,
+      tallies: { ...facts.tallies, raised: 0, provenOnce: 0, provenTwice: 0, open: 0 },
+    };
+    expect(stepResult(0, empty)).toBe("The sweeps marked every line a rule names.");
+    expect(stepResult(1, empty)).toBe(
+      "1 changed file classed by risk and read with what it calls into.",
+    );
+    expect(stepResult(2, empty)).toBe(
+      "No candidates raised, and every change and deletion accounted for.",
+    );
+    expect(stepResult(3, empty)).toBe("Nothing to prove.");
+  });
+});
+
+describe("what each step spent", () => {
+  it("counts every request a step's stages sent and the time they took", () => {
+    const at = (s: number) => new Date(Date.UTC(2026, 9, 23, 10, 0, s)).toISOString();
+    const usage = stepUsage([
+      { stage: "s1_risk", startedAt: at(0), endedAt: at(10) },
+      { stage: "s2_comprehension", startedAt: at(10), endedAt: at(40) },
+      // A failed attempt was still sent, so it counts.
+      { stage: "s3_adversarial", startedAt: at(40), endedAt: at(45) },
+      { stage: "s3_adversarial", startedAt: at(45), endedAt: at(55) },
+      { stage: "s5b_second_verification", startedAt: at(55), endedAt: null },
+    ]);
+    expect(usage).toEqual([
+      { requests: 0, ms: 0 },
+      { requests: 2, ms: 40_000 },
+      { requests: 2, ms: 15_000 },
+      // In flight: sent, its time not yet known.
+      { requests: 1, ms: 0 },
+      { requests: 0, ms: 0 },
+    ]);
   });
 });

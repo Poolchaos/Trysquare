@@ -398,6 +398,59 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Coverage" })).toBeHidden();
   });
 
+  await test.step("the finished review is summed up in its five steps", async () => {
+    // WP-G: how the findings came to be proven, then what each step came to
+    // and spent, refuted told apart from discarded.
+    const summary = page.getByRole("region", { name: "How the review went" });
+    await expect(
+      summary.getByRole("heading", { name: "How the findings were proven" }),
+    ).toBeVisible();
+    for (const label of ["Raised", "Proven once", "Proven by both", "Open question"]) {
+      await expect(
+        summary.getByRole("term").filter({ hasText: new RegExp(`^${label}$`) }),
+      ).toBeVisible();
+    }
+    const steps = summary.getByRole("listitem");
+    await expect(steps).toHaveCount(5);
+    await expect(steps.nth(0)).toContainText(/\d+ rules frozen for this review/);
+    await expect(steps.nth(0)).toContainText("no requests");
+    await expect(steps.nth(2)).toContainText(/\d+ candidates? raised/);
+    await expect(steps.nth(3)).toContainText(
+      /refuted, .* discarded for quoting code that was not there/,
+    );
+    await expect(steps.nth(3)).toContainText(/\d+ requests?$/);
+    await expect(steps.nth(4)).toContainText("Your confirmation, then the report.");
+
+    // Clipped from the whole page at the top: an element shot scrolls it
+    // into view, and the fixed top bar was drawn over its heading.
+    const shoot = async (name: string) => {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const box = await summary.boundingBox();
+      if (!box) throw new Error("The summary has no box to photograph.");
+      await page.screenshot({
+        path: join(EVIDENCE, `${name}.png`),
+        fullPage: true,
+        clip: box,
+        animations: "disabled",
+      });
+    };
+    const desktop = page.viewportSize();
+    for (const [scheme, name] of [
+      ["light", "summary-light"],
+      ["dark", "summary-dark"],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await shoot(name);
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+    ).toBeLessThanOrEqual(0);
+    await shoot("summary-phone");
+    if (desktop) await page.setViewportSize(desktop);
+  });
+
   await test.step("the queue mid-decision is photographed for the design review", async () => {
     mkdirSync(EVIDENCE, { recursive: true });
     // From the top: the top bar is fixed, and a body capture of a scrolled
@@ -743,6 +796,10 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     });
     await page.getByRole("button", { name: "Complete review" }).click();
     await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
+    // The summary stays, its last step now done (WP-G).
+    await expect(
+      page.getByRole("region", { name: "How the review went" }).getByRole("listitem").nth(4),
+    ).toContainText("Coverage audited, every finding decided, and the report written.");
     await expect(page.getByText(/its checkout could not be removed: EBUSY/)).toBeVisible();
     await stopAdding();
 
