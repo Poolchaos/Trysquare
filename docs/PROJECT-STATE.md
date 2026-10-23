@@ -11,8 +11,9 @@ Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
   is in build (D-186): WP-A, WP-B, WP-C and WP-D1 are DONE, then a review
   round over them (R1 to R10 in DECISIONS). Opus 5.5 is the recommended
   default and Haiku is retired; a verified finding carries a proof the app
-  checks step by step; an open question cannot be confirmed. Next is WP-D2.
-  `./verify.sh --e2e` exits 0 at e842508 with 1206 unit tests passing, 10
+  checks step by step; an open question cannot be confirmed, and one left
+  out is reported apart from the dismissed (D-190). Next is WP-D2.
+  `./verify.sh --e2e` exits 0 at 5b2893b with 1208 unit tests passing, 10
   skipped, and 101 browser tests; CI last passed all three at 0a3a3ae (run
   39921418416).
 - 2026-10-22: every row of the MVP (`plans/MVP-PLAN.md`) is DONE but 7.4,
@@ -136,7 +137,7 @@ are accepted; anything else is refused by name.
   arithmetic, ruleset import with a fidelity gate, prompt composition, batch
   planning, the report renderer, the request guard, and matching an error by
   the name its class sets.
-- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0012, and
+- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0013, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings and stage executions.
 - `src/server/gitops/` - the only code that spawns git.
@@ -168,7 +169,7 @@ are accepted; anything else is refused by name.
 - `tests/` - unit and integration tests. `e2e/` - the browser journey, the
   failure paths, the theme and screenshot pass with the axe accessibility
   pass, and the shutdown pass.
-  `drizzle/` - thirteen committed migrations.
+  `drizzle/` - fourteen committed migrations.
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and
