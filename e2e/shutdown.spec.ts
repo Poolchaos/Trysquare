@@ -63,6 +63,8 @@ async function seed(dataDir: string): Promise<{ reviewId: string; rulesetId: str
   const { runMigrations } = await import("@/server/db/migrate");
   const { createProject } = await import("@/server/db/repositories/projects");
   const { createReview } = await import("@/server/db/repositories/reviews");
+  const { recordProbeSuccess, registerCandidate } = await import("@/server/db/repositories/models");
+  const { DEFAULT_MODEL_CANDIDATES } = await import("@/server/engine/probe");
   const { saveImportedRuleset } = await import("@/server/db/repositories/rulesets");
   const { cloneBare, mergeBase, resolveBranch } = await import("@/server/gitops/repo");
 
@@ -84,6 +86,10 @@ async function seed(dataDir: string): Promise<{ reviewId: string; rulesetId: str
       tier: "global",
       imported: importProtocol(readFileSync(PROTOCOL_PATH, "utf8")).ruleset,
     });
+    // Proves a Fable review's findings again, so Start is not refused (WP-E).
+    const opus = DEFAULT_MODEL_CANDIDATES.find((candidate) => candidate.id === "claude-opus-5-5")!;
+    registerCandidate(db, opus);
+    recordProbeSuccess(db, opus.id, { resolvedId: opus.id, contextWindow: 1_000_000 });
     const review = createReview(db, {
       projectId: project.id,
       fromBranch: "feature/rename-prefs",

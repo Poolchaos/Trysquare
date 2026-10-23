@@ -210,6 +210,47 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await page.getByText("Advanced", { exact: true }).click();
   });
 
+  await test.step("Start waits for the model that proves every finding again", async () => {
+    // Every finding Fable proves is proven again on Opus 5.5 (PG-1 (a),
+    // D-185), which the server refuses to start without, so the page says
+    // so and points at the probe rather than failing at the last stage.
+    const start = page.getByRole("button", { name: "Start review" });
+    const waiting = page.getByText("The second verifier, Opus 5.5, has not been probed.");
+    await expect(waiting).toBeVisible({ timeout: 60_000 });
+    await expect(start).toBeDisabled();
+    await expect(page.getByText("Second verifier", { exact: true })).toBeVisible();
+
+    mkdirSync(EVIDENCE, { recursive: true });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const desktop = page.viewportSize();
+    for (const [scheme, name] of [
+      ["light", "second-verifier-light"],
+      ["dark", "second-verifier-dark"],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.locator("body").screenshot({
+        path: join(EVIDENCE, `${name}.png`),
+        animations: "disabled",
+        caret: "hide",
+      });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await waiting.evaluate((element) => element.scrollIntoView({ block: "center" }));
+    await page.screenshot({
+      path: join(EVIDENCE, "second-verifier-phone.png"),
+      animations: "disabled",
+    });
+    if (desktop) await page.setViewportSize(desktop);
+
+    // Beside the reason, since the list folds unprobed models away once one
+    // is usable. Probing it leaves Fable chosen.
+    await page.getByRole("button", { name: "Probe Opus 5.5" }).click();
+    await expect(waiting).toBeHidden({ timeout: 30_000 });
+    await expect(start).toBeEnabled();
+    await expect(page.getByRole("radio", { name: /^Fable 5 \(1M context\)/ })).toBeChecked();
+  });
+
   await test.step("Enter in the form starts nothing; only Start review does", async () => {
     // Every control here sits inside the start form, and Enter on a text box,
     // a radio or a checkbox submits a form: a keystroke meant for the branch

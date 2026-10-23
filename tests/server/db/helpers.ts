@@ -5,6 +5,8 @@ import { createDb, type Db } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import { createProject } from "@/server/db/repositories/projects";
 import { createReview } from "@/server/db/repositories/reviews";
+import { recordProbeSuccess, registerCandidate } from "@/server/db/repositories/models";
+import { DEFAULT_MODEL_CANDIDATES } from "@/server/engine/probe";
 
 export interface TestDb {
   db: Db;
@@ -51,4 +53,18 @@ export function seedReview(db: Db, projectId: string) {
     profileId: "full-context",
     engineMode: "headless",
   });
+}
+
+/**
+ * Probes the models that prove a review's findings again, Opus 5.5 for a
+ * Fable review and Fable 5.1 for an Opus one, so a create or Start is not
+ * refused for them (WP-E). Registered first: a test database has no
+ * candidates until a manager starts.
+ */
+export function probeSecondVerifier(db: Db): void {
+  for (const id of ["claude-opus-5-5", "claude-fable-5-1"]) {
+    const candidate = DEFAULT_MODEL_CANDIDATES.find((entry) => entry.id === id)!;
+    registerCandidate(db, candidate);
+    recordProbeSuccess(db, id, { resolvedId: id, contextWindow: 1_000_000 });
+  }
 }

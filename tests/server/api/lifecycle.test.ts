@@ -69,6 +69,12 @@ afterAll(async () => {
   delete process.env.TRYSQUARE_DATA;
 });
 
+// Every review here is on Fable, whose findings Opus 5.5 proves again (WP-E).
+beforeAll(async () => {
+  const { probeSecondVerifier } = await import("../db/helpers");
+  probeSecondVerifier((await import("@/server/runtime")).runtime().db);
+});
+
 async function makeReview(fromBranch = "feature/rename-prefs"): Promise<string> {
   const created = await routes.reviews.POST(
     post({

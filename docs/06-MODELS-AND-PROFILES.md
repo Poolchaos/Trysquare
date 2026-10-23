@@ -165,6 +165,16 @@ setting no review reads (D-124, D-125). It stays in the enum so reviews
 created before the rule still parse; it is simply never selectable and is
 refused at the API for every model.
 
+### The second verifier
+
+Every finding the first verifier proves is proven again on the other strong
+family (PG-1 (a), D-185): an Opus review by claude-fable-5-1, any other by
+claude-opus-5-5 (`lib/models/pairing.ts`). A headless review is refused at
+create and at Start, 409 SecondVerifierUnavailable, while that model has no
+probe vouching for it now, and the new-review screen keeps Start off with a
+Probe button for it beside the reason (WP-E1). Both paired models probed at
+1M on 2026-10-23 (D-188).
+
 ## 3. Review profiles (the model-dependent pipeline)
 
 The maintainer's constraint, 2026-07-30: "Fable I can give this full document and

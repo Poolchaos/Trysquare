@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { SELECTABLE_REVIEW_EFFORTS, type ReviewEffort } from "@/lib/domain/enums";
 import { effortRunsOn } from "@/lib/models/effort-support";
+import { pairedVerifierFor, secondVerifierReadiness } from "@/lib/models/pairing";
 import {
   defaultModel,
   isSelectable,
@@ -639,13 +640,26 @@ function NewReview() {
           : []),
       ]
     : [];
+  // Every finding the first verifier proves is proven again on the other
+  // strong family (WP-E), which the server refuses to start without. Read
+  // from the models here, not the pre-flight, so a probe in the list above
+  // counts at once. Mode B's stages run in the person's own session.
+  const pairedId = pairedVerifierFor(models.find((row) => row.id === model)?.family);
+  const paired = models.find((row) => row.id === pairedId);
+  const secondVerifier = secondVerifierReadiness(pairedId, paired?.availability);
+  const verifierMissing = model !== "" && engineMode === "headless" && !secondVerifier.usable;
   // Started anyway, the run stopped at its sweep, which will not pass a
   // pattern it could not run (5.14, audit U11).
   const wouldRefuse = preflight !== null && preflight.sweepProblems.length > 0;
   // And not before the pre-flight for these choices has answered: on beside
   // "Working out...", Start offered a review nothing had yet sized (D-147).
   const ready =
-    baseReady && !linkIncomplete && emptyHalves.length === 0 && !wouldRefuse && !preflightPending;
+    baseReady &&
+    !linkIncomplete &&
+    emptyHalves.length === 0 &&
+    !wouldRefuse &&
+    !verifierMissing &&
+    !preflightPending;
 
   if (!projectId) {
     return (
@@ -1159,6 +1173,9 @@ function NewReview() {
                   <Row label="Changed exports" value={String(preflight.changedSymbols)} />
                 ) : null}
                 <Row label="Model requests" value={String(preflight.requests)} />
+                {engineMode === "headless" ? (
+                  <Row label="Second verifier" value={paired?.displayName ?? pairedId} />
+                ) : null}
                 <Row
                   label="Estimated tokens"
                   value={preflight.estimatedTokens.toLocaleString("en-US")}
@@ -1249,8 +1266,15 @@ function NewReview() {
           {engineMode === "interactive" ? <TerminalEnvironmentNote /> : null}
           {managedPolicy === null ? null : <ManagedPolicyNotice policy={managedPolicy} />}
 
-          <div className="flex items-center gap-3">
-            <Button type="submit" variant="primary" disabled={!ready || starting}>
+          {/* Wrapping, each button on one line: at phone width the reason and a
+              probe beside Start squeezed both buttons onto two and three. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!ready || starting}
+              className="whitespace-nowrap"
+            >
               {starting ? "Starting..." : "Start review"}
             </Button>
             {rulesets.length === 0 && !rulesetReadFailed ? (
@@ -1260,7 +1284,10 @@ function NewReview() {
                   Rulesets
                 </Link>
               </span>
-            ) : wouldRefuse || emptyHalves.length > 0 || (baseReady && linkIncomplete) ? (
+            ) : wouldRefuse ||
+              emptyHalves.length > 0 ||
+              (baseReady && linkIncomplete) ||
+              (baseReady && verifierMissing) ? (
               // Every reason Start is off, not the first alone: an empty half's
               // line stood alone beside a dependency with no branch (D-146),
               // and so did a refusal's (review of the D-147 fixes).
@@ -1273,6 +1300,12 @@ function NewReview() {
                     : []),
                   ...(emptyHalves.length > 0
                     ? ["The pre-flight found a half of this review with no change: see above."]
+                    : []),
+                  ...(baseReady && verifierMissing
+                    ? [
+                        `The second verifier, ${paired?.displayName ?? pairedId}, ` +
+                          `${secondVerifier.reason}.`,
+                      ]
                     : []),
                   ...(baseReady && linkIncomplete
                     ? [
@@ -1294,6 +1327,18 @@ function NewReview() {
                   : "The commits are pinned when the review starts."}
               </span>
             )}
+            {baseReady && verifierMissing ? (
+              // Here, not only in the list: once a model is usable the list folds
+              // the unprobed ones away.
+              <Button
+                type="button"
+                disabled={probing !== null}
+                onClick={() => void probe(pairedId)}
+                className="whitespace-nowrap"
+              >
+                {probing === pairedId ? "Probing..." : `Probe ${paired?.displayName ?? pairedId}`}
+              </Button>
+            ) : null}
           </div>
         </form>
       </PageBody>

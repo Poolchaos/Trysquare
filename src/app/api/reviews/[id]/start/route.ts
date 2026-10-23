@@ -9,6 +9,7 @@ import { z } from "zod";
 import { rulesetTierSchema } from "@/lib/domain/enums";
 import { hasReviewSnapshot, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
 import { appendRunNote, requireReview } from "@/server/db/repositories/reviews";
+import { secondVerifierNotReady } from "@/server/db/repositories/models";
 import { handler, ok, readOptionalJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 import {
@@ -84,8 +85,12 @@ export async function POST(
     // signed out since failed them at their first stage with nothing said
     // (MVP 6.2, review of the 6.2 changes). The interactive engine starts no
     // CLI.
-    const readiness =
-      judged === "startable" && review.engineMode === "headless" ? await cliReadiness(db) : null;
+    // The second verifier, free, before the CLI is asked (WP-E): a Resume
+    // too, since a probe may have lapsed since the review was made.
+    const asked = judged === "startable" && review.engineMode === "headless";
+    const unverifiable = asked ? secondVerifierNotReady(db, review.model) : null;
+    if (unverifiable !== null) throw unverifiable;
+    const readiness = asked ? await cliReadiness(db) : null;
     if (readiness?.refusal) throw cliNotReady(readiness);
     const unshown = readiness === null ? null : billingNotShown(readiness, input.billingShown);
     if (unshown !== null) throw unshown;

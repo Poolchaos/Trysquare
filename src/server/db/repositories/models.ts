@@ -11,6 +11,13 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { nowIso } from "@/lib/ids";
 import type { ReviewProfile } from "@/lib/domain/enums";
 import { aliasRefusal, isFullModelId } from "@/lib/models/model-id";
+import { availabilityOf } from "@/lib/models/availability";
+import {
+  pairedVerifierFor,
+  secondVerifierReadiness,
+  secondVerifierRefusal,
+  type SecondVerifier,
+} from "@/lib/models/pairing";
 import type { Db } from "../client";
 import { models } from "../schema";
 
@@ -146,4 +153,29 @@ export function listModels(db: Db): ModelRow[] {
 
 export function getModel(db: Db, id: string): ModelRow | undefined {
   return db.select().from(models).where(eq(models.id, id)).get();
+}
+
+/** The model that proves a review's findings again, as its probe stands now (D-185). */
+export function secondVerifierOf(db: Db, model: string, now: number = Date.now()): SecondVerifier {
+  const paired = pairedVerifierFor(getModel(db, model)?.family);
+  const row = getModel(db, paired);
+  return secondVerifierReadiness(paired, row ? availabilityOf(row, now) : undefined);
+}
+
+/**
+ * The 409 for a review whose second verifier cannot run, or null. Asked at
+ * create and at Start, as the CLI is, so a review is neither left a draft
+ * nor started to fail at its last stage.
+ */
+export function secondVerifierNotReady(db: Db, model: string): Response | null {
+  const verifier = secondVerifierOf(db, model);
+  if (verifier.usable) return null;
+  return Response.json(
+    {
+      error: secondVerifierRefusal(verifier),
+      code: "SecondVerifierUnavailable",
+      model: verifier.model,
+    },
+    { status: 409 },
+  );
 }

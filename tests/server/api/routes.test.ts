@@ -87,6 +87,12 @@ afterAll(async () => {
   delete process.env.TRYSQUARE_DATA;
 });
 
+// Every review here is on Fable, whose findings Opus 5.5 proves again (WP-E).
+beforeAll(async () => {
+  const { probeSecondVerifier } = await import("../db/helpers");
+  probeSecondVerifier((await import("@/server/runtime")).runtime().db);
+});
+
 /**
  * Waits for the background clone to land, which is what the UI polls for.
  * Twenty seconds, as danger-zone.test.ts allows: five was enough alone and
@@ -444,6 +450,35 @@ describe("creating a review", () => {
       );
       expect(taken.status, model).toBe(201);
       expect(((await taken.json()) as { review: { effort: string } }).review.effort).toBe("xhigh");
+    }
+  }, 120_000);
+
+  it("refuses a review whose second verifier has not probed usable, naming it", async () => {
+    // Every finding it proves is proven again on the other strong family
+    // (PG-1 (a), D-185), so a review that could not finish is not made.
+    const { db } = (await import("@/server/runtime")).runtime();
+    const { recordProbeFailure } = await import("@/server/db/repositories/models");
+    const { probeSecondVerifier } = await import("../db/helpers");
+    recordProbeFailure(db, "claude-opus-5-5", "Not available to this account.");
+    try {
+      const response = await routes.reviews.POST(
+        post("http://localhost/api/reviews", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          model: "claude-fable-5[1m]",
+        }),
+      );
+      expect(response.status).toBe(409);
+      const body = (await response.json()) as { code: string; error: string; model: string };
+      expect(body.code).toBe("SecondVerifierUnavailable");
+      expect(body.model).toBe("claude-opus-5-5");
+      expect(body.error).toBe(
+        "Every verified finding is checked again by claude-opus-5-5, which did not answer " +
+          "its last probe. Probe it, then start again.",
+      );
+    } finally {
+      probeSecondVerifier(db);
     }
   }, 120_000);
 

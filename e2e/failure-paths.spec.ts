@@ -1429,9 +1429,10 @@ test("a new review starts on the model used last, while a probe vouches for it",
     [second, "Opus 5 (1M context)"],
     ["claude-fable-5[1m]", "Fable 5 (1M context)"],
     // One no longer registered falls back to the first a probe vouches for,
-    // in picker order: the recommended families first, Opus first since
-    // Opus 5.5 is the recommended default (D-184).
-    ["claude-gone-4", "Opus 5 (1M context)"],
+    // in picker order: the recommended families first, Opus 5.5 first as the
+    // recommended default (D-184), probed by the journey as the second
+    // verifier of its Fable review (WP-E).
+    ["claude-gone-4", "Opus 5.5"],
   ] as const) {
     const stop = await answer(lastUsed);
     await fillANewReview(page);

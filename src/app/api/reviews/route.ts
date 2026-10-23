@@ -22,7 +22,7 @@ import {
   requireClonedProject,
 } from "@/server/db/repositories/projects";
 import { appendRunNote, createReview, listActiveReviews } from "@/server/db/repositories/reviews";
-import { getModel } from "@/server/db/repositories/models";
+import { getModel, secondVerifierNotReady } from "@/server/db/repositories/models";
 import { effortRunsOn } from "@/lib/models/effort-support";
 import { reviewModelSchema } from "@/lib/models/model-id";
 import { resolveProfile } from "@/lib/review/profiles";
@@ -126,6 +126,11 @@ export function POST(request: Request): Promise<Response> {
     // refusal waits on no fetch (review of the 6.2 changes). The interactive
     // engine starts no CLI.
     const headless = (input.engineMode ?? "headless") === "headless";
+    // The second verifier first: free, and a review it cannot finish is
+    // not worth asking the CLI about (WP-E). Mode B's stages run in the
+    // person's own session, which is asked nothing here.
+    const unverifiable = headless ? secondVerifierNotReady(db, input.model) : null;
+    if (unverifiable !== null) throw unverifiable;
     const readiness = headless ? await cliReadiness(db) : null;
     if (readiness?.refusal) throw cliNotReady(readiness);
     // Asked here as well as at Start, so a page refused for it leaves no draft.

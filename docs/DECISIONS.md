@@ -4575,3 +4575,17 @@ verified evidence, in writing, here.
   terse. It says "no proven finding decided yet" and "confirmed of the
   proven findings decided". F14: PROJECT-STATE counts 36 route handlers
   and names WP-E next; the plan's WP-D row is DONE with its commits.
+- 2026-10-23 WP-E1 (proof-and-steps plan, PG-1 (a), D-185): the second
+  verifier's model is chosen by `lib/models/pairing.ts`, Fable 5.1 for an
+  Opus review and Opus 5.5 for any other, an unregistered model counting
+  as any other. A headless review is refused at create as well as at
+  Start, before the CLI is asked, as billing is, so a page refused leaves
+  no draft; a Resume too, since a probe may have lapsed. Mode B is not
+  checked yet: whether its second verifier runs in the person's session
+  is WP-E2's to settle. The new-review screen reads it from the models
+  it holds, not the pre-flight, so a probe counts at once, and offers a
+  Probe button beside the reason, since the list folds unprobed models
+  away once one is usable. Rejected: a pre-flight field for it, stale
+  after a probe; checking again in prepareAndRun, which would make every
+  run seed the model for no added safety (a lapsed model fails its stage,
+  which can be resumed).

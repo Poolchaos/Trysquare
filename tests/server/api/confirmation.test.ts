@@ -100,6 +100,10 @@ beforeAll(async () => {
     exportReport: await import("@/app/api/reviews/[id]/export/route"),
   };
 
+  // Every review here is on Fable, whose findings Opus 5.5 proves again (WP-E).
+  const { probeSecondVerifier } = await import("../db/helpers");
+  probeSecondVerifier((await import("@/server/runtime")).runtime().db);
+
   // A project, its rules, and a review of the seeded branch pair.
   const createdProject = await routes.projects.POST(
     post({ gitUrl: `file://${fixture.appClone}`, name: "app" }),
