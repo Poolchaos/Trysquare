@@ -962,25 +962,30 @@ test("the scan theater follows the review from stage to stage", async ({ page })
   // model call, the adversarial stage.
   // The two calls let through use up scripted answers, which every later
   // review reads by count, so the count is put back once this one is
-  // cancelled; the held call un-counts itself.
+  // cancelled; the held call un-counts itself. Put back even when an
+  // assertion fails, or every later review reads shifted answers and one
+  // failure becomes many.
   const callsBefore = readFileSync(COUNTER_FILE, "utf8");
   writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 30_000, skip: 2 }), "utf8");
-  await startAReview(page);
-  const theater = page.getByRole("dialog", {
-    name: "Watching the review of feature/rename-prefs into main",
-  });
-  await expect(theater).toBeVisible({ timeout: 60_000 });
-  await expect(theater.getByText("Adversarial", { exact: true })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(theater.getByText(/stage 4 of 7/)).toBeVisible();
+  try {
+    await startAReview(page);
+    const theater = page.getByRole("dialog", {
+      name: "Watching the review of feature/rename-prefs into main",
+    });
+    await expect(theater).toBeVisible({ timeout: 60_000 });
+    await expect(theater.getByText("Adversarial", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(theater.getByText(/stage 4 of 7/)).toBeVisible();
 
-  await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
-  await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
-  rmSync(STALL_TRIGGER, { force: true });
-  writeFileSync(COUNTER_FILE, callsBefore, "utf8");
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+    await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
+  } finally {
+    rmSync(STALL_TRIGGER, { force: true });
+    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
+  }
 });
 
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
@@ -1066,15 +1071,25 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
 });
 
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
-  // Only proven findings reach the report: an open question is dismissed, or
-  // verified again (PG-2 (a), D-185). The usage-limit test before this one
-  // leaves a review awaiting decisions; its findings are shown as open
-  // questions here, so whichever is first in the queue is one.
+  // Only proven findings reach the report: an open question can only be
+  // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test
+  // before this one leaves awaiting decisions: a review of its own would
+  // use up scripted answers the later tests read by count. Its verified
+  // findings are shown as open questions, so with none decided yet,
+  // whichever the queue opens on is one.
   const listed = (await (await page.request.get("/api/reviews")).json()) as {
-    reviews: { id: string; status: string }[];
+    reviews: { id: string; status: string; findings: { confirmed: number; dismissed: number } }[];
   };
-  const waiting = listed.reviews.find((review) => review.status === "awaiting_confirmation");
-  expect(waiting, "a review awaiting decisions").toBeDefined();
+  const waiting = listed.reviews.find(
+    (review) =>
+      review.status === "awaiting_confirmation" &&
+      review.findings.confirmed === 0 &&
+      review.findings.dismissed === 0,
+  );
+  expect(
+    waiting,
+    "a review awaiting decisions, none made yet (left by the usage-limit test)",
+  ).toBeDefined();
   const stop = await routeUntilStopped(page, `**/api/reviews/${waiting!.id}`, async (route) => {
     const response = await route.fetch();
     const body = (await response.json()) as {
