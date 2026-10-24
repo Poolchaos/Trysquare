@@ -21,6 +21,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { listCheckFindings } from "@/server/db/repositories/check-findings";
+import { listFindings, statusOf } from "@/server/db/repositories/findings";
 import { requireReview } from "@/server/db/repositories/reviews";
 import { listForReview } from "@/server/db/repositories/stage-executions";
 import type { ReviewEvent } from "@/server/jobs/bus";
@@ -147,8 +148,22 @@ async function main(): Promise<number> {
       2,
     )}\n`,
   );
+  // The code stages read the screens' HTML too, and what they raised is
+  // part of the run: the first real run raised three and kept none.
+  const codeFindings = listFindings(db, reviewId).map((finding) => ({
+    status: statusOf(finding),
+    file: finding.filePath,
+    lines: [finding.lineStart, finding.lineEnd],
+    severity: finding.severity,
+    ruleCode: finding.ruleCode,
+    issue: finding.issue,
+    comment: finding.comment,
+    quotedCode: finding.quotedCode,
+    verificationNote: finding.verificationNote,
+  }));
+  writeFileSync(join(outDir, "code-findings.json"), `${JSON.stringify(codeFindings, null, 2)}\n`);
   cpSync(screenshotsDir(dataDir, reviewId), join(outDir, "screenshots"), { recursive: true });
-  log(`Wrote the score, every grade and the screenshots to ${outDir}`);
+  log(`Wrote the score, every grade, the screenshots and the code findings to ${outDir}`);
 
   // Closed before the directory goes: Windows will not delete an open database.
   db.$client.close();

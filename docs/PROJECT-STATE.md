@@ -7,6 +7,16 @@ Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
 
 ## Status
 
+- 2026-10-24: WP-I is built (I1 to I6, three review rounds in DECISIONS):
+  a project may turn its own install, tests and e2e on, run on a
+  throwaway copy of the branch; a failing command is a finding the app
+  proves, and every screenshot its e2e saves is graded A to D by the
+  review's model and again, for a C or D, by the paired one, both needing
+  to fail it. WP-J ran the design fixture on Opus 5.5 with Fable 5.1
+  second (D-200): 5/5 planted screenshots found, none of the 7 clean ones
+  failed. Both wait on the maintainer's verdict.
+  `./verify.sh --e2e` exits 0 at 1ad57f6 with 1360 unit tests passing, 11
+  skipped, and 106 browser tests.
 - 2026-10-23: the proof-and-steps plan (`plans/PROOF-AND-STEPS-PLAN.md`)
   is in build (D-186): WP-A to WP-G are DONE, with five review rounds
   over them (in DECISIONS). Opus 5.5 is the recommended default and Haiku

@@ -4960,3 +4960,24 @@ verified evidence, in writing, here.
   WP-J can read each grade against its image. The demos' sign-in check
   and model probes moved to `scripts/lib/demo-cli.ts`, unchanged, so both
   refuse alike; `demo:fixture --fake` still finds 11/11.
+- 2026-10-24 D-200 WP-J, measured with the maintainer's go on CLI runs
+  ("if it's through the cli and not the api, you can go crazy with the
+  testing"), through the local CLI 2.1.301 signed in through the
+  subscription: `npm run demo:design -- --model claude-opus-5-5` at
+  1ad57f6 on Windows 11, Fable 5.1 the second grader. The fixture's e2e
+  passed in 1.1s and saved 12 screenshots; S4b graded them in two
+  requests and S5c the five it failed in one. Against the key: 5/5
+  planted screenshots found (phone checkout overflow D, desktop and phone
+  profile clipped D, desktop and phone receipt contrast C), each graded C
+  or D by both; none of the 7 clean screenshots failed, 6 graded A and
+  desktop orders B, its note that the rows offer no visible action, fair
+  under the fixture's standard. $2.4593 cost-equivalent in 263.7s. Every
+  grade was read against its screenshot here: the positions the graders
+  gave (the profile button at y 165 to 209, cut at "deli...", the
+  receipt's line at y 177, checkout's columns past Quantity off a phone)
+  hold. The first grader put the receipt's contrast at roughly 1.8:1 and
+  1.6:1; #c8c8c8 on white measures 1.67:1, so its figures are estimates,
+  its grades right. The code stages raised 3 findings in the HTML and both
+  verifiers proved them, which the demo did not keep: it now writes them
+  to code-findings.json. One run, so no rate is claimed. Evidence in
+  `review/2026-10-24-design/112623-claude-opus-5-5/` (gitignored).
