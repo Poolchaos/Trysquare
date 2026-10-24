@@ -4947,3 +4947,16 @@ verified evidence, in writing, here.
   clean; tables now keep 16px below them. Rejected: committed PNGs
   copied by a fake e2e, which would grade pictures of nothing the
   fixture's code renders.
+- 2026-10-24 WP-I step 6b, the design fixture reviewed end to end: one
+  function builds it, adds it as a project with its checks on (its e2e
+  handed this install's Playwright, its DESIGN.md the standard), reviews
+  it through the job manager as the app does, and scores every
+  screenshot against the key. The fake-engine test and `npm run
+  demo:design` both call it, so WP-J's real run is the run the test
+  proves. A planted screenshot is found only when both graders failed it,
+  whatever a person decided after; one the second grader passed is
+  missed, saying so. The evidence keeps every grade each grader gave,
+  A and B included, from the stages' answers, beside the screenshots, so
+  WP-J can read each grade against its image. The demos' sign-in check
+  and model probes moved to `scripts/lib/demo-cli.ts`, unchanged, so both
+  refuse alike; `demo:fixture --fake` still finds 11/11.

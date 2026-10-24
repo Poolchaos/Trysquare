@@ -131,7 +131,11 @@ app runs a project's and measures every page in Chromium at the key's
 width (sideways scroll, text contrast under 4.5:1, text cut off by a box
 that hides its overflow), and holds the key to exactly what it measures.
 The e2e is handed the path of a Playwright install, the fixture having
-none of its own.
+none of its own. `scripts/lib/design-demo.ts` reviews it end to end with
+its checks on and scores each screenshot against the key (found, missed,
+a clean screen failed by both graders, or by one);
+`tests/scripts/design-demo.test.ts` runs that on the fake engine, and
+`npm run demo:design` runs it on a real model (WP-J).
 
 ## 5. Numbers or silence
 

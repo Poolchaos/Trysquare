@@ -28,7 +28,6 @@ import { importProtocol } from "@/lib/rulesets/import";
 import { createDb } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import { listFindings, statusOf } from "@/server/db/repositories/findings";
-import { recordProbeSuccess, registerCandidate } from "@/server/db/repositories/models";
 import {
   createProject,
   linkDependency,
@@ -37,10 +36,7 @@ import {
 } from "@/server/db/repositories/projects";
 import { createReview, requireReview } from "@/server/db/repositories/reviews";
 import { cloneBare, diffText, mergeBase, resolveBranch } from "@/server/gitops/repo";
-import { probeModel, readCliStatus } from "@/server/engine/probe";
-import { configuredClaudePath } from "@/server/cli-path";
-import { pairedVerifierFor } from "@/lib/models/pairing";
-import { demoRefusal, describeSignIn } from "./lib/demo-billing";
+import { readyForReview } from "./lib/demo-cli";
 import { findsDefect } from "./lib/demo-score";
 import { JobManager } from "@/server/jobs/manager";
 import type { ReviewEvent } from "@/server/jobs/bus";
@@ -130,53 +126,17 @@ async function main(): Promise<number> {
   const db = createDb(dbPath(dataDir));
   runMigrations(db);
 
-  // One CLI for the check, the probe and the review: TRYSQUARE_CLAUDE_PATH's,
-  // else the bundled CLI, else claude on PATH, since the demo's own data
-  // directory holds no path from Settings. Checked by the bundled CLI and run by the variable's, the
-  // check vouched for a CLI the review never used (review of the D-163 fixes).
-  const claudePath = options.fake ? join(FIXTURES, "fake-claude.mjs") : configuredClaudePath(db);
-  const onPath = claudePath === undefined ? {} : { claudePath };
-  const manager = new JobManager();
-  manager.init({ db, dataDir, ...onPath });
-
-  if (!options.fake) {
-    const cli = await readCliStatus(onPath);
-    log(`CLI      ${describeSignIn(cli)}`);
-    const refusal = demoRefusal(cli, options.perToken);
-    if (refusal !== null) {
-      log(refusal);
-      db.$client.close();
-      if (!options.keep) rmSync(dataDir, { recursive: true, force: true });
-      return 1;
-    }
-    // The review's model and the second verifier it pairs with (WP-E), both
-    // probed before a review request is sent: the app refuses Start on an
-    // unprobed pair, and this calls the manager past that check, so without
-    // it a pair that cannot answer failed the run after five paid stages.
-    const family = (model: string) => model.split("-")[1] ?? "unknown";
-    for (const model of [options.model, pairedVerifierFor(family(options.model))]) {
-      log(`Probing ${model}...`);
-      const probe = await probeModel(model, onPath);
-      if (probe.status !== "available") {
-        log(`The model is not usable: ${probe.error}`);
-        log("No review request was sent. Pass --fake to run the demo without a model.");
-        db.$client.close();
-        if (!options.keep) rmSync(dataDir, { recursive: true, force: true });
-        return 1;
-      }
-      registerCandidate(db, {
-        id: model,
-        family: family(model),
-        displayName: model,
-        profileId: "full-context",
-      });
-      recordProbeSuccess(db, model, {
-        resolvedId: probe.resolvedId,
-        contextWindow: probe.contextWindow,
-      });
-      log(`Available as ${probe.resolvedId}, ` + `${count(probe.contextWindow)} token window.`);
-    }
+  // The fake, or the CLI the check and the probes vouched for.
+  const ready = options.fake
+    ? { claudePath: join(FIXTURES, "fake-claude.mjs") }
+    : await readyForReview(db, { model: options.model, perToken: options.perToken, log });
+  if (ready === null) {
+    db.$client.close();
+    if (!options.keep) rmSync(dataDir, { recursive: true, force: true });
+    return 1;
   }
+  const manager = new JobManager();
+  manager.init({ db, dataDir, ...ready });
 
   // Each cloned where the app keeps a project's own and marked ready, as
   // adding it in the app leaves it. Cloned into a shared clones directory

@@ -103,6 +103,21 @@ That spends usage.
 Both forms write their score and full event log into `review/<date>-fg2/`,
 which is gitignored, so the evidence stays on your machine.
 
+```bash
+npm run demo:design -- --fake
+```
+
+The same for the design check (WP-I): builds a storefront whose screens
+carry three planted design defects beside clean ones, turns its own checks
+on, lets its e2e photograph twelve screenshots in the review's throwaway
+copy, grades them, and scores each against the key. On the fake engine
+the grades follow the key, so it proves the plumbing only (measured
+2026-10-24 on this machine: three runs, each "5/5 planted screenshots
+found" and 2.9s as the demo reports it). Without `--fake` it grades with
+a real model, as `demo:fixture` does, and spends usage. Evidence goes to
+`review/<date>-design/`: the score, every grade each grader gave, and the
+screenshots they were given, so each grade can be read against its image.
+
 ## Run a first review
 
 Every step below is free until you press Start review.
@@ -187,9 +202,10 @@ silently used the real CLI:
 - Pressing Probe on the Settings screen, or a probe control in the model
   picker. Each probe is a real call, which is why nothing probes on a timer or
   at startup.
-- `npm run demo:fixture` **without** `--fake`. It says how the CLI is signed
-  in first, and stops, having spent nothing, when that bills per token or
-  may, unless `--per-token` is passed.
+- `npm run demo:fixture` or `npm run demo:design` **without** `--fake`.
+  Each says how the CLI is signed in first, and stops, having spent
+  nothing, when that bills per token or may, unless `--per-token` is
+  passed.
 
 Checking sign-in on Settings runs the CLI's own auth status and spends
 nothing. Pre-flight is git and arithmetic only. The entire test suite runs

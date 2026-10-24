@@ -170,7 +170,7 @@ are accepted; anything else is refused by name.
 - `src/components/` - the shared UI vocabulary, the top bar, and the
   confirmation queue.
 - `scripts/` - the house-style gate, the leak gate, the nothing-hidden gate,
-  the dead-export gate, the fixture demo, and `claude.ts`, which `npm run
+  the dead-export gate, the fixture demo, the design demo, and `claude.ts`, which `npm run
   claude` runs to sign in the CLI reviews use (MVP 6.3).
 - `tests/fixtures/example-protocol.md` - the public sample protocol the
   fidelity gate runs against.
