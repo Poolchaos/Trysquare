@@ -5038,3 +5038,20 @@ verified evidence, in writing, here.
   watched, so there the grader's word stands alone; the colon, backslash
   and edge-space names are tested on Linux and macOS alone, since Windows
   cannot name such files.
+- 2026-10-24 D-202 Measured, under the maintainer's go on CLI runs: the
+  code fixture again on Opus 5.5 with Fable 5.1 second, through the local
+  CLI 2.1.301 on the subscription, at a14fd4a on Windows 11, the first run
+  since D-194 and D-195 (`npm run demo:fixture -- --model
+  claude-opus-5-5`). 11 candidates raised, all 11 proven by both
+  verifiers, none refuted, no open question, no quote discarded, nothing
+  raised in the files that are deliberately fine: 11/11 by the key.
+  $2.7884 cost-equivalent in 346.0s. WP-H, before them, was 8 proven by
+  both, 3 open questions where Fable 5.1 ended its proof off the cited
+  lines, 7/11 by the key, $3.1545 in 344.4s. Every proof was read here: 6
+  of the 22 end away from the cited lines but pass through them, from the
+  change to where it does harm (the deleted retry.ts to dispatch.ts's
+  import of it; total.ts to its test; the shared default to the consumer
+  that reads it), the shape D-194 accepts; each path follows the defect.
+  The unmigrated consumer was proven citing no rule. One run, so no rate
+  is claimed. Evidence in `review/2026-10-24-fg2/122029-claude-opus-5-5/`
+  (gitignored).

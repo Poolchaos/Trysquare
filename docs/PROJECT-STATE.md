@@ -14,7 +14,9 @@ Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
   review's model and again, for a C or D, by the paired one, both needing
   to fail it. WP-J ran the design fixture on Opus 5.5 with Fable 5.1
   second (D-200): 5/5 planted screenshots found, none of the 7 clean ones
-  failed. Both wait on the maintainer's verdict.
+  failed. Both wait on the maintainer's verdict. The code fixture, run
+  again since D-194 on the same pair, gave 11/11 by the key, all proven by
+  both verifiers, no open question (D-202).
   `./verify.sh --e2e` exits 0 at 1ad57f6 with 1360 unit tests passing, 11
   skipped, and 106 browser tests.
 - 2026-10-23: the proof-and-steps plan (`plans/PROOF-AND-STEPS-PLAN.md`)
