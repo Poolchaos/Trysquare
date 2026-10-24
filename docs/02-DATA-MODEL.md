@@ -48,6 +48,26 @@ reviewed together with it (e.g. an app consumes a shared-core package).
 Links are directional (consumer -> dependency) and configured once on the
 project. A dependency is itself a normal project (own clone, own reviews).
 
+### project_checks
+
+A project's own tests and e2e, which a review runs on a throwaway copy of
+the branch once a person turns them on (proof-and-steps plan, WP-I; D-191,
+D-192). No row means off.
+
+| Column             | Type         | Notes                                                       |
+| ------------------ | ------------ | ----------------------------------------------------------- |
+| projectId          | text PK, FK  | cascades with the project                                   |
+| enabled            | integer bool | on only with a test or an e2e command                       |
+| installCommand     | text null    | one line, at most 1000 characters, run first                |
+| testCommand        | text null    | one line; a failing run is a finding                        |
+| e2eCommand         | text null    | one line; set together with screenshotDir                   |
+| screenshotDir      | text null    | inside the repository: relative, no `..`                    |
+| designStandardPath | text null    | inside the repository; null grades by the A to D scale only |
+| updatedAt          | text         |                                                             |
+
+The whole set is sent and checked at once (`lib/projects/checks.ts`), so a
+stored set is always one that passed. Turned off, the commands are kept.
+
 ### rulesets
 
 | Column               | Type      | Notes                                      |

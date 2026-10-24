@@ -144,6 +144,11 @@ choose rules, run).
   reviews for this project, delete flows per 02 deletion rules, and
   dependency links: add/remove a linked project with its package name
   (e.g. @acme/shared-core), shown as a chip on the project card.
+- Tests and design (WP-I, D-191, D-192): off until turned on, and saying
+  so; the checkbox shows, before anything is saved, that turning it on runs
+  the branch's own code on this machine. Install, tests and e2e commands,
+  the folder the e2e saves screenshots to, and the design standard's path,
+  saved whole with Save checks; a refusal is the server's words.
 
 ### New review (the setup flow)
 

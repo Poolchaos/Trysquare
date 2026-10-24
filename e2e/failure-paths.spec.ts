@@ -1689,6 +1689,102 @@ test("a project's name and default branch are edited from its page (D-51)", asyn
   expect(await stored()).toMatchObject({ name: "app", defaultBranch: before });
 });
 
+test("a project's own tests and e2e are set from its page, off until turned on (WP-I)", async ({
+  page,
+}) => {
+  // D-191, D-192: a review may run the project's tests and grade its e2e
+  // screenshots, on a throwaway copy of the branch, only once a person turns
+  // it on, told first that it runs the branch's code on this machine.
+  await page.goto("/projects");
+  await page.getByRole("link", { name: "app", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "app", level: 1, exact: true })).toBeVisible();
+  const projectId = page.url().split("/").pop()!;
+  const card = page.getByRole("heading", { name: "Tests and design" }).locator("..");
+  await expect(card).toContainText("Off: a review reads the code and runs none of it.");
+  const warning = card.getByText(/runs the branch's own code on this machine, as you/);
+  await expect(warning).toHaveCount(0);
+
+  await card.getByLabel("Run this project's tests and e2e on each review").check();
+  await expect(warning).toBeVisible();
+  await card.getByLabel(/^Tests/).fill("npm test");
+  await card.getByLabel(/^E2E/).fill("npm run e2e");
+  const save = card.getByRole("button", { name: "Save checks" });
+  await save.click();
+  // Screenshots only from an e2e run with its folder named (D-192).
+  await expect(
+    page.getByText(
+      "screenshotDir: An e2e command and the folder it saves screenshots to go together.",
+    ),
+  ).toBeVisible();
+
+  await card.getByLabel("Screenshots folder").fill("review/screens");
+  await card.getByLabel("Design standard").fill("docs/04-UI-DESIGN.md");
+  await save.click();
+  await expect(card).toContainText("On: each review also runs these on a throwaway copy");
+  const stored = async () =>
+    (
+      (await (await page.request.get(`/api/projects/${projectId}/checks`)).json()) as {
+        checks: Record<string, unknown>;
+      }
+    ).checks;
+  expect(await stored()).toEqual({
+    enabled: true,
+    installCommand: null,
+    testCommand: "npm test",
+    e2eCommand: "npm run e2e",
+    screenshotDir: "review/screens",
+    designStandardPath: "docs/04-UI-DESIGN.md",
+  });
+
+  await page.reload();
+  await expect(card.getByLabel("Run this project's tests and e2e on each review")).toBeChecked();
+  await expect(card.getByLabel("Screenshots folder")).toHaveValue("review/screens");
+
+  const evidence = join(
+    fileURLToPath(new URL("..", import.meta.url)),
+    "review",
+    `${new Date().toISOString().slice(0, 10)}-e2e`,
+  );
+  mkdirSync(evidence, { recursive: true });
+  // From the whole page, clipped to the card, so the fixed top bar is not
+  // drawn across it.
+  const shoot = async (name: string) => {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const box = await card.boundingBox();
+    if (!box) throw new Error("The card has no box to photograph.");
+    await page.screenshot({
+      path: join(evidence, `${name}.png`),
+      fullPage: true,
+      clip: box,
+      animations: "disabled",
+    });
+  };
+  const desktop = page.viewportSize();
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await shoot(`project-checks-${scheme}`);
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const sideways = await sidewaysOverflow(page);
+  expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
+  await shoot("project-checks-phone");
+  if (desktop) await page.setViewportSize(desktop);
+
+  // Put back, for the tests after.
+  const off = await page.request.put(`/api/projects/${projectId}/checks`, {
+    data: {
+      enabled: false,
+      installCommand: null,
+      testCommand: null,
+      e2eCommand: null,
+      screenshotDir: null,
+      designStandardPath: null,
+    },
+  });
+  expect(off.status()).toBe(200);
+});
+
 test("a review deleted from the list takes its evidence with it", async ({ page }) => {
   // The other ordinary ending: a review nobody needs any more. Its worktrees,
   // bundle and logs go with it, which is why the list says so out loud.
@@ -2599,6 +2695,17 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "DELETE projects/[id]": {},
     "PATCH projects/[id]": { data: { name: "Swept" } },
     "GET projects/[id]/branches": {},
+    "GET projects/[id]/checks": {},
+    "PUT projects/[id]/checks": {
+      data: {
+        enabled: false,
+        installCommand: null,
+        testCommand: null,
+        e2eCommand: null,
+        screenshotDir: null,
+        designStandardPath: null,
+      },
+    },
     "POST projects/[id]/clone": { data: {} },
     "POST projects/[id]/fetch": { data: {} },
     "GET projects/[id]/links": {},

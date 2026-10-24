@@ -13,6 +13,7 @@ import {
 } from "@/server/db/repositories/projects";
 import { listBranches } from "@/server/gitops/repo";
 import { listReviewsForProject } from "@/server/db/repositories/reviews";
+import { getProjectChecks } from "@/server/db/repositories/project-checks";
 import { failed, handler, isNamed, ok, readJson } from "@/server/api/respond";
 import { removeProjectFiles } from "@/server/projects/clone";
 import { runtime } from "@/server/runtime";
@@ -46,6 +47,7 @@ export async function GET(
         )
         .map((candidate) => ({ id: candidate.id, name: candidate.name })),
       reviews: listReviewsForProject(db, id),
+      checks: getProjectChecks(db, id),
     });
   });
 }

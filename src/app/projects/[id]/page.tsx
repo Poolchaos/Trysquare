@@ -27,6 +27,7 @@ import {
   statusTone,
 } from "@/components/ui";
 import { send, type Sent } from "@/components/request";
+import type { ProjectChecks } from "@/lib/projects/checks";
 
 interface Detail {
   project: {
@@ -47,6 +48,7 @@ interface Detail {
     status: string;
     createdAt: string;
   }[];
+  checks: ProjectChecks;
 }
 
 interface Branches {
@@ -511,6 +513,26 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             </Card>
 
             <Card className="p-4">
+              <h2 className="mb-1 text-heading font-semibold">Tests and design</h2>
+              <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
+                {detail.checks.enabled
+                  ? "On: each review also runs these on a throwaway copy of the branch, and grades the screenshots its e2e saves."
+                  : "Off: a review reads the code and runs none of it."}
+              </p>
+              <ProjectChecksForm
+                key={JSON.stringify(detail.checks)}
+                stored={detail.checks}
+                busy={busy}
+                onSave={(checks) =>
+                  void call(`/api/projects/${id}/checks`, {
+                    method: "PUT",
+                    body: JSON.stringify(checks),
+                  })
+                }
+              />
+            </Card>
+
+            <Card className="p-4">
               <h2 className="mb-1 text-heading font-semibold">Delete project</h2>
               <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
                 Removes the clone from disk. Refused while any review still refers to it.
@@ -660,6 +682,80 @@ function ProjectEditForm({
       <div>
         <Button type="submit" disabled={busy}>
           Save
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * The project's own tests and e2e (WP-I, D-191, D-192), held as typed and
+ * sent whole. Turning them on says what it means before it is saved: the
+ * branch's own code runs on this machine.
+ */
+function ProjectChecksForm({
+  stored,
+  busy,
+  onSave,
+}: {
+  stored: ProjectChecks;
+  busy: boolean;
+  onSave: (checks: ProjectChecks) => void;
+}) {
+  const [checks, setChecks] = useState(stored);
+  const text = (field: Exclude<keyof ProjectChecks, "enabled">) => ({
+    value: checks[field] ?? "",
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+      setChecks((current) => ({ ...current, [field]: event.target.value })),
+  });
+  return (
+    <form
+      className="grid gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave(checks);
+      }}
+    >
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={checks.enabled}
+          onChange={(event) => setChecks({ ...checks, enabled: event.target.checked })}
+        />
+        <span>Run this project&apos;s tests and e2e on each review</span>
+      </label>
+      {checks.enabled ? (
+        <p className="rounded-md border border-[var(--color-warning)] bg-[var(--color-warning-soft)] px-3 py-2 text-xs">
+          This runs the branch&apos;s own code on this machine, as you. Turn it on only for a
+          project whose branches you trust.
+        </p>
+      ) : null}
+      <Field label="Install" hint="Run first, such as npm ci. Optional.">
+        <Input name="installCommand" placeholder="npm ci" {...text("installCommand")} />
+      </Field>
+      <Field label="Tests" hint="A failing run is a finding.">
+        <Input name="testCommand" placeholder="npm test" {...text("testCommand")} />
+      </Field>
+      <Field label="E2E" hint="Only an e2e run's screenshots are graded.">
+        <Input name="e2eCommand" placeholder="npm run e2e" {...text("e2eCommand")} />
+      </Field>
+      <Field label="Screenshots folder" hint="Where the e2e saves them, inside the repository.">
+        <Input name="screenshotDir" placeholder="e2e/screenshots" {...text("screenshotDir")} />
+      </Field>
+      <Field
+        label="Design standard"
+        hint="A file in the repository the screenshots are graded against, A to D. Optional."
+      >
+        <Input
+          name="designStandardPath"
+          placeholder="docs/design.md"
+          {...text("designStandardPath")}
+        />
+      </Field>
+      <div>
+        <Button type="submit" disabled={busy}>
+          Save checks
         </Button>
       </div>
     </form>

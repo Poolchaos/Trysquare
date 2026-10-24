@@ -55,6 +55,23 @@ export const projectLinks = sqliteTable(
   (table) => [index("project_links_project_idx").on(table.projectId)],
 );
 
+/**
+ * A project's own tests and e2e, run on a throwaway copy of the branch when
+ * turned on (WP-I, D-191). No row is the same as turned off.
+ */
+export const projectChecks = sqliteTable("project_checks", {
+  projectId: text("project_id")
+    .primaryKey()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  enabled: integer("enabled", { mode: "boolean" }).notNull(),
+  installCommand: text("install_command"),
+  testCommand: text("test_command"),
+  e2eCommand: text("e2e_command"),
+  screenshotDir: text("screenshot_dir"),
+  designStandardPath: text("design_standard_path"),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export const rulesets = sqliteTable("rulesets", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
