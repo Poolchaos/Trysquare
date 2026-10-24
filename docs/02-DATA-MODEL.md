@@ -68,6 +68,37 @@ D-192). No row means off.
 The whole set is sent and checked at once (`lib/projects/checks.ts`), so a
 stored set is always one that passed. Turned off, the commands are kept.
 
+### check_findings
+
+What a project's own checks found in a review (D-197): a failing install,
+test or e2e command (kind `test`), or a screenshot graded C or D (kind
+`design`, WP-I step 4). A finding's lifecycle without a file and a line,
+kept apart so code findings, their ledger and their coverage checks never
+meet a row with neither. Made again from the checks' result each time a
+review prepares, as code findings are from the stages' answers.
+
+| Column           | Type         | Notes                                                    |
+| ---------------- | ------------ | -------------------------------------------------------- |
+| id               | text PK      |                                                          |
+| reviewId         | text FK      | cascades with the review                                 |
+| kind             | text         | test, design                                             |
+| step             | text null    | install, tests, e2e (a test)                             |
+| command          | text null    | as it was run                                            |
+| exitCode         | integer null | null when stopped                                        |
+| timedOut         | integer bool | stopped at its time limit                                |
+| logPath          | text null    | the command's whole output                               |
+| screenshotPath   | text null    | the screenshot a design grade is about                   |
+| grade            | text null    | C or D (a design grade)                                  |
+| severity         | text         | CRITICAL for a failing command                           |
+| issue            | text         | e.g. "The tests fail on this branch."                    |
+| evidence         | text         | the output's last lines, or what is off on the screen    |
+| status           | text         | a finding's: a failing command is proven by the app      |
+| verificationNote | text null    | e.g. "Exited with code 1, as the app ran it."            |
+| dismissReason    | text null    |                                                          |
+| dismissedFrom    | text null    |                                                          |
+| createdAt        | text         |                                                          |
+| decidedAt        | text null    |                                                          |
+
 ### rulesets
 
 | Column               | Type      | Notes                                      |

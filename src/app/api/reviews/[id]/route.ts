@@ -1,5 +1,6 @@
 /** Everything a review page needs in one read. */
 
+import { listCheckFindings } from "@/server/db/repositories/check-findings";
 import { listFindings } from "@/server/db/repositories/findings";
 import { getProject } from "@/server/db/repositories/projects";
 import { stageDurationMedians } from "@/server/db/repositories/stage-executions";
@@ -27,6 +28,8 @@ export async function GET(
     return ok({
       ...manager.snapshot(id),
       findings: listFindings(db, id),
+      // A project's own checks, kept apart from code findings (D-197).
+      checkFindings: listCheckFindings(db, id),
       project: project ? { id: project.id, name: project.name } : null,
       // What this machine has actually measured for this model, so a stage in
       // flight can say what it usually takes instead of only that it is still

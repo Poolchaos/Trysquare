@@ -38,6 +38,7 @@ import {
 import { NO_CHECKS, type ProjectChecks } from "@/lib/projects/checks";
 import { getProjectChecks, setProjectChecks } from "@/server/db/repositories/project-checks";
 import { runChecksForReview } from "@/server/review/project-checks";
+import { listCheckFindings } from "@/server/db/repositories/check-findings";
 import type { Db } from "@/server/db/client";
 import {
   confirmFinding,
@@ -1716,6 +1717,32 @@ describe("a project's own checks (WP-I, step 2)", () => {
     expect(failure).toMatch(
       /failed with exit code 1 in \d+\.\ds; its output is in .+tests\.log\.$/,
     );
+    // A finding of its own, proven by the app from the exit code and the
+    // output (WP-I, step 3, D-197), beside the code findings, not among them.
+    const found = listCheckFindings(db, reviewId);
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({
+      kind: "test",
+      step: "tests",
+      exitCode: 1,
+      timedOut: false,
+      severity: "CRITICAL",
+      status: "verified",
+      issue: "The tests fail on this branch.",
+      verificationNote: "Exited with code 1, as the app ran it.",
+    });
+    expect(found[0]!.evidence).toContain("1 failing");
+    expect(listFindings(db, reviewId).some((finding) => finding.issue.includes("tests fail"))).toBe(
+      false,
+    );
+  }, 120_000);
+
+  it("finds nothing in checks that pass", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    turnOn({ testCommand: script("green", "process.exit(0);") });
+    expect((await run(reviewId)).kind).toBe("completed");
+    expect(listCheckFindings(db, reviewId)).toEqual([]);
   }, 120_000);
 
   it("runs nothing for a project that left them off", async () => {

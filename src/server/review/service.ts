@@ -89,6 +89,10 @@ import { describeCli } from "../engine/cli";
 import { StageFailedError } from "../engine/headless";
 import { buildBundle, readBaseContents, type RepoSpec } from "../gitops/bundle";
 import { getProjectChecks } from "../db/repositories/project-checks";
+import {
+  deleteCheckFindingsForReview,
+  recordFailedCommand,
+} from "../db/repositories/check-findings";
 import { runChecksForReview } from "./project-checks";
 import { fetchAll, resolveCommit } from "../gitops/repo";
 import {
@@ -375,8 +379,11 @@ export async function prepareAndRun(
     // the code the primary consumes.
     const checks = getProjectChecks(db, project.id);
     const primary = sides.find((side) => side.role === "primary");
+    // Made again from the result each time, as code findings are from the
+    // stages' answers, so a resume does not add a second copy (D-197).
+    deleteCheckFindingsForReview(db, reviewId);
     if (checks.enabled && primary !== undefined) {
-      await runChecksForReview(db, {
+      const ran = await runChecksForReview(db, {
         reviewId,
         dataDir,
         clonePath: primary.clonePath,
@@ -385,6 +392,12 @@ export async function prepareAndRun(
         ...(options.signal === undefined ? {} : { signal: options.signal }),
       });
       assertNotCancelled(options.signal);
+      // A failing command is proven by the app itself: its exit code or its
+      // time limit, and its output (WP-I, step 3).
+      for (const command of ran.commands) {
+        if (command.cancelled || (command.exitCode === 0 && !command.timedOut)) continue;
+        recordFailedCommand(db, reviewId, command);
+      }
     }
 
     // Candidates and their verdicts are derived entirely from stage answers,

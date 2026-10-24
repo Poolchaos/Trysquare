@@ -4803,3 +4803,13 @@ verified evidence, in writing, here.
   three spawners to their modules. Rejected: git archive, which leaves no
   .git for a project's tooling; a closed environment list like the
   engine's, which would strip what package managers need.
+- 2026-10-24 D-197 DECIDED (the maintainer): a failing test and a screenshot
+  graded C or D are kept in a table of their own, check_findings, with a
+  finding's lifecycle (proven, open question, confirmed, dismissed), shown
+  in the confirmation queue as a group of their own, "Tests and design",
+  with the log or the screenshot where a code finding shows its code, and
+  in a section of their own in the report. Code findings, their ledger and
+  their coverage checks are untouched. Rejected: a kind column on findings,
+  which would teach every part that assumes a file and a line (coverage,
+  the code pane, verify-again, the report) about rows that have neither,
+  where a mistake reaches code findings too.

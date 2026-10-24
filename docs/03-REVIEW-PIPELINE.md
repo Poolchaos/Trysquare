@@ -87,6 +87,8 @@ S1 work its risk-tagged files first (U12).
    `runs/<id>/checks/result.json`, a run note says each command's outcome,
    and the copy is removed. A resume reuses the result for the same commit
    and the same checks. The dependency of a linked review is not run.
+   A command that fails, or stops at its limit, is a check finding
+   (D-197), proven by the app from its exit code and its output.
 
 Failure of any S0 step fails the review with the git/filesystem error.
 

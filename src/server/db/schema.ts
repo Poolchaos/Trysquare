@@ -418,6 +418,43 @@ export const findings = sqliteTable(
   (table) => [index("findings_review_idx").on(table.reviewId, table.status)],
 );
 
+/**
+ * A failing test, or a screenshot graded C or D, from a project's own
+ * checks (WP-I, D-197): a finding's lifecycle, without a file and a line.
+ */
+export const checkFindings = sqliteTable(
+  "check_findings",
+  {
+    id: text("id").primaryKey(),
+    reviewId: text("review_id")
+      .notNull()
+      .references(() => reviews.id, { onDelete: "cascade" }),
+    /** test, or design (WP-I step 4). */
+    kind: text("kind").notNull(),
+    /** install, tests or e2e, for a test; null for a design grade. */
+    step: text("step"),
+    command: text("command"),
+    exitCode: integer("exit_code"),
+    timedOut: integer("timed_out", { mode: "boolean" }).notNull().default(false),
+    logPath: text("log_path"),
+    /** The screenshot a design grade is about. */
+    screenshotPath: text("screenshot_path"),
+    /** C or D, for a design grade. */
+    grade: text("grade"),
+    severity: text("severity").notNull(),
+    issue: text("issue").notNull(),
+    /** The command's output where it failed, or what is off on the screen. */
+    evidence: text("evidence").notNull(),
+    status: text("status").notNull(),
+    verificationNote: text("verification_note"),
+    dismissReason: text("dismiss_reason"),
+    dismissedFrom: text("dismissed_from"),
+    createdAt: text("created_at").notNull(),
+    decidedAt: text("decided_at"),
+  },
+  (table) => [index("check_findings_review_idx").on(table.reviewId)],
+);
+
 /** Probed, never assumed. See docs/06-MODELS-AND-PROFILES.md. */
 export const models = sqliteTable("models", {
   /** The full model id passed to the CLI. Short aliases are never stored. */
