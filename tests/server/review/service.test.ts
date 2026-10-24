@@ -32,8 +32,12 @@ import {
   runDir,
   worktreeBaselinePath,
   worktreeRepoDir,
+  checksDir,
   worktreeRootDir,
 } from "@/lib/paths";
+import { NO_CHECKS, type ProjectChecks } from "@/lib/projects/checks";
+import { getProjectChecks, setProjectChecks } from "@/server/db/repositories/project-checks";
+import { runChecksForReview } from "@/server/review/project-checks";
 import type { Db } from "@/server/db/client";
 import {
   confirmFinding,
@@ -1651,5 +1655,103 @@ describe("a rule someone switched off", () => {
     const systemPrompt = recordedSystemPrompts()[2] ?? "";
     expect(systemPrompt).toContain(PROTOCOL.rules[1]!.ruleText);
     expect(systemPrompt).not.toContain(dropped.ruleText);
+  }, 120_000);
+});
+
+describe("a project's own checks (WP-I, step 2)", () => {
+  const node = `"${process.execPath}"`;
+  /** A script outside the copy, run in it, so no command leans on a shell's quoting. */
+  const script = (name: string, body: string) => {
+    const path = join(dataDir, "scripts", `${name}.cjs`);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, body);
+    return `${node} "${path}"`;
+  };
+  const turnOn = (checks: Partial<ProjectChecks>) => {
+    const project = listProjects(db).find((p) => p.name === "app")!;
+    setProjectChecks(db, project.id, { ...NO_CHECKS, enabled: true, ...checks });
+  };
+  const notes = (reviewId: string) =>
+    (JSON.parse(requireReview(db, reviewId).runNotes) as { message: string }[]).map(
+      (note) => note.message,
+    );
+
+  it("runs them on a copy of the commit under review, keeps what they saved, and removes the copy", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    turnOn({
+      testCommand: script("tests", "process.exit(0);"),
+      // Saves a screenshot only where the reviewed commit's own file is, so
+      // it ran in a checkout of that commit.
+      e2eCommand: script(
+        "e2e",
+        `const fs = require("node:fs");
+         if (!fs.readFileSync("src/settings/prefs.ts", "utf8").includes("reportAutoNavigate")) process.exit(2);
+         fs.mkdirSync("e2e/screens", { recursive: true });
+         fs.writeFileSync("e2e/screens/home.png", "png");`,
+      ),
+      screenshotDir: "e2e/screens",
+    });
+
+    const outcome = await run(reviewId);
+    expect(outcome.kind).toBe("completed");
+    const said = notes(reviewId);
+    expect(said.some((note) => /^Tests \(.+\) passed in \d+\.\ds\.$/.test(note))).toBe(true);
+    expect(said.some((note) => /^E2E \(.+\) passed in /.test(note))).toBe(true);
+    expect(said).toContain("The e2e saved 1 screenshot(s) to grade.");
+
+    const dir = checksDir(dataDir, reviewId);
+    expect(readFileSync(join(dir, "screenshots", "home.png"), "utf8")).toBe("png");
+    const kept = JSON.parse(readFileSync(join(dir, "result.json"), "utf8")) as { commit: string };
+    expect(kept.commit).toBe(appHead);
+    expect(existsSync(join(dir, "copy"))).toBe(false);
+  }, 120_000);
+
+  it("says a failure and the review still reaches a person", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    turnOn({ testCommand: script("failing", 'console.log("1 failing"); process.exit(1);') });
+    expect((await run(reviewId)).kind).toBe("completed");
+    const failure = notes(reviewId).find((note) => note.startsWith("Tests ("));
+    expect(failure).toMatch(
+      /failed with exit code 1 in \d+\.\ds; its output is in .+tests\.log\.$/,
+    );
+  }, 120_000);
+
+  it("runs nothing for a project that left them off", async () => {
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    expect((await run(reviewId)).kind).toBe("completed");
+    expect(existsSync(checksDir(dataDir, reviewId))).toBe(false);
+  }, 120_000);
+
+  it("reuses a result for the same commit and checks on a resume", async () => {
+    const reviewId = seedReview();
+    turnOn({
+      testCommand: script(
+        "counted",
+        'require("node:fs").appendFileSync(process.argv[1] + ".runs", "x");',
+      ),
+    });
+    const project = listProjects(db).find((p) => p.name === "app")!;
+    const asked = {
+      reviewId,
+      dataDir,
+      clonePath: appClone,
+      commit: appHead,
+      checks: getProjectChecks(db, project.id),
+    };
+    await runChecksForReview(db, asked);
+    await runChecksForReview(db, asked);
+    expect(readFileSync(join(dataDir, "scripts", "counted.cjs.runs"), "utf8")).toBe("x");
+    expect(notes(reviewId)).toContain(
+      "The project's own checks ran before this resume, on the same commit; their result stands.",
+    );
+    // Other checks are not the same checks: they run.
+    await runChecksForReview(db, {
+      ...asked,
+      checks: { ...asked.checks, installCommand: script("install", "") },
+    });
+    expect(readFileSync(join(dataDir, "scripts", "counted.cjs.runs"), "utf8")).toBe("xx");
   }, 120_000);
 });

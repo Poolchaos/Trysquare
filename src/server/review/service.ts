@@ -88,6 +88,8 @@ import { SETTING_KEYS, readSettingOr } from "../db/repositories/settings";
 import { describeCli } from "../engine/cli";
 import { StageFailedError } from "../engine/headless";
 import { buildBundle, readBaseContents, type RepoSpec } from "../gitops/bundle";
+import { getProjectChecks } from "../db/repositories/project-checks";
+import { runChecksForReview } from "./project-checks";
 import { fetchAll, resolveCommit } from "../gitops/repo";
 import {
   addWorktree,
@@ -365,6 +367,24 @@ export async function prepareAndRun(
           `No pre-change copy of ${miss.path}, so its deletion is reviewed from ` +
           `the diff alone: ${miss.reason}`,
       });
+    }
+
+    // The project's own tests and e2e, when a person turned them on (WP-I,
+    // D-191): run on a throwaway copy of the commit under review, before
+    // any model is asked. The dependency's are not run; it is reviewed as
+    // the code the primary consumes.
+    const checks = getProjectChecks(db, project.id);
+    const primary = sides.find((side) => side.role === "primary");
+    if (checks.enabled && primary !== undefined) {
+      await runChecksForReview(db, {
+        reviewId,
+        dataDir,
+        clonePath: primary.clonePath,
+        commit: primary.headCommit,
+        checks,
+        ...(options.signal === undefined ? {} : { signal: options.signal }),
+      });
+      assertNotCancelled(options.signal);
     }
 
     // Candidates and their verdicts are derived entirely from stage answers,

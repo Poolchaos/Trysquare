@@ -74,6 +74,19 @@ S1 work its risk-tagged files first (U12).
    AI never runs its own sweeps.
 5. Compose the **ruleset snapshot**: process directives + enabled rules,
    full verbatim text, ordered; freeze into review_rulesets.snapshotJson.
+6. Run the **project's own checks**, when a person turned them on for the
+   project (WP-I, D-191, D-192, D-196): a throwaway clone of the project's
+   clone, checked out at fromCommit, apart from the review's read-only
+   worktree; in it, install, then tests, then e2e, each that is set,
+   through the platform's shell, with the person's environment less the
+   app's and Claude's, each under a 20-minute limit after which, or on a
+   cancel, its whole process tree is killed. A failed install stops the
+   rest. Each command's output is kept in `runs/<id>/checks/logs`, the
+   screenshots an e2e saved in its folder are copied to
+   `runs/<id>/checks/screenshots`, the result is kept as
+   `runs/<id>/checks/result.json`, a run note says each command's outcome,
+   and the copy is removed. A resume reuses the result for the same commit
+   and the same checks. The dependency of a linked review is not run.
 
 Failure of any S0 step fails the review with the git/filesystem error.
 

@@ -77,6 +77,7 @@ src/
     engine/       EngineAdapter interface + headless/interactive impls,
                   claude CLI runner, model probing
     gitops/       clone/fetch/worktree/bundle execution (only git spawning)
+    projectrun/   a project's own commands, in its throwaway copy (WP-I)
     jobs/         job manager, stage orchestration, SSE hub
   app/            routes, pages, api handlers
   components/     UI components
@@ -95,7 +96,10 @@ Layering laws:
   call on the database handle. A type import is allowed, and the two files
   that own a handle, `server/runtime.ts` and `server/data-dir-lock.ts`, are
   named exceptions (MVP 5.10, widened in D-136).
-- Only `server/gitops` spawns git; only `server/engine` spawns claude.
+- Only `server/gitops` spawns git; only `server/engine` spawns claude;
+  only `server/projectrun` spawns a project's own commands, and only in a
+  throwaway copy (D-196). `tests/architecture/spawners.test.ts` holds it:
+  no other source file may import `child_process`.
 - UI components never import from `server/`; they consume API payloads typed
   by shared zod schemas in `lib/`.
 

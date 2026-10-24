@@ -192,7 +192,9 @@ boundary. Versions in `docs/PROJECT-STATE.md`.
 **Architectural laws:**
 
 - The app never writes inside a cloned project or a review worktree. Clones
-  are bare; reviews use detached worktrees pinned to a commit.
+  are bare; reviews use detached worktrees pinned to a commit. A project's
+  own commands, when turned on, run in a throwaway clone of its clone,
+  apart from both (WP-I, D-196).
 - AI review stages get read-only tools only (Read, Grep, Glob). Widening
   that allowlist is a decision-log entry, never a convenience.
 - Every spawned `claude` process has `CLAUDECODE` scrubbed from its
@@ -201,7 +203,9 @@ boundary. Versions in `docs/PROJECT-STATE.md`.
 - Full model ids only, never short aliases: `opus` and `sonnet` resolve to
   the previous generation.
 - `lib/` is pure and I/O-free; only `server/gitops` spawns git; only
-  `server/engine` spawns claude; all DB access goes through repositories.
+  `server/engine` spawns claude; only `server/projectrun` spawns a
+  project's own commands, and only in a throwaway copy of the branch; all
+  DB access goes through repositories.
 - Coverage invariants (every hunk, sweep hit, and deletion dispositioned)
   are enforced by app code, never by trusting a prompt.
 

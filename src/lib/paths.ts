@@ -86,6 +86,14 @@ export function bundleDir(dataDir: string, reviewId: string): string {
   return join(runDir(dataDir, reviewId), "bundle");
 }
 
+/**
+ * A project's own checks for this review (WP-I): the throwaway copy they
+ * run in, their logs, the screenshots their e2e saved, and their result.
+ */
+export function checksDir(dataDir: string, reviewId: string): string {
+  return join(runDir(dataDir, reviewId), "checks");
+}
+
 export function logsDir(dataDir: string, reviewId: string): string {
   return join(runDir(dataDir, reviewId), "logs");
 }

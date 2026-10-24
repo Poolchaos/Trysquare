@@ -4786,3 +4786,20 @@ verified evidence, in writing, here.
   change site is resolved in both lists of defects and tested against its
   marker. Left: the overflow helper can miss naming an absolutely placed
   element or name a fixed one; it only names, the measure is the page's.
+- 2026-10-24 D-196 WP-I step 2, where and how a project's own commands
+  run. The throwaway copy is a clone of the project's bare clone checked
+  out at fromCommit, not a second worktree: a worktree registers itself in
+  the clone, and the commands install, build and write. Hooks are off for
+  the checkout, as in addWorktree. The commands run through the platform's
+  shell, as typed, since "npm ci && npm test" is shell; with the person's
+  environment less TRYSQUARE_*, FAKE_CLAUDE_*, CLAUDE* and ANTHROPIC_*, so
+  a project's e2e cannot read the app's data directory or spend on an API
+  key; each under a 20-minute limit, the whole tree killed at it or on a
+  cancel (taskkill /T on Windows, the process group elsewhere), which the
+  tests prove with a grandchild that must not survive. They run in S0,
+  before any model is asked, one after another, the review waiting: run
+  beside S1 to S4 they would save time and add a second thing to cancel
+  and fail. Only server/projectrun spawns them, and a test now holds the
+  three spawners to their modules. Rejected: git archive, which leaves no
+  .git for a project's tooling; a closed environment list like the
+  engine's, which would strip what package managers need.
