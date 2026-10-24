@@ -9,6 +9,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -37,8 +38,16 @@ import {
 } from "@/lib/paths";
 import { NO_CHECKS, type ProjectChecks } from "@/lib/projects/checks";
 import { getProjectChecks, setProjectChecks } from "@/server/db/repositories/project-checks";
-import { runChecksForReview } from "@/server/review/project-checks";
-import { listCheckFindings } from "@/server/db/repositories/check-findings";
+import { STANDARD_CHARS, runChecksForReview } from "@/server/review/project-checks";
+import {
+  confirmCheckFinding,
+  dismissCheckFinding,
+  listCheckFindings,
+  recordDesignCandidate,
+  settleDesignCandidate,
+} from "@/server/db/repositories/check-findings";
+import { REPORT_IMAGE_BYTES } from "@/server/review/report-input";
+import { screenshotsDir } from "@/server/review/screenshots";
 import type { Db } from "@/server/db/client";
 import {
   confirmFinding,
@@ -1690,7 +1699,7 @@ describe("a project's own checks (WP-I, step 2)", () => {
     const reviewId = seedReview();
     // The screenshot is graded A, so nothing is asked of the second grader.
     writeIdealAnswers({
-      grading: [{ grades: [{ screenshot: "home.png", grade: "A", whatIsOff: "" }] }],
+      grading: [{ grades: [{ screenshot: "home.png", opened: true, grade: "A", whatIsOff: "" }] }],
     });
     turnOn({
       testCommand: script("tests", "process.exit(0);"),
@@ -1810,6 +1819,55 @@ describe("a project's own checks (WP-I, step 2)", () => {
       checks: { ...asked.checks, installCommand: script("install", "") },
     });
     expect(readFileSync(join(dataDir, "scripts", "counted.cjs.runs"), "utf8")).toBe("xx");
+
+    // A result kept before the standard and the hashes were (review round
+    // 8) cannot say what to grade against: run again, not reused.
+    const resultPath = join(checksDir(dataDir, reviewId), "result.json");
+    const kept = JSON.parse(readFileSync(resultPath, "utf8")) as Record<string, unknown>;
+    delete kept.designStandard;
+    delete kept.screenshotsLeft;
+    writeFileSync(resultPath, JSON.stringify(kept));
+    await runChecksForReview(db, {
+      ...asked,
+      checks: { ...asked.checks, installCommand: script("install", "") },
+    });
+    expect(readFileSync(join(dataDir, "scripts", "counted.cjs.runs"), "utf8")).toBe("xxx");
+  }, 120_000);
+
+  it("says when the design standard cannot be read, or is cut to fit", async () => {
+    const reviewId = seedReview();
+    const shots = script(
+      "one-screen",
+      `const fs = require("node:fs");
+       fs.mkdirSync("e2e/screens", { recursive: true });
+       fs.writeFileSync("e2e/screens/home.png", "png");
+       fs.writeFileSync("big.md", "x".repeat(${STANDARD_CHARS + 1}));`,
+    );
+    const asked = (designStandardPath: string) => ({
+      reviewId,
+      dataDir,
+      clonePath: appClone,
+      commit: appHead,
+      checks: {
+        ...NO_CHECKS,
+        enabled: true,
+        e2eCommand: shots,
+        screenshotDir: "e2e/screens",
+        designStandardPath,
+      },
+    });
+    // Dropped in silence, the screens were graded on the scale alone and
+    // nobody was told why (review round 8).
+    const missing = await runChecksForReview(db, asked("missing.md"));
+    expect(missing.designStandard).toBeNull();
+    expect(notes(reviewId)).toContain(
+      "The design standard missing.md is not a file in the branch, so the screens are graded on the A to D scale alone.",
+    );
+    const big = await runChecksForReview(db, asked("big.md"));
+    expect(big.designStandard).toHaveLength(STANDARD_CHARS);
+    expect(notes(reviewId)).toContain(
+      `The design standard big.md is ${STANDARD_CHARS + 1} characters; the graders are given its first ${STANDARD_CHARS}.`,
+    );
   }, 120_000);
 });
 
@@ -1839,8 +1897,14 @@ describe("the project's screens graded (WP-I, step 4)", () => {
     });
   };
   const grades = (...pairs: [string, string, string][]) => ({
-    grades: pairs.map(([screenshot, grade, whatIsOff]) => ({ screenshot, grade, whatIsOff })),
+    grades: pairs.map(([screenshot, grade, whatIsOff]) => ({
+      screenshot,
+      opened: true,
+      grade,
+      whatIsOff,
+    })),
   });
+  const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
   it("proves a screen both graders grade C or D, and leaves one the second passes open", async () => {
     const reviewId = seedReview();
@@ -1872,9 +1936,8 @@ describe("the project's screens graded (WP-I, step 4)", () => {
       "Graded D again by the second grader, claude-opus-5-5: The totals overflow the card at the right.",
     );
     expect(design[1]!.verificationNote).toBe("The second grader, claude-opus-5-5, graded it B.");
-    expect(design[0]!.screenshotPath).toBe(
-      join(checksDir(dataDir, reviewId), "screenshots", "home.png"),
-    );
+    // Its name, not where the data directory is today (review round 8).
+    expect(design[0]!.screenshotPath).toBe("home.png");
 
     // Only the grading stages may read the screenshots' folder (D-198), and
     // the second is asked of the paired model.
@@ -1885,12 +1948,72 @@ describe("the project's screens graded (WP-I, step 4)", () => {
     for (const args of withDir) expect(args[args.indexOf("--add-dir") + 1]).toBe(shots);
     expect(withDir[1]![withDir[1]!.indexOf("--model") + 1]).toBe("claude-opus-5-5");
     // The grader is told the scale and the project's own standard.
-    const graderPrompt = recordedSystemPrompts()[4] ?? "";
+    // Found by what it says, not by the order the calls were made in.
+    const graderPrompt =
+      recordedSystemPrompts().find((prompt) => prompt.startsWith("You grade screenshots")) ?? "";
     expect(graderPrompt).toContain("- D: broken or misleading");
     expect(graderPrompt).toContain("A fixture application used to test the reviewer.");
-    expect(recordedPrompts()[4]).toContain(
-      `- phone/settings.png: ${join(shots, "phone", "settings.png")}`,
+    const gradingPrompt =
+      recordedPrompts().find((prompt) => prompt.startsWith("Grade these 2 screenshot(s)")) ?? "";
+    expect(gradingPrompt).toContain(
+      `- phone/settings.png: ${join(shots, "phone", "settings.png")} (sha256 ${sha256("png")})`,
     );
+  }, 120_000);
+
+  it("reports a screen one grader passed, left out, apart from the dismissed (D-190)", async () => {
+    const reviewId = seedReview();
+    turnOnTwoScreens();
+    writeIdealAnswers({
+      grading: [
+        grades(
+          ["home.png", "D", "The totals column runs off the card."],
+          ["phone/settings.png", "C", "The Save button sits under the fold."],
+        ),
+      ],
+      secondGrading: [grades(["home.png", "D", "Overflows."], ["phone/settings.png", "B", ""])],
+    });
+    expect((await run(reviewId)).kind).toBe("completed");
+    const [home, settings] = listCheckFindings(db, reviewId).filter((row) => row.kind === "design");
+    confirmCheckFinding(db, home!.id);
+    dismissCheckFinding(db, settings!.id, "Agreed with design.");
+
+    const { checks } = buildReportInput(db, reviewId, dataDir);
+    // Filed under dismissed, it read as a person rejecting a screen nobody
+    // proved (review round 8).
+    expect(checks!.dismissed).toEqual([]);
+    expect(checks!.leftOutUnproven.map((check) => [check.issue, check.dismissReason])).toEqual([
+      ["The screen phone/settings.png is graded C.", "Agreed with design."],
+    ]);
+    // By the name the e2e gave it, so two screens named alike in two
+    // folders are told apart, and carried whole.
+    expect(checks!.leftOutUnproven[0]!.screenshotName).toBe("phone/settings.png");
+    expect(checks!.confirmed[0]!.screenshotDataUri).toBe(
+      `data:image/png;base64,${Buffer.from("png").toString("base64")}`,
+    );
+  }, 120_000);
+
+  it("carries screenshots in the report only up to what one report holds", async () => {
+    // A review at a person, where findings are decided.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    expect((await run(reviewId)).kind).toBe("completed");
+    const folder = screenshotsDir(dataDir, reviewId);
+    mkdirSync(folder, { recursive: true });
+    // Each under the copy's own limit, together over the report's.
+    const size = Math.ceil(REPORT_IMAGE_BYTES / 3) + 1;
+    for (const name of ["a.png", "b.png", "c.png"]) {
+      writeFileSync(join(folder, name), Buffer.alloc(size));
+      const row = recordDesignCandidate(db, reviewId, { name, grade: "D", whatIsOff: "Clipped." });
+      settleDesignCandidate(db, row.id, "verified", "Graded D again.");
+      confirmCheckFinding(db, row.id);
+    }
+    const { checks } = buildReportInput(db, reviewId, dataDir);
+    expect(checks!.confirmed.map((check) => check.screenshotDataUri !== null)).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    expect(checks!.confirmed[2]!.screenshotName).toBe("c.png");
   }, 120_000);
 
   it("asks nothing of the second grader when every screen passes", async () => {
@@ -1911,9 +2034,9 @@ describe("the project's screens graded (WP-I, step 4)", () => {
     const outcome = await run(reviewId);
     expect(outcome.kind).toBe("failed");
     expect(requireReview(db, reviewId).status).toBe("failed");
+    // Refused by the grading stage itself, not anywhere in the outcome.
     const failedRow = listForReview(db, reviewId).find((row) => row.stage === "s4b_design_grading");
-    expect(JSON.stringify(failedRow ?? {}) + JSON.stringify(outcome)).toContain(
-      "phone/settings.png was not graded",
-    );
+    expect(failedRow?.status).toBe("failed");
+    expect(JSON.stringify(failedRow)).toContain("phone/settings.png was not graded");
   }, 120_000);
 });

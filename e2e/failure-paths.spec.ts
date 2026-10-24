@@ -985,7 +985,7 @@ test("the scan theater follows the review from stage to stage", async ({ page })
     await expect(theater.getByText("Adversarial", { exact: true })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(theater.getByText(/stage 4 of 10/)).toBeVisible();
+    await expect(theater.getByText(/stage 4 of up to 10/)).toBeVisible();
 
     // The five steps a person reads (WP-G): the first two done with what
     // they measured, finding issues the one now.
@@ -1312,8 +1312,16 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
     completed = true;
     // Read only, once complete.
     await expect(section.getByRole("button")).toHaveCount(0);
-    await expect(section).toContainText("dismissed");
+    await expect(section.getByText("dismissed", { exact: true })).toBeVisible();
     await shootAll(page, section, "checks-complete");
+
+    // No screenshots, so the grading stages were not asked: said, not
+    // shown passed (review round 8).
+    await page.getByText("Run detail").click();
+    const stages = page.getByRole("heading", { name: "Stages" }).locator("..");
+    await expect(stages).toContainText("Not asked: there were no screenshots to grade.");
+    await expect(stages).toContainText("Not asked: no screen was graded C or D.");
+    await shootAll(page, stages, "stages-not-asked");
 
     // And the report says so, in a section of its own, with how the
     // project's commands ended (step 3b-2): it said nothing of them before.
@@ -1335,17 +1343,26 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
   }
 });
 
-test("a project's screens are graded, and one graded D is shown and decided (WP-I)", async ({
+test("a project's screens are graded: one proven D confirmed, one open question left out (WP-I)", async ({
   page,
 }) => {
   // Step 4: the screenshots a project's own e2e saved, graded A to D by one
   // model and, for a C or D, again by the paired model. Two real screens of
-  // this app stand in for the project's; the fake's answers grade one D and
-  // the other A, and are written past the two runs setup wrote, then taken
-  // away, the count put back, as the theater tests do.
+  // this app stand in for the project's; the fake grades one D twice, which
+  // proves it, and the other C then B, which leaves it an open question.
+  // The answers are written past those setup wrote, then taken away, the
+  // count put back, as the theater tests do.
   const callsBefore = readFileSync(COUNTER_FILE, "utf8");
-  const extra = Array.from({ length: 8 }, (_, index) =>
-    join(ANSWERS_DIR, `${String(13 + index).padStart(3, "0")}.json`),
+  // Numbered from what is there, not from what setup wrote when this was
+  // written (review round 8).
+  const written = readdirSync(ANSWERS_DIR).filter((file) => /^\d{3}\.json$/.test(file)).length;
+  const numbered = (n: number) => join(ANSWERS_DIR, `${String(n).padStart(3, "0")}.json`);
+  const extra = Array.from({ length: 8 }, (_, index) => numbered(written + 1 + index));
+  // Setup writes one run's answers twice over, S1 to S4, then S5 and S5b.
+  const perRun = written / 2;
+  expect(perRun, "a run's answers as setup writes them").toBe(6);
+  const [s1, s2, s3, s4, s5, s5b] = Array.from({ length: perRun }, (_, index) =>
+    readFileSync(numbered(index + 1), "utf8"),
   );
   const projects = (await (await page.request.get("/api/projects")).json()) as {
     projects: { id: string; name: string }[];
@@ -1370,33 +1387,32 @@ for (const name of ["home.png", "rulesets.png"]) {
 }
 `,
   );
-  const read = (n: number) =>
-    readFileSync(join(ANSWERS_DIR, `${String(n).padStart(3, "0")}.json`), "utf8");
-  // S1 to S4, then S4b grading both screens, then S5 and S5b, then S5c
-  // asked about the D alone.
+  const graded = (...grades: [string, string, string][]) =>
+    JSON.stringify({
+      grades: grades.map(([screenshot, grade, whatIsOff]) => ({
+        screenshot,
+        opened: true,
+        grade,
+        whatIsOff,
+      })),
+    });
+  // S1 to S4, S4b grading both screens, S5 and S5b, then S5c asked about
+  // both, graded C or D by the first.
   const answers = [
-    read(1),
-    read(2),
-    read(3),
-    read(4),
-    JSON.stringify({
-      grades: [
-        {
-          screenshot: "home.png",
-          grade: "D",
-          whatIsOff: "The page title is cut off at the top of the card.",
-        },
-        { screenshot: "rulesets.png", grade: "A", whatIsOff: "" },
-      ],
-    }),
-    read(5),
-    read(6),
-    JSON.stringify({
-      grades: [{ screenshot: "home.png", grade: "D", whatIsOff: "The heading is clipped." }],
-    }),
+    s1,
+    s2,
+    s3,
+    s4,
+    graded(
+      ["home.png", "D", "The page title is cut off at the top of the card."],
+      ["rulesets.png", "C", "The empty state sits too close to the heading."],
+    ),
+    s5,
+    s5b,
+    graded(["home.png", "D", "The heading is clipped."], ["rulesets.png", "B", ""]),
   ];
-  answers.forEach((answer, index) => writeFileSync(extra[index]!, answer));
-  writeFileSync(COUNTER_FILE, "12", "utf8");
+  answers.forEach((answer, index) => writeFileSync(extra[index]!, answer!));
+  writeFileSync(COUNTER_FILE, String(written), "utf8");
   const checks = (on: boolean) => ({
     enabled: on,
     installCommand: null,
@@ -1405,6 +1421,11 @@ for (const name of ["home.png", "rulesets.png"]) {
     screenshotDir: on ? "e2e/screens" : null,
     designStandardPath: null,
   });
+  const decided = (action: "confirm" | "dismiss") =>
+    page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/check-findings/") && response.url().endsWith(`/${action}`),
+    );
   let reviewId = "";
   let completed = false;
   try {
@@ -1417,7 +1438,9 @@ for (const name of ["home.png", "rulesets.png"]) {
     await expect(said).toContainText("The project's own checks run first", { timeout: 30_000 });
     await expect(said).toContainText("On a throwaway copy of the branch, as you:");
     await expect(said).toContainText("save-screens.cjs");
-    await expect(said).toContainText("one more request for each eight");
+    await expect(said).toContainText(
+      "The screenshots its e2e saves are then graded, a request for each eight or fewer",
+    );
     await shootAll(page, said, "preflight-checks");
     await page.getByRole("button", { name: "Start review" }).click();
     await expect(page).toHaveURL(/\/reviews\/[A-Z0-9]+$/i, { timeout: 60_000 });
@@ -1425,41 +1448,86 @@ for (const name of ["home.png", "rulesets.png"]) {
     await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
 
     const section = page.getByRole("region", { name: "Tests and design" });
-    await expect(section).toContainText("The screen home.png is graded D.");
-    await expect(section).toContainText("The page title is cut off at the top of the card.");
-    await expect(section).toContainText("Graded D again by the second grader");
-    // Only the D: the A raised nothing.
-    await expect(section).not.toContainText("rulesets.png");
-    // And the five steps say what grading came to (WP-I step 5).
-    const steps = page.getByRole("region", { name: "How the review went" }).getByRole("listitem");
-    await expect(steps.nth(2)).toContainText("1 screen graded C or D.");
+    const home = section
+      .getByRole("listitem")
+      .filter({ hasText: "The screen home.png is graded D." });
+    const rulesets = section
+      .getByRole("listitem")
+      .filter({ hasText: "The screen rulesets.png is graded C." });
+    await expect(home).toContainText("The page title is cut off at the top of the card.");
+    await expect(home).toContainText("Graded D again by the second grader");
+    await expect(rulesets).toContainText("The second grader, claude-opus-5-5, graded it B.");
+    // Open, as the code queue has it: said so, and no Confirm that does
+    // nothing (review round 8).
+    await expect(rulesets.getByText("open question", { exact: true })).toBeVisible();
+    await expect(rulesets.getByRole("button", { name: /^Confirm/ })).toHaveCount(0);
+    await expect(rulesets).toContainText("The two graders did not agree");
+    // The five steps, and the funnel, say what grading came to.
+    const went = page.getByRole("region", { name: "How the review went" });
+    const steps = went.getByRole("listitem");
+    await expect(steps.nth(2)).toContainText("2 screens graded C or D.");
     await expect(steps.nth(3)).toContainText(
-      "The second grader agreed on 1 of 1 screen graded C or D.",
+      "The second grader agreed on 1 of 2 screens graded C or D, leaving 1 open.",
     );
-    const image = section.getByRole("img", { name: /The screenshot graded D/ });
+    await expect(went).toContainText(
+      "Apart from these, 2 screens graded C or D: 1 graded C or D again by the second grader, 1 left open.",
+    );
+    const image = home.getByRole("img", {
+      name: /^The screen home\.png, graded D\. What is off: /,
+    });
     await expect(image).toBeVisible();
-    expect(await image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    // Loaded, not merely there: naturalWidth is 0 until it has.
+    await expect
+      .poll(() => image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0))
+      .toBe(true);
+    await expect(home.getByRole("link", { name: "Open the screenshot full size" })).toHaveAttribute(
+      "href",
+      /\/api\/check-findings\/.+\/screenshot$/,
+    );
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, section, "design-queue");
 
-    await section.getByRole("button", { name: /^Confirm/ }).click();
-    await expect(section).toContainText("confirmed");
+    const confirming = decided("confirm");
+    await home.getByRole("button", { name: /^Confirm/ }).click();
+    expect((await confirming).status()).toBe(200);
+    await expect(home.getByText("confirmed", { exact: true })).toBeVisible();
+
+    await rulesets.getByLabel("Why leave it out?").fill("Agreed with design.");
+    const leaving = decided("dismiss");
+    await rulesets.getByRole("button", { name: /^Leave out/ }).click();
+    expect((await leaving).status()).toBe(200);
+    await expect(rulesets.getByText("left out", { exact: true })).toBeVisible();
+    await expect(rulesets).toContainText("Left out: Agreed with design.");
+    await shootAll(page, section, "design-decided");
+
     const reviewed = (await (await page.request.get(`/api/reviews/${reviewId}`)).json()) as {
       findings: { id: string; status: string }[];
     };
     for (const finding of reviewed.findings.filter((row) => row.status === "verified")) {
-      await page.request.post(`/api/findings/${finding.id}/confirm`, { data: {} });
+      const confirmed = await page.request.post(`/api/findings/${finding.id}/confirm`, {
+        data: {},
+      });
+      expect(confirmed.status()).toBe(200);
     }
     await page.reload();
     await page.getByRole("button", { name: "Complete review" }).click();
     await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
     completed = true;
-    const inReport = page.getByRole("heading", { name: "Tests and design (1)" }).locator("..");
-    await expect(inReport).toContainText("The screen home.png is graded D.");
-    const reportImage = inReport.getByRole("img", { name: "The screen home.png is graded D." });
-    expect(await reportImage.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(
-      0,
+    const inReport = page.getByRole("heading", { name: "Tests and design (2)" }).locator("..");
+    await expect(inReport).toContainText(
+      "The screens the project's own e2e saved, on a copy of this branch, that were graded C or D.",
     );
+    await expect(inReport.getByRole("heading", { name: "Confirmed (1)" })).toBeVisible();
+    await expect(inReport.getByRole("heading", { name: "Left out unproven (1)" })).toBeVisible();
+    await expect(inReport).toContainText("Left out: Agreed with design.");
+    const reportImage = inReport.getByRole("img", {
+      name: "The screen home.png. What is off: The page title is cut off at the top of the card.",
+    });
+    await expect
+      .poll(() =>
+        reportImage.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0),
+      )
+      .toBe(true);
     await shootAll(page, inReport, "design-report");
   } finally {
     const off = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(false) });

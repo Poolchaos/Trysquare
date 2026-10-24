@@ -1,5 +1,5 @@
 /**
- * The five steps a person reads, mapped onto the eight stages that do the
+ * The five steps a person reads, mapped onto the ten stages that do the
  * work (proof-and-steps plan, WP-G; the approved mockup, PG-4, D-187).
  *
  * Pure, so the live view and the finished summary say the same thing. Every
@@ -20,12 +20,12 @@ export const STEPS = [
   },
   {
     title: "Find issues",
-    what: "Every rule is walked against every change, and every deletion is accounted for.",
+    what: "Every rule is walked against every change, every deletion is accounted for, and the project's screens are graded when its e2e saved any.",
     stages: ["s3_adversarial", "s4_deletions", "s4b_design_grading"],
   },
   {
     title: "Prove each finding",
-    what: "Two independent verifiers must each trace the failure through the code.",
+    what: "Two independent verifiers must each trace the failure through the code, and two graders must each grade a screen C or D.",
     stages: ["s5_verification", "s5b_second_verification", "s5c_design_second"],
   },
   {
@@ -163,11 +163,6 @@ export function stepUsage(
 const counted = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const noneOr = (n: number, rest: string) => `${n === 0 ? "none" : n} ${rest}`;
 
-/**
- * What each step came to on a review that has reached a person. Reviews from
- * before the second verifier (WP-E) have no verifier model, and their proven
- * findings were proven once.
- */
 /** What grading the project's screens came to (WP-I step 5), when it ran. */
 export interface DesignTallies {
   /** Screens graded C or D by the first grader. */
@@ -192,6 +187,11 @@ export function designTallies(
   };
 }
 
+/**
+ * What each step came to on a review that has reached a person. Reviews from
+ * before the second verifier (WP-E) have no verifier model, and their proven
+ * findings were proven once.
+ */
 export function stepResult(
   index: number,
   facts: StepFacts & { status: string; secondVerifier: boolean; design?: DesignTallies },
@@ -236,9 +236,19 @@ export function stepResult(
   }
 }
 
-/** The one line each step's card shows. */
-export function stepCount(index: number, state: StepState, facts: StepFacts): string {
+/**
+ * The one line each step's card shows. Given the stage in flight, since a
+ * step grading screens is not walking rules or proving code (review round 8).
+ */
+export function stepCount(
+  index: number,
+  state: StepState,
+  facts: StepFacts,
+  executing: string | null = null,
+): string {
   if (state === "next") return "Waiting";
+  if (state === "now" && executing === "s4b_design_grading") return "Grading the screens";
+  if (state === "now" && executing === "s5c_design_second") return "Grading the screens again";
   const { tallies } = facts;
   switch (index) {
     case 0:

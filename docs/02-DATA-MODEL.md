@@ -87,7 +87,7 @@ review prepares, as code findings are from the stages' answers.
 | exitCode         | integer null | null when stopped                                        |
 | timedOut         | integer bool | stopped at its time limit                                |
 | logPath          | text null    | the command's whole output                               |
-| screenshotPath   | text null    | the screenshot a design grade is about                   |
+| screenshotPath   | text null    | a design grade's screenshot, its name under the review's checks/screenshots, never a path (round 8) |
 | grade            | text null    | C or D (a design grade)                                  |
 | severity         | text         | CRITICAL for a failing command                           |
 | issue            | text         | e.g. "The tests fail on this branch."                    |

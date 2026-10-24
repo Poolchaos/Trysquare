@@ -36,7 +36,11 @@ export interface ReportFinding {
 /** What a project's own checks found and a person decided (WP-I, D-197). */
 export interface ReportCheck {
   command: string | null;
-  /** A design finding's screenshot, by its name and as an embeddable image. */
+  /**
+   * A design finding's screenshot, by its name under the review's
+   * screenshots, and as an image the report carries whole; null when it is
+   * gone or over what one report carries.
+   */
   screenshotName?: string | null;
   screenshotDataUri?: string | null;
   severity: string;
@@ -75,6 +79,8 @@ export interface ReportInput {
     ran: readonly ReportCheckRun[];
     confirmed: readonly ReportCheck[];
     dismissed: readonly ReportCheck[];
+    /** Graded C or D by one grader and not the other, then left out (D-190). */
+    leftOutUnproven: readonly ReportCheck[];
   };
 
   coverage: {
@@ -143,12 +149,12 @@ export function renderReport(input: ReportInput): string {
 
   const confirmedChecks = input.checks?.confirmed ?? [];
   const dismissedChecks = input.checks?.dismissed ?? [];
-  if (confirmedChecks.length + dismissedChecks.length > 0) {
+  const leftOutChecks = input.checks?.leftOutUnproven ?? [];
+  const allChecks = [...confirmedChecks, ...leftOutChecks, ...dismissedChecks];
+  if (allChecks.length > 0) {
     lines.push("## Tests and design");
     lines.push("");
-    lines.push(
-      "What the project's own checks found on this branch, run by the app on a copy of it.",
-    );
+    lines.push(checksIntro(allChecks));
     lines.push("");
     for (const check of confirmedChecks) {
       lines.push(`### ${check.severity}: ${check.issue}`);
@@ -167,18 +173,25 @@ export function renderReport(input: ReportInput): string {
         lines.push("");
       }
     }
-    if (dismissedChecks.length > 0) {
-      lines.push("Dismissed by a person:");
+    const listed = (heading: string, checks: readonly ReportCheck[]) => {
+      if (checks.length === 0) return;
+      lines.push(heading);
       lines.push("");
-      for (const check of dismissedChecks) {
+      for (const check of checks) {
         lines.push(
           `- ${check.issue}` +
             (check.command ? ` (\`${check.command}\`)` : "") +
+            (check.screenshotName ? ` (screenshot \`${check.screenshotName}\`)` : "") +
             (check.dismissReason ? ` Reason: ${check.dismissReason}` : ""),
         );
       }
       lines.push("");
-    }
+    };
+    listed(
+      "Left out unproven by a person, graded C or D by one grader and not the other, so possibly real:",
+      leftOutChecks,
+    );
+    listed("Dismissed by a person:", dismissedChecks);
   }
 
   const leftOut = (heading: string, why: string, findings: readonly ReportFinding[]) => {
@@ -238,6 +251,18 @@ function summary(input: ReportInput): string {
     `${input.confirmed.length} confirmed finding(s): ${parts.join(", ")}` +
     (checks === 0 ? "." : `; and ${fromChecks}.`)
   );
+}
+
+/** What the section holds: failing commands, screens graded C or D, or both. */
+export function checksIntro(checks: readonly ReportCheck[]): string {
+  const ran = checks.some((check) => check.command !== null);
+  const screens = checks.some((check) => Boolean(check.screenshotName));
+  if (ran && screens) {
+    return "What the project's own tests and e2e found on this branch, run by the app on a copy of it, and the screens its e2e saved that were graded C or D.";
+  }
+  return screens
+    ? "The screens the project's own e2e saved, on a copy of this branch, that were graded C or D."
+    : "What the project's own tests and e2e found on this branch, run by the app on a copy of it.";
 }
 
 /**
@@ -400,6 +425,30 @@ function escapeHtml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
+/**
+ * A screen, in the order its card on the review page shows it: what is off,
+ * the second grader's note, then the screenshot, or its name when the
+ * report does not carry it.
+ */
+function designBody(check: ReportCheck): string {
+  const shot = check.screenshotDataUri
+    ? `<img src="${check.screenshotDataUri}" alt="${escapeHtml(`The screen ${check.screenshotName}. What is off: ${check.evidence}`)}" style="max-width:100%;border:1px solid var(--line);border-radius:4px;margin-top:.5rem">`
+    : `<p class="c">The screenshot, ${escapeHtml(check.screenshotName ?? "")}, is not carried in this report: it is gone, or over what one report carries.</p>`;
+  return (
+    `<p class="c">What is off: ${escapeHtml(check.evidence)}</p>` +
+    (check.verificationNote ? `<p class="c">${escapeHtml(check.verificationNote)}</p>` : "") +
+    shot
+  );
+}
+
+/** A failing command: the note, then its output where it failed. */
+function commandBody(check: ReportCheck): string {
+  return (
+    (check.verificationNote ? `<p class="c">${escapeHtml(check.verificationNote)}</p>` : "") +
+    (check.evidence.trim() !== "" ? `<pre><code>${escapeHtml(check.evidence)}</code></pre>` : "")
+  );
+}
+
 export function renderReportHtml(input: ReportInput): string {
   const counts = input.confirmed.reduce<Record<string, number>>((all, finding) => {
     all[finding.severity] = (all[finding.severity] ?? 0) + 1;
@@ -424,26 +473,27 @@ export function renderReportHtml(input: ReportInput): string {
         <p class="t">${escapeHtml(check.issue)}
           ${check.command ? `<span class="w">${escapeHtml(check.command)}</span>` : ""}
         </p>
-        ${check.verificationNote && !check.screenshotDataUri ? `<p class="c">${escapeHtml(check.verificationNote)}</p>` : ""}
+        ${check.screenshotName ? designBody(check) : commandBody(check)}
         ${check.dismissReason ? `<p class="w">${decided}: ${escapeHtml(check.dismissReason)}</p>` : ""}
-        ${
-          check.screenshotDataUri
-            ? `<p class="c">${escapeHtml(check.evidence)}</p>${check.verificationNote ? `<p class="c">${escapeHtml(check.verificationNote)}</p>` : ""}<img src="${check.screenshotDataUri}" alt="${escapeHtml(check.issue)}" style="max-width:100%;border:1px solid var(--line);border-radius:4px;margin-top:.5rem">`
-            : check.evidence.trim() !== ""
-              ? `<pre><code>${escapeHtml(check.evidence)}</code></pre>`
-              : ""
-        }
       </li>`,
       )
       .join("");
   const confirmedChecks = input.checks?.confirmed ?? [];
   const dismissedChecks = input.checks?.dismissed ?? [];
-  const checksSection =
-    confirmedChecks.length + dismissedChecks.length === 0
+  const leftOutChecks = input.checks?.leftOutUnproven ?? [];
+  const allChecks = [...confirmedChecks, ...leftOutChecks, ...dismissedChecks];
+  const checksGroup = (label: string, checks: readonly ReportCheck[], decided: string) =>
+    checks.length === 0
       ? ""
-      : `<h2>Tests and design (${confirmedChecks.length + dismissedChecks.length})</h2>
-<p class="c">What the project's own checks found on this branch, run by the app on a copy of it.</p>
-<ul class="fs">${checkItems(confirmedChecks, "Dismissed")}${checkItems(dismissedChecks, "Dismissed")}</ul>`;
+      : `<h3>${label} (${checks.length})</h3><ul class="fs">${checkItems(checks, decided)}</ul>`;
+  const checksSection =
+    allChecks.length === 0
+      ? ""
+      : `<h2>Tests and design (${allChecks.length})</h2>
+<p class="c">${escapeHtml(checksIntro(allChecks))}</p>
+${checksGroup("Confirmed", confirmedChecks, "Dismissed")}
+${checksGroup("Left out unproven", leftOutChecks, "Left out")}
+${checksGroup("Dismissed", dismissedChecks, "Dismissed")}`;
 
   const group = (
     label: string,

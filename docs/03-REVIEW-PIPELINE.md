@@ -83,10 +83,14 @@ S1 work its risk-tagged files first (U12).
    cancel, its whole process tree is killed. A failed install stops the
    rest. Each command's output is kept in `runs/<id>/checks/logs`, the
    screenshots an e2e saved in its folder are copied to
-   `runs/<id>/checks/screenshots`, the result is kept as
+   `runs/<id>/checks/screenshots`, each with the sha256 of its bytes, at
+   most 200 by name and none over 8 MiB, a name with a line break or ": "
+   in it left out, each one left out said in a run note; the result is kept as
    `runs/<id>/checks/result.json`, a run note says each command's outcome,
    and the copy is removed. A resume reuses the result for the same commit
-   and the same checks. The dependency of a linked review is not run.
+   and the same checks, unless it was kept before the design standard and
+   the hashes were, when they run again. The dependency of a linked review
+   is not run.
    A command that fails, or stops at its limit, is a check finding
    (D-197), proven by the app from its exit code and its output.
 
@@ -172,12 +176,18 @@ by looking at it, against the scale (A ready, B minor polish, C visibly
 off, D broken or misleading) and the project's design standard when one
 is named, its text read from the copy and capped at 50,000 characters, and
 only a file inside the copy, so a committed symlink cannot put a file from
-elsewhere into a prompt. Eight screenshots a request. The stage may read
-the screenshots' folder and nothing else outside its checkout: `--add-dir`
-names that folder, the tools stay Read, Grep and Glob (D-198). App code
-then checks that every screenshot asked about was graded exactly once,
-refusing the answer otherwise. A C is a WARNING, a D a CRITICAL: each a
-check finding of kind design (D-197), its evidence what is off and where.
+elsewhere into a prompt; a run note says when it is not a file there, and
+when it was cut. Eight screenshots a request, each listed by its name, its
+path and the sha256 of its bytes, so a resume after the e2e saved another
+image asks again rather than replaying a grade of the old. The stage may
+read the screenshots' folder and nothing else outside its checkout:
+`--add-dir` names that folder, the tools stay Read, Grep and Glob (D-198).
+Each grade says whether the grader opened the image. App code then checks
+that every screenshot asked about was opened and graded exactly once, and
+that a C or D says what is off, refusing the answer otherwise: a screen
+that could not be opened is a failed stage, never a D nobody saw. A C is a
+WARNING, a D a CRITICAL: each a check finding of kind design (D-197), its
+evidence what is off and where, its screenshot kept by name.
 
 ### S5 Finding verification (protocol step 6) - FRESH SESSION
 

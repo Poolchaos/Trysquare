@@ -49,6 +49,7 @@ import {
   isFailingGrade,
   renderDesignPrompt,
   type Grade,
+  type DesignScreenshot,
 } from "@/lib/review/design";
 import { outputContractFor } from "@/lib/review/stage-schemas";
 import {
@@ -170,7 +171,7 @@ export interface PipelineInput {
     | {
         /** Their folder, outside the checkout: the stage may read it (D-198). */
         screenshotsDir: string;
-        screenshots: readonly { name: string; path: string }[];
+        screenshots: readonly DesignScreenshot[];
         standard: string | null;
       }
     | undefined;
@@ -692,7 +693,6 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
         designCandidates.push(
           recordDesignCandidate(db, reviewId, {
             name: shot.name,
-            screenshotPath: shot.path,
             grade: grade.grade,
             whatIsOff: grade.whatIsOff,
           }),
@@ -748,10 +748,9 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   // not shown the first grade. Both C or D proves it; anything else leaves
   // it an open question, one grader not overriding the other (D-188).
   if (design !== undefined && designCandidates.length > 0) {
-    const asked = designCandidates.map((row) => ({
-      name: design.screenshots.find((shot) => shot.path === row.screenshotPath)!.name,
-      path: row.screenshotPath!,
-    }));
+    const asked = designCandidates.map((row) =>
+      design.screenshots.find((shot) => shot.name === row.screenshotPath)!,
+    );
     const second = new Map<string, { grade: Grade; whatIsOff: string }>();
     const batches: (typeof asked)[] = [];
     for (let at = 0; at < asked.length; at += DESIGN_BATCH) {

@@ -24,7 +24,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join } from "node:path";
 import { z } from "zod";
 import type { EngineEvent } from "@/lib/engine/events";
 import { SHUTDOWN } from "@/lib/domain/shutdown";
@@ -44,7 +44,6 @@ import {
 import { repoSlug } from "@/lib/git/url";
 import {
   bundleDir as bundleDirFor,
-  checksDir as checksDirFor,
   logsDir as logsDirFor,
   resolveDataDir,
   runDir as runDirFor,
@@ -95,6 +94,7 @@ import {
   recordFailedCommand,
 } from "../db/repositories/check-findings";
 import { runChecksForReview, type ChecksResult } from "./project-checks";
+import { screenshotFile, screenshotsDir } from "./screenshots";
 import { fetchAll, resolveCommit } from "../gitops/repo";
 import {
   addWorktree,
@@ -442,12 +442,10 @@ export async function prepareAndRun(
       ...(ranChecks !== undefined && ranChecks.screenshots.length > 0
         ? {
             design: {
-              screenshotsDir: join(checksDirFor(dataDir, reviewId), "screenshots"),
-              screenshots: ranChecks.screenshots.map((path) => ({
-                name: relative(join(checksDirFor(dataDir, reviewId), "screenshots"), path)
-                  .split(sep)
-                  .join("/"),
-                path,
+              screenshotsDir: screenshotsDir(dataDir, reviewId),
+              screenshots: ranChecks.screenshots.map((shot) => ({
+                ...shot,
+                path: screenshotFile(dataDir, reviewId, shot.name)!,
               })),
               standard: ranChecks.designStandard ?? null,
             },

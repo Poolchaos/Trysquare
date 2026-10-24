@@ -4866,3 +4866,60 @@ verified evidence, in writing, here.
   counts the grading requests as none until step 5 counts them for a
   project whose e2e runs. Rejected: one stage grading and verifying at
   once, which is the self-attestation the second verifier exists to stop.
+- 2026-10-24 Review round 8 (over 3d9be06, cafa2be, 88ef103, 15659ef and
+  72e8f74), two read-only reviewers, one on the engine and one on the
+  screens and tests, each finding read again in the code before it was
+  fixed. The engine: a design finding kept its screenshot's absolute
+  path, so a data directory spelled or placed differently since lost it,
+  the route refused a name such as ..x.png by a prefix test, and the
+  report read the row's path without the route's containment; the row
+  now keeps the name the e2e gave it, resolved inside its own review's
+  screenshots folder wherever it is read, a name leaving it refused
+  segment by segment. A resume replayed grades given for another image
+  under the same name: each image's sha256 is now in its grading prompt,
+  which is the request's identity. A screen the grader could not open
+  was to be graded D, so two graders failing to open it made a proven
+  finding nobody had seen: each grade now says whether it was opened, and
+  one that was not fails the stage, as does a C or D that says nothing of
+  what is off. The screenshots copied are capped at 200 by name and 8 MiB
+  each, a name with a line break or ": " (which a prompt line cannot
+  carry) is left out, and each left out is said in a run note; the report
+  carries screenshots whole up to 24 MiB, and names the rest. A design
+  standard not a file in the branch, or cut at 50,000 characters, is said
+  in a run note, and a result kept before the standard and the hashes
+  were runs again. A dismissed open question from the checks was filed
+  with the dismissed: it is reported left out unproven, apart (D-190).
+  The screens: a screen the second grader passed is an open question as
+  in the code queue, badged so, with no Confirm that did nothing, left
+  out with a reason under "Why leave it out?" and reported as left out;
+  Run detail said S4b, S5b and S5c passed, in green, on a review that
+  never asked them, and now says each was not asked and why; the header
+  said "stage N of 10" when a review may run fewer, now "of up to 10";
+  the report's check cards took the critical bar whatever their severity;
+  its intro said the app ran what found a graded screen; the section's
+  copy said only a confirmed one reaches the report, though a dismissed
+  one is listed there; the card's image had no fallback when its file is
+  gone and no way to see a full-page shot whole, and the report's fell to
+  a failing command's layout without its image; the alt text repeated the
+  title. The five steps said "Walking the rules" while S4b graded and "0
+  to prove" while S5c did, the finished funnel counted the code alone
+  beside steps that counted screens, and what waits on the person left
+  the checks out. The pre-flight's "one more request for each eight" read
+  as none for fewer than eight. Records: request-plan.ts kept a design
+  parameter nothing passed, and D-199 and 88ef103's message said step 5
+  would count the grading requests before Start; it says them in words,
+  since how many depends on the screenshots the e2e saves, and the plan
+  counts them as none. Tests: the design e2e asserted toContainText
+  ("confirmed"), which the copy satisfied whatever the badge; it numbered
+  its answers from what setup wrote when it was written; it read the
+  image's naturalWidth before the image had loaded; it posted confirms
+  unchecked; the service test found the grader's prompt by call order;
+  the refusal test passed without the stage's failed row. Each is fixed,
+  and the e2e now drives an open question through to the report.
+  Left: invalidating S4b asks every batch again, not only the one
+  refused, which stays until a review has more than eight screens to
+  measure it on; the colon and line-break names are tested on Linux and
+  macOS alone, since Windows cannot name such a file. A D-105 occurrence:
+  CI run 40083722008 at 15659ef failed on Windows alone, the themes
+  test's dashboard navigation refused with net::ERR_NO_BUFFER_SPACE;
+  re-run once, the Windows job passed.

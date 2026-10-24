@@ -185,6 +185,17 @@ describe("what each step says it did", () => {
     expect(stepCount(4, "now", one)).toBe("1 waits for you");
   });
 
+  it("says when a step is grading screens, not walking rules or proving code", () => {
+    // During S4b the step said "Walking the rules", and during S5c "0 to
+    // prove", while neither was happening (review round 8).
+    const none = { ...facts, tallies: { ...facts.tallies, raised: 0, toProve: 0 } };
+    expect(stepCount(2, "now", none, "s4b_design_grading")).toBe("Grading the screens");
+    expect(stepCount(3, "now", none, "s5c_design_second")).toBe("Grading the screens again");
+    expect(stepCount(2, "now", none, "s3_adversarial")).toBe("Walking the rules");
+    // Waiting is waiting, whatever is running elsewhere.
+    expect(stepCount(3, "next", none, "s4b_design_grading")).toBe("Waiting");
+  });
+
   it("says nothing it does not know", () => {
     // A review whose ruleset was never frozen has no count to give.
     expect(stepCount(0, "now", { ...facts, rules: null })).toBe("Freezing the ruleset");
@@ -304,6 +315,14 @@ describe("what grading the screens came to (WP-I step 5)", () => {
       { kind: "test", status: "verified" },
     ]);
     expect(design).toEqual({ raised: 4, proven: 2, open: 2 });
+    // One still with the second grader is neither; one dismissed after both
+    // graded it C or D was proven (review round 8).
+    expect(
+      designTallies([
+        { kind: "design", status: "candidate" },
+        { kind: "design", status: "dismissed", dismissedFrom: "verified" },
+      ]),
+    ).toEqual({ raised: 2, proven: 1, open: 0 });
     expect(stepResult(2, { ...facts, design })).toBe(
       "2 candidates raised, and every change and deletion accounted for. 4 screens graded C or D.",
     );

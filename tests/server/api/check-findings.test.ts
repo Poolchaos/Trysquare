@@ -7,6 +7,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Db } from "@/server/db/client";
 
 let dataDir: string;
 
@@ -128,40 +129,74 @@ describe("what a project's own checks found", () => {
 });
 
 describe("a design finding's screenshot (WP-I step 4)", () => {
-  async function aDesignFinding(screenshotPath: (reviewDir: string) => string) {
+  /**
+   * A design finding whose screenshot the e2e saved under name; the row
+   * keeps the name, resolved inside its review's folder (review round 8).
+   */
+  async function aDesignFinding(name: string) {
     const { db, reviewId } = await aFailedTest();
     const { recordDesignCandidate } = await import("@/server/db/repositories/check-findings");
-    const { checksDir } = await import("@/lib/paths");
-    const path = screenshotPath(checksDir(dataDir, reviewId));
+    const { screenshotsDir } = await import("@/server/review/screenshots");
     const { mkdirSync, writeFileSync } = await import("node:fs");
     const { dirname } = await import("node:path");
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, "PNGBYTES");
-    return recordDesignCandidate(db, reviewId, {
-      name: "home.png",
-      screenshotPath: path,
-      grade: "D",
-      whatIsOff: "Clipped.",
-    });
+    const file = join(screenshotsDir(dataDir, reviewId), ...name.split("/"));
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, "PNGBYTES");
+    const row = recordDesignCandidate(db, reviewId, { name, grade: "D", whatIsOff: "Clipped." });
+    return { db, reviewId, row, file };
+  }
+  /** What a row from elsewhere, or a hand-edited one, might hold. */
+  async function namedInstead(db: Db, id: string, screenshotPath: string) {
+    const { checkFindings } = await import("@/server/db/schema");
+    const { eq } = await import("drizzle-orm");
+    db.update(checkFindings).set({ screenshotPath }).where(eq(checkFindings.id, id)).run();
   }
   async function shot(id: string) {
     const { GET } = await import("@/app/api/check-findings/[id]/screenshot/route");
     return GET(new Request("http://localhost/x"), params(id));
   }
 
-  it("is served from its review's own folder", async () => {
-    const row = await aDesignFinding((checks) => join(checks, "screenshots", "home.png"));
+  it("is served from its review's own folder, by the name the e2e gave it", async () => {
+    const { row } = await aDesignFinding("phone/home.png");
+    expect(row.screenshotPath).toBe("phone/home.png");
     const response = await shot(row.id);
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("image/png");
     expect(Buffer.from(await response.arrayBuffer()).toString()).toBe("PNGBYTES");
   });
 
+  it("serves a name that only starts with two dots", async () => {
+    // Refused as if it were "..": a prefix test, not a segment one.
+    const { row } = await aDesignFinding("..x.png");
+    expect((await shot(row.id)).status).toBe(200);
+  });
+
   it("is not served from anywhere else, whatever the row says", async () => {
-    const row = await aDesignFinding((checks) => join(checks, "..", "elsewhere.png"));
+    const { db, row, file } = await aDesignFinding("home.png");
+    for (const elsewhere of [
+      "../elsewhere.png",
+      "phone/../../elsewhere.png",
+      // Even its own file, spelled as an absolute path: the row keeps a
+      // name, and a path is what a moved or other drive's data dir breaks.
+      file,
+      "C:/elsewhere.png",
+    ]) {
+      await namedInstead(db, row.id, elsewhere);
+      const response = await shot(row.id);
+      expect(response.status, elsewhere).toBe(404);
+      expect((await response.json()).error).toBe("This screenshot is not in its review's folder.");
+    }
+  });
+
+  it("says when its file is gone", async () => {
+    const { row, file } = await aDesignFinding("home.png");
+    const { rmSync } = await import("node:fs");
+    rmSync(file);
     const response = await shot(row.id);
     expect(response.status).toBe(404);
-    expect((await response.json()).error).toBe("This screenshot is not in its review's folder.");
+    expect((await response.json()).error).toBe(
+      "The screenshot is gone: its review's files were removed.",
+    );
   });
 
   it("says when a finding has none", async () => {

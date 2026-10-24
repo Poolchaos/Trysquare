@@ -376,7 +376,7 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
     const report = renderReport({
       ...BASE,
       confirmed: [],
-      checks: { ran, confirmed: [failingTests], dismissed: [] },
+      checks: { ran, confirmed: [failingTests], dismissed: [], leftOutUnproven: [] },
     });
     expect(report).toContain(
       "No confirmed findings in the code; 1 confirmed from the project's own checks.",
@@ -390,7 +390,7 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
   it("names them beside the code findings when both were confirmed", () => {
     const report = renderReport({
       ...BASE,
-      checks: { ran, confirmed: [failingTests], dismissed: [] },
+      checks: { ran, confirmed: [failingTests], dismissed: [], leftOutUnproven: [] },
     });
     expect(report).toMatch(
       /confirmed finding\(s\): .+; and 1 confirmed from the project's own checks\./,
@@ -398,7 +398,10 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
   });
 
   it("says how each command ended, beside what was examined", () => {
-    const report = renderReport({ ...BASE, checks: { ran, confirmed: [], dismissed: [] } });
+    const report = renderReport({
+      ...BASE,
+      checks: { ran, confirmed: [], dismissed: [], leftOutUnproven: [] },
+    });
     expect(report).toContain(
       "The project's own checks ran on a copy of the branch: the install passed; the tests failed.",
     );
@@ -416,6 +419,7 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
         ran,
         confirmed: [],
         dismissed: [{ ...failingTests, dismissReason: "Flaky on this machine." }],
+        leftOutUnproven: [],
       },
     });
     expect(report).toContain("Dismissed by a person:");
@@ -428,7 +432,7 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
   it("says the same in the exported page", () => {
     const html = renderReportHtml({
       ...BASE,
-      checks: { ran, confirmed: [failingTests], dismissed: [] },
+      checks: { ran, confirmed: [failingTests], dismissed: [], leftOutUnproven: [] },
     });
     expect(html).toContain("; and 1 confirmed from the project's own checks.");
     expect(html).toContain("<h2>Tests and design (1)</h2>");
@@ -451,10 +455,15 @@ describe("a screen graded C or D, in the report (WP-I step 4)", () => {
   it("says which screen and what is off, not as code", () => {
     const report = renderReport({
       ...BASE,
-      checks: { ran: [], confirmed: [design], dismissed: [] },
+      checks: { ran: [], confirmed: [design], dismissed: [], leftOutUnproven: [] },
     });
     expect(report).toContain("### CRITICAL: The screen home.png is graded D.");
     expect(report).toContain("Screenshot `home.png`: The totals column runs off the card.");
+    // Screens alone: not said to be what commands found (review round 8).
+    expect(report).toContain(
+      "The screens the project's own e2e saved, on a copy of this branch, that were graded C or D.",
+    );
+    expect(report).not.toContain("run by the app on a copy of it.");
     expect(report).toContain("Graded D again by the second grader");
     expect(report).not.toContain("```\nThe totals column");
   });
@@ -462,9 +471,77 @@ describe("a screen graded C or D, in the report (WP-I step 4)", () => {
   it("carries the screen itself in the exported page, so it is whole on its own", () => {
     const html = renderReportHtml({
       ...BASE,
-      checks: { ran: [], confirmed: [design], dismissed: [] },
+      checks: { ran: [], confirmed: [design], dismissed: [], leftOutUnproven: [] },
     });
     expect(html).toContain('<img src="data:image/png;base64,UE5H"');
-    expect(html).toContain("The totals column runs off the card.");
+    expect(html).toContain("What is off: The totals column runs off the card.");
+    expect(html).toContain('alt="The screen home.png. What is off: The totals column runs off');
+  });
+
+  it("names a screen it does not carry, and never sets what is off as code", () => {
+    // Without its image the screen fell to a failing command's layout: what
+    // is off set as output, the screenshot not named (review round 8).
+    const html = renderReportHtml({
+      ...BASE,
+      checks: {
+        ran: [],
+        confirmed: [{ ...design, screenshotName: "phone/home.png", screenshotDataUri: null }],
+        dismissed: [],
+        leftOutUnproven: [],
+      },
+    });
+    expect(html).toContain("The screenshot, phone/home.png, is not carried in this report");
+    expect(html).toContain("What is off: The totals column runs off the card.");
+    expect(html).not.toContain("<pre><code>The totals column");
+  });
+
+  it("keeps one graded C or D by one grader only apart, as possibly real (D-190)", () => {
+    const open = {
+      ...design,
+      issue: "The screen phone/home.png is graded C.",
+      screenshotName: "phone/home.png",
+      verificationNote: "The second grader, claude-opus-5-5, graded it B.",
+      dismissReason: "Agreed with design.",
+    };
+    const input = {
+      ...BASE,
+      checks: { ran: [], confirmed: [], dismissed: [], leftOutUnproven: [open] },
+    };
+    const report = renderReport(input);
+    expect(report).toContain(
+      "Left out unproven by a person, graded C or D by one grader and not the other, so possibly real:",
+    );
+    expect(report).toContain(
+      "- The screen phone/home.png is graded C. (screenshot `phone/home.png`) Reason: Agreed with design.",
+    );
+    expect(report).not.toContain("Dismissed by a person:");
+    const html = renderReportHtml(input);
+    expect(html).toContain("<h3>Left out unproven (1)</h3>");
+    expect(html).toContain("Left out: Agreed with design.");
+    expect(html).not.toContain("<h3>Dismissed");
+  });
+
+  it("says both when the section holds failing commands and screens", () => {
+    const report = renderReport({
+      ...BASE,
+      checks: {
+        ran: [],
+        confirmed: [design],
+        dismissed: [
+          {
+            command: "npm test",
+            severity: "CRITICAL",
+            issue: "The tests fail.",
+            evidence: "1 failing",
+            verificationNote: null,
+            dismissReason: "Flaky.",
+          },
+        ],
+        leftOutUnproven: [],
+      },
+    });
+    expect(report).toContain(
+      "What the project's own tests and e2e found on this branch, run by the app on a copy of it, and the screens its e2e saved that were graded C or D.",
+    );
   });
 });

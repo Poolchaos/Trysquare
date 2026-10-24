@@ -1282,7 +1282,7 @@ function NewReview() {
                     ))}
                     .
                     {preflight.checks.grades
-                      ? " Its screenshots are then graded: one more request for each eight, and one for each eight graded C or D, counted once the e2e has saved them."
+                      ? " The screenshots its e2e saves are then graded, a request for each eight or fewer, and those graded C or D graded again the same way: how many requests is known only once the e2e has saved them."
                       : ""}
                   </p>
                 </div>

@@ -18,6 +18,7 @@ import {
   type ReviewStatus,
 } from "@/lib/domain/state-machines";
 import {
+  checksIntro,
   checksRan,
   completeness,
   refutedOnlySentence,
@@ -97,6 +98,17 @@ const STAGES = [
 
 /** Stages that run as app code, so they never write a stage_executions row. */
 const DETERMINISTIC_STAGES = new Set(["s0_prepare", "s6_audit"]);
+
+/**
+ * Stages asked only when there is something for them, and why one was not:
+ * passed without a row, they were skipped, which a green dot would call a
+ * pass (review round 8).
+ */
+const NOT_ASKED = new Map<string, string>([
+  ["s4b_design_grading", "Not asked: there were no screenshots to grade."],
+  ["s5b_second_verification", "Not asked: verification proved no finding."],
+  ["s5c_design_second", "Not asked: no screen was graded C or D."],
+]);
 
 const STAGE_LABELS = new Map<string, string>(STAGES.map(([stage, label]) => [stage, label]));
 
@@ -207,6 +219,7 @@ interface ReportData {
     ran: ReportCheckRun[];
     confirmed: ReportCheck[];
     dismissed: ReportCheck[];
+    leftOutUnproven: ReportCheck[];
   };
   projectName: string;
   fromBranch: string;
@@ -302,8 +315,9 @@ function deterministicDone(stage: string, snapshot: Snapshot, done: ReadonlySet<
 function executingStage(snapshot: Snapshot, done: ReadonlySet<string>): string | null {
   if (!snapshot.running) return null;
   const stage = snapshot.review.currentStage ?? "s0_prepare";
-  // After S5 the second verifier runs, or, when S5 proved nothing, the
-  // audit: the stage is stamped only when it runs.
+  // After S5 the second verifier, then the second grader, each only when
+  // it has something to ask, then the audit: a stage is stamped only when
+  // it runs.
   if (stage === "s5_verification" && done.has("s5_verification")) return "s6_audit";
   if (stage === "s5b_second_verification" && done.has("s5b_second_verification")) {
     return "s6_audit";
@@ -947,8 +961,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 stage from a stuck one. */}
             {snapshot.running && executing ? (
               <span className="text-[var(--color-ink)]">
-                {stageLabel(executing)}, stage {STAGES.findIndex(([s]) => s === executing) + 1} of{" "}
-                {STAGES.length}
+                {stageLabel(executing)}, stage {STAGES.findIndex(([s]) => s === executing) + 1} of
+                up to {STAGES.length}
               </span>
             ) : null}
             {review.startedAt && snapshot.running ? (
@@ -1495,6 +1509,7 @@ function FinishedSummary({ snapshot }: { snapshot: Snapshot }) {
     // What grading the project's screens came to, beside the code's (WP-I).
     design: designTallies(snapshot.checkFindings ?? []),
   };
+  const { design } = facts;
   const usage = stepUsage(snapshot.stages);
   const funnel: [string, number, ReactNode, string][] = [
     ["Raised", tallies.raised, "Candidates the rules turned up", "bg-[var(--color-accent)]"],
@@ -1555,6 +1570,15 @@ function FinishedSummary({ snapshot }: { snapshot: Snapshot }) {
             </div>
           ))}
         </dl>
+        {/* The funnel is the code's; the screens are counted on their own,
+            not as candidates the rules turned up (D-197). */}
+        {design.raised > 0 ? (
+          <p className="mt-4 text-aside text-[var(--color-ink-muted)]">
+            Apart from these, {design.raised} {design.raised === 1 ? "screen" : "screens"} graded C
+            or D: {design.proven} graded C or D again by the second grader
+            {design.open > 0 ? `, ${design.open} left open` : ""}.
+          </p>
+        ) : null}
       </Card>
       <div>
         <h2 className="mb-2 text-heading font-medium">The five steps</h2>
@@ -1633,8 +1657,9 @@ function RunDetail({
             // decision up as a fault.
             const wasCancelled = last?.status === "failed" && last.errorClass === "cancelled";
             const failed = last?.status === "failed" && !wasCancelled;
-            const succeeded =
-              deterministicDone(stage, snapshot, done) || last?.status === "succeeded";
+            const passed = deterministicDone(stage, snapshot, done) || last?.status === "succeeded";
+            const notAsked = passed && last === undefined && NOT_ASKED.has(stage);
+            const succeeded = passed && !notAsked;
             const current = stage === executing;
 
             return (
@@ -1683,7 +1708,11 @@ function RunDetail({
                   </p>
                 ) : (
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
-                    {description}
+                    {notAsked
+                      ? stage === "s5b_second_verification" && !snapshot.review.verifierModel
+                        ? "Not asked: this review is from before the second verifier."
+                        : NOT_ASKED.get(stage)
+                      : description}
                   </p>
                 )}
 
@@ -1814,6 +1843,14 @@ function RunDetail({
  * the exported document cannot say different things, and no markdown parser
  * has to be trusted to work out what a heading was.
  */
+function severityBar(severity: string): string {
+  return severity === "CRITICAL"
+    ? "bg-[var(--color-critical)]"
+    : severity === "WARNING"
+      ? "bg-[var(--color-warning)]"
+      : "bg-[var(--color-border-strong)]";
+}
+
 function RenderedReport({ data }: { data: ReportData }) {
   const groups = [
     { key: "confirmed", label: "Confirmed", findings: data.confirmed, reason: "" },
@@ -1836,7 +1873,22 @@ function RenderedReport({ data }: { data: ReportData }) {
   }, {});
   // What the project's own checks found, as the exported report says it.
   const confirmedChecks = data.checks?.confirmed ?? [];
-  const dismissedChecks = data.checks?.dismissed ?? [];
+  const checkGroups = [
+    { key: "confirmed", label: "Confirmed", checks: confirmedChecks, reason: "" },
+    {
+      key: "unproven",
+      label: "Left out unproven",
+      checks: data.checks?.leftOutUnproven ?? [],
+      reason: "Left out",
+    },
+    {
+      key: "dismissed",
+      label: "Dismissed",
+      checks: data.checks?.dismissed ?? [],
+      reason: "Dismissed",
+    },
+  ].filter((group) => group.checks.length > 0);
+  const allChecks = checkGroups.flatMap((group) => group.checks);
   const ran = checksRan(data);
 
   return (
@@ -1890,13 +1942,7 @@ function RenderedReport({ data }: { data: ReportData }) {
               >
                 <span
                   aria-hidden
-                  className={`w-0.5 shrink-0 self-stretch rounded ${
-                    finding.severity === "CRITICAL"
-                      ? "bg-[var(--color-critical)]"
-                      : finding.severity === "WARNING"
-                        ? "bg-[var(--color-warning)]"
-                        : "bg-[var(--color-border-strong)]"
-                  }`}
+                  className={`w-0.5 shrink-0 self-stretch rounded ${severityBar(finding.severity)}`}
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-2">
@@ -1932,67 +1978,84 @@ function RenderedReport({ data }: { data: ReportData }) {
         </section>
       ))}
 
-      {confirmedChecks.length + dismissedChecks.length > 0 ? (
+      {allChecks.length > 0 ? (
         <section className="mt-6">
           <h4 className="text-body font-semibold tracking-wide uppercase text-[var(--color-ink-muted)]">
-            Tests and design ({confirmedChecks.length + dismissedChecks.length})
+            Tests and design ({allChecks.length})
           </h4>
-          <ul className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-2">
-            {[...confirmedChecks, ...dismissedChecks].map((check, index) => (
-              <li
-                key={`${check.issue}-${index}`}
-                className="flex gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
-              >
-                <span
-                  aria-hidden
-                  className="w-0.5 shrink-0 self-stretch rounded bg-[var(--color-critical)]"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <span className="text-body font-medium">{check.issue}</span>
-                    {check.command ? (
-                      <Mono className="min-w-0 text-aside break-all text-[var(--color-ink-muted)]">
-                        {check.command}
-                      </Mono>
-                    ) : null}
-                  </div>
-                  {/* A screen's says what is off first, as its card does. */}
-                  {check.verificationNote && !check.screenshotDataUri ? (
-                    <p className="mt-1 text-body text-[var(--color-ink-muted)]">
-                      {check.verificationNote}
-                    </p>
-                  ) : null}
-                  {check.dismissReason ? (
-                    <p className="mt-1 text-aside text-[var(--color-ink-faint)]">
-                      Dismissed: {check.dismissReason}
-                    </p>
-                  ) : null}
-                  {check.screenshotDataUri ? (
-                    <>
-                      <p className="mt-1 text-body text-[var(--color-ink-muted)]">
-                        {check.evidence}
-                      </p>
+          <p className="mt-1 text-body text-[var(--color-ink-muted)]">{checksIntro(allChecks)}</p>
+          {checkGroups.map((group) => (
+            <div key={group.key} className="mt-3">
+              <h5 className="text-aside font-medium text-[var(--color-ink-muted)]">
+                {group.label} ({group.checks.length})
+              </h5>
+              <ul className="mt-1 grid grid-cols-[minmax(0,1fr)] gap-2">
+                {group.checks.map((check, index) => (
+                  <li
+                    key={`${check.issue}-${index}`}
+                    className="flex gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+                  >
+                    <span
+                      aria-hidden
+                      className={`w-0.5 shrink-0 self-stretch rounded ${severityBar(check.severity)}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="text-body font-medium">{check.issue}</span>
+                        {check.command ? (
+                          <Mono className="min-w-0 text-aside break-all text-[var(--color-ink-muted)]">
+                            {check.command}
+                          </Mono>
+                        ) : null}
+                      </div>
+                      {/* A screen in its card's order: what is off, the
+                          second grader's note, then the screen itself. */}
+                      {check.screenshotName ? (
+                        <p className="mt-1 text-body text-[var(--color-ink-muted)]">
+                          <span className="font-medium text-[var(--color-ink)]">What is off: </span>
+                          {check.evidence}
+                        </p>
+                      ) : null}
                       {check.verificationNote ? (
                         <p className="mt-1 text-aside text-[var(--color-ink-muted)]">
                           {check.verificationNote}
                         </p>
                       ) : null}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={check.screenshotDataUri}
-                        alt={check.issue}
-                        className="mt-2 max-h-96 w-auto max-w-full rounded border border-[var(--color-border)] object-contain"
-                      />
-                    </>
-                  ) : check.evidence.trim() !== "" ? (
-                    <pre className="mt-2 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2 text-aside">
-                      <code className="font-[family-name:var(--font-mono)]">{check.evidence}</code>
-                    </pre>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+                      {check.dismissReason ? (
+                        <p className="mt-1 text-aside text-[var(--color-ink-faint)]">
+                          {group.reason}: {check.dismissReason}
+                        </p>
+                      ) : null}
+                      {check.screenshotName ? (
+                        check.screenshotDataUri ? (
+                          // Whole, not capped in height: a full-page shot
+                          // scaled into a short box could not be read.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={check.screenshotDataUri}
+                            alt={`The screen ${check.screenshotName}. What is off: ${check.evidence}`}
+                            className="mt-2 h-auto w-auto max-w-full rounded border border-[var(--color-border)]"
+                          />
+                        ) : (
+                          <p className="mt-1 text-aside text-[var(--color-ink-faint)]">
+                            The screenshot,{" "}
+                            <Mono className="break-all">{check.screenshotName}</Mono>, is not
+                            carried in this report: it is gone, or over what one report carries.
+                          </p>
+                        )
+                      ) : check.evidence.trim() !== "" ? (
+                        <pre className="mt-2 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2 text-aside">
+                          <code className="font-[family-name:var(--font-mono)]">
+                            {check.evidence}
+                          </code>
+                        </pre>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </section>
       ) : null}
 
@@ -2061,7 +2124,10 @@ function ScanTheater({
     rules: snapshot.rules ?? null,
     files: coverage.totalFiles,
     tallies,
-    waiting: snapshot.findings.filter((finding) => finding.status === "verified").length,
+    // The project's own checks wait on the person too (D-197).
+    waiting:
+      snapshot.findings.filter((finding) => finding.status === "verified").length +
+      (snapshot.checkFindings ?? []).filter(isUndecidedCheck).length,
   };
   const feedRef = useRef<HTMLDivElement>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -2213,7 +2279,7 @@ function ScanTheater({
                   {step.what}
                 </span>
                 <span className="text-aside font-semibold tabular-nums">
-                  {stepCount(index, state, facts)}
+                  {stepCount(index, state, facts, executing)}
                 </span>
               </li>
             );
@@ -2230,7 +2296,7 @@ function ScanTheater({
           </span>
           {stageIndex !== -1 ? (
             <span className="text-body text-[var(--color-ink-muted)]">
-              stage {stageIndex + 1} of {STAGES.length}
+              stage {stageIndex + 1} of up to {STAGES.length}
               {/* A stage that divides its work says which division is in
                 flight, so nine requests do not look like one long one. */}
               {batch ? ` · request ${batch.number} of ${batch.count}` : ""}

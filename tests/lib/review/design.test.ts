@@ -13,7 +13,7 @@ import {
 } from "@/lib/review/design";
 
 const graded = (...names: string[]) =>
-  names.map((screenshot) => ({ screenshot, grade: "A" as const, whatIsOff: "" }));
+  names.map((screenshot) => ({ screenshot, opened: true, grade: "A" as const, whatIsOff: "" }));
 
 describe("the grades a stage answers with", () => {
   it("are taken when each screenshot asked about is graded once", () => {
@@ -33,6 +33,33 @@ describe("the grades a stage answers with", () => {
       GradesMismatchError,
     );
   });
+
+  it("are refused when a screen could not be opened, rather than graded D for it", () => {
+    // The prompt said to grade an unopenable screen D: both graders saying
+    // so made a proven finding of a file nobody had seen (review round 8).
+    expect(() =>
+      assertGradesMatch(
+        [{ screenshot: "home.png", opened: false, grade: "D", whatIsOff: "Could not open it." }],
+        ["home.png"],
+      ),
+    ).toThrow("home.png could not be opened");
+  });
+
+  it("are refused when a C or D does not say what is off", () => {
+    expect(() =>
+      assertGradesMatch(
+        [{ screenshot: "home.png", opened: true, grade: "C", whatIsOff: "  " }],
+        ["home.png"],
+      ),
+    ).toThrow("home.png was graded C without saying what is off");
+    // An A or B may say nothing.
+    expect(() =>
+      assertGradesMatch(
+        [{ screenshot: "home.png", opened: true, grade: "B", whatIsOff: "" }],
+        ["home.png"],
+      ),
+    ).not.toThrow();
+  });
 });
 
 describe("what a grader is told", () => {
@@ -51,14 +78,37 @@ describe("what a grader is told", () => {
     ).toContain("you are not shown its grades");
   });
 
-  it("lists each screenshot by the name to grade it under, and where it is", () => {
+  it("lists each screenshot by the name to grade it under, where it is, and its hash", () => {
     expect(
       renderDesignPrompt([
-        { name: "phone/home.png", path: "/runs/x/checks/screenshots/phone/home.png" },
+        {
+          name: "phone/home.png",
+          path: "/runs/x/checks/screenshots/phone/home.png",
+          sha256: "ab12",
+        },
       ]),
     ).toBe(
-      "Grade these 1 screenshot(s), each exactly once, by the name given:\n\n- phone/home.png: /runs/x/checks/screenshots/phone/home.png",
+      "Grade these 1 screenshot(s), each exactly once, by the name given:\n\n- phone/home.png: /runs/x/checks/screenshots/phone/home.png (sha256 ab12)",
     );
+  });
+
+  it("is a different request for a different image under the same name", () => {
+    // The request's identity is its prompt (promptHashFor): a resume after
+    // the e2e saved another image must not replay the old one's grade.
+    const shot = { name: "home.png", path: "/s/home.png" };
+    expect(renderDesignPrompt([{ ...shot, sha256: "aa" }])).not.toBe(
+      renderDesignPrompt([{ ...shot, sha256: "bb" }]),
+    );
+  });
+
+  it("says an unopened screen is said, not graded", () => {
+    const prompt = composeDesignSystemPrompt({
+      second: false,
+      standard: null,
+      outputContract: "C",
+    });
+    expect(prompt).toContain("say opened: false, and the review stops rather than guess");
+    expect(prompt).not.toContain("is graded D, saying so");
   });
 
   it("may read the screenshots' folder only when the stage names it (D-198)", () => {

@@ -6,9 +6,10 @@
  */
 
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { copyFile, mkdir, readdir } from "node:fs/promises";
-import { dirname, join, relative } from "node:path";
+import { copyFile, mkdir, readdir, readFile, stat } from "node:fs/promises";
+import { dirname, join, relative, sep } from "node:path";
 import { projectCommandEnv } from "@/lib/projects/command-env";
 import type { ProjectChecks } from "@/lib/projects/checks";
 
@@ -174,10 +175,35 @@ export function runProjectCommand(options: {
   );
 }
 
+/** A screenshot copied out of the copy, which is removed after. */
+export interface Screenshot {
+  /** Relative to screenshotsDir, with forward slashes, as the e2e named it. */
+  name: string;
+  /** Of its bytes: a grade replayed on resume must be of this same image. */
+  sha256: string;
+}
+
+/**
+ * The most screenshots graded, and the largest: each eight is a request,
+ * and each one graded C or D is carried whole in the report (review round 8).
+ */
+export const SCREENSHOT_LIMIT = 200;
+export const SCREENSHOT_BYTES = 8 * 1024 * 1024;
+
 export interface ChecksRun {
   commands: CommandResult[];
-  /** Copied out of the copy, which is removed after: paths under screenshotsDir. */
-  screenshots: string[];
+  screenshots: Screenshot[];
+  /** What was not copied, and why, each said to the person. */
+  screenshotsLeft: string[];
+}
+
+/**
+ * A name a grading prompt can list on one line and a grade can echo back:
+ * one line, and no ": ", which separates the name from its path there.
+ */
+function sayable(name: string): boolean {
+  const control = [...name].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127);
+  return !control && !name.includes(": ");
 }
 
 async function pngsUnder(root: string): Promise<string[]> {
@@ -237,15 +263,40 @@ export async function runProjectChecks(options: {
   }
 
   const ranE2e = commands.some((result) => result.step === "e2e" && !result.cancelled);
-  const screenshots: string[] = [];
+  const screenshots: Screenshot[] = [];
+  const screenshotsLeft: string[] = [];
   if (ranE2e && checks.screenshotDir !== null) {
     const from = join(options.copyDir, checks.screenshotDir);
-    for (const png of await pngsUnder(from)) {
-      const to = join(options.screenshotsDir, relative(from, png));
+    const found = await pngsUnder(from);
+    for (const png of found) {
+      const name = relative(from, png).split(sep).join("/");
+      if (!sayable(name)) {
+        screenshotsLeft.push(
+          `${JSON.stringify(name)} was not graded: a name with a line break or ": " in it cannot be listed in a grading request.`,
+        );
+        continue;
+      }
+      const bytes = (await stat(png)).size;
+      if (bytes > SCREENSHOT_BYTES) {
+        screenshotsLeft.push(
+          `${name} was not graded: at ${bytes} bytes it is over the ${SCREENSHOT_BYTES}-byte limit.`,
+        );
+        continue;
+      }
+      if (screenshots.length === SCREENSHOT_LIMIT) {
+        screenshotsLeft.push(
+          `Only the first ${SCREENSHOT_LIMIT} screenshots, by name, were graded; ${name} and the rest after it were not.`,
+        );
+        break;
+      }
+      const to = join(options.screenshotsDir, ...name.split("/"));
       await mkdir(dirname(to), { recursive: true });
       await copyFile(png, to);
-      screenshots.push(to);
+      const sha256 = createHash("sha256")
+        .update(await readFile(to))
+        .digest("hex");
+      screenshots.push({ name, sha256 });
     }
   }
-  return { commands, screenshots };
+  return { commands, screenshots, screenshotsLeft };
 }

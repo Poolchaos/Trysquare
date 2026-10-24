@@ -28,6 +28,8 @@ export const designGradesSchema = z.object({
       z.object({
         /** The screenshot's name exactly as the prompt lists it. */
         screenshot: z.string().min(1),
+        /** Whether the grader opened the image: one it could not is no grade. */
+        opened: z.boolean(),
         grade: z.enum(GRADES),
         /** For a C or D, what is off and where; for an A or B, may be empty. */
         whatIsOff: z.string(),
@@ -72,7 +74,8 @@ export function composeDesignSystemPrompt(options: {
     GRADE_SCALE,
     "",
     "For a C or a D, say what is off and where on the screen, specifically enough that",
-    "someone could find it. A screenshot you cannot open is graded D, saying so.",
+    "someone could find it. Say opened: true only for a screenshot you opened and looked at;",
+    "for one you could not open, say opened: false, and the review stops rather than guess.",
     ...(options.standard === null
       ? []
       : ["", "# The project's design standard", "", options.standard.trim()]),
@@ -83,18 +86,30 @@ export function composeDesignSystemPrompt(options: {
   ].join("\n");
 }
 
-export function renderDesignPrompt(screenshots: readonly { name: string; path: string }[]): string {
+export interface DesignScreenshot {
+  /** Relative to the screenshots folder, as the project's e2e named it. */
+  name: string;
+  path: string;
+  /**
+   * Of the image's bytes. In the prompt so that the request's identity is
+   * the image's: a resume after the e2e saved a different one asks again
+   * rather than replaying a grade of the old (review round 8).
+   */
+  sha256: string;
+}
+
+export function renderDesignPrompt(screenshots: readonly DesignScreenshot[]): string {
   return [
     `Grade these ${screenshots.length} screenshot(s), each exactly once, by the name given:`,
     "",
-    ...screenshots.map((shot) => `- ${shot.name}: ${shot.path}`),
+    ...screenshots.map((shot) => `- ${shot.name}: ${shot.path} (sha256 ${shot.sha256})`),
   ].join("\n");
 }
 
 export class GradesMismatchError extends Error {
   constructor(readonly problems: readonly string[]) {
     super(
-      `The grading stage did not grade each screenshot it was given exactly once: ` +
+      `The grading stage did not open and grade each screenshot it was given exactly once: ` +
         `${problems.join("; ")}.`,
     );
     this.name = "GradesMismatchError";
@@ -102,13 +117,20 @@ export class GradesMismatchError extends Error {
 }
 
 /**
- * Every screenshot asked about, graded once, and nothing else: a screen the
- * answer left out would read as one that passed (as a hunk left out would).
+ * Every screenshot asked about, opened and graded once, and nothing else: a
+ * screen the answer left out would read as one that passed (as a hunk left
+ * out would), and a C or D must say what is off for anyone to act on it.
  */
 export function assertGradesMatch(grades: DesignGrades["grades"], asked: readonly string[]): void {
   const problems: string[] = [];
   const seen = new Map<string, number>();
-  for (const grade of grades) seen.set(grade.screenshot, (seen.get(grade.screenshot) ?? 0) + 1);
+  for (const grade of grades) {
+    seen.set(grade.screenshot, (seen.get(grade.screenshot) ?? 0) + 1);
+    if (!grade.opened) problems.push(`${grade.screenshot} could not be opened`);
+    else if (isFailingGrade(grade.grade) && grade.whatIsOff.trim() === "") {
+      problems.push(`${grade.screenshot} was graded ${grade.grade} without saying what is off`);
+    }
+  }
   for (const name of asked) {
     if (!seen.has(name)) problems.push(`${name} was not graded`);
   }

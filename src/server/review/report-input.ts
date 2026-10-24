@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { checksDir } from "@/lib/paths";
 import { listCheckFindings, type CheckFinding } from "../db/repositories/check-findings";
 import { getChainFilesRead, coverageReport, listLedgerFiles } from "../db/repositories/ledger";
@@ -18,6 +18,7 @@ import { readReviewSnapshotMeta } from "../db/repositories/rulesets";
 import type { Db } from "../db/client";
 import type { ReportCheck, ReportCheckRun, ReportFinding, ReportInput } from "@/lib/review/report";
 import type { ChecksResult } from "./project-checks";
+import { screenshotFile } from "./screenshots";
 
 /**
  * How each of the project's own commands ended, from the result the review
@@ -45,29 +46,50 @@ function checksRanFor(dataDir: string | undefined, reviewId: string): ReportChec
   }
 }
 
-/** A design finding's screenshot as an image the report can carry whole. */
-function screenshotOf(
-  row: CheckFinding,
-): Pick<ReportCheck, "screenshotName" | "screenshotDataUri"> {
-  if (row.screenshotPath === null) return {};
-  let dataUri: string | null = null;
-  try {
-    dataUri = `data:image/png;base64,${readFileSync(row.screenshotPath).toString("base64")}`;
-  } catch {
-    dataUri = null;
-  }
-  return { screenshotName: basename(row.screenshotPath), screenshotDataUri: dataUri };
-}
+/**
+ * The most screenshot bytes one report carries: two hundred screens graded
+ * C or D at the copy's limit would otherwise make a report of gigabytes
+ * (review round 8). Past it a screen is named, not shown.
+ */
+export const REPORT_IMAGE_BYTES = 24 * 1024 * 1024;
 
-const asReportCheck = (row: CheckFinding): ReportCheck => ({
-  ...screenshotOf(row),
-  command: row.command,
-  severity: row.severity,
-  issue: row.issue,
-  evidence: row.evidence,
-  verificationNote: row.verificationNote,
-  dismissReason: row.dismissReason,
-});
+/**
+ * Turns check rows into the report's, carrying each design finding's
+ * screenshot whole while the report has room, read only from its own
+ * review's screenshots folder.
+ */
+function reportChecks(dataDir: string | undefined, reviewId: string) {
+  let carried = 0;
+  const screenshotOf = (
+    row: CheckFinding,
+  ): Pick<ReportCheck, "screenshotName" | "screenshotDataUri"> => {
+    if (row.screenshotPath === null) return {};
+    const file =
+      dataDir === undefined ? null : screenshotFile(dataDir, reviewId, row.screenshotPath);
+    let dataUri: string | null = null;
+    if (file !== null) {
+      try {
+        const bytes = readFileSync(file);
+        if (carried + bytes.length <= REPORT_IMAGE_BYTES) {
+          carried += bytes.length;
+          dataUri = `data:image/png;base64,${bytes.toString("base64")}`;
+        }
+      } catch {
+        dataUri = null;
+      }
+    }
+    return { screenshotName: row.screenshotPath, screenshotDataUri: dataUri };
+  };
+  return (row: CheckFinding): ReportCheck => ({
+    ...screenshotOf(row),
+    command: row.command,
+    severity: row.severity,
+    issue: row.issue,
+    evidence: row.evidence,
+    verificationNote: row.verificationNote,
+    dismissReason: row.dismissReason,
+  });
+}
 
 export function buildReportInput(db: Db, reviewId: string, dataDir?: string): ReportInput {
   const review = requireReview(db, reviewId);
@@ -75,6 +97,15 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
   const findings = listFindings(db, reviewId);
   const meta = readReviewSnapshotMeta(db, reviewId);
   const checkRows = listCheckFindings(db, reviewId);
+  const asReportCheck = reportChecks(dataDir, reviewId);
+  const dismissedCheck = (fromOpenQuestion: boolean) =>
+    checkRows
+      .filter(
+        (row) =>
+          row.status === "dismissed" &&
+          (row.dismissedFrom === "open_question") === fromOpenQuestion,
+      )
+      .map(asReportCheck);
 
   const of = (status: string, keep: (finding: (typeof findings)[number]) => boolean = () => true) =>
     findings
@@ -129,7 +160,10 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
     checks: {
       ran: checksRanFor(dataDir, reviewId),
       confirmed: checkRows.filter((row) => row.status === "confirmed").map(asReportCheck),
-      dismissed: checkRows.filter((row) => row.status === "dismissed").map(asReportCheck),
+      dismissed: dismissedCheck(false),
+      // Graded C or D by one grader only, as a code finding one verifier
+      // proved is an open question: never proven, so apart (D-190).
+      leftOutUnproven: dismissedCheck(true),
     },
 
     coverage: {

@@ -216,16 +216,22 @@ renders the report.
 Above the queue, what the project's own checks found (WP-I, D-197): a
 section of its own, Tests and design, one card each, the command, the
 output where it failed and the path of the whole log where a code finding
-shows its code; a screen graded C or D shows the screenshot itself, then
-what is off in words, then the second grader's note (WP-I step 4); Confirm,
-or Dismiss with a reason. Counted with the code
+shows its code; a screen graded C or D shows the screenshot itself, with
+a link to it full size and its name when it cannot be loaded, then what is
+off in words, then the second grader's note (WP-I step 4); Confirm, or
+Dismiss with a reason. A screen the second grader passed is an open
+question, as in the code queue: said so, with no Confirm, and left out
+with a reason (D-190). Counted with the code
 findings in n of m decided and in what is left to decide, and Complete
 review waits on them too. Read only once the review is complete.
 
 Above the queue, and above the report once complete, the finished review in
 its five steps (WP-G): how the findings were proven (raised, proven once,
 proven by both, open question) and what each step came to, refuted told
-apart from discarded, with the time and requests its stage rows recorded.
+apart from discarded, with the time and requests its stage rows recorded;
+screens graded C or D are counted apart from the code's funnel. In Run
+detail, a stage asked only when there is something for it (S4b, S5b, S5c)
+and not asked says so and why, never shown passed (round 8).
 
 ### Report
 
@@ -237,8 +243,10 @@ Copy and export actions; export writes the markdown and a self-contained
 single-file HTML beside it, so a report can be handed to a colleague whole
 (D-69). What a project's own checks found and a person decided has a
 section of its own, Tests and design, in the page, the markdown and the
-HTML alike, and What was examined says how each of its commands ended
-(WP-I, D-197). Past reports
+HTML alike, confirmed, left out unproven and dismissed apart as the code's
+are (D-190), and What was examined says how each of its commands ended
+(WP-I, D-197). A screen is shown whole in the report while the report
+carries under 24 MiB of screenshots, and named after that. Past reports
 listed per project with merged badges; delete per 02 rules.
 
 ### Rulesets

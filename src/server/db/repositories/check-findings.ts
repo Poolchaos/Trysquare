@@ -156,7 +156,7 @@ export function listUndecidedCheckFindings(db: Db, reviewId: string): CheckFindi
 export function recordDesignCandidate(
   db: Db,
   reviewId: string,
-  graded: { name: string; screenshotPath: string; grade: "C" | "D"; whatIsOff: string },
+  graded: { name: string; grade: "C" | "D"; whatIsOff: string },
 ): CheckFinding {
   const row = {
     id: newId(),
@@ -167,7 +167,9 @@ export function recordDesignCandidate(
     exitCode: null,
     timedOut: false,
     logPath: null,
-    screenshotPath: graded.screenshotPath,
+    // Its name under the review's screenshots folder, not where that is
+    // now (review round 8): see server/review/screenshots.ts.
+    screenshotPath: graded.name,
     grade: graded.grade,
     severity: severityOfGrade(graded.grade),
     issue: `The screen ${graded.name} is graded ${graded.grade}.`,

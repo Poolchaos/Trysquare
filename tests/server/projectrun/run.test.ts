@@ -4,13 +4,21 @@
  * the whole process tree down, and the screenshots an e2e saved copied out.
  */
 
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { NO_CHECKS } from "@/lib/projects/checks";
-import { runProjectChecks, runProjectCommand } from "@/server/projectrun/run";
+import {
+  SCREENSHOT_BYTES,
+  SCREENSHOT_LIMIT,
+  runProjectChecks,
+  runProjectCommand,
+} from "@/server/projectrun/run";
+
+const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
 let root: string;
 const node = `"${process.execPath}"`;
@@ -223,9 +231,88 @@ describe("a project's checks in turn", () => {
       ["tests", 1],
       ["e2e", 0],
     ]);
-    expect(run.screenshots).toEqual([join(shots, "home.png"), join(shots, "phone", "home.png")]);
+    // By the name the e2e gave each, and the hash of what it saved.
+    expect(run.screenshots).toEqual([
+      { name: "home.png", sha256: sha256("png") },
+      { name: "phone/home.png", sha256: sha256("png") },
+    ]);
+    expect(run.screenshotsLeft).toEqual([]);
     expect(readFileSync(join(shots, "phone", "home.png"), "utf8")).toBe("png");
   });
+
+  /** An e2e command whose body saves screenshots under e2e/screens. */
+  const saving = (name: string, body: string) => ({
+    ...NO_CHECKS,
+    enabled: true,
+    e2eCommand: script(
+      name,
+      `const fs = require("node:fs"), path = require("node:path");
+       const dir = path.join(process.cwd(), "e2e", "screens");
+       fs.mkdirSync(dir, { recursive: true });
+       ${body}`,
+    ),
+    screenshotDir: "e2e/screens",
+  });
+
+  it("leave out a screenshot over the size limit, and say so", async () => {
+    const run = await runProjectChecks({
+      checks: saving(
+        "huge",
+        `fs.writeFileSync(path.join(dir, "huge.png"), Buffer.alloc(${SCREENSHOT_BYTES + 1}));
+         fs.writeFileSync(path.join(dir, "home.png"), "png");`,
+      ),
+      copyDir: copyWith("huge"),
+      logDir: join(root, "huge-logs"),
+      screenshotsDir: join(root, "huge-shots"),
+    });
+    expect(run.screenshots.map((shot) => shot.name)).toEqual(["home.png"]);
+    expect(run.screenshotsLeft).toEqual([
+      `huge.png was not graded: at ${SCREENSHOT_BYTES + 1} bytes it is over the ${SCREENSHOT_BYTES}-byte limit.`,
+    ]);
+    expect(existsSync(join(root, "huge-shots", "huge.png"))).toBe(false);
+  });
+
+  it("grade only the first screenshots up to the limit, and say where it stopped", async () => {
+    const run = await runProjectChecks({
+      checks: saving(
+        "many",
+        `for (let i = 0; i <= ${SCREENSHOT_LIMIT}; i++) {
+           fs.writeFileSync(path.join(dir, \`s\${String(i).padStart(3, "0")}.png\`), "png");
+         }`,
+      ),
+      copyDir: copyWith("many"),
+      logDir: join(root, "many-logs"),
+      screenshotsDir: join(root, "many-shots"),
+    });
+    expect(run.screenshots).toHaveLength(SCREENSHOT_LIMIT);
+    expect(run.screenshotsLeft).toEqual([
+      `Only the first ${SCREENSHOT_LIMIT} screenshots, by name, were graded; s${SCREENSHOT_LIMIT}.png and the rest after it were not.`,
+    ]);
+  });
+
+  // Windows allows neither a colon nor a line break in a file name, so a
+  // project there cannot save one; Linux and macOS can (CI runs both).
+  it.skipIf(process.platform === "win32")(
+    "leave out a name a grading request cannot list on one line",
+    async () => {
+      const run = await runProjectChecks({
+        checks: saving(
+          "unsayable",
+          `fs.writeFileSync(path.join(dir, "a: b.png"), "png");
+           fs.writeFileSync(path.join(dir, "two\\nlines.png"), "png");
+           fs.writeFileSync(path.join(dir, "home.png"), "png");`,
+        ),
+        copyDir: copyWith("unsayable"),
+        logDir: join(root, "unsayable-logs"),
+        screenshotsDir: join(root, "unsayable-shots"),
+      });
+      expect(run.screenshots.map((shot) => shot.name)).toEqual(["home.png"]);
+      expect(run.screenshotsLeft).toEqual([
+        '"a: b.png" was not graded: a name with a line break or ": " in it cannot be listed in a grading request.',
+        '"two\\nlines.png" was not graded: a name with a line break or ": " in it cannot be listed in a grading request.',
+      ]);
+    },
+  );
 
   it("copy no screenshot when no e2e ran", async () => {
     const copyDir = copyWith("no-e2e");

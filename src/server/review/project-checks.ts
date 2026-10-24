@@ -10,7 +10,7 @@
 
 import { existsSync } from "node:fs";
 import { mkdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
-import { isAbsolute, join, relative } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { checksDir } from "@/lib/paths";
 import type { ProjectChecks } from "@/lib/projects/checks";
 import type { Db } from "../db/client";
@@ -26,24 +26,38 @@ export interface ChecksResult extends ChecksRun {
 }
 
 /** As much of a design standard as a grading prompt carries. */
-const STANDARD_CHARS = 50_000;
+export const STANDARD_CHARS = 50_000;
 
 /**
  * The design standard's text, or null when none is named or it is not a
- * file inside the copy. Resolved first: a symlink committed at that path
- * would otherwise put a file from elsewhere on this machine into a prompt.
+ * file inside the copy, with what the person is told when it is not read
+ * whole. Resolved first: a symlink committed at that path would otherwise
+ * put a file from elsewhere on this machine into a prompt.
  */
-async function readStandard(copyDir: string, path: string | null): Promise<string | null> {
-  if (path === null) return null;
+async function readStandard(
+  copyDir: string,
+  path: string | null,
+): Promise<{ text: string | null; note: string | null }> {
+  if (path === null) return { text: null, note: null };
+  const unread = {
+    text: null,
+    note: `The design standard ${path} is not a file in the branch, so the screens are graded on the A to D scale alone.`,
+  };
   try {
     const root = await realpath(copyDir);
     const file = await realpath(join(copyDir, path));
     const inside = relative(root, file);
-    if (inside.startsWith("..") || isAbsolute(inside)) return null;
-    if (!(await stat(file)).isFile()) return null;
-    return (await readFile(file, "utf8")).slice(0, STANDARD_CHARS);
+    if (inside.split(sep)[0] === ".." || isAbsolute(inside)) return unread;
+    if (!(await stat(file)).isFile()) return unread;
+    const text = await readFile(file, "utf8");
+    return text.length > STANDARD_CHARS
+      ? {
+          text: text.slice(0, STANDARD_CHARS),
+          note: `The design standard ${path} is ${text.length} characters; the graders are given its first ${STANDARD_CHARS}.`,
+        }
+      : { text, note: null };
   } catch {
-    return null;
+    return unread;
   }
 }
 
@@ -96,7 +110,11 @@ export async function runChecksForReview(
   if (
     kept !== null &&
     kept.commit === options.commit &&
-    JSON.stringify(kept.checks) === JSON.stringify(options.checks)
+    JSON.stringify(kept.checks) === JSON.stringify(options.checks) &&
+    // A result kept before the standard and each screenshot's hash were
+    // (review round 8) cannot say what to grade against, so they run again.
+    kept.designStandard !== undefined &&
+    Array.isArray(kept.screenshotsLeft)
   ) {
     appendRunNote(db, options.reviewId, {
       kind: "note",
@@ -113,7 +131,7 @@ export async function runChecksForReview(
   const copyDir = join(dir, "copy");
   await mkdir(dir, { recursive: true });
   let run: ChecksRun;
-  let designStandard: string | null = null;
+  let standard: Awaited<ReturnType<typeof readStandard>> = { text: null, note: null };
   try {
     await makeThrowawayCopy(options.clonePath, options.commit, copyDir);
     run = await runProjectChecks({
@@ -124,7 +142,7 @@ export async function runChecksForReview(
       ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     });
-    designStandard = await readStandard(copyDir, options.checks.designStandardPath);
+    standard = await readStandard(copyDir, options.checks.designStandardPath);
   } finally {
     await removeThrowawayCopy(copyDir);
   }
@@ -149,12 +167,18 @@ export async function runChecksForReview(
           : `The e2e saved ${run.screenshots.length} screenshot(s) to grade.`,
     });
   }
+  for (const message of run.screenshotsLeft) {
+    appendRunNote(db, options.reviewId, { kind: "note", message });
+  }
+  if (run.screenshots.length > 0 && standard.note !== null) {
+    appendRunNote(db, options.reviewId, { kind: "note", message: standard.note });
+  }
 
   const result: ChecksResult = {
     ...run,
     commit: options.commit,
     checks: options.checks,
-    designStandard,
+    designStandard: standard.text,
   };
   // Not kept when cancelled: a resume runs them whole.
   if (!run.commands.some((command) => command.cancelled)) {
