@@ -1737,6 +1737,24 @@ describe("a project's own checks (WP-I, step 2)", () => {
     );
   }, 120_000);
 
+  it("keeps one finding for a failing command across a pause and a resume", async () => {
+    // Made again from the kept result on the resume, not added beside the
+    // first (review round 7: the claim was untested through a real run).
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    turnOn({ testCommand: script("failing-once", "process.exit(1);") });
+    process.env.FAKE_CLAUDE_FAIL_AT = "3";
+    expect((await run(reviewId)).kind).toBe("paused");
+    delete process.env.FAKE_CLAUDE_FAIL_AT;
+    expect(listCheckFindings(db, reviewId)).toHaveLength(1);
+    writeFileSync(join(dataDir, "calls.txt"), "2");
+    expect((await run(reviewId)).kind).toBe("completed");
+    expect(listCheckFindings(db, reviewId)).toHaveLength(1);
+    expect(notes(reviewId)).toContain(
+      "The project's own checks ran before this resume, on the same commit; their result stands.",
+    );
+  }, 120_000);
+
   it("finds nothing in checks that pass", async () => {
     const reviewId = seedReview();
     writeIdealAnswers();

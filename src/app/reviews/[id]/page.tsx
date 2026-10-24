@@ -1275,9 +1275,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 <p className="mb-2 text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
                   Activity
                 </p>
+                {/* A named list, not a group: as a group its items were list items
+                    in no list, which axe found once a review waiting on a
+                    person was scanned with its log full (review round 7). */}
                 <ul
                   tabIndex={0}
-                  role="group"
                   aria-label="Activity log"
                   className="max-h-64 overflow-auto text-aside text-[var(--color-ink-muted)]"
                 >

@@ -208,19 +208,22 @@ export function ConfirmationQueue({
   // page, leaving the keyboard nowhere to go (5.14, audit U12). Complete
   // review is where the work goes next; it takes the focus once the decision
   // has settled and the button is on, unless the person has gone elsewhere.
+  // Counting the project's checks too: decided last, one of them took the
+  // focus with it and Complete never got it (review round 7).
+  const leftToDecide = undecided.length + checks.undecided;
   const lastDecided = useRef(false);
-  const wereUndecided = useRef(undecided.length > 0);
+  const wereUndecided = useRef(leftToDecide > 0);
   useEffect(() => {
     // A decision undone before the last one settled leaves nothing to move to.
-    if (undecided.length > 0) lastDecided.current = false;
+    if (leftToDecide > 0) lastDecided.current = false;
     else if (wereUndecided.current) lastDecided.current = true;
-    wereUndecided.current = undecided.length > 0;
+    wereUndecided.current = leftToDecide > 0;
     if (!lastDecided.current || busy) return;
     lastDecided.current = false;
     if (document.activeElement === null || document.activeElement === document.body) {
       completeRef.current?.focus();
     }
-  }, [undecided.length, busy]);
+  }, [leftToDecide, busy]);
 
   // A mouse click on one of the queue's buttons leaves no focus on it, so the
   // keyboard drives the queue after the mouse has been used: kept on a
@@ -483,6 +486,10 @@ export function ConfirmationQueue({
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
+      // Keys pressed among the project's checks are not the queue's: Shift+C
+      // there confirmed the code finding selected below, unseen (review
+      // round 7).
+      if (target?.closest("[data-check-findings]")) return;
       // Typing a reason or a comment must not also drive the queue.
       if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
         if (event.key === "Escape") target.blur();
@@ -623,539 +630,563 @@ export function ConfirmationQueue({
           : "No findings."}
       </p>
 
-      {/* Bounded on a phone too: a bare grid sized its one column to the
+      {/* With none, said in a line: an empty list, a tab stop with nothing
+          in it and keys that did nothing stood there instead, when only the
+          project's checks were left to decide (review round 7). */}
+      {queue.length === 0 ? (
+        <p className="text-sm text-[var(--color-ink-muted)]">
+          No code findings: the review raised none that verification kept.
+        </p>
+      ) : (
+        <>
+          {/* Bounded on a phone too: a bare grid sized its one column to the
           widest path, and Linux fonts pushed the queue off the screen. */}
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <nav aria-label="Findings" tabIndex={0} className="lg:max-h-[42rem] lg:overflow-y-auto">
-          {SEVERITY_ORDER.filter((severity) =>
-            queue.some((finding) => finding.severity.toUpperCase() === severity),
-          ).map((severity) => (
-            <div key={severity} className="mb-3">
-              <h3 className="mb-1 flex items-center gap-2 font-[family-name:var(--font-mono)] text-xs font-semibold tracking-wide text-[var(--color-ink-muted)] uppercase">
-                {severity}
-                <span className="tabular-nums">
-                  ({queue.filter((finding) => finding.severity.toUpperCase() === severity).length})
-                </span>
-              </h3>
-              <ul className="grid grid-cols-[minmax(0,1fr)] gap-1">
-                {queue.map((finding, index) =>
-                  finding.severity.toUpperCase() === severity ? (
-                    <li key={finding.id}>
-                      <button
-                        type="button"
-                        onClick={() => moveTo(index)}
-                        aria-current={index === selected ? "true" : undefined}
-                        className={`flex w-full items-stretch gap-2 overflow-hidden rounded-md border pr-2.5 text-left text-xs transition-colors ${
-                          index === selected
-                            ? "border-[var(--color-accent)] bg-[var(--color-surface-raised)]"
-                            : "border-transparent hover:bg-[var(--color-surface-sunken)]"
-                        }`}
-                      >
-                        {/* An element rather than a border utility: the
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
+            <nav aria-label="Findings" tabIndex={0} className="lg:max-h-[42rem] lg:overflow-y-auto">
+              {SEVERITY_ORDER.filter((severity) =>
+                queue.some((finding) => finding.severity.toUpperCase() === severity),
+              ).map((severity) => (
+                <div key={severity} className="mb-3">
+                  <h3 className="mb-1 flex items-center gap-2 font-[family-name:var(--font-mono)] text-xs font-semibold tracking-wide text-[var(--color-ink-muted)] uppercase">
+                    {severity}
+                    <span className="tabular-nums">
+                      (
+                      {
+                        queue.filter((finding) => finding.severity.toUpperCase() === severity)
+                          .length
+                      }
+                      )
+                    </span>
+                  </h3>
+                  <ul className="grid grid-cols-[minmax(0,1fr)] gap-1">
+                    {queue.map((finding, index) =>
+                      finding.severity.toUpperCase() === severity ? (
+                        <li key={finding.id}>
+                          <button
+                            type="button"
+                            onClick={() => moveTo(index)}
+                            aria-current={index === selected ? "true" : undefined}
+                            className={`flex w-full items-stretch gap-2 overflow-hidden rounded-md border pr-2.5 text-left text-xs transition-colors ${
+                              index === selected
+                                ? "border-[var(--color-accent)] bg-[var(--color-surface-raised)]"
+                                : "border-transparent hover:bg-[var(--color-surface-sunken)]"
+                            }`}
+                          >
+                            {/* An element rather than a border utility: the
                             selected state sets a border colour on all four
                             sides, and which of the two wins would come down
                             to stylesheet order. */}
-                        <span
-                          aria-hidden
-                          className={`w-0.5 shrink-0 self-stretch ${severityEdge(finding.severity)}`}
-                        />
-                        <span className="flex items-center gap-2 py-2">
-                          <StateChip
-                            status={
-                              finding.dismissedFrom === "open_question"
-                                ? "left_out"
-                                : finding.status
-                            }
-                          />
-                        </span>
-                        <span className="min-w-0 flex-1 py-2">
-                          {/* The path leads the row. A reviewer's first
+                            <span
+                              aria-hidden
+                              className={`w-0.5 shrink-0 self-stretch ${severityEdge(finding.severity)}`}
+                            />
+                            <span className="flex items-center gap-2 py-2">
+                              <StateChip
+                                status={
+                                  finding.dismissedFrom === "open_question"
+                                    ? "left_out"
+                                    : finding.status
+                                }
+                              />
+                            </span>
+                            <span className="min-w-0 flex-1 py-2">
+                              {/* The path leads the row. A reviewer's first
                               question on any finding is where am I, and a
                               queue that answers it only in the detail pane
                               makes every scan a click (D-68). */}
-                          <Mono className="block truncate text-[var(--color-ink-muted)]">
-                            {finding.filePath}:{finding.lineStart}
-                          </Mono>
-                          <span className="block truncate">{finding.issue}</span>
-                        </span>
-                        {/* Redundant with the group heading on purpose: on a
+                              <Mono className="block truncate text-[var(--color-ink-muted)]">
+                                {finding.filePath}:{finding.lineStart}
+                              </Mono>
+                              <span className="block truncate">{finding.issue}</span>
+                            </span>
+                            {/* Redundant with the group heading on purpose: on a
                             long queue the heading scrolls away, and severity
                             is the one thing a row must never make someone
                             scroll up to recover. */}
-                        <span className="self-center py-2">
-                          <Badge tone={severityTone(finding.severity)}>
-                            {finding.severity.toLowerCase()}
-                          </Badge>
-                        </span>
-                      </button>
-                    </li>
-                  ) : null,
-                )}
-              </ul>
-            </div>
-          ))}
-        </nav>
+                            <span className="self-center py-2">
+                              <Badge tone={severityTone(finding.severity)}>
+                                {finding.severity.toLowerCase()}
+                              </Badge>
+                            </span>
+                          </button>
+                        </li>
+                      ) : null,
+                    )}
+                  </ul>
+                </div>
+              ))}
+            </nav>
 
-        {current ? (
-          <Card className="min-w-0 p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={severityTone(current.severity)}>{current.severity}</Badge>
-              {current.raisedSeverity && current.raisedSeverity !== current.severity ? (
-                <span className="text-xs text-[var(--color-ink-muted)]">
-                  Finder said {current.raisedSeverity}
-                </span>
-              ) : null}
-              {secondProof?.severity && secondProof.severity !== current.severity ? (
-                <span className="text-xs text-[var(--color-ink-muted)]">
-                  Second verifier said {secondProof.severity}
-                </span>
-              ) : null}
-              {current.status === "open_question" ? (
-                <Badge tone="question">open question</Badge>
-              ) : null}
-              {current.status === "confirmed" ? <Badge tone="good">confirmed</Badge> : null}
-              {current.status === "dismissed" ? (
-                <Badge tone="neutral">
-                  {current.dismissedFrom === "open_question" ? "left out" : "dismissed"}
-                </Badge>
-              ) : null}
-              <Mono className="min-w-0 text-xs break-all text-[var(--color-ink-muted)]">
-                {current.filePath}:{current.lineStart}
-                {current.lineEnd > current.lineStart ? `-${current.lineEnd}` : ""}
-              </Mono>
-            </div>
-
-            <h3 ref={titleRef} tabIndex={-1} className="mt-2 font-medium">
-              {current.issue}
-            </h3>
-
-            {editing ? (
-              <div className="mt-2">
-                <label className="mb-1 block text-xs font-medium" htmlFor={`comment-${current.id}`}>
-                  Comment, as it will appear in the report
-                </label>
-                <Textarea
-                  id={`comment-${current.id}`}
-                  ref={editRef}
-                  rows={4}
-                  value={draft}
-                  onChange={(event) =>
-                    setDrafts((all) => ({ ...all, [current.id]: event.target.value }))
-                  }
-                />
-                <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
-                  The engine&apos;s own wording is kept either way; it is how the prompts get
-                  judged.
-                </p>
-              </div>
-            ) : (
-              <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-                {current.editedComment ?? current.comment}
-                {current.editedComment ? (
-                  <span className="ml-2 text-xs text-[var(--color-ink-faint)]">(edited)</span>
-                ) : null}
-              </p>
-            )}
-
-            {current.verificationNote ? (
-              <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
-                Verification: {current.verificationNote}
-              </p>
-            ) : null}
-
-            {current.dismissReason ? (
-              <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
-                Dismissed: {current.dismissReason}
-              </p>
-            ) : null}
-
-            {current.ruleCode ? (
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={() => setRuleOpenFor(ruleOpen ? null : current.id)}
-                  aria-expanded={ruleOpen}
-                  className="text-xs text-[var(--color-ink-muted)] underline underline-offset-2 hover:text-[var(--color-ink)]"
-                >
-                  Rule {current.ruleCode}
-                  {currentRule ? `: ${currentRule.title}` : ""}
-                </button>
-                {ruleOpen && rulesProblem ? (
-                  <div className="mt-2 grid gap-2">
-                    <Problem>{rulesProblem}</Problem>
-                    <div>
-                      <Button
-                        onClick={() => {
-                          setRulesProblem("");
-                          setRules(null);
-                          setRulesAttempt((attempt) => attempt + 1);
-                        }}
-                      >
-                        Try again
-                      </Button>
-                    </div>
-                  </div>
-                ) : ruleOpen ? (
-                  <pre
-                    tabIndex={0}
-                    role="group"
-                    aria-label={`Rule ${current.ruleCode} in full`}
-                    className="mt-2 max-h-64 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs whitespace-pre-wrap"
-                  >
-                    <code className="font-[family-name:var(--font-mono)]">
-                      {rules === null
-                        ? "Reading the review's rules..."
-                        : (currentRule?.raw ??
-                          "This rule is not in the ruleset the review was frozen with.")}
-                    </code>
-                  </pre>
-                ) : null}
-              </div>
-            ) : null}
-
-            {current.quotedCode ? (
-              <figure className="mt-3">
-                {/* Numbered from the finding's own lineStart. The quotation
-                    was byte-checked against the file at those lines before it
-                    could be verified, so these numbers are read off the
-                    record rather than guessed at. */}
-                <figcaption className="flex items-center justify-between gap-3 rounded-t border border-b-0 border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1.5">
-                  <Mono className="truncate text-xs text-[var(--color-ink-muted)]">
-                    {current.filePath}
+            {current ? (
+              <Card className="min-w-0 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={severityTone(current.severity)}>{current.severity}</Badge>
+                  {current.raisedSeverity && current.raisedSeverity !== current.severity ? (
+                    <span className="text-xs text-[var(--color-ink-muted)]">
+                      Finder said {current.raisedSeverity}
+                    </span>
+                  ) : null}
+                  {secondProof?.severity && secondProof.severity !== current.severity ? (
+                    <span className="text-xs text-[var(--color-ink-muted)]">
+                      Second verifier said {secondProof.severity}
+                    </span>
+                  ) : null}
+                  {current.status === "open_question" ? (
+                    <Badge tone="question">open question</Badge>
+                  ) : null}
+                  {current.status === "confirmed" ? <Badge tone="good">confirmed</Badge> : null}
+                  {current.status === "dismissed" ? (
+                    <Badge tone="neutral">
+                      {current.dismissedFrom === "open_question" ? "left out" : "dismissed"}
+                    </Badge>
+                  ) : null}
+                  <Mono className="min-w-0 text-xs break-all text-[var(--color-ink-muted)]">
+                    {current.filePath}:{current.lineStart}
+                    {current.lineEnd > current.lineStart ? `-${current.lineEnd}` : ""}
                   </Mono>
-                  <span className="shrink-0 text-[0.65rem] text-[var(--color-ink-faint)]">
-                    {current.lineEnd > current.lineStart
-                      ? `lines ${current.lineStart}-${current.lineEnd}`
-                      : `line ${current.lineStart}`}
-                  </span>
-                </figcaption>
-                <pre className="overflow-x-auto rounded-b border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs">
-                  <code className="font-[family-name:var(--font-mono)]">
-                    {current.quotedCode.split("\n").map((line, offset) => (
-                      <span key={offset} className="block">
-                        <span className="mr-3 inline-block w-8 shrink-0 text-right text-[var(--color-ink-faint)]">
-                          {current.lineStart + offset}
-                        </span>
-                        {line}
-                      </span>
-                    ))}
-                  </code>
-                </pre>
-              </figure>
-            ) : null}
+                </div>
 
-            {current.mechanism ? (
-              <p className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs">
-                <span className="font-medium">Failure mechanism </span>
-                <span className="text-[var(--color-ink-muted)]">{current.mechanism}</span>
-              </p>
-            ) : null}
+                <h3 ref={titleRef} tabIndex={-1} className="mt-2 font-medium">
+                  {current.issue}
+                </h3>
 
-            {/* An open question claims no proof, left out or not (D-190),
-                though one was kept from the verifier that gave it. */}
-            {currentProof &&
-            current.status !== "open_question" &&
-            current.dismissedFrom !== "open_question" ? (
-              <section
-                aria-label="How it was proven"
-                className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs"
-              >
-                <p>
-                  <span className="font-medium">Proven from </span>
-                  <span className="text-[var(--color-ink-muted)]">{currentProof.trigger}</span>
-                </p>
-                {/* Every step was found at its lines in the checkout before the
-                    finding could be verified; the last is the failure. */}
-                <ol className="mt-2 grid gap-2">
-                  {currentProof.evidence.map((step, index) => (
-                    <li key={index} className="min-w-0">
-                      <Mono className="text-[var(--color-ink-muted)]">
-                        {index + 1}. {step.path}:{step.lineStart}
-                        {step.lineEnd > step.lineStart ? `-${step.lineEnd}` : ""}
-                      </Mono>
-                      {/* Focusable, as the code panes are, so a long line
-                          scrolls from the keyboard too. */}
+                {editing ? (
+                  <div className="mt-2">
+                    <label
+                      className="mb-1 block text-xs font-medium"
+                      htmlFor={`comment-${current.id}`}
+                    >
+                      Comment, as it will appear in the report
+                    </label>
+                    <Textarea
+                      id={`comment-${current.id}`}
+                      ref={editRef}
+                      rows={4}
+                      value={draft}
+                      onChange={(event) =>
+                        setDrafts((all) => ({ ...all, [current.id]: event.target.value }))
+                      }
+                    />
+                    <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
+                      The engine&apos;s own wording is kept either way; it is how the prompts get
+                      judged.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+                    {current.editedComment ?? current.comment}
+                    {current.editedComment ? (
+                      <span className="ml-2 text-xs text-[var(--color-ink-faint)]">(edited)</span>
+                    ) : null}
+                  </p>
+                )}
+
+                {current.verificationNote ? (
+                  <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
+                    Verification: {current.verificationNote}
+                  </p>
+                ) : null}
+
+                {current.dismissReason ? (
+                  <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
+                    Dismissed: {current.dismissReason}
+                  </p>
+                ) : null}
+
+                {current.ruleCode ? (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setRuleOpenFor(ruleOpen ? null : current.id)}
+                      aria-expanded={ruleOpen}
+                      className="text-xs text-[var(--color-ink-muted)] underline underline-offset-2 hover:text-[var(--color-ink)]"
+                    >
+                      Rule {current.ruleCode}
+                      {currentRule ? `: ${currentRule.title}` : ""}
+                    </button>
+                    {ruleOpen && rulesProblem ? (
+                      <div className="mt-2 grid gap-2">
+                        <Problem>{rulesProblem}</Problem>
+                        <div>
+                          <Button
+                            onClick={() => {
+                              setRulesProblem("");
+                              setRules(null);
+                              setRulesAttempt((attempt) => attempt + 1);
+                            }}
+                          >
+                            Try again
+                          </Button>
+                        </div>
+                      </div>
+                    ) : ruleOpen ? (
                       <pre
                         tabIndex={0}
                         role="group"
-                        aria-label={`Step ${index + 1}, as quoted`}
-                        className="mt-1 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2"
+                        aria-label={`Rule ${current.ruleCode} in full`}
+                        className="mt-2 max-h-64 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs whitespace-pre-wrap"
                       >
-                        <code className="font-[family-name:var(--font-mono)]">{step.quote}</code>
+                        <code className="font-[family-name:var(--font-mono)]">
+                          {rules === null
+                            ? "Reading the review's rules..."
+                            : (currentRule?.raw ??
+                              "This rule is not in the ruleset the review was frozen with.")}
+                        </code>
                       </pre>
-                    </li>
-                  ))}
-                </ol>
-                <p className="mt-2">
-                  <span className="font-medium">Guards searched </span>
-                  <span className="text-[var(--color-ink-muted)]">
-                    {currentProof.guardsSearched.join("; ")}
-                  </span>
-                </p>
-                {/* Both verifiers, each in a session of its own (WP-E). */}
-                {secondProof && verifierModel ? (
-                  <p className="mt-2">
-                    <span className="font-medium">Proven by </span>
-                    <span className="text-[var(--color-ink-muted)]">
-                      <Mono>{model}</Mono> and again by <Mono>{verifierModel}</Mono>
-                    </span>
-                  </p>
+                    ) : null}
+                  </div>
                 ) : null}
-              </section>
-            ) : null}
 
-            {showContext ? (
-              // Bounded, so a long line scrolls in its pane: the grid took the
-              // longest line's width and ran past the card (review round 6).
-              <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3">
-                {shownContext?.hunk ? (
-                  <div>
-                    <h4 className="mb-1 text-xs font-medium">What the change did here</h4>
-                    <pre
-                      tabIndex={0}
-                      role="group"
-                      aria-label="The change at this line"
-                      className="max-h-64 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs"
-                    >
+                {current.quotedCode ? (
+                  <figure className="mt-3">
+                    {/* Numbered from the finding's own lineStart. The quotation
+                    was byte-checked against the file at those lines before it
+                    could be verified, so these numbers are read off the
+                    record rather than guessed at. */}
+                    <figcaption className="flex items-center justify-between gap-3 rounded-t border border-b-0 border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1.5">
+                      <Mono className="truncate text-xs text-[var(--color-ink-muted)]">
+                        {current.filePath}
+                      </Mono>
+                      <span className="shrink-0 text-[0.65rem] text-[var(--color-ink-faint)]">
+                        {current.lineEnd > current.lineStart
+                          ? `lines ${current.lineStart}-${current.lineEnd}`
+                          : `line ${current.lineStart}`}
+                      </span>
+                    </figcaption>
+                    <pre className="overflow-x-auto rounded-b border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs">
                       <code className="font-[family-name:var(--font-mono)]">
-                        <span className="block text-[var(--color-ink-faint)]">
-                          {shownContext.hunk.header}
-                        </span>
-                        {shownContext.hunk.lines.map((line, index) => (
-                          <span
-                            key={index}
-                            className={`block ${
-                              line.startsWith("+")
-                                ? "text-[var(--color-good)]"
-                                : line.startsWith("-")
-                                  ? "text-[var(--color-critical)]"
-                                  : ""
-                            }`}
-                          >
+                        {current.quotedCode.split("\n").map((line, offset) => (
+                          <span key={offset} className="block">
+                            <span className="mr-3 inline-block w-8 shrink-0 text-right text-[var(--color-ink-faint)]">
+                              {current.lineStart + offset}
+                            </span>
                             {line}
                           </span>
                         ))}
                       </code>
                     </pre>
-                  </div>
+                  </figure>
                 ) : null}
 
-                {contextError ? (
-                  <div className="grid gap-2">
-                    <Problem>{contextError}</Problem>
-                    <div>
-                      <Button onClick={() => setContext(null)}>Try again</Button>
-                    </div>
-                  </div>
-                ) : null}
-
-                <div>
-                  <h4 className="mb-1 text-xs font-medium">The file as it stands</h4>
-                  {shownContext?.renamedTo ? (
-                    <p className="mb-1 text-xs text-[var(--color-ink-muted)]">
-                      The change renamed this file to <Mono>{shownContext.renamedTo}</Mono>, so it
-                      is shown from there.
-                    </p>
-                  ) : null}
-                  <pre
-                    tabIndex={0}
-                    role="group"
-                    aria-label="The file around this finding"
-                    className="max-h-72 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs"
-                  >
-                    <code className="font-[family-name:var(--font-mono)]">
-                      {shownContext === null
-                        ? "Reading the file..."
-                        : contextError
-                          ? "Not read."
-                          : shownContext.brokenLink
-                            ? "This file is a link to something that is not there, so there is nothing to show: the change above says where it points."
-                            : shownContext.outside
-                              ? "This file is a link that leads out of the review's checkout, so where it leads is not shown: the change above says where it points."
-                              : shownContext.deleted
-                                ? shownContext.hunk
-                                  ? "This file is not in the review's checkout: the change deleted it, and the change above is all there is of it."
-                                  : "This file is not in the review's checkout: the change deleted it."
-                                : shownContext.lines.length === 0
-                                  ? "No lines of this file to show here."
-                                  : shownContext.lines.map((line) => (
-                                      <span
-                                        key={line.number}
-                                        className={`block ${
-                                          line.number >= current.lineStart &&
-                                          line.number <= current.lineEnd
-                                            ? "bg-[var(--color-accent-soft)]"
-                                            : ""
-                                        }`}
-                                      >
-                                        <span className="mr-3 inline-block w-10 text-right text-[var(--color-ink-faint)]">
-                                          {line.number}
-                                        </span>
-                                        {line.text}
-                                      </span>
-                                    ))}
-                    </code>
-                  </pre>
-                </div>
-              </div>
-            ) : null}
-
-            {UNDECIDED.has(current.status) ? (
-              <div className="mt-4 grid gap-3 border-t border-[var(--color-border)] pt-3">
-                {CONFIRMABLE.has(current.status) ? null : (
-                  <p className="text-xs" data-testid="not-proven">
-                    <span className="font-medium">
-                      Not proven, so it cannot go into the report.{" "}
-                    </span>
-                    {/* Why is said above it, as every finding's note is. */}
-                    <span className="text-[var(--color-ink-muted)]">
-                      Dismiss it with a reason below, or verify it again.
-                    </span>
+                {current.mechanism ? (
+                  <p className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs">
+                    <span className="font-medium">Failure mechanism </span>
+                    <span className="text-[var(--color-ink-muted)]">{current.mechanism}</span>
                   </p>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  {CONFIRMABLE.has(current.status) ? (
-                    <>
-                      <Button
-                        variant="primary"
-                        disabled={busy}
-                        onClick={() => void act(current, "confirm", drafts[current.id])}
-                      >
-                        Confirm
-                      </Button>
-                      <Button
-                        variant="quiet"
-                        onClick={() => setEditingFor(editing ? null : current.id)}
-                      >
-                        {editing ? "Stop editing" : "Edit comment"}
-                      </Button>
-                    </>
-                  ) : null}
-                  <Button
-                    variant="quiet"
-                    onClick={() => setContextFor(showContext ? null : current.id)}
+                ) : null}
+
+                {/* An open question claims no proof, left out or not (D-190),
+                though one was kept from the verifier that gave it. */}
+                {currentProof &&
+                current.status !== "open_question" &&
+                current.dismissedFrom !== "open_question" ? (
+                  <section
+                    aria-label="How it was proven"
+                    className="mt-3 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs"
                   >
-                    {showContext ? "Hide code" : "Show code"}
-                  </Button>
-                  {current.status === "open_question" && againFor !== current.id ? (
-                    <Button
-                      ref={verifyButtonRef}
-                      variant="quiet"
-                      disabled={againBusy}
-                      title={againBusy ? "Another finding is being verified again." : undefined}
-                      onClick={() => void askAgain(current)}
-                    >
-                      Verify again
-                    </Button>
-                  ) : null}
-                </div>
-                {current.status === "open_question" && againFor === current.id ? (
-                  // Said before anything is sent: it is a paid request (WP-D2).
-                  <div
-                    ref={dialogRef}
-                    tabIndex={-1}
-                    role="group"
-                    aria-label="Verify again"
-                    className="grid gap-2 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 text-xs"
-                  >
-                    <div aria-live="polite" className="grid gap-2">
-                      {againTerms ? (
-                        <p>
-                          <span className="font-medium">Verify this finding again? </span>
-                          This asks <Mono>{model}</Mono> again in a fresh session and, if it proves
-                          the finding,{" "}
-                          {verifierModel ? <Mono>{verifierModel}</Mono> : "the second verifier"}{" "}
-                          too: up to two requests, using your Claude usage
-                          {againTerms.billing?.state === "perToken"
-                            ? ", billed per token"
-                            : againTerms.billing?.state === "maybePerToken"
-                              ? ", which may be billed per token"
-                              : ""}
-                          . Each can take up to {againTerms.minutes} minutes. If both prove it, you
-                          can confirm it; if not, it stays an open question.
-                        </p>
-                      ) : (
-                        <p className="text-[var(--color-ink-muted)]">Reading what it costs.</p>
-                      )}
-                      {againBusy && againTerms ? (
-                        <p className="text-[var(--color-ink-muted)]">
-                          Waiting for the answer. Leaving this page stops the request.
+                    <p>
+                      <span className="font-medium">Proven from </span>
+                      <span className="text-[var(--color-ink-muted)]">{currentProof.trigger}</span>
+                    </p>
+                    {/* Every step was found at its lines in the checkout before the
+                    finding could be verified; the last is the failure. */}
+                    <ol className="mt-2 grid gap-2">
+                      {currentProof.evidence.map((step, index) => (
+                        <li key={index} className="min-w-0">
+                          <Mono className="text-[var(--color-ink-muted)]">
+                            {index + 1}. {step.path}:{step.lineStart}
+                            {step.lineEnd > step.lineStart ? `-${step.lineEnd}` : ""}
+                          </Mono>
+                          {/* Focusable, as the code panes are, so a long line
+                          scrolls from the keyboard too. */}
+                          <pre
+                            tabIndex={0}
+                            role="group"
+                            aria-label={`Step ${index + 1}, as quoted`}
+                            className="mt-1 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2"
+                          >
+                            <code className="font-[family-name:var(--font-mono)]">
+                              {step.quote}
+                            </code>
+                          </pre>
+                        </li>
+                      ))}
+                    </ol>
+                    <p className="mt-2">
+                      <span className="font-medium">Guards searched </span>
+                      <span className="text-[var(--color-ink-muted)]">
+                        {currentProof.guardsSearched.join("; ")}
+                      </span>
+                    </p>
+                    {/* Both verifiers, each in a session of its own (WP-E). */}
+                    {secondProof && verifierModel ? (
+                      <p className="mt-2">
+                        <span className="font-medium">Proven by </span>
+                        <span className="text-[var(--color-ink-muted)]">
+                          <Mono>{model}</Mono> and again by <Mono>{verifierModel}</Mono>
+                        </span>
+                      </p>
+                    ) : null}
+                  </section>
+                ) : null}
+
+                {showContext ? (
+                  // Bounded, so a long line scrolls in its pane: the grid took the
+                  // longest line's width and ran past the card (review round 6).
+                  <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3">
+                    {shownContext?.hunk ? (
+                      <div>
+                        <h4 className="mb-1 text-xs font-medium">What the change did here</h4>
+                        <pre
+                          tabIndex={0}
+                          role="group"
+                          aria-label="The change at this line"
+                          className="max-h-64 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs"
+                        >
+                          <code className="font-[family-name:var(--font-mono)]">
+                            <span className="block text-[var(--color-ink-faint)]">
+                              {shownContext.hunk.header}
+                            </span>
+                            {shownContext.hunk.lines.map((line, index) => (
+                              <span
+                                key={index}
+                                className={`block ${
+                                  line.startsWith("+")
+                                    ? "text-[var(--color-good)]"
+                                    : line.startsWith("-")
+                                      ? "text-[var(--color-critical)]"
+                                      : ""
+                                }`}
+                              >
+                                {line}
+                              </span>
+                            ))}
+                          </code>
+                        </pre>
+                      </div>
+                    ) : null}
+
+                    {contextError ? (
+                      <div className="grid gap-2">
+                        <Problem>{contextError}</Problem>
+                        <div>
+                          <Button onClick={() => setContext(null)}>Try again</Button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <h4 className="mb-1 text-xs font-medium">The file as it stands</h4>
+                      {shownContext?.renamedTo ? (
+                        <p className="mb-1 text-xs text-[var(--color-ink-muted)]">
+                          The change renamed this file to <Mono>{shownContext.renamedTo}</Mono>, so
+                          it is shown from there.
                         </p>
                       ) : null}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="primary"
-                        disabled={againTerms === null || againBusy}
-                        onClick={() => void sendAgain(current)}
+                      <pre
+                        tabIndex={0}
+                        role="group"
+                        aria-label="The file around this finding"
+                        className="max-h-72 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs"
                       >
-                        {againBusy ? "Verifying" : "Send request"}
-                      </Button>
-                      <Button
-                        variant="quiet"
-                        disabled={againBusy}
-                        onClick={() => {
-                          focusAfterAgain.current = "verify";
-                          setAgainFor(null);
-                        }}
-                      >
-                        Not now
-                      </Button>
+                        <code className="font-[family-name:var(--font-mono)]">
+                          {shownContext === null
+                            ? "Reading the file..."
+                            : contextError
+                              ? "Not read."
+                              : shownContext.brokenLink
+                                ? "This file is a link to something that is not there, so there is nothing to show: the change above says where it points."
+                                : shownContext.outside
+                                  ? "This file is a link that leads out of the review's checkout, so where it leads is not shown: the change above says where it points."
+                                  : shownContext.deleted
+                                    ? shownContext.hunk
+                                      ? "This file is not in the review's checkout: the change deleted it, and the change above is all there is of it."
+                                      : "This file is not in the review's checkout: the change deleted it."
+                                    : shownContext.lines.length === 0
+                                      ? "No lines of this file to show here."
+                                      : shownContext.lines.map((line) => (
+                                          <span
+                                            key={line.number}
+                                            className={`block ${
+                                              line.number >= current.lineStart &&
+                                              line.number <= current.lineEnd
+                                                ? "bg-[var(--color-accent-soft)]"
+                                                : ""
+                                            }`}
+                                          >
+                                            <span className="mr-3 inline-block w-10 text-right text-[var(--color-ink-faint)]">
+                                              {line.number}
+                                            </span>
+                                            {line.text}
+                                          </span>
+                                        ))}
+                        </code>
+                      </pre>
                     </div>
                   </div>
                 ) : null}
 
-                <form
-                  className="grid gap-1.5"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    if (current.id === verifyingId) return;
-                    void act(current, "dismiss", reason);
-                  }}
-                >
-                  <label className="text-xs font-medium" htmlFor={`dismiss-reason-${current.id}`}>
-                    {reasonQuestion}
-                  </label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      id={`dismiss-reason-${current.id}`}
-                      ref={reasonRef}
-                      value={reason}
-                      onChange={(event) =>
-                        setReasons((all) => ({ ...all, [current.id]: event.target.value }))
-                      }
-                      placeholder={reasonQuestion}
-                      className="min-w-40 flex-1"
-                    />
-                    <Button
-                      type="submit"
-                      disabled={busy || reason.trim() === "" || current.id === verifyingId}
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            ) : null}
-          </Card>
-        ) : null}
-      </div>
+                {UNDECIDED.has(current.status) ? (
+                  <div className="mt-4 grid gap-3 border-t border-[var(--color-border)] pt-3">
+                    {CONFIRMABLE.has(current.status) ? null : (
+                      <p className="text-xs" data-testid="not-proven">
+                        <span className="font-medium">
+                          Not proven, so it cannot go into the report.{" "}
+                        </span>
+                        {/* Why is said above it, as every finding's note is. */}
+                        <span className="text-[var(--color-ink-muted)]">
+                          Dismiss it with a reason below, or verify it again.
+                        </span>
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {CONFIRMABLE.has(current.status) ? (
+                        <>
+                          <Button
+                            variant="primary"
+                            disabled={busy}
+                            onClick={() => void act(current, "confirm", drafts[current.id])}
+                          >
+                            Confirm
+                          </Button>
+                          <Button
+                            variant="quiet"
+                            onClick={() => setEditingFor(editing ? null : current.id)}
+                          >
+                            {editing ? "Stop editing" : "Edit comment"}
+                          </Button>
+                        </>
+                      ) : null}
+                      <Button
+                        variant="quiet"
+                        onClick={() => setContextFor(showContext ? null : current.id)}
+                      >
+                        {showContext ? "Hide code" : "Show code"}
+                      </Button>
+                      {current.status === "open_question" && againFor !== current.id ? (
+                        <Button
+                          ref={verifyButtonRef}
+                          variant="quiet"
+                          disabled={againBusy}
+                          title={againBusy ? "Another finding is being verified again." : undefined}
+                          onClick={() => void askAgain(current)}
+                        >
+                          Verify again
+                        </Button>
+                      ) : null}
+                    </div>
+                    {current.status === "open_question" && againFor === current.id ? (
+                      // Said before anything is sent: it is a paid request (WP-D2).
+                      <div
+                        ref={dialogRef}
+                        tabIndex={-1}
+                        role="group"
+                        aria-label="Verify again"
+                        className="grid gap-2 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-3 text-xs"
+                      >
+                        <div aria-live="polite" className="grid gap-2">
+                          {againTerms ? (
+                            <p>
+                              <span className="font-medium">Verify this finding again? </span>
+                              This asks <Mono>{model}</Mono> again in a fresh session and, if it
+                              proves the finding,{" "}
+                              {verifierModel ? <Mono>{verifierModel}</Mono> : "the second verifier"}{" "}
+                              too: up to two requests, using your Claude usage
+                              {againTerms.billing?.state === "perToken"
+                                ? ", billed per token"
+                                : againTerms.billing?.state === "maybePerToken"
+                                  ? ", which may be billed per token"
+                                  : ""}
+                              . Each can take up to {againTerms.minutes} minutes. If both prove it,
+                              you can confirm it; if not, it stays an open question.
+                            </p>
+                          ) : (
+                            <p className="text-[var(--color-ink-muted)]">Reading what it costs.</p>
+                          )}
+                          {againBusy && againTerms ? (
+                            <p className="text-[var(--color-ink-muted)]">
+                              Waiting for the answer. Leaving this page stops the request.
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            variant="primary"
+                            disabled={againTerms === null || againBusy}
+                            onClick={() => void sendAgain(current)}
+                          >
+                            {againBusy ? "Verifying" : "Send request"}
+                          </Button>
+                          <Button
+                            variant="quiet"
+                            disabled={againBusy}
+                            onClick={() => {
+                              focusAfterAgain.current = "verify";
+                              setAgainFor(null);
+                            }}
+                          >
+                            Not now
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
 
-      <footer className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-aside text-[var(--color-ink-faint)]">
-        <Key label="j / k" action="next / previous" />
-        {/* Only what works on the finding in front: an open question has no
+                    <form
+                      className="grid gap-1.5"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        if (current.id === verifyingId) return;
+                        void act(current, "dismiss", reason);
+                      }}
+                    >
+                      <label
+                        className="text-xs font-medium"
+                        htmlFor={`dismiss-reason-${current.id}`}
+                      >
+                        {reasonQuestion}
+                      </label>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          id={`dismiss-reason-${current.id}`}
+                          ref={reasonRef}
+                          value={reason}
+                          onChange={(event) =>
+                            setReasons((all) => ({ ...all, [current.id]: event.target.value }))
+                          }
+                          placeholder={reasonQuestion}
+                          className="min-w-40 flex-1"
+                        />
+                        <Button
+                          type="submit"
+                          disabled={busy || reason.trim() === "" || current.id === verifyingId}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                ) : null}
+              </Card>
+            ) : null}
+          </div>
+
+          <footer className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-aside text-[var(--color-ink-faint)]">
+            <Key label="j / k" action="next / previous" />
+            {/* Only what works on the finding in front: an open question has no
             confirm and no comment to edit (PG-2 (a), D-185). */}
-        {current && !CONFIRMABLE.has(current.status) ? null : (
-          <Key label="Shift+C" action="confirm" />
-        )}
-        <Key label="d" action="dismiss" />
-        {current && !CONFIRMABLE.has(current.status) ? null : (
-          <Key label="e" action="edit comment" />
-        )}
-        <Key label="enter" action="show code" />
-        <Key label="g g" action="first" />
-        <Key label="G" action="last" />
-      </footer>
+            {current && !CONFIRMABLE.has(current.status) ? null : (
+              <Key label="Shift+C" action="confirm" />
+            )}
+            <Key label="d" action="dismiss" />
+            {current && !CONFIRMABLE.has(current.status) ? null : (
+              <Key label="e" action="edit comment" />
+            )}
+            <Key label="enter" action="show code" />
+            <Key label="g g" action="first" />
+            <Key label="G" action="last" />
+          </footer>
+        </>
+      )}
     </section>
   );
 }

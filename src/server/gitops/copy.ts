@@ -21,7 +21,13 @@ export async function makeThrowawayCopy(
   // project's own commands may run its hooks later, in the copy.
   const noHooks = await mkdtemp(join(tmpdir(), "trysquare-no-hooks-"));
   try {
-    await git(["clone", "--quiet", "--no-checkout", repoDir, copyDir], { timeoutMs: 300_000 });
+    // No hardlinks into the clone's objects, and no remote back to it, so
+    // nothing a project's scripts do in the copy, a push say, reaches the
+    // clone a review reads (review round 7).
+    await git(["clone", "--quiet", "--no-checkout", "--no-hardlinks", repoDir, copyDir], {
+      timeoutMs: 300_000,
+    });
+    await git(["remote", "remove", "origin"], { cwd: copyDir });
     await git(["-c", `core.hooksPath=${noHooks}`, "checkout", "--quiet", "--detach", commit], {
       cwd: copyDir,
       timeoutMs: 300_000,

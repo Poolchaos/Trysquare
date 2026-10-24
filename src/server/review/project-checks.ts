@@ -83,7 +83,9 @@ export async function runChecksForReview(
   }
 
   // A result for another commit or other checks is not this one's.
-  await rm(dir, { recursive: true, force: true });
+  // With retries: what a crashed run left running can hold a file in it for
+  // a moment on Windows (review round 7).
+  await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   const copyDir = join(dir, "copy");
   await mkdir(dir, { recursive: true });
   let run: ChecksRun;

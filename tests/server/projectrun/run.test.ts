@@ -75,14 +75,18 @@ describe("one of a project's commands", () => {
     }
   });
 
-  // A grandchild that writes a marker a moment later, under a parent that
-  // waits long after: a kill of the shell alone left the grandchild to write.
+  // A grandchild that writes a marker well after the kill, under a parent
+  // that says once it exists and then waits long after: a kill of the shell
+  // alone left the grandchild to write. The parent's line proves the
+  // grandchild was there to be killed, so a kill that came first proves
+  // nothing and fails (review round 7).
   const lingering = (name: string) => {
     const marker = join(root, `${name}.marker`);
     const command = script(
       name,
       `const { spawn } = require("node:child_process");
-       spawn(process.execPath, ["-e", "setTimeout(() => require('node:fs').writeFileSync(" + JSON.stringify(${JSON.stringify(marker)}) + ", 'x'), 1500)"], { stdio: "ignore" });
+       spawn(process.execPath, ["-e", "setTimeout(() => require('node:fs').writeFileSync(" + JSON.stringify(${JSON.stringify(marker)}) + ", 'x'), 4500)"], { stdio: "ignore" });
+       console.log("grandchild spawned");
        setTimeout(() => {}, 20000);`,
     );
     return { marker, command };
@@ -95,18 +99,19 @@ describe("one of a project's commands", () => {
       command,
       cwd: root,
       logPath: join(root, "logs", "slow.log"),
-      timeoutMs: 500,
+      timeoutMs: 2500,
     });
     expect(result).toMatchObject({ exitCode: null, timedOut: true, cancelled: false });
-    expect(result.durationMs).toBeLessThan(10_000);
-    await sleep(2500);
+    expect(result.tail).toContain("grandchild spawned");
+    expect(result.durationMs).toBeLessThan(15_000);
+    await sleep(5000);
     expect(existsSync(marker)).toBe(false);
-  });
+  }, 30_000);
 
   it("is stopped by a cancel, with everything it started", async () => {
     const { marker, command } = lingering("cancelled");
     const abort = new AbortController();
-    setTimeout(() => abort.abort(), 500);
+    setTimeout(() => abort.abort(), 2500);
     const result = await runProjectCommand({
       step: "e2e",
       command,
@@ -115,9 +120,52 @@ describe("one of a project's commands", () => {
       signal: abort.signal,
     });
     expect(result).toMatchObject({ exitCode: null, timedOut: false, cancelled: true });
-    await sleep(2500);
+    expect(result.tail).toContain("grandchild spawned");
+    expect(result.durationMs).toBeLessThan(15_000);
+    await sleep(5000);
+    expect(existsSync(marker)).toBe(false);
+  }, 30_000);
+
+  it("never starts once cancelled, though the cancel came first", async () => {
+    // An abort event fires once; a listener added after it never heard it,
+    // and the command ran to its limit (review round 7).
+    const marker = join(root, "never.marker");
+    const abort = new AbortController();
+    abort.abort();
+    const result = await runProjectCommand({
+      step: "tests",
+      command: script(
+        "never",
+        `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "ran");`,
+      ),
+      cwd: root,
+      logPath: join(root, "logs", "never.log"),
+      signal: abort.signal,
+    });
+    expect(result).toMatchObject({ exitCode: null, cancelled: true });
+    await sleep(1000);
     expect(existsSync(marker)).toBe(false);
   });
+
+  it("ends when it exits, though something it started still holds its output", async () => {
+    // A background process sharing the pipes kept them open, and waiting for
+    // them to close hung the review for its whole life (review round 7).
+    const result = await runProjectCommand({
+      step: "tests",
+      command: script(
+        "leaves-a-child",
+        `const { spawn } = require("node:child_process");
+         spawn(process.execPath, ["-e", "setTimeout(() => {}, 8000)"], { stdio: "inherit", cwd: require("node:os").tmpdir() });
+         console.log("passed, leaving a helper running");
+         process.exit(0);`,
+      ),
+      cwd: root,
+      logPath: join(root, "logs", "leaves-a-child.log"),
+    });
+    expect(result).toMatchObject({ exitCode: 0, timedOut: false, cancelled: false });
+    expect(result.tail).toContain("passed, leaving a helper running");
+    expect(result.durationMs).toBeLessThan(6000);
+  }, 30_000);
 });
 
 describe("a project's checks in turn", () => {

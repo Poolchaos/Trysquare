@@ -4813,3 +4813,31 @@ verified evidence, in writing, here.
   which would teach every part that assumes a file and a line (coverage,
   the code pane, verify-again, the report) about rows that have neither,
   where a mistake reaches code findings too.
+- 2026-10-24 Review round 7 (over 78fc2e5, fc83280, 3ceaaa9, 333a0e0 and
+  fb03107), two read-only reviewers, each finding read again in the code
+  and, where it could be, shown failing first. The project's commands: a
+  cancel that came before one started was never heard, and it ran to its
+  limit; they inherited the server's NODE_ENV=production, so a project's
+  npm ci would skip the devDependencies its tests need and the app would
+  call the failure proven, so NODE_ENV and Next's own variables are
+  withheld; a command now ends when it exits, a background process
+  holding its output given two seconds, never reported timed out after it
+  exited, and on Windows never killed by a process id that may since name
+  another process; a log that cannot be written no longer ends the
+  server; a leftover copy is removed with retries; the copy no longer
+  hardlinks the clone's objects or keeps a remote back to it; the spawn
+  gate sees a dynamic import. The screens: the queue's keys no longer act
+  from inside the project's checks, Complete review takes the focus when
+  a check is decided last, a refused save is said in the card in its
+  fields' names, the dismissal is a form with a label of its own and
+  buttons named for their finding, a queue with only checks to decide
+  says it has no code findings, and the review's activity log is a named
+  list, which axe found once a waiting review was scanned. Tests: the
+  tree-kill tests prove the grandchild existed before the kill; the e2e
+  tests put the checks back whatever happens, decide every code finding
+  to show Complete waits on the check alone, scan both new screens with
+  axe, and photograph the off, refused, checks-only, dismissed and
+  complete states; a resume through a real run keeps one check finding.
+  Left: the report says nothing of check findings until step 3b-2, next;
+  the lingering-child test reproduces only where a pipe outlives its
+  command, Linux and macOS, which CI runs.

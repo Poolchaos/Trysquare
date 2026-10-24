@@ -50,6 +50,13 @@ function killTree(pid: number): void {
   }
 }
 
+/**
+ * How long a command's output may go on arriving after it exits: a process
+ * it left in the background can hold the pipes open, and waiting for them
+ * to close hung the review for as long as it lived (review round 7).
+ */
+const CLOSE_GRACE_MS = 2000;
+
 export function runProjectCommand(options: {
   step: CommandResult["step"];
   command: string;
@@ -59,13 +66,41 @@ export function runProjectCommand(options: {
   signal?: AbortSignal;
 }): Promise<CommandResult> {
   const started = Date.now();
+  const result = (
+    outcome: Pick<CommandResult, "exitCode" | "timedOut" | "cancelled" | "tail">,
+  ): CommandResult => ({
+    step: options.step,
+    command: options.command,
+    ...outcome,
+    durationMs: Date.now() - started,
+    logPath: options.logPath,
+  });
+  // A cancel that came before the command is one it never hears: an abort
+  // event fires once, and a listener added after it waits for ever.
+  const cancelledBefore = () =>
+    result({ exitCode: null, timedOut: false, cancelled: true, tail: "" });
+  if (options.signal?.aborted === true) return Promise.resolve(cancelledBefore());
+
   return mkdir(dirname(options.logPath), { recursive: true }).then(
     () =>
       new Promise<CommandResult>((resolve) => {
+        if (options.signal?.aborted === true) {
+          resolve(cancelledBefore());
+          return;
+        }
         const log = createWriteStream(options.logPath);
+        let logFailed = false;
         let tail = "";
         let timedOut = false;
         let cancelled = false;
+        let exited = false;
+        let settled = false;
+        // A log that cannot be written, a full disk say, is said in the tail;
+        // unheard, its error event would end the server.
+        log.on("error", (error) => {
+          logFailed = true;
+          tail = (tail + `\n${error.message}\n`).slice(-TAIL_CHARS);
+        });
         // Through the platform's shell, as the person would type it: a
         // command such as "npm ci && npm test" is one line of shell.
         const child = spawn(options.command, {
@@ -78,44 +113,61 @@ export function runProjectCommand(options: {
           stdio: ["ignore", "pipe", "pipe"],
         });
         const take = (chunk: Buffer) => {
-          log.write(chunk);
+          if (!logFailed) log.write(chunk);
           tail = (tail + chunk.toString("utf8")).slice(-TAIL_CHARS);
         };
         child.stdout?.on("data", take);
         child.stderr?.on("data", take);
 
+        // Not once the shell has exited on Windows: its id is free to belong
+        // to another process by then, whose tree taskkill would end.
         const stop = () => {
-          if (child.pid !== undefined) killTree(child.pid);
+          if (child.pid === undefined) return;
+          if (exited && process.platform === "win32") return;
+          killTree(child.pid);
         };
         const timer = setTimeout(() => {
           timedOut = true;
           stop();
         }, options.timeoutMs ?? COMMAND_TIME_LIMIT_MS);
         const onAbort = () => {
+          if (exited) return;
           cancelled = true;
           stop();
         };
         options.signal?.addEventListener("abort", onAbort, { once: true });
+        let grace: NodeJS.Timeout | undefined;
 
         const settle = (exitCode: number | null) => {
+          if (settled) return;
+          settled = true;
           clearTimeout(timer);
+          clearTimeout(grace);
           options.signal?.removeEventListener("abort", onAbort);
-          log.end(() =>
-            resolve({
-              step: options.step,
-              command: options.command,
-              exitCode: timedOut || cancelled ? null : exitCode,
-              timedOut,
-              cancelled,
-              durationMs: Date.now() - started,
-              logPath: options.logPath,
-              tail,
-            }),
-          );
+          child.stdout?.destroy();
+          child.stderr?.destroy();
+          const outcome = result({
+            exitCode: timedOut || cancelled ? null : exitCode,
+            timedOut,
+            cancelled,
+            tail,
+          });
+          if (logFailed) resolve(outcome);
+          else log.end(() => resolve(outcome));
         };
         child.on("error", (error) => {
           take(Buffer.from(`\n${error.message}\n`));
           settle(null);
+        });
+        child.on("exit", (code) => {
+          exited = true;
+          clearTimeout(timer);
+          // What it left in its group off Windows: the copy is removed next,
+          // and a server still serving it would hold it and its port.
+          if (process.platform !== "win32" && child.pid !== undefined && !timedOut && !cancelled) {
+            killTree(child.pid);
+          }
+          grace = setTimeout(() => settle(code), CLOSE_GRACE_MS);
         });
         child.on("close", (code) => settle(code));
       }),

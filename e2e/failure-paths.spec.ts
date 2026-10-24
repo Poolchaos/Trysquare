@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type Locator, type Route } from "@playwright/test";
 import { answerOnce, routeUntilStopped } from "./answer-once";
 import { sidewaysOverflow } from "./overflow";
+import { accessibilityViolations } from "./axe";
 import { APP_REPO, COUNTER_FILE, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
 
 /** Unix seconds, and deliberately a fixed moment so the banner is checkable. */
@@ -1166,6 +1167,46 @@ for (const held of [
   });
 }
 
+/**
+ * A region in light, dark and at a phone's width, clipped from the whole
+ * page so the fixed top bar is not drawn across it, the phone measured for
+ * anything past its edge while it is there.
+ */
+async function shootAll(
+  page: import("@playwright/test").Page,
+  region: Locator,
+  name: string,
+): Promise<void> {
+  const evidence = join(
+    fileURLToPath(new URL("..", import.meta.url)),
+    "review",
+    `${new Date().toISOString().slice(0, 10)}-e2e`,
+  );
+  mkdirSync(evidence, { recursive: true });
+  const shoot = async (file: string) => {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const box = await region.boundingBox();
+    if (!box) throw new Error(`${name} has no box to photograph.`);
+    await page.screenshot({
+      path: join(evidence, `${file}.png`),
+      fullPage: true,
+      clip: box,
+      animations: "disabled",
+    });
+  };
+  const desktop = page.viewportSize();
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await shoot(`${name}-${scheme}`);
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const sideways = await sidewaysOverflow(page);
+  expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
+  await shoot(`${name}-phone`);
+  if (desktop) await page.setViewportSize(desktop);
+}
+
 test("a project's failing test is decided above the queue, and counted (WP-I)", async ({
   page,
 }) => {
@@ -1188,14 +1229,15 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
     screenshotDir: null,
     designStandardPath: null,
   });
-  let reviewUrl = "";
+  let reviewId = "";
+  let completed = false;
   try {
     const on = await page.request.put(`/api/projects/${app.id}/checks`, {
       data: checks(`"${process.execPath}" "${failing}"`),
     });
     expect(on.status()).toBe(200);
     await startAReview(page);
-    reviewUrl = page.url();
+    reviewId = page.url().split("/").pop()!;
     await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
 
     const section = page.getByRole("region", { name: "Tests and design" });
@@ -1207,50 +1249,70 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
     // Counted with the code findings: nine of those, and this.
     await expect(page.getByText("0 of 10 decided")).toBeVisible();
     await expect(page.getByText(/1 from the project's checks left to decide/)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Complete review" })).toBeDisabled();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, section, "checks-queue");
 
-    const evidence = join(
-      fileURLToPath(new URL("..", import.meta.url)),
-      "review",
-      `${new Date().toISOString().slice(0, 10)}-e2e`,
+    // A review whose only findings are its checks: the queue says it has
+    // none, not an empty list with keys that do nothing (review round 7).
+    const stopNoCode = await routeUntilStopped(
+      page,
+      `**/api/reviews/${reviewId}`,
+      async (route) => {
+        const response = await route.fetch();
+        const body = (await response.json()) as object;
+        await route.fulfill({ response, json: { ...body, findings: [] } });
+      },
     );
-    mkdirSync(evidence, { recursive: true });
-    const shoot = async (name: string) => {
-      await page.evaluate(() => window.scrollTo(0, 0));
-      const box = await section.boundingBox();
-      if (!box) throw new Error("The section has no box to photograph.");
-      await page.screenshot({
-        path: join(evidence, `${name}.png`),
-        fullPage: true,
-        clip: box,
-        animations: "disabled",
-      });
-    };
-    const desktop = page.viewportSize();
-    for (const scheme of ["light", "dark"] as const) {
-      await page.emulateMedia({ colorScheme: scheme });
-      await shoot(`checks-queue-${scheme}`);
-    }
-    await page.emulateMedia({ colorScheme: "light" });
-    await page.setViewportSize({ width: 390, height: 844 });
-    const sideways = await sidewaysOverflow(page);
-    expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
-    await shoot("checks-queue-phone");
-    if (desktop) await page.setViewportSize(desktop);
+    await page.reload();
+    await expect(
+      page.getByText("No code findings: the review raised none that verification kept."),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("navigation", { name: "Findings" })).toHaveCount(0);
+    await expect(page.getByText("0 of 1 decided")).toBeVisible();
+    await shootAll(page, page.getByRole("main"), "checks-only");
+    await stopNoCode();
+    await page.reload();
+    await expect(page.getByText("0 of 10 decided")).toBeVisible({ timeout: 30_000 });
 
-    // Dismissed only with a reason, which is kept and shown.
-    const dismiss = section.getByRole("button", { name: "Dismiss" });
+    // Every code finding decided, the check still not: Complete stays off
+    // for the check alone (review round 7: it was off for the code findings).
+    const read = (await (await page.request.get(`/api/reviews/${reviewId}`)).json()) as {
+      findings: { id: string; status: string }[];
+    };
+    for (const finding of read.findings.filter((row) => row.status === "verified")) {
+      const confirmed = await page.request.post(`/api/findings/${finding.id}/confirm`, {
+        data: {},
+      });
+      expect(confirmed.status()).toBe(200);
+    }
+    await page.reload();
+    await expect(page.getByText("9 of 10 decided")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("1 from the project's checks left to decide")).toBeVisible();
+    const complete = page.getByRole("button", { name: "Complete review" });
+    await expect(complete).toBeDisabled();
+
+    // Dismissed only with a reason, which is kept and shown; then Complete.
+    const dismiss = section.getByRole("button", { name: /^Dismiss/ });
     await expect(dismiss).toBeDisabled();
-    await section.getByPlaceholder("Why is this not a problem?").fill("Flaky on this machine.");
-    await dismiss.click();
+    await section.getByLabel("Why is this not a problem?").fill("Flaky on this machine.");
+    await section.getByLabel("Why is this not a problem?").press("Enter");
     await expect(section).toContainText("Dismissed: Flaky on this machine.");
-    await expect(page.getByText("1 of 10 decided")).toBeVisible();
-    await expect(page.getByText(/from the project's checks/)).toHaveCount(0);
+    await expect(page.getByText("10 of 10 decided")).toBeVisible();
+    await shootAll(page, section, "checks-dismissed");
+    await expect(complete).toBeEnabled();
+    await complete.click();
+    await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
+    completed = true;
+    // Read only, once complete.
+    await expect(section.getByRole("button")).toHaveCount(0);
+    await expect(section).toContainText("dismissed");
+    await shootAll(page, section, "checks-complete");
   } finally {
-    await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(null) });
-    if (reviewUrl !== "") {
-      const reviewId = reviewUrl.split("/").pop()!;
-      await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
+    const off = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(null) });
+    expect.soft(off.status(), "the checks turned off again").toBe(200);
+    if (reviewId !== "" && !completed) {
+      const cancelled = await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
+      expect.soft(cancelled.status(), "the review cancelled").toBe(200);
     }
     writeFileSync(COUNTER_FILE, callsBefore, "utf8");
   }
@@ -1789,97 +1851,81 @@ test("a project's own tests and e2e are set from its page, off until turned on (
   await page.getByRole("link", { name: "app", exact: true }).click();
   await expect(page.getByRole("heading", { name: "app", level: 1, exact: true })).toBeVisible();
   const projectId = page.url().split("/").pop()!;
-  const card = page.getByRole("heading", { name: "Tests and design" }).locator("..");
-  await expect(card).toContainText("Off: a review reads the code and runs none of it.");
-  const warning = card.getByText(/runs the branch's own code on this machine, as you/);
-  await expect(warning).toHaveCount(0);
-
-  await card.getByLabel("Run this project's tests and e2e on each review").check();
-  await expect(warning).toBeVisible();
-  await card.getByLabel(/^Tests/).fill("npm test");
-  await card.getByLabel(/^E2E/).fill("npm run e2e");
-  const save = card.getByRole("button", { name: "Save checks" });
-  await save.click();
-  // Screenshots only from an e2e run with its folder named (D-192).
-  await expect(
-    page.getByText(
-      "screenshotDir: An e2e command and the folder it saves screenshots to go together.",
-    ),
-  ).toBeVisible();
-
-  await card.getByLabel("Screenshots folder").fill("review/screens");
-  await card.getByLabel("Design standard").fill("docs/04-UI-DESIGN.md");
-  await save.click();
-  await expect(card).toContainText("On: each review also runs these on a throwaway copy");
-  const stored = async () =>
-    (
-      (await (await page.request.get(`/api/projects/${projectId}/checks`)).json()) as {
-        checks: Record<string, unknown>;
-      }
-    ).checks;
-  expect(await stored()).toEqual({
-    enabled: true,
+  const off = {
+    enabled: false,
     installCommand: null,
-    testCommand: "npm test",
-    e2eCommand: "npm run e2e",
-    screenshotDir: "review/screens",
-    designStandardPath: "docs/04-UI-DESIGN.md",
-  });
+    testCommand: null,
+    e2eCommand: null,
+    screenshotDir: null,
+    designStandardPath: null,
+  };
+  try {
+    const card = page.getByRole("heading", { name: "Tests and design" }).locator("..");
+    await expect(card).toContainText("Off: a review reads the code and runs none of it.");
+    await shootAll(page, card, "project-checks-off");
+    const warning = card.getByText(/runs the branch's own code on this machine, as you/);
+    await expect(warning).toHaveCount(0);
 
-  await page.reload();
-  await expect(card.getByLabel("Run this project's tests and e2e on each review")).toBeChecked();
-  await expect(card.getByLabel("Screenshots folder")).toHaveValue("review/screens");
+    await card.getByLabel("Run this project's tests and e2e on each review").check();
+    await expect(warning).toBeVisible();
+    await card.getByLabel(/^Tests/).fill("npm test");
+    await card.getByLabel(/^E2E/).fill("npm run e2e");
+    const save = card.getByRole("button", { name: "Save checks" });
+    await save.click();
+    // Screenshots only from an e2e run with its folder named (D-192), said
+    // in the card in its label's words (review round 7).
+    await expect(
+      card.getByText(
+        "Screenshots folder: An e2e command and the folder it saves screenshots to go together.",
+      ),
+    ).toBeVisible();
+    await shootAll(page, card, "project-checks-refused");
 
-  const evidence = join(
-    fileURLToPath(new URL("..", import.meta.url)),
-    "review",
-    `${new Date().toISOString().slice(0, 10)}-e2e`,
-  );
-  mkdirSync(evidence, { recursive: true });
-  // From the whole page, clipped to the card, so the fixed top bar is not
-  // drawn across it.
-  const shoot = async (name: string) => {
+    await card.getByLabel("Screenshots folder").fill("review/screens");
+    await card.getByLabel("Design standard").fill("docs/04-UI-DESIGN.md");
+    await save.click();
+    await expect(card).toContainText("On: each review also runs these on a throwaway copy");
+    const stored = async () =>
+      (
+        (await (await page.request.get(`/api/projects/${projectId}/checks`)).json()) as {
+          checks: Record<string, unknown>;
+        }
+      ).checks;
+    expect(await stored()).toEqual({
+      enabled: true,
+      installCommand: null,
+      testCommand: "npm test",
+      e2eCommand: "npm run e2e",
+      screenshotDir: "review/screens",
+      designStandardPath: "docs/04-UI-DESIGN.md",
+    });
+
+    await page.reload();
+    await expect(card.getByLabel("Run this project's tests and e2e on each review")).toBeChecked();
+    await expect(card.getByLabel("Screenshots folder")).toHaveValue("review/screens");
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, card, "project-checks");
+
+    // The header too, whose address ran off a phone where a temporary path is
+    // long (macOS CI, run 40072390549).
+    const desktop = page.viewportSize();
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => window.scrollTo(0, 0));
-    const box = await card.boundingBox();
-    if (!box) throw new Error("The card has no box to photograph.");
     await page.screenshot({
-      path: join(evidence, `${name}.png`),
-      fullPage: true,
-      clip: box,
+      path: join(
+        fileURLToPath(new URL("..", import.meta.url)),
+        "review",
+        `${new Date().toISOString().slice(0, 10)}-e2e`,
+        "project-header-phone.png",
+      ),
       animations: "disabled",
     });
-  };
-  const desktop = page.viewportSize();
-  for (const scheme of ["light", "dark"] as const) {
-    await page.emulateMedia({ colorScheme: scheme });
-    await shoot(`project-checks-${scheme}`);
+    if (desktop) await page.setViewportSize(desktop);
+  } finally {
+    // Put back whatever happened, or every later review would run npm.
+    const reset = await page.request.put(`/api/projects/${projectId}/checks`, { data: off });
+    expect.soft(reset.status(), "the checks turned off again").toBe(200);
   }
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.setViewportSize({ width: 390, height: 844 });
-  const sideways = await sidewaysOverflow(page);
-  expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
-  await shoot("project-checks-phone");
-  // The header too, whose address ran off a phone where a temporary path is
-  // long (macOS CI, run 40072390549).
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({
-    path: join(evidence, "project-header-phone.png"),
-    animations: "disabled",
-  });
-  if (desktop) await page.setViewportSize(desktop);
-
-  // Put back, for the tests after.
-  const off = await page.request.put(`/api/projects/${projectId}/checks`, {
-    data: {
-      enabled: false,
-      installCommand: null,
-      testCommand: null,
-      e2eCommand: null,
-      screenshotDir: null,
-      designStandardPath: null,
-    },
-  });
-  expect(off.status()).toBe(200);
 });
 
 test("a review deleted from the list takes its evidence with it", async ({ page }) => {
@@ -2387,7 +2433,7 @@ test("a dropped stream is said in the theater and opened again, and the feed goe
   // the feed itself, not the notes the poll reads back, so only a stream
   // opened again can put it there.
   await expect(
-    page.getByRole("group", { name: "Activity log" }).getByText(/stalled call was never cancelled/),
+    page.getByRole("list", { name: "Activity log" }).getByText(/stalled call was never cancelled/),
   ).toBeVisible({ timeout: 30_000 });
   page.off("request", countStreams);
 });

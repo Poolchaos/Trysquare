@@ -106,30 +106,45 @@ function CheckFindingCard({
       {deciding && isUndecidedCheck(row) ? (
         <div className="mt-3 grid gap-2 border-t border-[var(--color-border)] pt-3">
           <div>
+            {/* Named for its finding: two cards, a failing test run and a
+                failing e2e run, made two buttons named only Confirm. */}
             <Button
               variant="primary"
+              aria-label={`Confirm: ${row.issue}`}
               disabled={busy || row.status === "open_question"}
               onClick={() => void decide("confirm")}
             >
               Confirm
             </Button>
           </div>
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="font-medium">Why is this not a problem?</span>
+          {/* A form, as the queue's dismissal is, so Enter in the reason
+              dismisses and the label names only its box (review round 7). */}
+          <form
+            className="grid gap-1.5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (reason.trim() !== "") void decide("dismiss");
+            }}
+          >
+            <label htmlFor={`dismiss-${row.id}`} className="text-sm font-medium">
+              Why is this not a problem?
+            </label>
             <span className="flex gap-2">
               <Input
+                id={`dismiss-${row.id}`}
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
-                placeholder="Why is this not a problem?"
+                placeholder="A flaky test, tracked elsewhere"
               />
               <Button
+                type="submit"
+                aria-label={`Dismiss: ${row.issue}`}
                 disabled={busy || reason.trim() === ""}
-                onClick={() => void decide("dismiss")}
               >
                 Dismiss
               </Button>
             </span>
-          </label>
+          </form>
         </div>
       ) : null}
     </Card>
@@ -147,11 +162,12 @@ export function CheckFindings({
   onChanged: () => void | Promise<void>;
 }) {
   return (
-    <section aria-label="Tests and design" className="mb-6">
+    // Marked so the queue's keys leave it alone (review round 7).
+    <section aria-label="Tests and design" data-check-findings className="mb-6">
       <h2 className="mb-1 text-heading font-semibold">Tests and design</h2>
       <p className="mb-3 text-sm text-[var(--color-ink-muted)]">
-        What the project&apos;s own checks found on this branch, decided as the findings are: only
-        one confirmed goes into the report.
+        What the project&apos;s own checks found on this branch, decided as the findings below are:
+        only a confirmed one goes into the report.
       </p>
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {rows.map((row) => (

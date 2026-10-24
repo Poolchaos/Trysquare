@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 const SRC = join(process.cwd(), "src");
 const SPAWNERS = ["server/gitops/", "server/engine/", "server/projectrun/"];
 const IMPORTS_CHILD_PROCESS =
-  /(?:from\s+["'](?:node:)?child_process["']|require\(\s*["'](?:node:)?child_process["']\s*\))/;
+  /(?:from\s+["'](?:node:)?child_process["']|(?:require|import)\(\s*["'](?:node:)?child_process["']\s*\))/;
 
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

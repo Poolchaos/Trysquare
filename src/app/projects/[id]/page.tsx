@@ -521,14 +521,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               </p>
               <ProjectChecksForm
                 key={JSON.stringify(detail.checks)}
+                projectId={id}
                 stored={detail.checks}
-                busy={busy}
-                onSave={(checks) =>
-                  void call(`/api/projects/${id}/checks`, {
-                    method: "PUT",
-                    body: JSON.stringify(checks),
-                  })
-                }
+                onSaved={load}
               />
             </Card>
 
@@ -693,16 +688,36 @@ function ProjectEditForm({
  * sent whole. Turning them on says what it means before it is saved: the
  * branch's own code runs on this machine.
  */
+/** The server says a field by its key; the card says it as its label. */
+const CHECK_FIELD_LABELS: Record<string, string> = {
+  enabled: "On",
+  installCommand: "Install",
+  testCommand: "Tests",
+  e2eCommand: "E2E",
+  screenshotDir: "Screenshots folder",
+  designStandardPath: "Design standard",
+};
+
+function inFieldLabels(error: string): string {
+  return error.replace(/(^|; )([A-Za-z]+): /g, (whole, before: string, key: string) =>
+    CHECK_FIELD_LABELS[key] === undefined ? whole : `${before}${CHECK_FIELD_LABELS[key]}: `,
+  );
+}
+
 function ProjectChecksForm({
+  projectId,
   stored,
-  busy,
-  onSave,
+  onSaved,
 }: {
+  projectId: string;
   stored: ProjectChecks;
-  busy: boolean;
-  onSave: (checks: ProjectChecks) => void;
+  onSaved: () => Promise<void>;
 }) {
   const [checks, setChecks] = useState(stored);
+  const [busy, setBusy] = useState(false);
+  // Said in the card, beside Save checks: at the top of the page it was a
+  // screen away on a phone, in the server's field keys (review round 7).
+  const [problem, setProblem] = useState("");
   const text = (field: Exclude<keyof ProjectChecks, "enabled">) => ({
     value: checks[field] ?? "",
     onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
@@ -711,9 +726,21 @@ function ProjectChecksForm({
   return (
     <form
       className="grid gap-3"
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
-        onSave(checks);
+        setBusy(true);
+        setProblem("");
+        try {
+          const sent = await send(
+            `/api/projects/${projectId}/checks`,
+            { method: "PUT", body: JSON.stringify(checks) },
+            "The checks could not be saved",
+          );
+          if (sent.ok) await onSaved();
+          else setProblem(inFieldLabels(sent.error));
+        } finally {
+          setBusy(false);
+        }
       }}
     >
       <label className="flex items-start gap-2 text-sm">
@@ -753,6 +780,11 @@ function ProjectChecksForm({
           {...text("designStandardPath")}
         />
       </Field>
+      {problem ? (
+        <div role="alert">
+          <Problem>{problem}</Problem>
+        </div>
+      ) : null}
       <div>
         <Button type="submit" disabled={busy}>
           Save checks

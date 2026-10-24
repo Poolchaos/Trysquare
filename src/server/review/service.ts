@@ -383,6 +383,9 @@ export async function prepareAndRun(
     // stages' answers, so a resume does not add a second copy (D-197).
     deleteCheckFindingsForReview(db, reviewId);
     if (checks.enabled && primary !== undefined) {
+      // Before the copy: the fetch and the bundle above may have been
+      // cancelled, and nothing since has asked.
+      assertNotCancelled(options.signal);
       const ran = await runChecksForReview(db, {
         reviewId,
         dataDir,

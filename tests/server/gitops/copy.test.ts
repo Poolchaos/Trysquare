@@ -5,7 +5,15 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -69,6 +77,16 @@ describe("a throwaway copy", () => {
     expect(git(["for-each-ref"], cloneDir)).toBe(refsBefore);
     expect(git(["worktree", "list", "--porcelain"], cloneDir)).not.toContain("copy-written");
     expect(git(["rev-parse", "--is-bare-repository"], cloneDir).trim()).toBe("true");
+    // No way back: no remote to push to, and no object file shared.
+    expect(git(["remote"], copyDir).trim()).toBe("");
+    const objects = readdirSync(join(copyDir, ".git", "objects"), {
+      recursive: true,
+      withFileTypes: true,
+    })
+      .filter((entry) => entry.isFile())
+      .map((entry) => join(entry.parentPath, entry.name));
+    expect(objects.length).toBeGreaterThan(0);
+    expect(objects.filter((file) => statSync(file).nlink > 1)).toEqual([]);
   });
 
   it("is removed whole", async () => {

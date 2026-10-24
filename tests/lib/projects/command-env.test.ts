@@ -20,6 +20,9 @@ describe("a project command's environment", () => {
         CLAUDE_CODE_ENTRYPOINT: "cli",
         ANTHROPIC_API_KEY: "sk-test",
         anthropic_base_url: "lower case too",
+        NODE_ENV: "production",
+        NEXT_RUNTIME: "nodejs",
+        __NEXT_PRIVATE_ORIGIN: "http://127.0.0.1:3000",
       }),
     ).toEqual({
       PATH: "/usr/bin",
