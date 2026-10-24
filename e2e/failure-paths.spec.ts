@@ -1769,6 +1769,13 @@ test("a project's own tests and e2e are set from its page, off until turned on (
   const sideways = await sidewaysOverflow(page);
   expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
   await shoot("project-checks-phone");
+  // The header too, whose address ran off a phone where a temporary path is
+  // long (macOS CI, run 40072390549).
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: join(evidence, "project-header-phone.png"),
+    animations: "disabled",
+  });
   if (desktop) await page.setViewportSize(desktop);
 
   // Put back, for the tests after.

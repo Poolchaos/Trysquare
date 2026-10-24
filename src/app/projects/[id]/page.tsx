@@ -240,7 +240,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         title={project.name}
         subtitle={
           <span className="flex flex-wrap items-center gap-3">
-            <Mono className="text-xs">{project.gitUrl}</Mono>
+            <Mono className="min-w-0 text-xs break-all">{project.gitUrl}</Mono>
             <span>default {project.defaultBranch}</span>
             <span>
               {project.lastFetchedAt
