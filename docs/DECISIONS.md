@@ -4931,3 +4931,19 @@ verified evidence, in writing, here.
   command, its e2e did not run (a failed install, a cancel), or it saved
   no screenshot. Read from the result the review kept, as the commands'
   outcomes are.
+- 2026-10-24 WP-I step 6a, the design fixture: a storefront of six
+  static pages, built like the seeded repos by a script, whose own e2e
+  photographs each at desktop and phone width. Planted: overflow (a table
+  set 640px wide), low contrast (#c8c8c8 on white) and clipped text (a
+  label in a box one line high), one each, beside clean screens; the
+  checkout table overflows only on a phone, so one page is planted and
+  clean at once. The key is held to what Chromium measures on each page,
+  not written and trusted. Screenshots are of the viewport, not the full
+  page, so what runs off a phone is cut off as a person sees it. The
+  e2e takes a Playwright path as its argument: the fixture has no
+  install, and one per review would need the network. Looking at the
+  first shots found the checkout's Pay button flush against its table, a
+  spacing flaw a grader could fairly mark C on a screen the key calls
+  clean; tables now keep 16px below them. Rejected: committed PNGs
+  copied by a fake e2e, which would grade pictures of nothing the
+  fixture's code renders.

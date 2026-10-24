@@ -176,6 +176,9 @@ are accepted; anything else is refused by name.
   fidelity gate runs against.
 - `tests/fixtures/fake-claude.mjs` - stand-in CLI, so tests are hermetic and
   cost nothing.
+- `tests/fixtures/build-design-fixture.mjs` - the design fixture, screens
+  with planted design defects and a key proven by measurement (WP-I
+  step 6, 05-TESTING section 4b).
 - `tests/` - unit and integration tests. `e2e/` - the browser journey, the
   failure paths, the theme and screenshot pass with the axe accessibility
   pass, and the shutdown pass.

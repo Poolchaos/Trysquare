@@ -116,6 +116,23 @@ Gate assertions (fake engine in CI; real engine manually pre-release):
 The real-engine run's report and usage numbers are captured into
 `review/<session>-engine/` as the proof artifact before any release claim.
 
+## 4b. The design fixture (WP-I step 6)
+
+`tests/fixtures/build-design-fixture.mjs` builds a small storefront whose
+`feature/checkout-screens` branch adds four screens beside main's two,
+with a design standard (`DESIGN.md`) and its own e2e (`e2e/shoot.mjs`),
+which photographs every page at 1280 and 390 pixels wide: twelve
+screenshots, two grading requests. Three carry a planted defect: the
+checkout table, 640 pixels wide, runs off a phone; the receipt's order line
+is light grey on white; the profile's button label is cut off by its box.
+The key, `design-manifest.json`, names the defect each screenshot shows, or
+none. `tests/server/projectrun/design-fixture.test.ts` runs that e2e as the
+app runs a project's and measures every page in Chromium at the key's
+width (sideways scroll, text contrast under 4.5:1, text cut off by a box
+that hides its overflow), and holds the key to exactly what it measures.
+The e2e is handed the path of a Playwright install, the fixture having
+none of its own.
+
 ## 5. Numbers or silence
 
 Any claim about review runtime, token usage, or app performance ships with
