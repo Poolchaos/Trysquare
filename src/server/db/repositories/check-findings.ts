@@ -8,6 +8,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { assertFindingTransition, findingStatusSchema } from "@/lib/domain/state-machines";
 import { newId, nowIso } from "@/lib/ids";
 import type { Db } from "../client";
+import { severityOfGrade } from "@/lib/review/design";
 import { checkFindings, reviews } from "../schema";
 import { OpenQuestionNotConfirmableError, ReviewNotDecidingError } from "./findings";
 
@@ -146,4 +147,58 @@ export function listUndecidedCheckFindings(db: Db, reviewId: string): CheckFindi
   return listCheckFindings(db, reviewId).filter(
     (row) => row.status === "verified" || row.status === "open_question",
   );
+}
+
+/**
+ * A screenshot the first grader graded C or D (WP-I step 4): a candidate,
+ * until the second grader has looked at it too.
+ */
+export function recordDesignCandidate(
+  db: Db,
+  reviewId: string,
+  graded: { name: string; screenshotPath: string; grade: "C" | "D"; whatIsOff: string },
+): CheckFinding {
+  const row = {
+    id: newId(),
+    reviewId,
+    kind: "design",
+    step: null,
+    command: null,
+    exitCode: null,
+    timedOut: false,
+    logPath: null,
+    screenshotPath: graded.screenshotPath,
+    grade: graded.grade,
+    severity: severityOfGrade(graded.grade),
+    issue: `The screen ${graded.name} is graded ${graded.grade}.`,
+    evidence: graded.whatIsOff,
+    status: "candidate",
+    verificationNote: null,
+    dismissReason: null,
+    dismissedFrom: null,
+    createdAt: nowIso(),
+    decidedAt: null,
+  };
+  db.insert(checkFindings).values(row).run();
+  return row;
+}
+
+/** The second grader's word on a candidate, on the code findings' transitions. */
+export function settleDesignCandidate(
+  db: Db,
+  id: string,
+  to: "verified" | "open_question",
+  note: string,
+): CheckFinding {
+  const from = findingStatusSchema.parse(requireCheckFinding(db, id).status);
+  assertFindingTransition(from, to);
+  const result = db
+    .update(checkFindings)
+    .set({ status: to, verificationNote: note })
+    .where(and(eq(checkFindings.id, id), eq(checkFindings.status, from)))
+    .run();
+  if (result.changes === 0) {
+    throw new Error(`Finding "${id}" changed status concurrently; nothing was overwritten.`);
+  }
+  return requireCheckFinding(db, id);
 }

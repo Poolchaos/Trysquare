@@ -978,7 +978,7 @@ test("the scan theater follows the review from stage to stage", async ({ page })
     await expect(theater.getByText("Adversarial", { exact: true })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(theater.getByText(/stage 4 of 8/)).toBeVisible();
+    await expect(theater.getByText(/stage 4 of 10/)).toBeVisible();
 
     // The five steps a person reads (WP-G): the first two done with what
     // they measured, finding issues the one now.

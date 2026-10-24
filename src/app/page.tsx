@@ -85,8 +85,10 @@ const STAGE_ORDER = [
   "s2_comprehension",
   "s3_adversarial",
   "s4_deletions",
+  "s4b_design_grading",
   "s5_verification",
   "s5b_second_verification",
+  "s5c_design_second",
   "s6_audit",
 ];
 
@@ -97,7 +99,9 @@ const STAGE_NAMES: Record<string, string> = {
   s3_adversarial: "Adversarial",
   s4_deletions: "Deletions",
   s5_verification: "Verification",
+  s4b_design_grading: "Design grading",
   s5b_second_verification: "Second verifier",
+  s5c_design_second: "Second grader",
   s6_audit: "Audit",
 };
 

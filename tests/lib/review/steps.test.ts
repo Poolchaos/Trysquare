@@ -53,6 +53,7 @@ describe("where a review is", () => {
           "s2_comprehension",
           "s3_adversarial",
           "s4_deletions",
+          "s4b_design_grading",
         ),
         executing: "s5_verification",
         status: "verifying",

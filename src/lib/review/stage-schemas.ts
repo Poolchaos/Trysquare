@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { RISK_TAGS, SEVERITIES, type ReviewStage } from "@/lib/domain/enums";
+import { designGradesSchema } from "./design";
 
 export const riskStageSchema = z.object({
   files: z.array(
@@ -184,6 +185,8 @@ const STAGE_SCHEMAS = {
   s4_deletions: deletionStageSchema,
   s5_verification: verificationStageSchema,
   s5b_second_verification: verificationStageSchema,
+  s4b_design_grading: designGradesSchema,
+  s5c_design_second: designGradesSchema,
   // The audit stage produces prose for the report rather than structured
   // findings, so it reuses the simplest shape; nothing reads its output.
   s6_audit: riskStageSchema,

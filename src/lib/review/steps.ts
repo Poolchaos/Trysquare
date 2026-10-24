@@ -21,12 +21,12 @@ export const STEPS = [
   {
     title: "Find issues",
     what: "Every rule is walked against every change, and every deletion is accounted for.",
-    stages: ["s3_adversarial", "s4_deletions"],
+    stages: ["s3_adversarial", "s4_deletions", "s4b_design_grading"],
   },
   {
     title: "Prove each finding",
     what: "Two independent verifiers must each trace the failure through the code.",
-    stages: ["s5_verification", "s5b_second_verification"],
+    stages: ["s5_verification", "s5b_second_verification", "s5c_design_second"],
   },
   {
     title: "Report",

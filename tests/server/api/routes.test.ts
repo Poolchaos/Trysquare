@@ -970,8 +970,11 @@ describe("looking before you pay", () => {
       s2_comprehension: 1,
       s3_adversarial: 1,
       s4_deletions: 1,
+      // No screenshots to grade: this project's checks are off (WP-I).
+      s4b_design_grading: 0,
       s5_verification: 1,
       s5b_second_verification: 1,
+      s5c_design_second: 0,
     });
     expect(body.requests).toBe(6);
     expect(body.requestsSplit).toBe(false);

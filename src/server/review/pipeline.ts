@@ -41,6 +41,21 @@ import {
   riskStageSchema,
 } from "@/lib/review/stage-schemas";
 import { assertSweepComplete, runSweeps } from "@/lib/review/sweep";
+import {
+  DESIGN_BATCH,
+  assertGradesMatch,
+  composeDesignSystemPrompt,
+  designGradesSchema,
+  isFailingGrade,
+  renderDesignPrompt,
+  type Grade,
+} from "@/lib/review/design";
+import { outputContractFor } from "@/lib/review/stage-schemas";
+import {
+  recordDesignCandidate,
+  settleDesignCandidate,
+  type CheckFinding,
+} from "@/server/db/repositories/check-findings";
 import type { Db } from "@/server/db/client";
 import { appendRunNote } from "@/server/db/repositories/reviews";
 import {
@@ -97,6 +112,8 @@ export interface StageRequest {
   findingId?: string;
   /** Asked of this model rather than the review's: the second verifier's (WP-E). */
   model?: string;
+  /** Folders outside the checkout it may read: the screenshots', to grade (D-198). */
+  readDirs?: readonly string[];
 }
 
 export interface StageResponse {
@@ -145,6 +162,18 @@ export interface PipelineInput {
   baseContents?: ReadonlyMap<string, string> | undefined;
   /** The model that proves every finding S5 proves again, in S5b (WP-E). */
   secondVerifier: string;
+  /**
+   * The screenshots the project's own e2e saved, to grade (WP-I step 4), and
+   * its design standard; absent when its checks are off or saved none.
+   */
+  design?:
+    | {
+        /** Their folder, outside the checkout: the stage may read it (D-198). */
+        screenshotsDir: string;
+        screenshots: readonly { name: string; path: string }[];
+        standard: string | null;
+      }
+    | undefined;
   /**
    * Composes the system prompt. Given a batch's rules when the profile sends
    * fewer than all of them, so the caller keeps ownership of composition.
@@ -627,6 +656,51 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     if (hunksSettled && deletionSettled) markFileReviewed(db, file.id);
   }
 
+  // S4b: the project's screens, each screenshot graded A to D by looking at
+  // it (WP-I step 4). A C or D is a candidate of its own kind, kept apart
+  // from the code's (D-197), until the second grader has looked too.
+  const design = input.design;
+  const designCandidates: CheckFinding[] = [];
+  if (design !== undefined && design.screenshots.length > 0) {
+    const batches: (typeof design.screenshots)[] = [];
+    for (let at = 0; at < design.screenshots.length; at += DESIGN_BATCH) {
+      batches.push(design.screenshots.slice(at, at + DESIGN_BATCH));
+    }
+    for (const [index, batch] of batches.entries()) {
+      const response = await input.run({
+        stage: "s4b_design_grading",
+        systemPrompt: composeDesignSystemPrompt({
+          second: false,
+          standard: design.standard,
+          outputContract: outputContractFor(designGradesSchema),
+        }),
+        prompt: renderDesignPrompt(batch),
+        readDirs: [design.screenshotsDir],
+        ...(batches.length > 1 ? { batchNumber: index + 1, batchCount: batches.length } : {}),
+      });
+      const graded = rejecting("s4b_design_grading", () => {
+        const parsed = designGradesSchema.parse(response.output);
+        assertGradesMatch(
+          parsed.grades,
+          batch.map((shot) => shot.name),
+        );
+        return parsed.grades;
+      });
+      for (const grade of graded) {
+        if (!isFailingGrade(grade.grade)) continue;
+        const shot = batch.find((each) => each.name === grade.screenshot)!;
+        designCandidates.push(
+          recordDesignCandidate(db, reviewId, {
+            name: shot.name,
+            screenshotPath: shot.path,
+            grade: grade.grade,
+            whatIsOff: grade.whatIsOff,
+          }),
+        );
+      }
+    }
+  }
+
   // S5: verification, in a fresh session with no access to the reasoning that
   // produced the candidates.
   const verifying = {
@@ -668,6 +742,63 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     tally.verified = second.verified;
     tally.openQuestions += second.disagreed;
     secondVerifierDisagreed = second.disagreed;
+  }
+
+  // S5c: each screen graded C or D, graded again on the other strong family,
+  // not shown the first grade. Both C or D proves it; anything else leaves
+  // it an open question, one grader not overriding the other (D-188).
+  if (design !== undefined && designCandidates.length > 0) {
+    const asked = designCandidates.map((row) => ({
+      name: design.screenshots.find((shot) => shot.path === row.screenshotPath)!.name,
+      path: row.screenshotPath!,
+    }));
+    const second = new Map<string, { grade: Grade; whatIsOff: string }>();
+    const batches: (typeof asked)[] = [];
+    for (let at = 0; at < asked.length; at += DESIGN_BATCH) {
+      batches.push(asked.slice(at, at + DESIGN_BATCH));
+    }
+    for (const [index, batch] of batches.entries()) {
+      const response = await input.run({
+        stage: "s5c_design_second",
+        systemPrompt: composeDesignSystemPrompt({
+          second: true,
+          standard: design.standard,
+          outputContract: outputContractFor(designGradesSchema),
+        }),
+        prompt: renderDesignPrompt(batch),
+        readDirs: [design.screenshotsDir],
+        model: input.secondVerifier,
+        ...(batches.length > 1 ? { batchNumber: index + 1, batchCount: batches.length } : {}),
+      });
+      const graded = rejecting("s5c_design_second", () => {
+        const parsed = designGradesSchema.parse(response.output);
+        assertGradesMatch(
+          parsed.grades,
+          batch.map((shot) => shot.name),
+        );
+        return parsed.grades;
+      });
+      for (const grade of graded) second.set(grade.screenshot, grade);
+    }
+    for (const [index, row] of designCandidates.entries()) {
+      const again = second.get(asked[index]!.name)!;
+      if (isFailingGrade(again.grade)) {
+        settleDesignCandidate(
+          db,
+          row.id,
+          "verified",
+          `Graded ${again.grade} again by the second grader, ${input.secondVerifier}: ${again.whatIsOff}`,
+        );
+      } else {
+        settleDesignCandidate(
+          db,
+          row.id,
+          "open_question",
+          `The second grader, ${input.secondVerifier}, graded it ${again.grade}` +
+            (again.whatIsOff.trim() === "" ? "." : `: ${again.whatIsOff}`),
+        );
+      }
+    }
   }
 
   // A candidate the verification stage never ruled on is an outstanding

@@ -9,8 +9,8 @@
  */
 
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { isAbsolute, join, relative } from "node:path";
 import { checksDir } from "@/lib/paths";
 import type { ProjectChecks } from "@/lib/projects/checks";
 import type { Db } from "../db/client";
@@ -21,6 +21,30 @@ import { runProjectChecks, type ChecksRun, type CommandResult } from "../project
 export interface ChecksResult extends ChecksRun {
   commit: string;
   checks: ProjectChecks;
+  /** The project's design standard, read from the copy before it went (WP-I). */
+  designStandard?: string | null;
+}
+
+/** As much of a design standard as a grading prompt carries. */
+const STANDARD_CHARS = 50_000;
+
+/**
+ * The design standard's text, or null when none is named or it is not a
+ * file inside the copy. Resolved first: a symlink committed at that path
+ * would otherwise put a file from elsewhere on this machine into a prompt.
+ */
+async function readStandard(copyDir: string, path: string | null): Promise<string | null> {
+  if (path === null) return null;
+  try {
+    const root = await realpath(copyDir);
+    const file = await realpath(join(copyDir, path));
+    const inside = relative(root, file);
+    if (inside.startsWith("..") || isAbsolute(inside)) return null;
+    if (!(await stat(file)).isFile()) return null;
+    return (await readFile(file, "utf8")).slice(0, STANDARD_CHARS);
+  } catch {
+    return null;
+  }
 }
 
 const STEP_NAMES: Record<CommandResult["step"], string> = {
@@ -89,6 +113,7 @@ export async function runChecksForReview(
   const copyDir = join(dir, "copy");
   await mkdir(dir, { recursive: true });
   let run: ChecksRun;
+  let designStandard: string | null = null;
   try {
     await makeThrowawayCopy(options.clonePath, options.commit, copyDir);
     run = await runProjectChecks({
@@ -99,6 +124,7 @@ export async function runChecksForReview(
       ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     });
+    designStandard = await readStandard(copyDir, options.checks.designStandardPath);
   } finally {
     await removeThrowawayCopy(copyDir);
   }
@@ -124,7 +150,12 @@ export async function runChecksForReview(
     });
   }
 
-  const result: ChecksResult = { ...run, commit: options.commit, checks: options.checks };
+  const result: ChecksResult = {
+    ...run,
+    commit: options.commit,
+    checks: options.checks,
+    designStandard,
+  };
   // Not kept when cancelled: a resume runs them whole.
   if (!run.commands.some((command) => command.cancelled)) {
     await writeFile(resultPath, `${JSON.stringify(result, null, 2)}\n`);

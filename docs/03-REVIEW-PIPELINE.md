@@ -164,6 +164,21 @@ every deletion state what behaviour the removed code provided, search the
 worktree for who depended on it, flag removed guards/awaits/cleanups/error
 handlers. Output: candidate findings and per-deletion clears.
 
+### S4b Design grading (WP-I, D-191, D-192, D-198) - FRESH SESSION
+
+Asked only when the project's own checks are on and its e2e saved
+screenshots (S0 step 6). The review's model grades every screenshot A to D
+by looking at it, against the scale (A ready, B minor polish, C visibly
+off, D broken or misleading) and the project's design standard when one
+is named, its text read from the copy and capped at 50,000 characters, and
+only a file inside the copy, so a committed symlink cannot put a file from
+elsewhere into a prompt. Eight screenshots a request. The stage may read
+the screenshots' folder and nothing else outside its checkout: `--add-dir`
+names that folder, the tools stay Read, Grep and Glob (D-198). App code
+then checks that every screenshot asked about was graded exactly once,
+refusing the answer otherwise. A C is a WARNING, a D a CRITICAL: each a
+check finding of kind design (D-197), its evidence what is off and where.
+
 ### S5 Finding verification (protocol step 6) - FRESH SESSION
 
 Input: candidate findings only (file, lines, severity, issue, mechanism, the
@@ -220,6 +235,15 @@ proof that does not hold, or no verdict, makes it an open question that
 names the second verifier and why, so neither verifier overrides the other.
 With nothing proven by S5, S5b is not asked. A stage of its own, so it is
 checkpointed, replayed on resume and named in the run view.
+
+### S5c Second grading (WP-I) - FRESH SESSION
+
+Every screenshot S4b graded C or D, graded again by the paired model under
+the same names, not shown the first grades, with the same folder readable.
+Both C or D proves it: verified, the first grade standing, the second's
+noted ("Graded D again by the second grader, <model>: ..."). An A or B
+leaves it an open question naming the second grade, one grader not
+overriding the other (D-188). Not asked when nothing was graded C or D.
 
 ### S6 Coverage self-audit (protocol step 7; deterministic + AI summary)
 

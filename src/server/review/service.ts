@@ -24,7 +24,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { z } from "zod";
 import type { EngineEvent } from "@/lib/engine/events";
 import { SHUTDOWN } from "@/lib/domain/shutdown";
@@ -44,6 +44,7 @@ import {
 import { repoSlug } from "@/lib/git/url";
 import {
   bundleDir as bundleDirFor,
+  checksDir as checksDirFor,
   logsDir as logsDirFor,
   resolveDataDir,
   runDir as runDirFor,
@@ -93,7 +94,7 @@ import {
   deleteCheckFindingsForReview,
   recordFailedCommand,
 } from "../db/repositories/check-findings";
-import { runChecksForReview } from "./project-checks";
+import { runChecksForReview, type ChecksResult } from "./project-checks";
 import { fetchAll, resolveCommit } from "../gitops/repo";
 import {
   addWorktree,
@@ -382,6 +383,7 @@ export async function prepareAndRun(
     // Made again from the result each time, as code findings are from the
     // stages' answers, so a resume does not add a second copy (D-197).
     deleteCheckFindingsForReview(db, reviewId);
+    let ranChecks: ChecksResult | undefined;
     if (checks.enabled && primary !== undefined) {
       // Before the copy: the fetch and the bundle above may have been
       // cancelled, and nothing since has asked.
@@ -401,6 +403,7 @@ export async function prepareAndRun(
         if (command.cancelled || (command.exitCode === 0 && !command.timedOut)) continue;
         recordFailedCommand(db, reviewId, command);
       }
+      ranChecks = ran;
     }
 
     // Candidates and their verdicts are derived entirely from stage answers,
@@ -434,6 +437,22 @@ export async function prepareAndRun(
       changedSymbols: bundle.inventory.changedExportedSymbols,
       baseContents,
       secondVerifier: verifierModel,
+      // The screens the project's own e2e saved, graded in S4b and S5c (WP-I
+      // step 4), only once there are some to grade.
+      ...(ranChecks !== undefined && ranChecks.screenshots.length > 0
+        ? {
+            design: {
+              screenshotsDir: join(checksDirFor(dataDir, reviewId), "screenshots"),
+              screenshots: ranChecks.screenshots.map((path) => ({
+                name: relative(join(checksDirFor(dataDir, reviewId), "screenshots"), path)
+                  .split(sep)
+                  .join("/"),
+                path,
+              })),
+              standard: ranChecks.designStandard ?? null,
+            },
+          }
+        : {}),
       systemPromptFor: (stage, batch) =>
         composeSystemPrompt({
           directives: snapshot.directives,

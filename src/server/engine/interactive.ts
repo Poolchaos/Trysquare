@@ -152,10 +152,13 @@ export function launchArgsFor(input: {
   model: string;
   exchangeDir: string;
   files: ExchangeFiles;
+  /** The screenshots' folder, for a grading stage (D-198). */
+  readDirs?: readonly string[];
 }): string[] {
   return [
     "--add-dir",
     input.exchangeDir,
+    ...(input.readDirs ?? []).flatMap((dir) => ["--add-dir", dir]),
     "--model",
     input.model,
     "--tools",
@@ -255,7 +258,12 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
     const commands = launchCommandsFor(
       cli,
       options.worktreeRoot,
-      launchArgsFor({ model, exchangeDir: options.exchangeDir, files }),
+      launchArgsFor({
+        model,
+        exchangeDir: options.exchangeDir,
+        files,
+        ...(request.readDirs === undefined ? {} : { readDirs: request.readDirs }),
+      }),
     );
     options.onEvent?.(request.stage, {
       kind: "text",

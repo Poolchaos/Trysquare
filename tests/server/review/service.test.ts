@@ -249,7 +249,13 @@ function seedReviewOnly(): string {
 }
 
 /** Writes the answers a correct reviewer would give about this fixture. */
-function writeIdealAnswers(options: { linked?: boolean } = {}): void {
+/**
+ * The grades a grading stage answers with, when the project's e2e saved
+ * screenshots (WP-I step 4): S4b's after S4, S5c's after the second verifier.
+ */
+function writeIdealAnswers(
+  options: { linked?: boolean; grading?: unknown[]; secondGrading?: unknown[] } = {},
+): void {
   const files = [
     ...appFiles.map((file) => ({ repo: "primary" as const, slug: "app", file })),
     ...(options.linked
@@ -265,7 +271,10 @@ function writeIdealAnswers(options: { linked?: boolean } = {}): void {
     worktreeRoot: referenceRoot,
     rules: PROTOCOL.rules,
   });
-  writeAnswersDir(answersDir, answerSequence(outputs));
+  const sequence = answerSequence(outputs);
+  sequence.splice(4, 0, ...(options.grading ?? []));
+  sequence.push(...(options.secondGrading ?? []));
+  writeAnswersDir(answersDir, sequence);
 }
 
 function run(reviewId: string, extra: Record<string, unknown> = {}) {
@@ -1679,7 +1688,10 @@ describe("a project's own checks (WP-I, step 2)", () => {
 
   it("runs them on a copy of the commit under review, keeps what they saved, and removes the copy", async () => {
     const reviewId = seedReview();
-    writeIdealAnswers();
+    // The screenshot is graded A, so nothing is asked of the second grader.
+    writeIdealAnswers({
+      grading: [{ grades: [{ screenshot: "home.png", grade: "A", whatIsOff: "" }] }],
+    });
     turnOn({
       testCommand: script("tests", "process.exit(0);"),
       // Saves a screenshot only where the reviewed commit's own file is, so
@@ -1798,5 +1810,110 @@ describe("a project's own checks (WP-I, step 2)", () => {
       checks: { ...asked.checks, installCommand: script("install", "") },
     });
     expect(readFileSync(join(dataDir, "scripts", "counted.cjs.runs"), "utf8")).toBe("xx");
+  }, 120_000);
+});
+
+describe("the project's screens graded (WP-I, step 4)", () => {
+  const node = `"${process.execPath}"`;
+  const script = (name: string, body: string) => {
+    const path = join(dataDir, "scripts", `${name}.cjs`);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, body);
+    return `${node} "${path}"`;
+  };
+  /** An e2e that saves two screenshots, and the project's README as its standard. */
+  const turnOnTwoScreens = () => {
+    const project = listProjects(db).find((p) => p.name === "app")!;
+    setProjectChecks(db, project.id, {
+      ...NO_CHECKS,
+      enabled: true,
+      e2eCommand: script(
+        "two-screens",
+        `const fs = require("node:fs");
+         fs.mkdirSync("e2e/screens/phone", { recursive: true });
+         fs.writeFileSync("e2e/screens/home.png", "png");
+         fs.writeFileSync("e2e/screens/phone/settings.png", "png");`,
+      ),
+      screenshotDir: "e2e/screens",
+      designStandardPath: "README.md",
+    });
+  };
+  const grades = (...pairs: [string, string, string][]) => ({
+    grades: pairs.map(([screenshot, grade, whatIsOff]) => ({ screenshot, grade, whatIsOff })),
+  });
+
+  it("proves a screen both graders grade C or D, and leaves one the second passes open", async () => {
+    const reviewId = seedReview();
+    turnOnTwoScreens();
+    writeIdealAnswers({
+      grading: [
+        grades(
+          ["home.png", "D", "The totals column runs off the card."],
+          ["phone/settings.png", "C", "The Save button sits under the fold."],
+        ),
+      ],
+      // Not shown the first grades: agrees on home, passes settings.
+      secondGrading: [
+        grades(
+          ["home.png", "D", "The totals overflow the card at the right."],
+          ["phone/settings.png", "B", ""],
+        ),
+      ],
+    });
+
+    expect((await run(reviewId)).kind).toBe("completed");
+    const design = listCheckFindings(db, reviewId).filter((row) => row.kind === "design");
+    expect(design.map((row) => [row.issue, row.grade, row.severity, row.status])).toEqual([
+      ["The screen home.png is graded D.", "D", "CRITICAL", "verified"],
+      ["The screen phone/settings.png is graded C.", "C", "WARNING", "open_question"],
+    ]);
+    expect(design[0]!.evidence).toBe("The totals column runs off the card.");
+    expect(design[0]!.verificationNote).toBe(
+      "Graded D again by the second grader, claude-opus-5-5: The totals overflow the card at the right.",
+    );
+    expect(design[1]!.verificationNote).toBe("The second grader, claude-opus-5-5, graded it B.");
+    expect(design[0]!.screenshotPath).toBe(
+      join(checksDir(dataDir, reviewId), "screenshots", "home.png"),
+    );
+
+    // Only the grading stages may read the screenshots' folder (D-198), and
+    // the second is asked of the paired model.
+    const argv = recordedArgv();
+    const shots = join(checksDir(dataDir, reviewId), "screenshots");
+    const withDir = argv.filter((args) => args.includes("--add-dir"));
+    expect(withDir).toHaveLength(2);
+    for (const args of withDir) expect(args[args.indexOf("--add-dir") + 1]).toBe(shots);
+    expect(withDir[1]![withDir[1]!.indexOf("--model") + 1]).toBe("claude-opus-5-5");
+    // The grader is told the scale and the project's own standard.
+    const graderPrompt = recordedSystemPrompts()[4] ?? "";
+    expect(graderPrompt).toContain("- D: broken or misleading");
+    expect(graderPrompt).toContain("A fixture application used to test the reviewer.");
+    expect(recordedPrompts()[4]).toContain(
+      `- phone/settings.png: ${join(shots, "phone", "settings.png")}`,
+    );
+  }, 120_000);
+
+  it("asks nothing of the second grader when every screen passes", async () => {
+    const reviewId = seedReview();
+    turnOnTwoScreens();
+    writeIdealAnswers({
+      grading: [grades(["home.png", "A", ""], ["phone/settings.png", "B", "A little tight."])],
+    });
+    expect((await run(reviewId)).kind).toBe("completed");
+    expect(listCheckFindings(db, reviewId).filter((row) => row.kind === "design")).toEqual([]);
+    expect(recordedArgv().filter((args) => args.includes("--add-dir"))).toHaveLength(1);
+  }, 120_000);
+
+  it("refuses an answer that leaves a screen ungraded, rather than reading it as passed", async () => {
+    const reviewId = seedReview();
+    turnOnTwoScreens();
+    writeIdealAnswers({ grading: [grades(["home.png", "A", ""])] });
+    const outcome = await run(reviewId);
+    expect(outcome.kind).toBe("failed");
+    expect(requireReview(db, reviewId).status).toBe("failed");
+    const failedRow = listForReview(db, reviewId).find((row) => row.stage === "s4b_design_grading");
+    expect(JSON.stringify(failedRow ?? {}) + JSON.stringify(outcome)).toContain(
+      "phone/settings.png was not graded",
+    );
   }, 120_000);
 });

@@ -96,9 +96,13 @@ export const REVIEW_STAGES = [
   "s2_comprehension",
   "s3_adversarial",
   "s4_deletions",
+  // Each e2e screenshot graded A to D, when the project runs its own (WP-I).
+  "s4b_design_grading",
   "s5_verification",
   // The second, independent verifier, on the other strong family (WP-E).
   "s5b_second_verification",
+  // The C and D screenshots graded again on the other strong family (WP-I).
+  "s5c_design_second",
   "s6_audit",
 ] as const;
 export const reviewStageSchema = z.enum(REVIEW_STAGES);

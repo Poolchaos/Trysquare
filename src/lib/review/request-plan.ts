@@ -24,19 +24,28 @@ export interface RequestPlan {
   oversized: boolean;
 }
 
-export function planRequests(s3: {
-  passes: number;
-  groups: number;
-  split: boolean;
-  oversized: boolean;
-}): RequestPlan {
+export function planRequests(
+  s3: {
+    passes: number;
+    groups: number;
+    split: boolean;
+    oversized: boolean;
+  },
+  /**
+   * The grading stages' requests (WP-I), none for a project whose checks are
+   * off; how many there may be for one whose e2e runs is step 5's to count.
+   */
+  design: { grading: number; second: number } = { grading: 0, second: 0 },
+): RequestPlan {
   const byStage: Record<ModelStage, number> = {
     s1_risk: 1,
     s2_comprehension: 1,
     s3_adversarial: s3.groups,
     s4_deletions: 1,
+    s4b_design_grading: design.grading,
     s5_verification: 1,
     s5b_second_verification: 1,
+    s5c_design_second: design.second,
   };
   const total = Object.values(byStage).reduce((sum, count) => sum + count, 0);
   return { byStage, passes: s3.passes, total, split: s3.split, oversized: s3.oversized };

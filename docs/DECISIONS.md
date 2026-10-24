@@ -4841,3 +4841,28 @@ verified evidence, in writing, here.
   Left: the report says nothing of check findings until step 3b-2, next;
   the lingering-child test reproduces only where a pipe outlives its
   command, Linux and macOS, which CI runs.
+- 2026-10-24 D-198 Measured, with the maintainer's go, through the CLI on
+  the subscription (2.1.301, the engine's own stage arguments and
+  environment, effort low): can a stage with only Read, Grep and Glob read
+  a screenshot saved beside the review's checkout, as WP-I step 4 needs?
+  Outside the stage's working folder, no: Opus 5.5's Read of the PNG was
+  denied, "you haven't granted it yet", and it said it could not see it
+  ($0.0334 cost-equivalent). With `--add-dir` naming the screenshots'
+  folder, yes: Opus 5.5 read it and gave its bold title exactly, "The
+  tests fail on this branch." ($0.0123), and so did Fable 5.1 ($0.0815).
+  So the grading stages pass `--add-dir` for that one folder, and only
+  they do; the tools stay read-only. The denial also confirms that every
+  other stage cannot read outside its checkout.
+- 2026-10-24 D-199 WP-I step 4, the screens graded: two stages, S4b by
+  the review's model under Find issues and S5c by the paired model under
+  Prove each finding, as the code's verification has two. A C is a
+  WARNING and a D a CRITICAL; the first grade stands when both fail it,
+  as the first verifier's severity does (D-188). Eight screenshots a
+  request, so one image-heavy answer stays small. The answer must grade
+  every screenshot asked about once and nothing else, checked by the app,
+  since a screen left out would read as one that passed. The design
+  standard is read from the copy while it exists, only if it is a file
+  inside it, and kept with the checks' result for a resume. The pre-flight
+  counts the grading requests as none until step 5 counts them for a
+  project whose e2e runs. Rejected: one stage grading and verifying at
+  once, which is the self-attestation the second verifier exists to stop.

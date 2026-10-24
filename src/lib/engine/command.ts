@@ -28,6 +28,12 @@ export interface StageCommandOptions {
   resumeSessionId?: string | undefined;
   /** Empty disables every tool, which is what a probe wants. */
   tools?: readonly string[];
+  /**
+   * Folders outside the working one the stage may read, its Read refused
+   * there otherwise (measured, D-198): only the grading stages name one,
+   * the screenshots'.
+   */
+  addDirs?: readonly string[];
   /** How hard to think. Omitted entirely when unset, so the CLI decides. */
   effort?: string | undefined;
   maxBudgetUsd?: number | undefined;
@@ -93,6 +99,8 @@ export function buildStageArgs(options: StageCommandOptions): string[] {
   // five. An unknown value is not refused: it warns on stderr and runs at the
   // default effort, so only a value reviewEffortSchema accepts is sent.
   if (options.effort !== undefined) args.push("--effort", options.effort);
+
+  for (const dir of options.addDirs ?? []) args.push("--add-dir", dir);
 
   if (options.resumeSessionId) args.push("--resume", options.resumeSessionId);
   if (options.maxBudgetUsd !== undefined) {

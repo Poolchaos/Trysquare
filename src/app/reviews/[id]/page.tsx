@@ -79,11 +79,17 @@ const STAGES = [
   ["s2_comprehension", "Comprehension", "Read the code, including what it calls into"],
   ["s3_adversarial", "Adversarial", "Hunt against the rules"],
   ["s4_deletions", "Deletions", "Account for what the change removed"],
+  ["s4b_design_grading", "Design grading", "Grade each screenshot the project's e2e saved, A to D"],
   ["s5_verification", "Verification", "Re-check every candidate in a fresh session"],
   [
     "s5b_second_verification",
     "Second verifier",
     "Prove each verified finding again on the other strong family",
+  ],
+  [
+    "s5c_design_second",
+    "Second grader",
+    "Grade each screen graded C or D again on the other strong family",
   ],
   ["s6_audit", "Audit", "Refuse to finish while anything is undispositioned"],
 ] as const;
@@ -258,9 +264,18 @@ function deterministicDone(stage: string, snapshot: Snapshot, done: ReadonlySet<
     );
   }
   // Not asked when the first verifier proved nothing; a review that reached a
-  // person has passed it either way (WP-E).
-  if (stage === "s5b_second_verification") {
+  // person has passed it either way (WP-E). So with the second grader, asked
+  // only about a screen graded C or D (WP-I).
+  if (stage === "s5b_second_verification" || stage === "s5c_design_second") {
     return ["awaiting_confirmation", "complete"].includes(snapshot.review.status);
+  }
+  // Asked only when the project's e2e saved screenshots: past it once
+  // verification has begun, asked or not.
+  if (stage === "s4b_design_grading") {
+    return (
+      snapshot.stages.some((row) => row.stage === "s5_verification") ||
+      ["verifying", "awaiting_confirmation", "complete"].includes(snapshot.review.status)
+    );
   }
   if (stage === "s6_audit") {
     if (["awaiting_confirmation", "complete"].includes(snapshot.review.status)) return true;
@@ -292,6 +307,7 @@ function executingStage(snapshot: Snapshot, done: ReadonlySet<string>): string |
   if (stage === "s5b_second_verification" && done.has("s5b_second_verification")) {
     return "s6_audit";
   }
+  if (stage === "s5c_design_second" && done.has("s5c_design_second")) return "s6_audit";
   return stage;
 }
 
@@ -2014,7 +2030,8 @@ function ScanTheater({
     stageDone: (stage) =>
       deterministicDone(stage, snapshot, done) ||
       done.has(stage) ||
-      (stage === "s5b_second_verification" && executing === "s6_audit"),
+      ((stage === "s5b_second_verification" || stage === "s5c_design_second") &&
+        executing === "s6_audit"),
     executing,
     status: review.status,
   });
