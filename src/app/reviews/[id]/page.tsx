@@ -17,7 +17,13 @@ import {
   isResumableReview,
   type ReviewStatus,
 } from "@/lib/domain/state-machines";
-import { completeness, refutedOnlySentence } from "@/lib/review/report";
+import {
+  checksRan,
+  completeness,
+  refutedOnlySentence,
+  type ReportCheck,
+  type ReportCheckRun,
+} from "@/lib/review/report";
 import { ConfirmationQueue, type Finding } from "@/components/confirmation";
 import { CheckFindings, isUndecidedCheck, type CheckFindingRow } from "@/components/check-findings";
 import { Loading, PageBody, PageHeader, PageLoading } from "@/components/page";
@@ -189,6 +195,12 @@ interface ReportFinding {
 }
 
 interface ReportData {
+  /** The project's own checks (D-197); absent from an older server. */
+  checks?: {
+    ran: ReportCheckRun[];
+    confirmed: ReportCheck[];
+    dismissed: ReportCheck[];
+  };
   projectName: string;
   fromBranch: string;
   intoBranch: string;
@@ -1803,6 +1815,10 @@ function RenderedReport({ data }: { data: ReportData }) {
     all[finding.severity] = (all[finding.severity] ?? 0) + 1;
     return all;
   }, {});
+  // What the project's own checks found, as the exported report says it.
+  const confirmedChecks = data.checks?.confirmed ?? [];
+  const dismissedChecks = data.checks?.dismissed ?? [];
+  const ran = checksRan(data);
 
   return (
     <Card className="p-6">
@@ -1821,11 +1837,15 @@ function RenderedReport({ data }: { data: ReportData }) {
               .map((severity) => `${counts[severity]} ${severity.toLowerCase()}`)
               .join(", ")}`
           : ""}
+        {confirmedChecks.length > 0
+          ? `; and ${confirmedChecks.length} confirmed from the project's own checks`
+          : ""}
         .
       </p>
 
       <h4 className="mt-5 text-body font-medium">What was examined</h4>
       <p className="mt-1 text-body text-[var(--color-ink-muted)]">{completeness(data)}</p>
+      {ran === null ? null : <p className="mt-1 text-body text-[var(--color-ink-muted)]">{ran}</p>}
 
       {data.intent ? (
         <>
@@ -1892,6 +1912,52 @@ function RenderedReport({ data }: { data: ReportData }) {
           </ul>
         </section>
       ))}
+
+      {confirmedChecks.length + dismissedChecks.length > 0 ? (
+        <section className="mt-6">
+          <h4 className="text-body font-semibold tracking-wide uppercase text-[var(--color-ink-muted)]">
+            Tests and design ({confirmedChecks.length + dismissedChecks.length})
+          </h4>
+          <ul className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-2">
+            {[...confirmedChecks, ...dismissedChecks].map((check, index) => (
+              <li
+                key={`${check.issue}-${index}`}
+                className="flex gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+              >
+                <span
+                  aria-hidden
+                  className="w-0.5 shrink-0 self-stretch rounded bg-[var(--color-critical)]"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="text-body font-medium">{check.issue}</span>
+                    {check.command ? (
+                      <Mono className="min-w-0 text-aside break-all text-[var(--color-ink-muted)]">
+                        {check.command}
+                      </Mono>
+                    ) : null}
+                  </div>
+                  {check.verificationNote ? (
+                    <p className="mt-1 text-body text-[var(--color-ink-muted)]">
+                      {check.verificationNote}
+                    </p>
+                  ) : null}
+                  {check.dismissReason ? (
+                    <p className="mt-1 text-aside text-[var(--color-ink-faint)]">
+                      Dismissed: {check.dismissReason}
+                    </p>
+                  ) : null}
+                  {check.evidence.trim() !== "" ? (
+                    <pre className="mt-2 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2 text-aside">
+                      <code className="font-[family-name:var(--font-mono)]">{check.evidence}</code>
+                    </pre>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <footer className="mt-6 border-t border-[var(--color-border)] pt-3 text-aside text-[var(--color-ink-faint)]">
         <Mono>{data.model}</Mono> at effort {data.effort}, {data.profile} profile, against{" "}

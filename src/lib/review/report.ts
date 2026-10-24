@@ -33,6 +33,24 @@ export interface ReportFinding {
   dismissReason?: string | null;
 }
 
+/** What a project's own checks found and a person decided (WP-I, D-197). */
+export interface ReportCheck {
+  command: string | null;
+  severity: string;
+  issue: string;
+  /** The output where it failed. */
+  evidence: string;
+  verificationNote: string | null;
+  dismissReason?: string | null;
+}
+
+/** How each of a project's own commands ended in this review's copy. */
+export interface ReportCheckRun {
+  step: "install" | "tests" | "e2e";
+  command: string;
+  outcome: "passed" | "failed" | "timed out" | "cancelled";
+}
+
 export interface ReportInput {
   projectName: string;
   fromBranch: string;
@@ -46,6 +64,15 @@ export interface ReportInput {
   dismissed: readonly ReportFinding[];
   /** Dismissed open questions: never proven, so possibly real (D-190). */
   leftOutUnproven: readonly ReportFinding[];
+  /**
+   * The project's own checks (WP-I, D-197), when the review ran them: how
+   * each command ended, and what was confirmed or dismissed of what failed.
+   */
+  checks?: {
+    ran: readonly ReportCheckRun[];
+    confirmed: readonly ReportCheck[];
+    dismissed: readonly ReportCheck[];
+  };
 
   coverage: {
     totalFiles: number;
@@ -93,6 +120,11 @@ export function renderReport(input: ReportInput): string {
   lines.push("");
   lines.push(completeness(input));
   lines.push("");
+  const ran = checksRan(input);
+  if (ran !== null) {
+    lines.push(ran);
+    lines.push("");
+  }
 
   if (input.confirmed.length > 0) {
     lines.push("## Findings");
@@ -103,6 +135,42 @@ export function renderReport(input: ReportInput): string {
       lines.push(`### ${severity} (${group.length})`);
       lines.push("");
       for (const finding of group) lines.push(...renderFinding(finding));
+    }
+  }
+
+  const confirmedChecks = input.checks?.confirmed ?? [];
+  const dismissedChecks = input.checks?.dismissed ?? [];
+  if (confirmedChecks.length + dismissedChecks.length > 0) {
+    lines.push("## Tests and design");
+    lines.push("");
+    lines.push(
+      "What the project's own checks found on this branch, run by the app on a copy of it.",
+    );
+    lines.push("");
+    for (const check of confirmedChecks) {
+      lines.push(`### ${check.severity}: ${check.issue}`);
+      lines.push("");
+      if (check.command)
+        lines.push(`Ran \`${check.command}\`. ${check.verificationNote ?? ""}`.trimEnd());
+      lines.push("");
+      if (check.evidence.trim() !== "") {
+        lines.push("```");
+        lines.push(check.evidence.trimEnd());
+        lines.push("```");
+        lines.push("");
+      }
+    }
+    if (dismissedChecks.length > 0) {
+      lines.push("Dismissed by a person:");
+      lines.push("");
+      for (const check of dismissedChecks) {
+        lines.push(
+          `- ${check.issue}` +
+            (check.command ? ` (\`${check.command}\`)` : "") +
+            (check.dismissReason ? ` Reason: ${check.dismissReason}` : ""),
+        );
+      }
+      lines.push("");
     }
   }
 
@@ -146,15 +214,38 @@ function summary(input: ReportInput): string {
     count: input.confirmed.filter((finding) => finding.severity === severity).length,
   })).filter((entry) => entry.count > 0);
 
+  const checks = input.checks?.confirmed.length ?? 0;
+  const fromChecks = `${checks} confirmed from the project's own checks`;
   if (counts.length === 0) {
     return (
-      `No confirmed findings. ${input.coverage.totalHunks} hunk(s) across ` +
+      (checks === 0
+        ? "No confirmed findings. "
+        : `No confirmed findings in the code; ${fromChecks}. `) +
+      `${input.coverage.totalHunks} hunk(s) across ` +
       `${input.coverage.totalFiles} file(s) were examined and every one was accounted for.`
     );
   }
 
   const parts = counts.map((entry) => `${entry.count} ${entry.severity.toLowerCase()}`);
-  return `${input.confirmed.length} confirmed finding(s): ${parts.join(", ")}.`;
+  return (
+    `${input.confirmed.length} confirmed finding(s): ${parts.join(", ")}` +
+    (checks === 0 ? "." : `; and ${fromChecks}.`)
+  );
+}
+
+/**
+ * How the project's own checks ended, when the review ran them, or null.
+ * Exported for the page's typeset report, as completeness is.
+ */
+export function checksRan(input: Pick<ReportInput, "checks">): string | null {
+  const ran = input.checks?.ran ?? [];
+  if (ran.length === 0) return null;
+  const names = { install: "the install", tests: "the tests", e2e: "the e2e tests" };
+  return (
+    "The project's own checks ran on a copy of the branch: " +
+    ran.map((run) => `${names[run.step]} ${run.outcome}`).join("; ") +
+    "."
+  );
 }
 
 /**
@@ -307,6 +398,7 @@ export function renderReportHtml(input: ReportInput): string {
     all[finding.severity] = (all[finding.severity] ?? 0) + 1;
     return all;
   }, {});
+  const checkCount = input.checks?.confirmed.length ?? 0;
   const summary =
     `${input.confirmed.length} confirmed finding${input.confirmed.length === 1 ? "" : "s"}` +
     (Object.keys(counts).length > 0
@@ -314,7 +406,31 @@ export function renderReportHtml(input: ReportInput): string {
           .map((severity) => `${counts[severity]} ${severity.toLowerCase()}`)
           .join(", ")}`
       : "") +
+    (checkCount > 0 ? `; and ${checkCount} confirmed from the project's own checks` : "") +
     ".";
+  const ranLine = checksRan(input);
+  const checkItems = (checks: readonly ReportCheck[], decided: string) =>
+    checks
+      .map(
+        (check) => `
+      <li class="f ${escapeHtml(check.severity.toLowerCase())}">
+        <p class="t">${escapeHtml(check.issue)}
+          ${check.command ? `<span class="w">${escapeHtml(check.command)}</span>` : ""}
+        </p>
+        ${check.verificationNote ? `<p class="c">${escapeHtml(check.verificationNote)}</p>` : ""}
+        ${check.dismissReason ? `<p class="w">${decided}: ${escapeHtml(check.dismissReason)}</p>` : ""}
+        ${check.evidence.trim() !== "" ? `<pre><code>${escapeHtml(check.evidence)}</code></pre>` : ""}
+      </li>`,
+      )
+      .join("");
+  const confirmedChecks = input.checks?.confirmed ?? [];
+  const dismissedChecks = input.checks?.dismissed ?? [];
+  const checksSection =
+    confirmedChecks.length + dismissedChecks.length === 0
+      ? ""
+      : `<h2>Tests and design (${confirmedChecks.length + dismissedChecks.length})</h2>
+<p class="c">What the project's own checks found on this branch, run by the app on a copy of it.</p>
+<ul class="fs">${checkItems(confirmedChecks, "Dismissed")}${checkItems(dismissedChecks, "Dismissed")}</ul>`;
 
   const group = (
     label: string,
@@ -372,8 +488,10 @@ footer { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: .75
 <p class="sum">${escapeHtml(summary)}</p>
 <h3>What was examined</h3>
 <p class="c">${escapeHtml(completeness(input))}</p>
+${ranLine === null ? "" : `<p class="c">${escapeHtml(ranLine)}</p>`}
 ${input.intent ? `<h3>What the change was for</h3><blockquote>${escapeHtml(input.intent)}</blockquote>` : ""}
 ${group("Confirmed", input.confirmed)}
+${checksSection}
 ${group("Left out unproven", input.leftOutUnproven, "Left out")}
 ${group("Dismissed", input.dismissed)}
 <footer>${escapeHtml(input.model)} at effort ${escapeHtml(input.effort)}, ${escapeHtml(input.profile)} profile, against ${escapeHtml(input.rulesetName)} v${input.rulesetVersion}.

@@ -39,7 +39,7 @@ export async function POST(
       );
     }
 
-    const input = buildReportInput(db, id);
+    const input = buildReportInput(db, id, dataDir);
     const markdown = renderReport(input);
     const name = exportFileName({
       projectSlug: repoSlug(requireProject(db, review.projectId).name),

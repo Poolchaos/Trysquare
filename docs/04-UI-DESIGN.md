@@ -229,7 +229,10 @@ cards grouped by severity with the code excerpt subordinate, and a
 provenance footer (model, rulesets+versions, commits, usage, duration).
 Copy and export actions; export writes the markdown and a self-contained
 single-file HTML beside it, so a report can be handed to a colleague whole
-(D-69). Past reports
+(D-69). What a project's own checks found and a person decided has a
+section of its own, Tests and design, in the page, the markdown and the
+HTML alike, and What was examined says how each of its commands ended
+(WP-I, D-197). Past reports
 listed per project with merged badges; delete per 02 rules.
 
 ### Rulesets

@@ -357,3 +357,82 @@ describe("the report as a file someone else can open", () => {
     );
   });
 });
+
+describe("what a project's own checks found (WP-I, D-197)", () => {
+  const failingTests = {
+    command: "npm test",
+    severity: "CRITICAL",
+    issue: "The tests fail on this branch.",
+    evidence: "2 failing: totals, refunds",
+    verificationNote: "Exited with code 1, as the app ran it.",
+  };
+  const ran = [
+    { step: "install" as const, command: "npm ci", outcome: "passed" as const },
+    { step: "tests" as const, command: "npm test", outcome: "failed" as const },
+  ];
+
+  it("counts a confirmed one, where no code finding was confirmed", () => {
+    // Said "No confirmed findings" with a failing suite confirmed (round 7).
+    const report = renderReport({
+      ...BASE,
+      confirmed: [],
+      checks: { ran, confirmed: [failingTests], dismissed: [] },
+    });
+    expect(report).toContain(
+      "No confirmed findings in the code; 1 confirmed from the project's own checks.",
+    );
+    expect(report).toContain("## Tests and design");
+    expect(report).toContain("### CRITICAL: The tests fail on this branch.");
+    expect(report).toContain("Ran `npm test`. Exited with code 1, as the app ran it.");
+    expect(report).toContain("```\n2 failing: totals, refunds\n```");
+  });
+
+  it("names them beside the code findings when both were confirmed", () => {
+    const report = renderReport({
+      ...BASE,
+      checks: { ran, confirmed: [failingTests], dismissed: [] },
+    });
+    expect(report).toMatch(
+      /confirmed finding\(s\): .+; and 1 confirmed from the project's own checks\./,
+    );
+  });
+
+  it("says how each command ended, beside what was examined", () => {
+    const report = renderReport({ ...BASE, checks: { ran, confirmed: [], dismissed: [] } });
+    expect(report).toContain(
+      "The project's own checks ran on a copy of the branch: the install passed; the tests failed.",
+    );
+    // Run, and nothing decided from them: no section.
+    expect(report).not.toContain("## Tests and design");
+    // Not run: nothing said of them at all.
+    expect(renderReport(BASE)).not.toContain("own checks");
+  });
+
+  it("keeps a dismissed one with its reason", () => {
+    const report = renderReport({
+      ...BASE,
+      confirmed: [],
+      checks: {
+        ran,
+        confirmed: [],
+        dismissed: [{ ...failingTests, dismissReason: "Flaky on this machine." }],
+      },
+    });
+    expect(report).toContain("Dismissed by a person:");
+    expect(report).toContain(
+      "- The tests fail on this branch. (`npm test`) Reason: Flaky on this machine.",
+    );
+    expect(report).toContain("No confirmed findings. ");
+  });
+
+  it("says the same in the exported page", () => {
+    const html = renderReportHtml({
+      ...BASE,
+      checks: { ran, confirmed: [failingTests], dismissed: [] },
+    });
+    expect(html).toContain("; and 1 confirmed from the project's own checks.");
+    expect(html).toContain("<h2>Tests and design (1)</h2>");
+    expect(html).toContain("2 failing: totals, refunds");
+    expect(html).toContain("the tests failed.");
+  });
+});

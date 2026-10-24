@@ -38,7 +38,7 @@ export async function GET(
     // copied, the structured input is what the screen typesets. Rendering the
     // page from the same input the document is written from means the two
     // cannot drift, and it needs no markdown parser to say what a heading is.
-    const input = buildReportInput(db, id);
+    const input = buildReportInput(db, id, runtime().dataDir);
     return ok({ markdown: renderReport(input), report: input });
   });
 }

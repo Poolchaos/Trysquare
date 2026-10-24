@@ -1307,6 +1307,16 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
     await expect(section.getByRole("button")).toHaveCount(0);
     await expect(section).toContainText("dismissed");
     await shootAll(page, section, "checks-complete");
+
+    // And the report says so, in a section of its own, with how the
+    // project's commands ended (step 3b-2): it said nothing of them before.
+    await expect(
+      page.getByText("The project's own checks ran on a copy of the branch: the tests failed."),
+    ).toBeVisible({ timeout: 30_000 });
+    const inReport = page.getByRole("heading", { name: "Tests and design (1)" }).locator("..");
+    await expect(inReport).toContainText("Dismissed: Flaky on this machine.");
+    await expect(inReport).toContainText("2 failing: totals, refunds");
+    await shootAll(page, inReport, "report-checks");
   } finally {
     const off = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(null) });
     expect.soft(off.status(), "the checks turned off again").toBe(200);
