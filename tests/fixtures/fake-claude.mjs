@@ -590,6 +590,28 @@ switch (scenario) {
     }
 
     emit(initEvent);
+    // A grading request is answered as a real grader does, after opening
+    // each screenshot it lists with Read, all in one message as a model
+    // opening them in parallel would; the app refuses a grade of a screen
+    // never read (review round 9). FAKE_CLAUDE_SKIP_READS plays a grader
+    // that answers without looking.
+    const listed = [...PROMPT.matchAll(/^- .+?: (.+) \(sha256 [0-9a-f]+\)$/gm)].map(
+      (match) => match[1],
+    );
+    if (listed.length > 0 && !process.env.FAKE_CLAUDE_SKIP_READS) {
+      emit({
+        type: "assistant",
+        session_id: sessionId,
+        message: {
+          content: listed.map((file_path, index) => ({
+            type: "tool_use",
+            id: `read-${index}`,
+            name: "Read",
+            input: { file_path },
+          })),
+        },
+      });
+    }
     emit(resultEvent({ result: answer }));
     process.exit(0);
     break;

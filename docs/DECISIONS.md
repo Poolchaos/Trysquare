@@ -4981,3 +4981,60 @@ verified evidence, in writing, here.
   verifiers proved them, which the demo did not keep: it now writes them
   to code-findings.json. One run, so no rate is claimed. Evidence in
   `review/2026-10-24-design/112623-claude-opus-5-5/` (gitignored).
+- 2026-10-24 D-201 Measured, under the maintainer's go on CLI runs,
+  through the local CLI 2.1.301 on the subscription with the engine's own
+  stage arguments (Opus 5.5, effort low, Read, Grep and Glob, the folder
+  named by `--add-dir`): does Read open a large screenshot? Each image had
+  a word drawn at its top left for the model to give back. Random-noise
+  PNGs of 3,282,327, 6,382,378 and 10,441,321 bytes (1100, 1500 and 1900
+  pixels square) all opened, each word given right; a 1280x12000 page of
+  80,019 bytes opened too, but the CLI showed it as 213x2000. $0.1451
+  cost-equivalent in all. So the copy's 8 MiB cap is not a limit Read
+  imposes, and stands for the report's sake; a screenshot past 2000
+  pixels on a side is graded from a copy scaled to fit, which a run note
+  now says with the size the graders see. One image per size, so where
+  the size limit lies, if there is one under 10 MB, is not known.
+- 2026-10-24 Review round 9 (over 734c12c, 8de241f, 57194da, 1ad57f6 and
+  c23194e), two read-only reviewers, one on the design fixture and its
+  demo and one on round 8's fixes, each finding read again in the code
+  and, where it could be, shown failing first. 21 findings, none HIGH.
+  The grading check: "opened" was the grader's word alone, against the
+  rule that coverage is the app's to enforce; the engine now collects
+  every file a stage's session opens with Read, its repair round
+  included, and a grade of a screenshot never read is refused. The
+  engine's event narrowing kept only the first tool call of a message, so
+  a model opening eight screenshots at once would have shown one: each
+  call is now its own event. The fake grader Reads what it is asked to
+  grade, in one message, unless told not to. The names: the copy step
+  took `c:home.png`, `..\x.png` and names with a space at either end,
+  which the lookup refuses, and the review then sent "undefined" as a
+  path; both now ask one rule, isScreenshotName, and the review drops any
+  name the lookup would not take. The first 200 were by this machine's
+  path order, so Windows graded a different 200; now by name. A
+  screenshot folder committed as a link outside the branch was followed;
+  it is refused, as the design standard is. Rows from before round 8,
+  holding an absolute path inside their own folder, are read by the name
+  it has there. Read's limits were measured (D-201), and a screenshot it
+  scales is said. The report: screenshots left out were graded or "saved
+  none" in its sentence, which now says some or all were left out; the
+  image budget was spent with the dismissed before the left out, read
+  each file whole before checking it, and counted raw bytes for base64;
+  each fixed. The page: "N wait for you" left out code open questions;
+  "Not asked" could show beside S4b while it ran on a resume; the
+  verifying step's copy read as a requirement to grade C or D. The demo:
+  a screen still waiting on the second grader was scored as one it
+  passed, and a run that stopped was scored at all, both now said; a
+  found screen carries what the grader said, since both failing a screen
+  is not both naming its defect; a screen the key lacks is named; the
+  database is closed and the data folder removed on any throw, the
+  screenshots copied only when there are some; the fake's environment is
+  set for the review alone; a tool path a shell would misread is refused;
+  the RUNBOOK names the per-run folder. Tests: a resume after the e2e
+  saved another image grades it live (failing when the image is the
+  same), a grader that never Reads and one saying it could not open are
+  refused through the pipeline, and the browser now drives the card whose
+  image will not load, the report that does not carry an image, and the
+  step that is grading the screens. Left: Mode B's terminal is not
+  watched, so there the grader's word stands alone; the colon, backslash
+  and edge-space names are tested on Linux and macOS alone, since Windows
+  cannot name such files.

@@ -114,9 +114,12 @@ copy, grades them, and scores each against the key. On the fake engine
 the grades follow the key, so it proves the plumbing only (measured
 2026-10-24 on this machine: three runs, each "5/5 planted screenshots
 found" and 2.9s as the demo reports it). Without `--fake` it grades with
-a real model, as `demo:fixture` does, and spends usage. Evidence goes to
-`review/<date>-design/`: the score, every grade each grader gave, and the
-screenshots they were given, so each grade can be read against its image.
+a real model, as `demo:fixture` does, and spends usage. Each run's evidence
+goes to its own folder, `review/<date>-design/<time>-<model>/`, the time in
+UTC: the score, every grade each grader gave with the screenshots they were
+given, so each grade can be read against its image, the code findings the
+code stages raised in the screens' HTML, and the event log. A run that did
+not reach a person says it is not a measurement.
 
 ## Run a first review
 

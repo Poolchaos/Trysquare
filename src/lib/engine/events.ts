@@ -116,13 +116,36 @@ export type EngineEvent =
   | { kind: "unknown"; raw: unknown };
 
 /**
- * Narrows one parsed CLI event into an EngineEvent.
+ * Narrows one parsed CLI event into the EngineEvents it carries: one each,
+ * but an assistant message, which carries one per tool call and text block.
+ * Only its first was kept, and a model opening eight screenshots in one
+ * message would have shown one Read where the grading check needs all
+ * eight (review round 9).
  *
  * Unrecognised events become `unknown` rather than throwing: the CLI may add
  * event types, and a review must not fail because of one it has not seen.
  * The events the app depends on are validated strictly.
  */
-export function toEngineEvent(raw: unknown): EngineEvent {
+export function toEngineEvents(raw: unknown): EngineEvent[] {
+  if (typeof raw === "object" && raw !== null && (raw as { type?: unknown }).type === "assistant") {
+    const parsed = assistantEventSchema.safeParse(raw);
+    if (!parsed.success) return [{ kind: "unknown", raw }];
+    const events: EngineEvent[] = [];
+    for (const block of parsed.data.message.content) {
+      // Thinking blocks are deliberately not surfaced: they are long, carry a
+      // signature, and are not part of the review's output contract.
+      if (block.type === "tool_use" && block.name) {
+        events.push({ kind: "tool-use", tool: block.name, input: block.input });
+      } else if (block.type === "text" && typeof block.text === "string") {
+        events.push({ kind: "text", text: block.text });
+      }
+    }
+    return events.length === 0 ? [{ kind: "unknown", raw }] : events;
+  }
+  return [toEngineEvent(raw)];
+}
+
+function toEngineEvent(raw: unknown): EngineEvent {
   if (typeof raw !== "object" || raw === null) return { kind: "unknown", raw };
   const type = (raw as { type?: unknown }).type;
 
@@ -136,22 +159,6 @@ export function toEngineEvent(raw: unknown): EngineEvent {
         tools: parsed.data.tools,
         cwd: parsed.data.cwd,
       };
-    }
-    return { kind: "unknown", raw };
-  }
-
-  if (type === "assistant") {
-    const parsed = assistantEventSchema.safeParse(raw);
-    if (!parsed.success) return { kind: "unknown", raw };
-    for (const block of parsed.data.message.content) {
-      // Thinking blocks are deliberately not surfaced: they are long, carry a
-      // signature, and are not part of the review's output contract.
-      if (block.type === "tool_use" && block.name) {
-        return { kind: "tool-use", tool: block.name, input: block.input };
-      }
-      if (block.type === "text" && typeof block.text === "string") {
-        return { kind: "text", text: block.text };
-      }
     }
     return { kind: "unknown", raw };
   }

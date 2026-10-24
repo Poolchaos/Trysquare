@@ -51,10 +51,21 @@ export interface ReportCheck {
   dismissReason?: string | null;
 }
 
-export type DesignChecked = "graded" | "no e2e command" | "e2e not run" | "no screenshots";
+export type DesignChecked =
+  | "graded"
+  | "partly graded"
+  | "none gradable"
+  | "no e2e command"
+  | "e2e not run"
+  | "no screenshots";
 
 const DESIGN_SAID: Record<DesignChecked, string> = {
   graded: "The screenshots its e2e saved were graded A to D.",
+  // Said rather than counted among the graded (review round 9).
+  "partly graded":
+    "The screenshots its e2e saved were graded A to D, but for some left out, which the run notes name and say why.",
+  "none gradable":
+    "The design was not checked: none of the screenshots its e2e saved could be graded, and the run notes say why.",
   "no e2e command": "The design was not checked: the project has no e2e command.",
   "e2e not run": "The design was not checked: its e2e did not run.",
   "no screenshots": "The design was not checked: its e2e saved no screenshot.",

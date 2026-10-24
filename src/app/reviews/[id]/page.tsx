@@ -1505,7 +1505,7 @@ function FinishedSummary({ snapshot }: { snapshot: Snapshot }) {
     rules: snapshot.rules ?? null,
     files: snapshot.coverage.totalFiles,
     tallies,
-    waiting: snapshot.findings.filter((finding) => finding.status === "verified").length,
+    waiting: waitingOn(snapshot),
     status: review.status,
     secondVerifier,
     // What grading the project's screens came to, beside the code's (WP-I).
@@ -1660,7 +1660,10 @@ function RunDetail({
             const wasCancelled = last?.status === "failed" && last.errorClass === "cancelled";
             const failed = last?.status === "failed" && !wasCancelled;
             const passed = deterministicDone(stage, snapshot, done) || last?.status === "succeeded";
-            const notAsked = passed && last === undefined && NOT_ASKED.has(stage);
+            // Not while it runs: a resumed review can have passed S5 before,
+            // and now be grading the screens it had none of then.
+            const notAsked =
+              passed && last === undefined && stage !== executing && NOT_ASKED.has(stage);
             const succeeded = passed && !notAsked;
             const current = stage === executing;
 
@@ -1845,6 +1848,18 @@ function RunDetail({
  * the exported document cannot say different things, and no markdown parser
  * has to be trusted to work out what a heading was.
  */
+/**
+ * What waits on the person: a proven finding to confirm or dismiss, and an
+ * open question to leave out, from the code and the project's checks
+ * alike, as the queue's n of m counts them (review round 9).
+ */
+function waitingOn(snapshot: Snapshot): number {
+  return (
+    snapshot.findings.filter((finding) => ["verified", "open_question"].includes(finding.status))
+      .length + (snapshot.checkFindings ?? []).filter(isUndecidedCheck).length
+  );
+}
+
 function severityBar(severity: string): string {
   return severity === "CRITICAL"
     ? "bg-[var(--color-critical)]"
@@ -2127,9 +2142,7 @@ function ScanTheater({
     files: coverage.totalFiles,
     tallies,
     // The project's own checks wait on the person too (D-197).
-    waiting:
-      snapshot.findings.filter((finding) => finding.status === "verified").length +
-      (snapshot.checkFindings ?? []).filter(isUndecidedCheck).length,
+    waiting: waitingOn(snapshot),
   };
   const feedRef = useRef<HTMLDivElement>(null);
   const [cancelling, setCancelling] = useState(false);

@@ -87,6 +87,30 @@ describe("a design fixture review's score", () => {
     ]);
   });
 
+  it("says a planted screen the second grader never answered on, rather than blame it", () => {
+    // A run stopped in S5c left its rows candidates: it was scored "the
+    // second grader did not fail it", which no grader said (review round 9).
+    const score = scoreDesign([row("phone/checkout.png", "candidate")], key);
+    expect(score.missed[0]).toEqual({
+      screenshot: "phone/checkout.png",
+      defect: "overflow",
+      why: "the second grader never answered",
+    });
+  });
+
+  it("carries what the first grader said beside a found screen", () => {
+    const score = scoreDesign(
+      [row("phone/checkout.png", "verified", { evidence: "The table runs off the right." })],
+      key,
+    );
+    expect(score.found[0]!.whatIsOff).toBe("The table runs off the right.");
+  });
+
+  it("names a failed screen the key does not have, rather than drop it", () => {
+    const score = scoreDesign([row("phone/extra.png", "verified")], key);
+    expect(score.unkeyed).toEqual([{ screenshot: "phone/extra.png", status: "verified" }]);
+  });
+
   it("counts a clean screen both failed as a false positive, and one failed once apart", () => {
     const score = scoreDesign(
       [

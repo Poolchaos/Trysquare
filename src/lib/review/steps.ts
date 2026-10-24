@@ -25,7 +25,7 @@ export const STEPS = [
   },
   {
     title: "Prove each finding",
-    what: "Two independent verifiers must each trace the failure through the code, and two graders must each grade a screen C or D.",
+    what: "Two independent verifiers must each trace the failure through the code, and a screen graded C or D must be graded so again by a second grader.",
     stages: ["s5_verification", "s5b_second_verification", "s5c_design_second"],
   },
   {

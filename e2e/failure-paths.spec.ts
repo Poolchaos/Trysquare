@@ -1490,6 +1490,24 @@ for (const name of ["home.png", "rulesets.png"]) {
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, section, "design-queue");
 
+    // A screenshot that will not load says so, by name, rather than show a
+    // broken image (review round 9: the state was never driven).
+    const stopImages = await routeUntilStopped(
+      page,
+      "**/api/check-findings/*/screenshot",
+      (route) => route.fulfill({ status: 404, json: { error: "gone" } }),
+    );
+    await page.reload();
+    await expect(home).toContainText(
+      "The screenshot, home.png, could not be loaded: its review's files may have been removed.",
+      { timeout: 30_000 },
+    );
+    await expect(home.getByRole("img")).toHaveCount(0);
+    await shootAll(page, home, "design-image-gone");
+    await stopImages();
+    await page.reload();
+    await expect(image).toBeVisible({ timeout: 30_000 });
+
     const confirming = decided("confirm");
     await home.getByRole("button", { name: /^Confirm/ }).click();
     expect((await confirming).status()).toBe(200);
@@ -1537,6 +1555,32 @@ for (const name of ["home.png", "rulesets.png"]) {
       )
       .toBe(true);
     await shootAll(page, inReport, "design-report");
+
+    // A screen the report does not carry is named, in its own layout, not
+    // set as a failing command's output (review round 9: never driven).
+    const stopReport = await routeUntilStopped(
+      page,
+      `**/api/reviews/${reviewId}/report`,
+      async (route) => {
+        const response = await route.fetch();
+        const body = (await response.json()) as {
+          report?: { checks?: { confirmed: { screenshotDataUri?: string | null }[] } };
+        };
+        for (const check of body.report?.checks?.confirmed ?? []) check.screenshotDataUri = null;
+        await route.fulfill({ response, json: body });
+      },
+    );
+    await page.reload();
+    const notCarried = page.getByRole("heading", { name: "Tests and design (2)" }).locator("..");
+    await expect(notCarried).toContainText(
+      "The screenshot, home.png, is not carried in this report: it is gone, or over what one report carries.",
+      { timeout: 30_000 },
+    );
+    await expect(notCarried).toContainText(
+      "What is off: The page title is cut off at the top of the card.",
+    );
+    await shootAll(page, notCarried, "design-report-not-carried");
+    await stopReport();
   } finally {
     const off = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(false) });
     expect.soft(off.status(), "the checks turned off again").toBe(200);
@@ -1544,6 +1588,68 @@ for (const name of ["home.png", "rulesets.png"]) {
       const cancelled = await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
       expect.soft(cancelled.status(), "the review cancelled").toBe(200);
     }
+    for (const file of extra) rmSync(file, { force: true });
+    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
+  }
+});
+
+test("the theater says when a step is grading the project's screens (WP-I)", async ({ page }) => {
+  // Held in S4b, the fifth call: the Find issues step is grading screens,
+  // not walking the rules, and said so (review round 9: never driven).
+  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+  const written = readdirSync(ANSWERS_DIR).filter((file) => /^\d{3}\.json$/.test(file)).length;
+  const numbered = (n: number) => join(ANSWERS_DIR, `${String(n).padStart(3, "0")}.json`);
+  const extra = [1, 2, 3, 4].map((n) => {
+    const to = numbered(written + n);
+    writeFileSync(to, readFileSync(numbered(n), "utf8"));
+    return to;
+  });
+  writeFileSync(COUNTER_FILE, String(written), "utf8");
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = projects.projects.find((project) => project.name === "app")!;
+  const e2e = join(E2E_ROOT, "scripts", "save-one-screen.cjs");
+  mkdirSync(join(E2E_ROOT, "scripts"), { recursive: true });
+  writeFileSync(
+    e2e,
+    `const fs = require("node:fs");
+fs.mkdirSync("e2e/screens", { recursive: true });
+fs.writeFileSync("e2e/screens/home.png", "png");
+`,
+  );
+  const checks = (on: boolean) => ({
+    enabled: on,
+    installCommand: null,
+    testCommand: null,
+    e2eCommand: on ? `"${process.execPath}" "${e2e}"` : null,
+    screenshotDir: on ? "e2e/screens" : null,
+    designStandardPath: null,
+  });
+  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 60_000, skip: 4 }), "utf8");
+  try {
+    const on = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(true) });
+    expect(on.status()).toBe(200);
+    await startAReview(page);
+    const theater = page.getByRole("dialog", {
+      name: "Watching the review of feature/rename-prefs into main",
+    });
+    await expect(theater.getByText("Design grading", { exact: true })).toBeVisible({
+      timeout: 60_000,
+    });
+    const steps = theater.getByRole("list", { name: "Review steps" });
+    await expect(steps.locator('[aria-current="step"]')).toContainText("Find issues");
+    await expect(steps.getByRole("listitem").nth(2)).toContainText("Grading the screens");
+    await shootAll(page, theater, "steps-grading");
+
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
+    await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
+  } finally {
+    rmSync(STALL_TRIGGER, { force: true });
+    const off = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(false) });
+    expect.soft(off.status(), "the checks turned off again").toBe(200);
     for (const file of extra) rmSync(file, { force: true });
     writeFileSync(COUNTER_FILE, callsBefore, "utf8");
   }

@@ -160,6 +160,16 @@ export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
 
   const run = async (request: StageRequest): Promise<StageResponse> => {
     const schema = stageSchemaFor(request.stage);
+    // What the session opened, so a grade can be held to a look at the
+    // image rather than the grader's word that it looked (review round 9).
+    const filesRead: string[] = [];
+    const onEvent = (event: EngineEvent) => {
+      if (event.kind === "tool-use" && event.tool === "Read") {
+        const path = (event.input as { file_path?: unknown } | null)?.file_path;
+        if (typeof path === "string") filesRead.push(path);
+      }
+      options.onEvent?.(request.stage, event);
+    };
     const systemPrompt =
       request.systemPrompt ||
       composeSystemPrompt({
@@ -187,9 +197,7 @@ export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
       ...(options.claudePath === undefined ? {} : { claudePath: options.claudePath }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
       ...(resume === undefined ? {} : { resumeSessionId: resume }),
-      ...(options.onEvent === undefined
-        ? {}
-        : { onEvent: (event: EngineEvent) => options.onEvent?.(request.stage, event) }),
+      onEvent,
     });
 
     // Checked on every call, not once: a session that gained a tool part way
@@ -208,7 +216,7 @@ export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
 
     const extracted = extractJsonObject(outcome.result.result ?? "");
     if (extracted.ok && schema.safeParse(extracted.value).success) {
-      return { output: extracted.value, sessionId: outcome.sessionId, usage };
+      return { output: extracted.value, sessionId: outcome.sessionId, usage, filesRead };
     }
 
     // One repair round, and only one. Models routinely fix a shape when told
@@ -242,9 +250,8 @@ export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
       resumeSessionId: outcome.sessionId,
       ...(options.claudePath === undefined ? {} : { claudePath: options.claudePath }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
-      ...(options.onEvent === undefined
-        ? {}
-        : { onEvent: (event: EngineEvent) => options.onEvent?.(request.stage, event) }),
+      // The repair resumes the session: what it opened before still counts.
+      onEvent,
     });
 
     assertToolsAreReadOnly(repair.toolsGranted, READ_ONLY_TOOLS);
@@ -281,6 +288,7 @@ export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
     return {
       output: repaired.value,
       sessionId: repair.sessionId,
+      filesRead,
       usage: {
         inputTokens: usage.inputTokens + repairUsage.inputTokens,
         cacheCreationTokens: usage.cacheCreationTokens + repairUsage.cacheCreationTokens,

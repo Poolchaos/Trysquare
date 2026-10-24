@@ -6,7 +6,9 @@ import {
   buildProbeArgs,
   buildStageArgs,
 } from "@/lib/engine/command";
-import { toEngineEvent } from "@/lib/engine/events";
+import { toEngineEvents } from "@/lib/engine/events";
+
+const toEngineEvent = (raw: unknown) => toEngineEvents(raw)[0]!;
 
 function valueAfter(args: readonly string[], flag: string): string | undefined {
   const index = args.indexOf(flag);
@@ -304,6 +306,28 @@ describe("event narrowing", () => {
       message: { content: [{ type: "thinking", thinking: "long private reasoning" }] },
     });
     expect(event.kind).toBe("unknown");
+  });
+
+  it("surfaces every tool call in one message, not only the first", () => {
+    // A grader opening its screenshots in parallel sends them in one
+    // message; the grading check needs to see every Read (review round 9).
+    expect(
+      toEngineEvents({
+        type: "assistant",
+        session_id: "s",
+        message: {
+          content: [
+            { type: "text", text: "Opening both." },
+            { type: "tool_use", id: "a", name: "Read", input: { file_path: "/s/a.png" } },
+            { type: "tool_use", id: "b", name: "Read", input: { file_path: "/s/b.png" } },
+          ],
+        },
+      }),
+    ).toEqual([
+      { kind: "text", text: "Opening both." },
+      { kind: "tool-use", tool: "Read", input: { file_path: "/s/a.png" } },
+      { kind: "tool-use", tool: "Read", input: { file_path: "/s/b.png" } },
+    ]);
   });
 
   it("treats an unrecognised event as unknown rather than throwing", () => {

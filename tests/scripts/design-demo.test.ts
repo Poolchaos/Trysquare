@@ -36,14 +36,17 @@ beforeAll(async () => {
 
 afterAll(() => {
   run?.db.$client.close();
-  for (const name of FAKE) {
-    if (before[name] === undefined) delete process.env[name];
-    else process.env[name] = before[name];
-  }
   rmSync(dataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 });
 
 describe("the design fixture, reviewed on the fake engine", () => {
+  it("leaves the environment as it found it", () => {
+    // The fake's answers are found through the environment, set for the
+    // review alone: left set, a later run in this process read them
+    // (review round 9).
+    expect(Object.fromEntries(FAKE.map((name) => [name, process.env[name]]))).toEqual(before);
+  });
+
   it("reaches a person, every planted screen found and no clean one failed", () => {
     expect(run!.outcome).toBe("completed");
     const planted = run!.manifest.screens.filter((screen) => screen.defect !== null);

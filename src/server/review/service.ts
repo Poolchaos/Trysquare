@@ -443,10 +443,12 @@ export async function prepareAndRun(
         ? {
             design: {
               screenshotsDir: screenshotsDir(dataDir, reviewId),
-              screenshots: ranChecks.screenshots.map((shot) => ({
-                ...shot,
-                path: screenshotFile(dataDir, reviewId, shot.name)!,
-              })),
+              // The copy keeps only names the lookup takes (isScreenshotName);
+              // one it would not is left out rather than sent as no path.
+              screenshots: ranChecks.screenshots.flatMap((shot) => {
+                const path = screenshotFile(dataDir, reviewId, shot.name);
+                return path === null ? [] : [{ ...shot, path }];
+              }),
               standard: ranChecks.designStandard ?? null,
             },
           }

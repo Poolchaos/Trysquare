@@ -172,20 +172,29 @@ describe("a design finding's screenshot (WP-I step 4)", () => {
   });
 
   it("is not served from anywhere else, whatever the row says", async () => {
-    const { db, row, file } = await aDesignFinding("home.png");
+    const { db, row } = await aDesignFinding("home.png");
     for (const elsewhere of [
       "../elsewhere.png",
       "phone/../../elsewhere.png",
-      // Even its own file, spelled as an absolute path: the row keeps a
-      // name, and a path is what a moved or other drive's data dir breaks.
-      file,
+      join(dataDir, "elsewhere.png"),
       "C:/elsewhere.png",
+      "c:home.png",
     ]) {
       await namedInstead(db, row.id, elsewhere);
       const response = await shot(row.id);
       expect(response.status, elsewhere).toBe(404);
       expect((await response.json()).error).toBe("This screenshot is not in its review's folder.");
     }
+  });
+
+  it("serves a row from before round 8 by the name its absolute path has", async () => {
+    // Rows kept the absolute path until round 8: one inside its own
+    // review's folder is its name there (review round 9).
+    const { db, row, file } = await aDesignFinding("phone/home.png");
+    await namedInstead(db, row.id, file);
+    const response = await shot(row.id);
+    expect(response.status).toBe(200);
+    expect(Buffer.from(await response.arrayBuffer()).toString()).toBe("PNGBYTES");
   });
 
   it("says when its file is gone", async () => {

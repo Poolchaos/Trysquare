@@ -2066,4 +2066,88 @@ describe("the project's screens graded (WP-I, step 4)", () => {
     expect(failedRow?.status).toBe("failed");
     expect(JSON.stringify(failedRow)).toContain("phone/settings.png was not graded");
   }, 120_000);
+
+  it("refuses a grade of a screen the grader never opened with Read", async () => {
+    // "opened: true" was the grader's word alone; the engine sees what the
+    // session read, and a grade of an image never read is refused (round 9).
+    const reviewId = seedReview();
+    turnOnTwoScreens();
+    writeIdealAnswers({
+      grading: [grades(["home.png", "A", ""], ["phone/settings.png", "A", ""])],
+    });
+    process.env.FAKE_CLAUDE_SKIP_READS = "1";
+    try {
+      expect((await run(reviewId)).kind).toBe("failed");
+    } finally {
+      delete process.env.FAKE_CLAUDE_SKIP_READS;
+    }
+    const failedRow = listForReview(db, reviewId).find((row) => row.stage === "s4b_design_grading");
+    expect(failedRow?.status).toBe("failed");
+    expect(JSON.stringify(failedRow)).toContain(
+      "home.png was graded without being opened with Read",
+    );
+  }, 120_000);
+
+  it("refuses an answer saying a screen could not be opened, through the stage", async () => {
+    const reviewId = seedReview();
+    turnOnTwoScreens();
+    writeIdealAnswers({
+      grading: [
+        {
+          grades: [
+            { screenshot: "home.png", opened: false, grade: "D", whatIsOff: "Could not open it." },
+            { screenshot: "phone/settings.png", opened: true, grade: "C", whatIsOff: " " },
+          ],
+        },
+      ],
+    });
+    expect((await run(reviewId)).kind).toBe("failed");
+    const failedRow = listForReview(db, reviewId).find((row) => row.stage === "s4b_design_grading");
+    expect(failedRow?.status).toBe("failed");
+    expect(JSON.stringify(failedRow)).toContain("home.png could not be opened");
+    expect(JSON.stringify(failedRow)).toContain(
+      "phone/settings.png was graded C without saying what is off",
+    );
+  }, 120_000);
+
+  it("grades again, live, a screen whose image changed before a resume", async () => {
+    // The request's identity carries each image's hash: checks run again on
+    // the resume save a different image under the same name, and the old
+    // grade is not replayed for it (review round 8, proven end to end in 9).
+    const reviewId = seedReview();
+    const project = listProjects(db).find((p) => p.name === "app")!;
+    const saving = (bytes: string) => ({
+      ...NO_CHECKS,
+      enabled: true,
+      e2eCommand: script(
+        `saves-${bytes}`,
+        `const fs = require("node:fs");
+         fs.mkdirSync("e2e/screens", { recursive: true });
+         fs.writeFileSync("e2e/screens/home.png", ${JSON.stringify(bytes)});`,
+      ),
+      screenshotDir: "e2e/screens",
+    });
+    setProjectChecks(db, project.id, saving("first"));
+    writeIdealAnswers({
+      grading: [grades(["home.png", "A", ""]), grades(["home.png", "B", "A little tight."])],
+    });
+    // S1 to S4, S4b, then S5 fails: paused with S4b's answer kept.
+    process.env.FAKE_CLAUDE_FAIL_AT = "6";
+    expect((await run(reviewId)).kind).toBe("paused");
+    delete process.env.FAKE_CLAUDE_FAIL_AT;
+
+    setProjectChecks(db, project.id, saving("second"));
+    // The next live call is the sixth: the second grading answer, if S4b is
+    // asked again; S5 would get it, and fail, if S4b were replayed.
+    writeFileSync(join(dataDir, "calls.txt"), "5");
+    expect((await run(reviewId)).kind).toBe("completed");
+
+    const graded = listForReview(db, reviewId).filter(
+      (row) => row.stage === "s4b_design_grading" && row.status === "succeeded",
+    );
+    expect(graded).toHaveLength(2);
+    expect(new Set(graded.map((row) => row.promptHash)).size).toBe(2);
+    const prompts = recordedPrompts().filter((prompt) => prompt.startsWith("Grade these"));
+    expect(prompts.at(-1)).toContain(`(sha256 ${sha256("second")})`);
+  }, 120_000);
 });

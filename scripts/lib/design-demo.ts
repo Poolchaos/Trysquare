@@ -70,7 +70,32 @@ export async function reviewDesignFixture(options: {
   };
   const built = fixture.buildDesignFixture(fixtureRoot);
 
+  // The e2e command runs through a shell: a quote, a dollar, a backtick, a
+  // percent or a caret in either path would be read as the shell's own.
+  for (const path of [process.execPath, options.playwright]) {
+    if (/["$`%^\r\n]/.test(path)) {
+      throw new Error(`The path ${path} has a character a shell would read as its own.`);
+    }
+  }
+
   const db = createDb(dbPath(dataDir));
+  // Closed on any throw from here: the caller has no database to close then,
+  // and Windows will not remove a folder holding an open one.
+  try {
+    return await reviewWith(db, built, fixture, options);
+  } catch (error) {
+    db.$client.close();
+    throw error;
+  }
+}
+
+async function reviewWith(
+  db: Db,
+  built: { dir: string; manifest: DesignManifest },
+  fixture: { DESIGN_BRANCH: string; DESIGN_SCREENSHOT_DIR: string; DESIGN_STANDARD_PATH: string },
+  options: Parameters<typeof reviewDesignFixture>[0],
+): Promise<DesignRun | null> {
+  const { dataDir } = options;
   runMigrations(db);
   const ready = await options.prepare(db);
   if (ready === null) {
@@ -117,22 +142,34 @@ export async function reviewDesignFixture(options: {
   }).id;
 
   const rules = importProtocol(readFileSync(join(FIXTURES, "example-protocol.md"), "utf8")).ruleset;
-  if (options.fake) {
-    await writeFakeAnswers({
-      dataDir,
-      clonePath,
-      base,
-      head: fromCommit,
-      manifest: built.manifest,
-      rules: rules.rules,
-    });
-  }
+  const fake = options.fake
+    ? await writeFakeAnswers({
+        dataDir,
+        clonePath,
+        base,
+        head: fromCommit,
+        manifest: built.manifest,
+        rules: rules.rules,
+      })
+    : {};
 
   if (options.onEvent) manager.subscribe(reviewId, options.onEvent);
-  manager.start(reviewId, {
-    ruleset: { imported: rules, name: "Example protocol", tier: "global" },
-  });
-  const outcome = await manager.settled(reviewId);
+  // The fake reads its answers from the environment the engine passes on,
+  // set for this review alone and put back after it.
+  const before = Object.fromEntries(Object.keys(fake).map((name) => [name, process.env[name]]));
+  Object.assign(process.env, fake);
+  let outcome;
+  try {
+    manager.start(reviewId, {
+      ruleset: { imported: rules, name: "Example protocol", tier: "global" },
+    });
+    outcome = await manager.settled(reviewId);
+  } finally {
+    for (const [name, value] of Object.entries(before)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
 
   return {
     db,
@@ -155,7 +192,7 @@ async function writeFakeAnswers(input: {
   head: string;
   manifest: DesignManifest;
   rules: unknown;
-}): Promise<void> {
+}): Promise<Record<string, string>> {
   const helpers = (await import(
     pathToFileURL(join(REPO_ROOT, "tests", "helpers", "ideal-answers.ts")).href
   )) as {
@@ -192,9 +229,6 @@ async function writeFakeAnswers(input: {
   // S1 to S4, S4b, then S5 (nothing proven, so no S5b), then S5c.
   const [s1, s2, s3, s4, s5, ...rest] = code;
   if (rest.length !== 0) throw new Error("The clean code answers proved something.");
-  process.env.FAKE_CLAUDE_SCENARIO = "script";
-  process.env.FAKE_CLAUDE_DIR = join(input.dataDir, "answers");
-  process.env.FAKE_CLAUDE_COUNTER = join(input.dataDir, "calls.txt");
   helpers.writeAnswersDir(join(input.dataDir, "answers"), [
     s1,
     s2,
@@ -204,4 +238,9 @@ async function writeFakeAnswers(input: {
     s5,
     ...batches(planted),
   ]);
+  return {
+    FAKE_CLAUDE_SCENARIO: "script",
+    FAKE_CLAUDE_DIR: join(input.dataDir, "answers"),
+    FAKE_CLAUDE_COUNTER: join(input.dataDir, "calls.txt"),
+  };
 }

@@ -5,7 +5,15 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -300,6 +308,10 @@ describe("a project's checks in turn", () => {
           "unsayable",
           `fs.writeFileSync(path.join(dir, "a: b.png"), "png");
            fs.writeFileSync(path.join(dir, "two\\nlines.png"), "png");
+           // Names the lookup refuses, so the copy must too (review round 9).
+           fs.writeFileSync(path.join(dir, "c:home.png"), "png");
+           fs.writeFileSync(path.join(dir, "..\\\\x.png"), "png");
+           fs.writeFileSync(path.join(dir, " lead.png"), "png");
            fs.writeFileSync(path.join(dir, "home.png"), "png");`,
         ),
         copyDir: copyWith("unsayable"),
@@ -308,11 +320,81 @@ describe("a project's checks in turn", () => {
       });
       expect(run.screenshots.map((shot) => shot.name)).toEqual(["home.png"]);
       expect(run.screenshotsLeft).toEqual([
-        '"a: b.png" was not graded: a name with a line break or ": " in it cannot be listed in a grading request.',
-        '"two\\nlines.png" was not graded: a name with a line break or ": " in it cannot be listed in a grading request.',
+        '" lead.png" was not graded: a name with a line break, ": ", a backslash, a drive or a space at either end cannot be listed in a grading request.',
+        '"..\\\\x.png" was not graded: a name with a line break, ": ", a backslash, a drive or a space at either end cannot be listed in a grading request.',
+        '"a: b.png" was not graded: a name with a line break, ": ", a backslash, a drive or a space at either end cannot be listed in a grading request.',
+        '"c:home.png" was not graded: a name with a line break, ": ", a backslash, a drive or a space at either end cannot be listed in a grading request.',
+        '"two\\nlines.png" was not graded: a name with a line break, ": ", a backslash, a drive or a space at either end cannot be listed in a grading request.',
       ]);
     },
   );
+
+  it("take screenshots in the order of their names, the same on every machine", async () => {
+    // Sorted by path, Windows put a0/x.png before a/x.png, its backslash
+    // sorting after a digit where a slash sorts before (review round 9).
+    const run = await runProjectChecks({
+      checks: saving(
+        "ordered",
+        `for (const folder of ["a0", "a"]) {
+           fs.mkdirSync(path.join(dir, folder), { recursive: true });
+           fs.writeFileSync(path.join(dir, folder, "x.png"), "png");
+         }`,
+      ),
+      copyDir: copyWith("ordered"),
+      logDir: join(root, "ordered-logs"),
+      screenshotsDir: join(root, "ordered-shots"),
+    });
+    expect(run.screenshots.map((shot) => shot.name)).toEqual(["a/x.png", "a0/x.png"]);
+  });
+
+  it("say a screenshot the graders are shown smaller than it was saved", async () => {
+    // A PNG's header holds its size: 2400 by 600 is shown at 2000 by 500.
+    const header = (width: number, height: number) => {
+      const bytes = Buffer.alloc(33);
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(bytes, 0);
+      bytes.writeUInt32BE(13, 8);
+      bytes.write("IHDR", 12, "latin1");
+      bytes.writeUInt32BE(width, 16);
+      bytes.writeUInt32BE(height, 20);
+      return bytes.toString("base64");
+    };
+    const run = await runProjectChecks({
+      checks: saving(
+        "wide",
+        `fs.writeFileSync(path.join(dir, "wide.png"), Buffer.from("${header(2400, 600)}", "base64"));
+         fs.writeFileSync(path.join(dir, "fits.png"), Buffer.from("${header(1900, 1900)}", "base64"));`,
+      ),
+      copyDir: copyWith("wide"),
+      logDir: join(root, "wide-logs"),
+      screenshotsDir: join(root, "wide-shots"),
+    });
+    expect(run.screenshots.map((shot) => shot.name)).toEqual(["fits.png", "wide.png"]);
+    expect(run.screenshotsScaled).toEqual([
+      "wide.png is 2400x600; the graders see it scaled to about 2000x500, so its detail may be lost.",
+    ]);
+  });
+
+  it("take nothing from a screenshot folder that leads outside the branch", async () => {
+    // A link committed at the folder's path, followed, sent screenshots from
+    // elsewhere on this machine to the graders (review round 9). A junction
+    // on Windows, which needs no administrator.
+    const outside = join(root, "outside-shots");
+    mkdirSync(outside, { recursive: true });
+    writeFileSync(join(outside, "secret.png"), "png");
+    const copyDir = copyWith("linked");
+    mkdirSync(join(copyDir, "e2e"), { recursive: true });
+    symlinkSync(outside, join(copyDir, "e2e", "screens"), "junction");
+    const run = await runProjectChecks({
+      checks: { ...saving("linked", ""), e2eCommand: script("linked-e2e", "") },
+      copyDir,
+      logDir: join(root, "linked-logs"),
+      screenshotsDir: join(root, "linked-shots"),
+    });
+    expect(run.screenshots).toEqual([]);
+    expect(run.screenshotsLeft).toEqual([
+      "The screenshot folder e2e/screens leads outside the branch, so nothing in it was graded.",
+    ]);
+  });
 
   it("copy no screenshot when no e2e ran", async () => {
     const copyDir = copyWith("no-e2e");

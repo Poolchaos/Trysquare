@@ -15,7 +15,7 @@
  *   npm run demo:design -- --model claude-opus-5-5
  */
 
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -101,13 +101,38 @@ async function main(): Promise<number> {
     if (!options.keep) rmSync(dataDir, { recursive: true, force: true });
     return 1;
   }
+  try {
+    return report(run, { ...options, dataDir, startedAt, events });
+  } finally {
+    // Closed before the directory goes, whatever happened: Windows will not
+    // delete an open database.
+    run.db.$client.close();
+    if (options.keep) log(`Kept the data directory: ${dataDir}`);
+    else rmSync(dataDir, { recursive: true, force: true });
+  }
+}
 
+function report(
+  run: NonNullable<Awaited<ReturnType<typeof reviewDesignFixture>>>,
+  options: ReturnType<typeof parseArgs> & { dataDir: string; startedAt: number; events: string[] },
+): number {
+  const { dataDir, startedAt, events } = options;
   const { db, reviewId, score, manifest } = run;
   const review = requireReview(db, reviewId);
   log();
+  // A run that did not reach a person stopped before both graders had
+  // answered: what it left is not a score of either (review round 9).
+  if (run.outcome !== "completed") {
+    log(`Not a measurement: the review ended ${run.outcome} before both graders had answered.`);
+  }
   log("Against the key");
-  for (const hit of score.found)
-    log(`  FOUND   ${hit.screenshot.padEnd(24)} ${hit.defect}, graded ${hit.grade}`);
+  // The key's defect beside what the grader said: both failing a screen is
+  // not both naming what was planted, which only the words show.
+  for (const hit of score.found) {
+    log(
+      `  FOUND   ${hit.screenshot.padEnd(24)} key: ${hit.defect}; graded ${hit.grade}: ${hit.whatIsOff}`,
+    );
+  }
   for (const miss of score.missed)
     log(`  MISSED  ${miss.screenshot.padEnd(24)} ${miss.defect}: ${miss.why}`);
   for (const wrong of score.falsePositives) {
@@ -117,6 +142,9 @@ async function main(): Promise<number> {
   }
   for (const open of score.cleanOpen)
     log(`  OPEN    ${open.padEnd(24)} clean, failed by one grader`);
+  for (const extra of score.unkeyed) {
+    log(`  UNKEYED ${extra.screenshot.padEnd(24)} not in the key, left ${extra.status}`);
+  }
   const planted = manifest.screens.filter((screen) => screen.defect !== null).length;
   log();
   log(
@@ -135,7 +163,10 @@ async function main(): Promise<number> {
   const outDir = join(REPO_ROOT, "review", `${stamp.slice(0, 10)}-design`, label);
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, "events.jsonl"), `${events.join("\n")}\n`);
-  writeFileSync(join(outDir, "score.json"), `${JSON.stringify(score, null, 2)}\n`);
+  writeFileSync(
+    join(outDir, "score.json"),
+    `${JSON.stringify({ outcome: run.outcome, ...score }, null, 2)}\n`,
+  );
   writeFileSync(
     join(outDir, "grades.json"),
     `${JSON.stringify(
@@ -162,13 +193,10 @@ async function main(): Promise<number> {
     verificationNote: finding.verificationNote,
   }));
   writeFileSync(join(outDir, "code-findings.json"), `${JSON.stringify(codeFindings, null, 2)}\n`);
-  cpSync(screenshotsDir(dataDir, reviewId), join(outDir, "screenshots"), { recursive: true });
+  // Made only for a screenshot copied: an e2e that saved none left none.
+  const shots = screenshotsDir(dataDir, reviewId);
+  if (existsSync(shots)) cpSync(shots, join(outDir, "screenshots"), { recursive: true });
   log(`Wrote the score, every grade, the screenshots and the code findings to ${outDir}`);
-
-  // Closed before the directory goes: Windows will not delete an open database.
-  db.$client.close();
-  if (options.keep) log(`Kept the data directory: ${dataDir}`);
-  else rmSync(dataDir, { recursive: true, force: true });
   return run.outcome === "completed" ? 0 : 1;
 }
 

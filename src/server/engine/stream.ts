@@ -7,7 +7,7 @@
  * output is how a review loses the result it was waiting for.
  */
 
-import { toEngineEvent, type EngineEvent } from "@/lib/engine/events";
+import { toEngineEvents, type EngineEvent } from "@/lib/engine/events";
 
 export class StreamDecoder {
   private buffer = "";
@@ -22,8 +22,7 @@ export class StreamDecoder {
     while (newlineIndex !== -1) {
       const line = this.buffer.slice(0, newlineIndex);
       this.buffer = this.buffer.slice(newlineIndex + 1);
-      const event = this.decodeLine(line);
-      if (event) events.push(event);
+      events.push(...this.decodeLine(line));
       newlineIndex = this.buffer.indexOf("\n");
     }
 
@@ -34,8 +33,7 @@ export class StreamDecoder {
   flush(): EngineEvent[] {
     const remaining = this.buffer;
     this.buffer = "";
-    const event = this.decodeLine(remaining);
-    return event ? [event] : [];
+    return this.decodeLine(remaining);
   }
 
   /** Lines that were not JSON. Non-empty means the transcript has a hole. */
@@ -43,14 +41,14 @@ export class StreamDecoder {
     return this.malformed;
   }
 
-  private decodeLine(line: string): EngineEvent | null {
+  private decodeLine(line: string): EngineEvent[] {
     const trimmed = line.trim();
-    if (trimmed === "") return null;
+    if (trimmed === "") return [];
     try {
-      return toEngineEvent(JSON.parse(trimmed));
+      return toEngineEvents(JSON.parse(trimmed));
     } catch {
       this.malformed.push(trimmed.slice(0, 500));
-      return null;
+      return [];
     }
   }
 }

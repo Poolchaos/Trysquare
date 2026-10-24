@@ -9,27 +9,30 @@ import {
   GradesMismatchError,
   assertGradesMatch,
   composeDesignSystemPrompt,
+  isScreenshotName,
   renderDesignPrompt,
 } from "@/lib/review/design";
 
 const graded = (...names: string[]) =>
   names.map((screenshot) => ({ screenshot, opened: true, grade: "A" as const, whatIsOff: "" }));
+/** Screenshots asked about, each at a path in the screenshots folder. */
+const asked = (...names: string[]) => names.map((name) => ({ name, path: `C:\\runs\\s\\${name}` }));
 
 describe("the grades a stage answers with", () => {
   it("are taken when each screenshot asked about is graded once", () => {
     expect(() =>
-      assertGradesMatch(graded("home.png", "phone/x.png"), ["home.png", "phone/x.png"]),
+      assertGradesMatch(graded("home.png", "phone/x.png"), asked("home.png", "phone/x.png")),
     ).not.toThrow();
   });
 
   it("are refused when a screen is left out, doubled, or not one asked about", () => {
-    expect(() => assertGradesMatch(graded("home.png"), ["home.png", "settings.png"])).toThrow(
+    expect(() => assertGradesMatch(graded("home.png"), asked("home.png", "settings.png"))).toThrow(
       "settings.png was not graded",
     );
-    expect(() => assertGradesMatch(graded("home.png", "home.png"), ["home.png"])).toThrow(
+    expect(() => assertGradesMatch(graded("home.png", "home.png"), asked("home.png"))).toThrow(
       "home.png was graded 2 times",
     );
-    expect(() => assertGradesMatch(graded("home.png", "other.png"), ["home.png"])).toThrow(
+    expect(() => assertGradesMatch(graded("home.png", "other.png"), asked("home.png"))).toThrow(
       GradesMismatchError,
     );
   });
@@ -40,7 +43,7 @@ describe("the grades a stage answers with", () => {
     expect(() =>
       assertGradesMatch(
         [{ screenshot: "home.png", opened: false, grade: "D", whatIsOff: "Could not open it." }],
-        ["home.png"],
+        asked("home.png"),
       ),
     ).toThrow("home.png could not be opened");
   });
@@ -49,16 +52,60 @@ describe("the grades a stage answers with", () => {
     expect(() =>
       assertGradesMatch(
         [{ screenshot: "home.png", opened: true, grade: "C", whatIsOff: "  " }],
-        ["home.png"],
+        asked("home.png"),
       ),
     ).toThrow("home.png was graded C without saying what is off");
     // An A or B may say nothing.
     expect(() =>
       assertGradesMatch(
         [{ screenshot: "home.png", opened: true, grade: "B", whatIsOff: "" }],
-        ["home.png"],
+        asked("home.png"),
       ),
     ).not.toThrow();
+  });
+
+  it("are refused when a screen said opened was never opened with Read", () => {
+    // "opened: true" was the grader's word alone (review round 9): the
+    // files its session read are the app's to check.
+    const shots = asked("home.png", "phone/x.png");
+    expect(() =>
+      assertGradesMatch(graded("home.png", "phone/x.png"), shots, [shots[0]!.path]),
+    ).toThrow("phone/x.png was graded without being opened with Read");
+    // The same file, however the session spelt it.
+    expect(() =>
+      assertGradesMatch(graded("home.png", "phone/x.png"), shots, [
+        "c:/runs/s/home.png",
+        "C:\\RUNS\\S\\phone/x.png",
+      ]),
+    ).not.toThrow();
+    // Not watched (a replayed answer, Mode B): the word stands alone.
+    expect(() => assertGradesMatch(graded("home.png"), asked("home.png"))).not.toThrow();
+  });
+});
+
+describe("a screenshot's name", () => {
+  it("is one the copy step and the lookup both take, or neither", () => {
+    for (const name of ["home.png", "phone/home.png", "..x.png", "a b.png", "a:b.png"]) {
+      expect(isScreenshotName(name), name).toBe(name !== "a:b.png");
+    }
+    for (const name of [
+      "",
+      " home.png",
+      "home.png ",
+      "c:home.png",
+      "/home.png",
+      "..\\x.png",
+      "a\\b.png",
+      "../x.png",
+      "a//b.png",
+      "./x.png",
+      "a: b.png",
+      "two\nlines.png",
+      `para${String.fromCodePoint(0x2028)}graph.png`,
+      `next${String.fromCodePoint(0x85)}line.png`,
+    ]) {
+      expect(isScreenshotName(name), JSON.stringify(name)).toBe(false);
+    }
   });
 });
 
@@ -107,7 +154,7 @@ describe("what a grader is told", () => {
       standard: null,
       outputContract: "C",
     });
-    expect(prompt).toContain("say opened: false, and the review stops rather than guess");
+    expect(prompt).toContain("say opened: false, and the review stops rather\nthan guess.");
     expect(prompt).not.toContain("is graded D, saying so");
   });
 

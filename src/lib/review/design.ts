@@ -74,8 +74,9 @@ export function composeDesignSystemPrompt(options: {
     GRADE_SCALE,
     "",
     "For a C or a D, say what is off and where on the screen, specifically enough that",
-    "someone could find it. Say opened: true only for a screenshot you opened and looked at;",
-    "for one you could not open, say opened: false, and the review stops rather than guess.",
+    "someone could find it. Say opened: true only for a screenshot you opened with Read and",
+    "looked at; for one you could not open, say opened: false, and the review stops rather",
+    "than guess.",
     ...(options.standard === null
       ? []
       : ["", "# The project's design standard", "", options.standard.trim()]),
@@ -84,6 +85,27 @@ export function composeDesignSystemPrompt(options: {
     "",
     options.outputContract,
   ].join("\n");
+}
+
+/**
+ * A screenshot name the app can list on one line of a grading request, have
+ * echoed back, and find again inside its review's folder: relative, with
+ * forward slashes and real segments only, one line, no ": " (which ends a
+ * name in the request), and no space at either end (a grader echoing it
+ * trimmed would not match). The copy step and the lookup both ask this, so
+ * neither keeps a name the other refuses (review round 9: `c:home.png`).
+ */
+export function isScreenshotName(name: string): boolean {
+  if (name === "" || name !== name.trim() || name.includes(": ")) return false;
+  if (/^[a-zA-Z]:/.test(name) || name.startsWith("/") || name.includes("\\")) return false;
+  for (const char of name) {
+    const code = char.codePointAt(0)!;
+    // Line breaks a reader would see, Unicode's own among them.
+    if (code < 32 || code === 127 || code === 0x85 || code === 0x2028 || code === 0x2029) {
+      return false;
+    }
+  }
+  return name.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
 }
 
 export interface DesignScreenshot {
@@ -120,22 +142,36 @@ export class GradesMismatchError extends Error {
  * Every screenshot asked about, opened and graded once, and nothing else: a
  * screen the answer left out would read as one that passed (as a hunk left
  * out would), and a C or D must say what is off for anyone to act on it.
+ *
+ * Opened is checked against the files the stage's session actually Read,
+ * when the engine saw them, not taken on the grader's word: coverage is the
+ * app's to enforce, never a prompt's (review round 9). Compared without
+ * case or slash direction, as Windows names one file either way.
  */
-export function assertGradesMatch(grades: DesignGrades["grades"], asked: readonly string[]): void {
+export function assertGradesMatch(
+  grades: DesignGrades["grades"],
+  asked: readonly { name: string; path: string }[],
+  filesRead?: readonly string[],
+): void {
   const problems: string[] = [];
+  const same = (path: string) => path.replaceAll("\\", "/").toLowerCase();
+  const read = filesRead === undefined ? undefined : new Set(filesRead.map(same));
   const seen = new Map<string, number>();
   for (const grade of grades) {
     seen.set(grade.screenshot, (seen.get(grade.screenshot) ?? 0) + 1);
+    const shot = asked.find((each) => each.name === grade.screenshot);
     if (!grade.opened) problems.push(`${grade.screenshot} could not be opened`);
-    else if (isFailingGrade(grade.grade) && grade.whatIsOff.trim() === "") {
+    else if (shot !== undefined && read !== undefined && !read.has(same(shot.path))) {
+      problems.push(`${grade.screenshot} was graded without being opened with Read`);
+    } else if (isFailingGrade(grade.grade) && grade.whatIsOff.trim() === "") {
       problems.push(`${grade.screenshot} was graded ${grade.grade} without saying what is off`);
     }
   }
-  for (const name of asked) {
+  for (const { name } of asked) {
     if (!seen.has(name)) problems.push(`${name} was not graded`);
   }
   for (const [name, count] of seen) {
-    if (!asked.includes(name)) problems.push(`${name} was not asked about`);
+    if (!asked.some((each) => each.name === name)) problems.push(`${name} was not asked about`);
     else if (count > 1) problems.push(`${name} was graded ${count} times`);
   }
   if (problems.length > 0) throw new GradesMismatchError(problems);

@@ -7,7 +7,7 @@
 import { readFile } from "node:fs/promises";
 import { requireCheckFinding } from "@/server/db/repositories/check-findings";
 import { handler } from "@/server/api/respond";
-import { screenshotFile } from "@/server/review/screenshots";
+import { screenshotFile, screenshotNameOf } from "@/server/review/screenshots";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,11 @@ export async function GET(
     const notFound = (error: string) =>
       Response.json({ error, code: "ScreenshotNotFound" }, { status: 404 });
     if (row.screenshotPath === null) return notFound("This finding has no screenshot.");
-    const file = screenshotFile(dataDir, row.reviewId, row.screenshotPath);
+    const file = screenshotFile(
+      dataDir,
+      row.reviewId,
+      screenshotNameOf(dataDir, row.reviewId, row.screenshotPath),
+    );
     if (file === null) return notFound("This screenshot is not in its review's folder.");
     try {
       const bytes = await readFile(file);

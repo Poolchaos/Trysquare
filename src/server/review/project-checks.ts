@@ -112,9 +112,11 @@ export async function runChecksForReview(
     kept.commit === options.commit &&
     JSON.stringify(kept.checks) === JSON.stringify(options.checks) &&
     // A result kept before the standard and each screenshot's hash were
-    // (review round 8) cannot say what to grade against, so they run again.
+    // (review round 8), or before the scaling notes (round 9), cannot say
+    // all a person is told, so they run again.
     kept.designStandard !== undefined &&
-    Array.isArray(kept.screenshotsLeft)
+    Array.isArray(kept.screenshotsLeft) &&
+    Array.isArray(kept.screenshotsScaled)
   ) {
     appendRunNote(db, options.reviewId, {
       kind: "note",
@@ -162,12 +164,14 @@ export async function runChecksForReview(
     appendRunNote(db, options.reviewId, {
       kind: "note",
       message:
-        run.screenshots.length === 0
-          ? `The e2e saved no screenshot in ${options.checks.screenshotDir}, so the design was not checked.`
-          : `The e2e saved ${run.screenshots.length} screenshot(s) to grade.`,
+        run.screenshots.length > 0
+          ? `The e2e saved ${run.screenshots.length} screenshot(s) to grade.`
+          : run.screenshotsLeft.length > 0
+            ? "None of the e2e's screenshots could be graded, so the design was not checked."
+            : `The e2e saved no screenshot in ${options.checks.screenshotDir}, so the design was not checked.`,
     });
   }
-  for (const message of run.screenshotsLeft) {
+  for (const message of [...run.screenshotsLeft, ...run.screenshotsScaled]) {
     appendRunNote(db, options.reviewId, { kind: "note", message });
   }
   if (run.screenshots.length > 0 && standard.note !== null) {

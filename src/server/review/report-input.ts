@@ -6,7 +6,7 @@
  * that could drift about what a report contains.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { checksDir } from "@/lib/paths";
 import { listCheckFindings, type CheckFinding } from "../db/repositories/check-findings";
@@ -24,7 +24,7 @@ import type {
   ReportInput,
 } from "@/lib/review/report";
 import type { ChecksResult } from "./project-checks";
-import { screenshotFile } from "./screenshots";
+import { screenshotFile, screenshotNameOf } from "./screenshots";
 
 /**
  * How each of the project's own commands ended, from the result the review
@@ -46,9 +46,13 @@ function checksRanFor(
         ? "no e2e command"
         : e2e === undefined || e2e.cancelled
           ? "e2e not run"
-          : kept.screenshots.length === 0
-            ? "no screenshots"
-            : "graded";
+          : kept.screenshots.length > 0
+            ? (kept.screenshotsLeft ?? []).length > 0
+              ? "partly graded"
+              : "graded"
+            : (kept.screenshotsLeft ?? []).length > 0
+              ? "none gradable"
+              : "no screenshots";
     const ran = kept.commands.map((command): ReportCheckRun => ({
       step: command.step,
       command: command.command,
@@ -67,11 +71,14 @@ function checksRanFor(
 }
 
 /**
- * The most screenshot bytes one report carries: two hundred screens graded
- * C or D at the copy's limit would otherwise make a report of gigabytes
- * (review round 8). Past it a screen is named, not shown.
+ * The most screenshot data one report carries, counted as the base64 it is
+ * carried as: two hundred screens graded C or D at the copy's limit would
+ * otherwise make a report of gigabytes (review round 8). Past it a screen
+ * is named, not shown.
  */
 export const REPORT_IMAGE_BYTES = 24 * 1024 * 1024;
+
+const base64Length = (bytes: number) => 4 * Math.ceil(bytes / 3);
 
 /**
  * Turns check rows into the report's, carrying each design finding's
@@ -84,21 +91,25 @@ function reportChecks(dataDir: string | undefined, reviewId: string) {
     row: CheckFinding,
   ): Pick<ReportCheck, "screenshotName" | "screenshotDataUri"> => {
     if (row.screenshotPath === null) return {};
-    const file =
-      dataDir === undefined ? null : screenshotFile(dataDir, reviewId, row.screenshotPath);
+    const name =
+      dataDir === undefined
+        ? row.screenshotPath
+        : screenshotNameOf(dataDir, reviewId, row.screenshotPath);
+    const file = dataDir === undefined ? null : screenshotFile(dataDir, reviewId, name);
     let dataUri: string | null = null;
     if (file !== null) {
       try {
-        const bytes = readFileSync(file);
-        if (carried + bytes.length <= REPORT_IMAGE_BYTES) {
-          carried += bytes.length;
-          dataUri = `data:image/png;base64,${bytes.toString("base64")}`;
+        // Sized before it is read: a file past the budget is never loaded.
+        const encoded = base64Length(statSync(file).size);
+        if (carried + encoded <= REPORT_IMAGE_BYTES) {
+          carried += encoded;
+          dataUri = `data:image/png;base64,${readFileSync(file).toString("base64")}`;
         }
       } catch {
         dataUri = null;
       }
     }
-    return { screenshotName: row.screenshotPath, screenshotDataUri: dataUri };
+    return { screenshotName: name, screenshotDataUri: dataUri };
   };
   return (row: CheckFinding): ReportCheck => ({
     ...screenshotOf(row),
@@ -126,6 +137,14 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
           (row.dismissedFrom === "open_question") === fromOpenQuestion,
       )
       .map(asReportCheck);
+
+  // In the order the report shows them, which is the order the image
+  // budget is spent in (review round 9).
+  const confirmedChecks = checkRows.filter((row) => row.status === "confirmed").map(asReportCheck);
+  // Graded C or D by one grader only, as a code finding one verifier
+  // proved is an open question: never proven, so apart (D-190).
+  const leftOutChecks = dismissedCheck(true);
+  const dismissedChecks = dismissedCheck(false);
 
   const of = (status: string, keep: (finding: (typeof findings)[number]) => boolean = () => true) =>
     findings
@@ -179,11 +198,9 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
     // The project's own checks, decided as the code findings are (D-197).
     checks: {
       ...checksRanFor(dataDir, reviewId),
-      confirmed: checkRows.filter((row) => row.status === "confirmed").map(asReportCheck),
-      dismissed: dismissedCheck(false),
-      // Graded C or D by one grader only, as a code finding one verifier
-      // proved is an open question: never proven, so apart (D-190).
-      leftOutUnproven: dismissedCheck(true),
+      confirmed: confirmedChecks,
+      dismissed: dismissedChecks,
+      leftOutUnproven: leftOutChecks,
     },
 
     coverage: {

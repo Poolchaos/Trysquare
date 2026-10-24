@@ -11,6 +11,7 @@ import {
   renderReport,
   renderReportHtml,
   type ReportInput,
+  type DesignChecked,
 } from "@/lib/review/report";
 
 const FINDING = {
@@ -414,7 +415,7 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
   it("says the design was not checked, and why, rather than grade nothing", () => {
     // WP-I step 4: a project with no e2e gets "design not checked" in the
     // report, never a grade; the report said nothing of the design at all.
-    const said = (design: "graded" | "no e2e command" | "e2e not run" | "no screenshots") =>
+    const said = (design: DesignChecked) =>
       renderReport({
         ...BASE,
         checks: { ran, confirmed: [], dismissed: [], leftOutUnproven: [], design },
@@ -427,6 +428,14 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
       "The design was not checked: its e2e saved no screenshot.",
     );
     expect(said("graded")).toContain("The screenshots its e2e saved were graded A to D.");
+    // Some or all left out, the run notes naming them: never "graded" or
+    // "saved no screenshot" for them (review round 9).
+    expect(said("partly graded")).toContain(
+      "The screenshots its e2e saved were graded A to D, but for some left out, which the run notes name and say why.",
+    );
+    expect(said("none gradable")).toContain(
+      "The design was not checked: none of the screenshots its e2e saved could be graded, and the run notes say why.",
+    );
     expect(
       renderReportHtml({
         ...BASE,

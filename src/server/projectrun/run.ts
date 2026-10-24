@@ -8,8 +8,9 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { copyFile, mkdir, readdir, readFile, stat } from "node:fs/promises";
-import { dirname, join, relative, sep } from "node:path";
+import { copyFile, mkdir, readdir, readFile, realpath, stat } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import { isScreenshotName } from "@/lib/review/design";
 import { projectCommandEnv } from "@/lib/projects/command-env";
 import type { ProjectChecks } from "@/lib/projects/checks";
 
@@ -190,20 +191,26 @@ export interface Screenshot {
 export const SCREENSHOT_LIMIT = 200;
 export const SCREENSHOT_BYTES = 8 * 1024 * 1024;
 
+/**
+ * The longest side the CLI's Read shows a model, larger images scaled to
+ * fit: measured 2026-10-24 with 2.1.301, a 1280x12000 PNG shown as
+ * 213x2000, and a 1900x1900 one whole (D-201).
+ */
+export const READ_MAX_SIDE = 2000;
+
 export interface ChecksRun {
   commands: CommandResult[];
   screenshots: Screenshot[];
   /** What was not copied, and why, each said to the person. */
   screenshotsLeft: string[];
+  /** Copied, but shown to the graders smaller than saved, each said. */
+  screenshotsScaled: string[];
 }
 
-/**
- * A name a grading prompt can list on one line and a grade can echo back:
- * one line, and no ": ", which separates the name from its path there.
- */
-function sayable(name: string): boolean {
-  const control = [...name].some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127);
-  return !control && !name.includes(": ");
+/** A PNG's width and height, from its header, or null for one without it. */
+function pngSize(bytes: Buffer): { width: number; height: number } | null {
+  if (bytes.length < 24 || bytes.toString("latin1", 12, 16) !== "IHDR") return null;
+  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
 async function pngsUnder(root: string): Promise<string[]> {
@@ -222,7 +229,23 @@ async function pngsUnder(root: string): Promise<string[]> {
     }
   };
   await walk(root);
-  return found.sort();
+  return found;
+}
+
+/**
+ * The screenshot folder, resolved, when it is inside the copy; false when a
+ * link committed at that path leads elsewhere on this machine, as the
+ * design standard is refused (review round 9); null when it is not there.
+ */
+async function insideCopy(copyDir: string, folder: string): Promise<string | false | null> {
+  try {
+    const root = await realpath(copyDir);
+    const resolved = await realpath(join(copyDir, folder));
+    const inside = relative(root, resolved);
+    return isAbsolute(inside) || inside.split(sep)[0] === ".." ? false : resolved;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -265,14 +288,25 @@ export async function runProjectChecks(options: {
   const ranE2e = commands.some((result) => result.step === "e2e" && !result.cancelled);
   const screenshots: Screenshot[] = [];
   const screenshotsLeft: string[] = [];
-  if (ranE2e && checks.screenshotDir !== null) {
-    const from = join(options.copyDir, checks.screenshotDir);
-    const found = await pngsUnder(from);
-    for (const png of found) {
-      const name = relative(from, png).split(sep).join("/");
-      if (!sayable(name)) {
+  const screenshotsScaled: string[] = [];
+  const from =
+    ranE2e && checks.screenshotDir !== null
+      ? await insideCopy(options.copyDir, checks.screenshotDir)
+      : null;
+  if (from === false) {
+    screenshotsLeft.push(
+      `The screenshot folder ${checks.screenshotDir} leads outside the branch, so nothing in it was graded.`,
+    );
+  } else if (from !== null) {
+    // By name, as said, not by this machine's path order: Windows sorts
+    // its backslashes apart from the slashes a name has (review round 9).
+    const found = (await pngsUnder(from))
+      .map((png) => ({ png, name: relative(from, png).split(sep).join("/") }))
+      .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    for (const { png, name } of found) {
+      if (!isScreenshotName(name)) {
         screenshotsLeft.push(
-          `${JSON.stringify(name)} was not graded: a name with a line break or ": " in it cannot be listed in a grading request.`,
+          `${JSON.stringify(name)} was not graded: a name with a line break, ": ", a backslash, a drive or a space at either end cannot be listed in a grading request.`,
         );
         continue;
       }
@@ -292,11 +326,17 @@ export async function runProjectChecks(options: {
       const to = join(options.screenshotsDir, ...name.split("/"));
       await mkdir(dirname(to), { recursive: true });
       await copyFile(png, to);
-      const sha256 = createHash("sha256")
-        .update(await readFile(to))
-        .digest("hex");
+      const copied = await readFile(to);
+      const sha256 = createHash("sha256").update(copied).digest("hex");
       screenshots.push({ name, sha256 });
+      const size = pngSize(copied);
+      if (size !== null && Math.max(size.width, size.height) > READ_MAX_SIDE) {
+        const scale = READ_MAX_SIDE / Math.max(size.width, size.height);
+        screenshotsScaled.push(
+          `${name} is ${size.width}x${size.height}; the graders see it scaled to about ${Math.round(size.width * scale)}x${Math.round(size.height * scale)}, so its detail may be lost.`,
+        );
+      }
     }
   }
-  return { commands, screenshots, screenshotsLeft };
+  return { commands, screenshots, screenshotsLeft, screenshotsScaled };
 }

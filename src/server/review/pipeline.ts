@@ -121,6 +121,12 @@ export interface StageResponse {
   /** The stage's JSON answer, still unvalidated. */
   output: unknown;
   sessionId: string;
+  /**
+   * Every file the stage's session opened with Read, as the engine saw it;
+   * absent when nothing watched (a replayed answer, accepted when it was
+   * given, or Mode B's terminal).
+   */
+  filesRead?: readonly string[];
   usage?: {
     inputTokens: number;
     outputTokens: number;
@@ -681,10 +687,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       });
       const graded = rejecting("s4b_design_grading", () => {
         const parsed = designGradesSchema.parse(response.output);
-        assertGradesMatch(
-          parsed.grades,
-          batch.map((shot) => shot.name),
-        );
+        assertGradesMatch(parsed.grades, batch, response.filesRead);
         return parsed.grades;
       });
       for (const grade of graded) {
@@ -771,10 +774,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       });
       const graded = rejecting("s5c_design_second", () => {
         const parsed = designGradesSchema.parse(response.output);
-        assertGradesMatch(
-          parsed.grades,
-          batch.map((shot) => shot.name),
-        );
+        assertGradesMatch(parsed.grades, batch, response.filesRead);
         return parsed.grades;
       });
       for (const grade of graded) second.set(grade.screenshot, grade);

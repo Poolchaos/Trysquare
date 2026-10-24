@@ -231,7 +231,10 @@ proven by both, open question) and what each step came to, refuted told
 apart from discarded, with the time and requests its stage rows recorded;
 screens graded C or D are counted apart from the code's funnel. In Run
 detail, a stage asked only when there is something for it (S4b, S5b, S5c)
-and not asked says so and why, never shown passed (round 8).
+and not asked says so and why, never shown passed (round 8), and never
+beside its own pulsing dot while it runs (round 9). What waits for the
+person counts every proven finding and open question, code and checks
+alike, as the queue's n of m does.
 
 ### Report
 
@@ -246,9 +249,12 @@ section of its own, Tests and design, in the page, the markdown and the
 HTML alike, confirmed, left out unproven and dismissed apart as the code's
 are (D-190), and What was examined says how each of its commands ended
 and whether the screens were graded, or why the design was not checked:
-no e2e command, an e2e that did not run, or one that saved no screenshot,
-never a grade (WP-I, D-197). A screen is shown whole in the report while the report
-carries under 24 MiB of screenshots, and named after that. Past reports
+no e2e command, an e2e that did not run, one that saved no screenshot, or
+one whose screenshots were all left out, and that some were left out when
+the rest were graded, never a grade (WP-I, D-197). A screen is shown whole
+in the report while its screenshots, counted as the base64 they are
+carried as, come to under 24 MiB, spent in the report's order (confirmed,
+left out unproven, dismissed), and named after that. Past reports
 listed per project with merged badges; delete per 02 rules.
 
 ### Rulesets
