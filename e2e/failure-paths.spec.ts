@@ -1325,9 +1325,12 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
 
     // And the report says so, in a section of its own, with how the
     // project's commands ended (step 3b-2): it said nothing of them before.
-    await expect(
-      page.getByText("The project's own checks ran on a copy of the branch: the tests failed."),
-    ).toBeVisible({ timeout: 30_000 });
+    // And that the design was not checked, never a grade (WP-I step 4).
+    const examined = page.getByText(
+      "The project's own checks ran on a copy of the branch: the tests failed. The design was not checked: the project has no e2e command.",
+    );
+    await expect(examined).toBeVisible({ timeout: 30_000 });
+    await shootAll(page, examined, "report-design-not-checked");
     const inReport = page.getByRole("heading", { name: "Tests and design (1)" }).locator("..");
     await expect(inReport).toContainText("Dismissed: Flaky on this machine.");
     await expect(inReport).toContainText("2 failing: totals, refunds");
@@ -1513,6 +1516,11 @@ for (const name of ["home.png", "rulesets.png"]) {
     await page.getByRole("button", { name: "Complete review" }).click();
     await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
     completed = true;
+    await expect(
+      page.getByText(
+        "The project's own checks ran on a copy of the branch: the e2e tests passed. The screenshots its e2e saved were graded A to D.",
+      ),
+    ).toBeVisible();
     const inReport = page.getByRole("heading", { name: "Tests and design (2)" }).locator("..");
     await expect(inReport).toContainText(
       "The screens the project's own e2e saved, on a copy of this branch, that were graded C or D.",

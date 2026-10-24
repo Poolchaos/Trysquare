@@ -22,6 +22,7 @@ import {
   checksRan,
   completeness,
   refutedOnlySentence,
+  type DesignChecked,
   type ReportCheck,
   type ReportCheckRun,
 } from "@/lib/review/report";
@@ -220,6 +221,7 @@ interface ReportData {
     confirmed: ReportCheck[];
     dismissed: ReportCheck[];
     leftOutUnproven: ReportCheck[];
+    design?: DesignChecked;
   };
   projectName: string;
   fromBranch: string;

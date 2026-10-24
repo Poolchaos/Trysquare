@@ -245,7 +245,9 @@ single-file HTML beside it, so a report can be handed to a colleague whole
 section of its own, Tests and design, in the page, the markdown and the
 HTML alike, confirmed, left out unproven and dismissed apart as the code's
 are (D-190), and What was examined says how each of its commands ended
-(WP-I, D-197). A screen is shown whole in the report while the report
+and whether the screens were graded, or why the design was not checked:
+no e2e command, an e2e that did not run, or one that saved no screenshot,
+never a grade (WP-I, D-197). A screen is shown whole in the report while the report
 carries under 24 MiB of screenshots, and named after that. Past reports
 listed per project with merged badges; delete per 02 rules.
 

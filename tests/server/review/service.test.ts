@@ -1756,6 +1756,8 @@ describe("a project's own checks (WP-I, step 2)", () => {
     expect(listFindings(db, reviewId).some((finding) => finding.issue.includes("tests fail"))).toBe(
       false,
     );
+    // No e2e, so the report says the design was not checked (WP-I step 4).
+    expect(buildReportInput(db, reviewId, dataDir).checks!.design).toBe("no e2e command");
   }, 120_000);
 
   it("keeps one finding for a failing command across a pause and a resume", async () => {
@@ -1832,6 +1834,30 @@ describe("a project's own checks (WP-I, step 2)", () => {
       checks: { ...asked.checks, installCommand: script("install", "") },
     });
     expect(readFileSync(join(dataDir, "scripts", "counted.cjs.runs"), "utf8")).toBe("xxx");
+  }, 120_000);
+
+  it("says why the design was not checked when the e2e saved nothing, or never ran", async () => {
+    const reviewId = seedReview();
+    const asked = (checks: Partial<ProjectChecks>) => ({
+      reviewId,
+      dataDir,
+      clonePath: appClone,
+      commit: appHead,
+      checks: { ...NO_CHECKS, enabled: true, screenshotDir: "e2e/screens", ...checks },
+    });
+    writeIdealAnswers();
+    turnOn({ e2eCommand: script("saves-nothing", ""), screenshotDir: "e2e/screens" });
+    expect((await run(reviewId)).kind).toBe("completed");
+    expect(buildReportInput(db, reviewId, dataDir).checks!.design).toBe("no screenshots");
+    // A failed install stops the e2e.
+    await runChecksForReview(
+      db,
+      asked({
+        installCommand: script("install-fails", "process.exit(1);"),
+        e2eCommand: script("never-runs", ""),
+      }),
+    );
+    expect(buildReportInput(db, reviewId, dataDir).checks!.design).toBe("e2e not run");
   }, 120_000);
 
   it("says when the design standard cannot be read, or is cut to fit", async () => {
@@ -1978,6 +2004,7 @@ describe("the project's screens graded (WP-I, step 4)", () => {
     dismissCheckFinding(db, settings!.id, "Agreed with design.");
 
     const { checks } = buildReportInput(db, reviewId, dataDir);
+    expect(checks!.design).toBe("graded");
     // Filed under dismissed, it read as a person rejecting a screen nobody
     // proved (review round 8).
     expect(checks!.dismissed).toEqual([]);

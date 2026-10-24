@@ -411,6 +411,36 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
     expect(renderReport(BASE)).not.toContain("own checks");
   });
 
+  it("says the design was not checked, and why, rather than grade nothing", () => {
+    // WP-I step 4: a project with no e2e gets "design not checked" in the
+    // report, never a grade; the report said nothing of the design at all.
+    const said = (design: "graded" | "no e2e command" | "e2e not run" | "no screenshots") =>
+      renderReport({
+        ...BASE,
+        checks: { ran, confirmed: [], dismissed: [], leftOutUnproven: [], design },
+      });
+    expect(said("no e2e command")).toContain(
+      "the tests failed. The design was not checked: the project has no e2e command.",
+    );
+    expect(said("e2e not run")).toContain("The design was not checked: its e2e did not run.");
+    expect(said("no screenshots")).toContain(
+      "The design was not checked: its e2e saved no screenshot.",
+    );
+    expect(said("graded")).toContain("The screenshots its e2e saved were graded A to D.");
+    expect(
+      renderReportHtml({
+        ...BASE,
+        checks: {
+          ran,
+          confirmed: [],
+          dismissed: [],
+          leftOutUnproven: [],
+          design: "no e2e command",
+        },
+      }),
+    ).toContain("The design was not checked: the project has no e2e command.");
+  });
+
   it("keeps a dismissed one with its reason", () => {
     const report = renderReport({
       ...BASE,

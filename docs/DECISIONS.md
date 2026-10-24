@@ -4923,3 +4923,11 @@ verified evidence, in writing, here.
   CI run 40083722008 at 15659ef failed on Windows alone, the themes
   test's dashboard navigation refused with net::ERR_NO_BUFFER_SPACE;
   re-run once, the Windows job passed.
+- 2026-10-24 WP-I step 4 owed "design not checked": the plan row says a
+  project with no e2e gets it in the report, never a grade, and the report
+  said nothing of the design. What was examined now says, after how each
+  command ended, either that the screenshots its e2e saved were graded A
+  to D, or that the design was not checked and why: the project has no e2e
+  command, its e2e did not run (a failed install, a cancel), or it saved
+  no screenshot. Read from the result the review kept, as the commands'
+  outcomes are.

@@ -51,6 +51,15 @@ export interface ReportCheck {
   dismissReason?: string | null;
 }
 
+export type DesignChecked = "graded" | "no e2e command" | "e2e not run" | "no screenshots";
+
+const DESIGN_SAID: Record<DesignChecked, string> = {
+  graded: "The screenshots its e2e saved were graded A to D.",
+  "no e2e command": "The design was not checked: the project has no e2e command.",
+  "e2e not run": "The design was not checked: its e2e did not run.",
+  "no screenshots": "The design was not checked: its e2e saved no screenshot.",
+};
+
 /** How each of a project's own commands ended in this review's copy. */
 export interface ReportCheckRun {
   step: "install" | "tests" | "e2e";
@@ -81,6 +90,11 @@ export interface ReportInput {
     dismissed: readonly ReportCheck[];
     /** Graded C or D by one grader and not the other, then left out (D-190). */
     leftOutUnproven: readonly ReportCheck[];
+    /**
+     * Whether the screens were graded, and if not why: a project with no
+     * e2e gets "design not checked", never a grade (WP-I step 4).
+     */
+    design?: DesignChecked;
   };
 
   coverage: {
@@ -273,10 +287,12 @@ export function checksRan(input: Pick<ReportInput, "checks">): string | null {
   const ran = input.checks?.ran ?? [];
   if (ran.length === 0) return null;
   const names = { install: "the install", tests: "the tests", e2e: "the e2e tests" };
+  const design = input.checks?.design;
   return (
     "The project's own checks ran on a copy of the branch: " +
     ran.map((run) => `${names[run.step]} ${run.outcome}`).join("; ") +
-    "."
+    "." +
+    (design === undefined ? "" : ` ${DESIGN_SAID[design]}`)
   );
 }
 
