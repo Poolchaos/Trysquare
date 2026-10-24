@@ -1953,7 +1953,8 @@ function RenderedReport({ data }: { data: ReportData }) {
                       </Mono>
                     ) : null}
                   </div>
-                  {check.verificationNote ? (
+                  {/* A screen's says what is off first, as its card does. */}
+                  {check.verificationNote && !check.screenshotDataUri ? (
                     <p className="mt-1 text-body text-[var(--color-ink-muted)]">
                       {check.verificationNote}
                     </p>
@@ -1963,7 +1964,24 @@ function RenderedReport({ data }: { data: ReportData }) {
                       Dismissed: {check.dismissReason}
                     </p>
                   ) : null}
-                  {check.evidence.trim() !== "" ? (
+                  {check.screenshotDataUri ? (
+                    <>
+                      <p className="mt-1 text-body text-[var(--color-ink-muted)]">
+                        {check.evidence}
+                      </p>
+                      {check.verificationNote ? (
+                        <p className="mt-1 text-aside text-[var(--color-ink-muted)]">
+                          {check.verificationNote}
+                        </p>
+                      ) : null}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={check.screenshotDataUri}
+                        alt={check.issue}
+                        className="mt-2 max-h-96 w-auto max-w-full rounded border border-[var(--color-border)] object-contain"
+                      />
+                    </>
+                  ) : check.evidence.trim() !== "" ? (
                     <pre className="mt-2 overflow-x-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-2 text-aside">
                       <code className="font-[family-name:var(--font-mono)]">{check.evidence}</code>
                     </pre>

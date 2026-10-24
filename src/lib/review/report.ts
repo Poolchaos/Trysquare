@@ -36,6 +36,9 @@ export interface ReportFinding {
 /** What a project's own checks found and a person decided (WP-I, D-197). */
 export interface ReportCheck {
   command: string | null;
+  /** A design finding's screenshot, by its name and as an embeddable image. */
+  screenshotName?: string | null;
+  screenshotDataUri?: string | null;
   severity: string;
   issue: string;
   /** The output where it failed. */
@@ -152,8 +155,12 @@ export function renderReport(input: ReportInput): string {
       lines.push("");
       if (check.command)
         lines.push(`Ran \`${check.command}\`. ${check.verificationNote ?? ""}`.trimEnd());
+      if (check.screenshotName) {
+        lines.push(`Screenshot \`${check.screenshotName}\`: ${check.evidence}`);
+        if (check.verificationNote) lines.push("", check.verificationNote);
+      }
       lines.push("");
-      if (check.evidence.trim() !== "") {
+      if (!check.screenshotName && check.evidence.trim() !== "") {
         lines.push("```");
         lines.push(check.evidence.trimEnd());
         lines.push("```");
@@ -417,9 +424,15 @@ export function renderReportHtml(input: ReportInput): string {
         <p class="t">${escapeHtml(check.issue)}
           ${check.command ? `<span class="w">${escapeHtml(check.command)}</span>` : ""}
         </p>
-        ${check.verificationNote ? `<p class="c">${escapeHtml(check.verificationNote)}</p>` : ""}
+        ${check.verificationNote && !check.screenshotDataUri ? `<p class="c">${escapeHtml(check.verificationNote)}</p>` : ""}
         ${check.dismissReason ? `<p class="w">${decided}: ${escapeHtml(check.dismissReason)}</p>` : ""}
-        ${check.evidence.trim() !== "" ? `<pre><code>${escapeHtml(check.evidence)}</code></pre>` : ""}
+        ${
+          check.screenshotDataUri
+            ? `<p class="c">${escapeHtml(check.evidence)}</p>${check.verificationNote ? `<p class="c">${escapeHtml(check.verificationNote)}</p>` : ""}<img src="${check.screenshotDataUri}" alt="${escapeHtml(check.issue)}" style="max-width:100%;border:1px solid var(--line);border-radius:4px;margin-top:.5rem">`
+            : check.evidence.trim() !== ""
+              ? `<pre><code>${escapeHtml(check.evidence)}</code></pre>`
+              : ""
+        }
       </li>`,
       )
       .join("");

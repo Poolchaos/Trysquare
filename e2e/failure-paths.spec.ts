@@ -18,7 +18,14 @@ import { expect, test, type Locator, type Route } from "@playwright/test";
 import { answerOnce, routeUntilStopped } from "./answer-once";
 import { sidewaysOverflow } from "./overflow";
 import { accessibilityViolations } from "./axe";
-import { APP_REPO, COUNTER_FILE, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
+import {
+  ANSWERS_DIR,
+  APP_REPO,
+  COUNTER_FILE,
+  E2E_ROOT,
+  LIMIT_TRIGGER,
+  STALL_TRIGGER,
+} from "./setup";
 
 /** Unix seconds, and deliberately a fixed moment so the banner is checkable. */
 const RESETS_AT = 1785408600;
@@ -1324,6 +1331,128 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
       const cancelled = await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
       expect.soft(cancelled.status(), "the review cancelled").toBe(200);
     }
+    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
+  }
+});
+
+test("a project's screens are graded, and one graded D is shown and decided (WP-I)", async ({
+  page,
+}) => {
+  // Step 4: the screenshots a project's own e2e saved, graded A to D by one
+  // model and, for a C or D, again by the paired model. Two real screens of
+  // this app stand in for the project's; the fake's answers grade one D and
+  // the other A, and are written past the two runs setup wrote, then taken
+  // away, the count put back, as the theater tests do.
+  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+  const extra = Array.from({ length: 8 }, (_, index) =>
+    join(ANSWERS_DIR, `${String(13 + index).padStart(3, "0")}.json`),
+  );
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = projects.projects.find((project) => project.name === "app")!;
+  const source = join(E2E_ROOT, "screens-source");
+  mkdirSync(source, { recursive: true });
+  await page.goto("/projects");
+  await expect(page.getByRole("heading", { name: "Projects", level: 1 })).toBeVisible();
+  await page.screenshot({ path: join(source, "home.png") });
+  await page.goto("/rulesets");
+  await expect(page.getByRole("heading", { name: "Rulesets", level: 1 })).toBeVisible();
+  await page.screenshot({ path: join(source, "rulesets.png") });
+  const e2e = join(E2E_ROOT, "scripts", "save-screens.cjs");
+  mkdirSync(join(E2E_ROOT, "scripts"), { recursive: true });
+  writeFileSync(
+    e2e,
+    `const fs = require("node:fs"), path = require("node:path");
+fs.mkdirSync("e2e/screens", { recursive: true });
+for (const name of ["home.png", "rulesets.png"]) {
+  fs.copyFileSync(path.join(${JSON.stringify(source)}, name), path.join("e2e/screens", name));
+}
+`,
+  );
+  const read = (n: number) =>
+    readFileSync(join(ANSWERS_DIR, `${String(n).padStart(3, "0")}.json`), "utf8");
+  // S1 to S4, then S4b grading both screens, then S5 and S5b, then S5c
+  // asked about the D alone.
+  const answers = [
+    read(1),
+    read(2),
+    read(3),
+    read(4),
+    JSON.stringify({
+      grades: [
+        {
+          screenshot: "home.png",
+          grade: "D",
+          whatIsOff: "The page title is cut off at the top of the card.",
+        },
+        { screenshot: "rulesets.png", grade: "A", whatIsOff: "" },
+      ],
+    }),
+    read(5),
+    read(6),
+    JSON.stringify({
+      grades: [{ screenshot: "home.png", grade: "D", whatIsOff: "The heading is clipped." }],
+    }),
+  ];
+  answers.forEach((answer, index) => writeFileSync(extra[index]!, answer));
+  writeFileSync(COUNTER_FILE, "12", "utf8");
+  const checks = (on: boolean) => ({
+    enabled: on,
+    installCommand: null,
+    testCommand: null,
+    e2eCommand: on ? `"${process.execPath}" "${e2e}"` : null,
+    screenshotDir: on ? "e2e/screens" : null,
+    designStandardPath: null,
+  });
+  let reviewId = "";
+  let completed = false;
+  try {
+    const on = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(true) });
+    expect(on.status()).toBe(200);
+    await startAReview(page);
+    reviewId = page.url().split("/").pop()!;
+    await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
+
+    const section = page.getByRole("region", { name: "Tests and design" });
+    await expect(section).toContainText("The screen home.png is graded D.");
+    await expect(section).toContainText("The page title is cut off at the top of the card.");
+    await expect(section).toContainText("Graded D again by the second grader");
+    // Only the D: the A raised nothing.
+    await expect(section).not.toContainText("rulesets.png");
+    const image = section.getByRole("img", { name: /The screenshot graded D/ });
+    await expect(image).toBeVisible();
+    expect(await image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, section, "design-queue");
+
+    await section.getByRole("button", { name: /^Confirm/ }).click();
+    await expect(section).toContainText("confirmed");
+    const reviewed = (await (await page.request.get(`/api/reviews/${reviewId}`)).json()) as {
+      findings: { id: string; status: string }[];
+    };
+    for (const finding of reviewed.findings.filter((row) => row.status === "verified")) {
+      await page.request.post(`/api/findings/${finding.id}/confirm`, { data: {} });
+    }
+    await page.reload();
+    await page.getByRole("button", { name: "Complete review" }).click();
+    await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
+    completed = true;
+    const inReport = page.getByRole("heading", { name: "Tests and design (1)" }).locator("..");
+    await expect(inReport).toContainText("The screen home.png is graded D.");
+    const reportImage = inReport.getByRole("img", { name: "The screen home.png is graded D." });
+    expect(await reportImage.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(
+      0,
+    );
+    await shootAll(page, inReport, "design-report");
+  } finally {
+    const off = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(false) });
+    expect.soft(off.status(), "the checks turned off again").toBe(200);
+    if (reviewId !== "" && !completed) {
+      const cancelled = await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
+      expect.soft(cancelled.status(), "the review cancelled").toBe(200);
+    }
+    for (const file of extra) rmSync(file, { force: true });
     writeFileSync(COUNTER_FILE, callsBefore, "utf8");
   }
 });
@@ -2852,6 +2981,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "GET projects/[id]/checks": {},
     "POST check-findings/[id]/confirm": { data: {} },
     "POST check-findings/[id]/dismiss": { data: { reason: "Asked by the sweep." } },
+    "GET check-findings/[id]/screenshot": {},
     "PUT projects/[id]/checks": {
       data: {
         enabled: false,

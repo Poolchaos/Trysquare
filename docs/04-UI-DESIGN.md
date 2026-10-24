@@ -212,7 +212,9 @@ renders the report.
 Above the queue, what the project's own checks found (WP-I, D-197): a
 section of its own, Tests and design, one card each, the command, the
 output where it failed and the path of the whole log where a code finding
-shows its code; Confirm, or Dismiss with a reason. Counted with the code
+shows its code; a screen graded C or D shows the screenshot itself, then
+what is off in words, then the second grader's note (WP-I step 4); Confirm,
+or Dismiss with a reason. Counted with the code
 findings in n of m decided and in what is left to decide, and Complete
 review waits on them too. Read only once the review is complete.
 

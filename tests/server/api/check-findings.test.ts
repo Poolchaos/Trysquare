@@ -126,3 +126,46 @@ describe("what a project's own checks found", () => {
     expect((await complete(reviewId)).status).toBe(200);
   });
 });
+
+describe("a design finding's screenshot (WP-I step 4)", () => {
+  async function aDesignFinding(screenshotPath: (reviewDir: string) => string) {
+    const { db, reviewId } = await aFailedTest();
+    const { recordDesignCandidate } = await import("@/server/db/repositories/check-findings");
+    const { checksDir } = await import("@/lib/paths");
+    const path = screenshotPath(checksDir(dataDir, reviewId));
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const { dirname } = await import("node:path");
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "PNGBYTES");
+    return recordDesignCandidate(db, reviewId, {
+      name: "home.png",
+      screenshotPath: path,
+      grade: "D",
+      whatIsOff: "Clipped.",
+    });
+  }
+  async function shot(id: string) {
+    const { GET } = await import("@/app/api/check-findings/[id]/screenshot/route");
+    return GET(new Request("http://localhost/x"), params(id));
+  }
+
+  it("is served from its review's own folder", async () => {
+    const row = await aDesignFinding((checks) => join(checks, "screenshots", "home.png"));
+    const response = await shot(row.id);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(Buffer.from(await response.arrayBuffer()).toString()).toBe("PNGBYTES");
+  });
+
+  it("is not served from anywhere else, whatever the row says", async () => {
+    const row = await aDesignFinding((checks) => join(checks, "..", "elsewhere.png"));
+    const response = await shot(row.id);
+    expect(response.status).toBe(404);
+    expect((await response.json()).error).toBe("This screenshot is not in its review's folder.");
+  });
+
+  it("says when a finding has none", async () => {
+    const { id } = await aFailedTest();
+    expect((await shot(id)).status).toBe(404);
+  });
+});

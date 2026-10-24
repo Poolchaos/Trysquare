@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { checksDir } from "@/lib/paths";
 import { listCheckFindings, type CheckFinding } from "../db/repositories/check-findings";
 import { getChainFilesRead, coverageReport, listLedgerFiles } from "../db/repositories/ledger";
@@ -45,7 +45,22 @@ function checksRanFor(dataDir: string | undefined, reviewId: string): ReportChec
   }
 }
 
+/** A design finding's screenshot as an image the report can carry whole. */
+function screenshotOf(
+  row: CheckFinding,
+): Pick<ReportCheck, "screenshotName" | "screenshotDataUri"> {
+  if (row.screenshotPath === null) return {};
+  let dataUri: string | null = null;
+  try {
+    dataUri = `data:image/png;base64,${readFileSync(row.screenshotPath).toString("base64")}`;
+  } catch {
+    dataUri = null;
+  }
+  return { screenshotName: basename(row.screenshotPath), screenshotDataUri: dataUri };
+}
+
 const asReportCheck = (row: CheckFinding): ReportCheck => ({
+  ...screenshotOf(row),
   command: row.command,
   severity: row.severity,
   issue: row.issue,

@@ -19,6 +19,9 @@ export interface CheckFindingRow {
   exitCode: number | null;
   timedOut: boolean;
   logPath: string | null;
+  /** The screenshot a design finding is about, and its grade (WP-I step 4). */
+  screenshotPath: string | null;
+  grade: string | null;
   severity: string;
   issue: string;
   evidence: string;
@@ -77,10 +80,29 @@ function CheckFindingCard({
         ) : null}
       </div>
       <h3 className="mt-2 font-medium">{row.issue}</h3>
+      {row.screenshotPath !== null ? (
+        // The screen itself, where a code finding shows its code: a grade
+        // is only as good as the look a person can take at what was graded.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/check-findings/${row.id}/screenshot`}
+          alt={`The screenshot graded ${row.grade ?? ""}: ${row.issue}`}
+          className="mt-3 max-h-96 w-auto max-w-full rounded border border-[var(--color-border)] object-contain"
+        />
+      ) : null}
+      {/* A screen's grader says what is off in words, under the screen and
+          before the second grader's note; set as command output it read as
+          code and ran off a phone. */}
+      {row.kind === "design" && row.evidence.trim() !== "" ? (
+        <p className="mt-2 text-sm">
+          <span className="font-medium">What is off: </span>
+          {row.evidence}
+        </p>
+      ) : null}
       {row.verificationNote ? (
         <p className="mt-1 text-xs text-[var(--color-ink-muted)]">{row.verificationNote}</p>
       ) : null}
-      {row.evidence.trim() !== "" ? (
+      {row.kind !== "design" && row.evidence.trim() !== "" ? (
         <pre
           tabIndex={0}
           role="group"
@@ -134,7 +156,11 @@ function CheckFindingCard({
                 id={`dismiss-${row.id}`}
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
-                placeholder="A flaky test, tracked elsewhere"
+                placeholder={
+                  row.kind === "design"
+                    ? "A layout agreed with design"
+                    : "A flaky test, tracked elsewhere"
+                }
               />
               <Button
                 type="submit"

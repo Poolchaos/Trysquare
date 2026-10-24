@@ -436,3 +436,35 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
     expect(html).toContain("the tests failed.");
   });
 });
+
+describe("a screen graded C or D, in the report (WP-I step 4)", () => {
+  const design = {
+    command: null,
+    severity: "CRITICAL",
+    issue: "The screen home.png is graded D.",
+    evidence: "The totals column runs off the card.",
+    verificationNote: "Graded D again by the second grader, claude-opus-5-5: overflows.",
+    screenshotName: "home.png",
+    screenshotDataUri: "data:image/png;base64,UE5H",
+  };
+
+  it("says which screen and what is off, not as code", () => {
+    const report = renderReport({
+      ...BASE,
+      checks: { ran: [], confirmed: [design], dismissed: [] },
+    });
+    expect(report).toContain("### CRITICAL: The screen home.png is graded D.");
+    expect(report).toContain("Screenshot `home.png`: The totals column runs off the card.");
+    expect(report).toContain("Graded D again by the second grader");
+    expect(report).not.toContain("```\nThe totals column");
+  });
+
+  it("carries the screen itself in the exported page, so it is whole on its own", () => {
+    const html = renderReportHtml({
+      ...BASE,
+      checks: { ran: [], confirmed: [design], dismissed: [] },
+    });
+    expect(html).toContain('<img src="data:image/png;base64,UE5H"');
+    expect(html).toContain("The totals column runs off the card.");
+  });
+});
