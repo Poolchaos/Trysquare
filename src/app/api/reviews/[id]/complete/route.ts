@@ -9,6 +9,7 @@
  */
 
 import { worktreeRootDir } from "@/lib/paths";
+import { listUndecidedCheckFindings } from "@/server/db/repositories/check-findings";
 import { listAwaitingDecision } from "@/server/db/repositories/findings";
 import {
   appendRunNote,
@@ -44,7 +45,9 @@ export async function POST(
     // Completing removes the checkout a verify-again is reading.
     manager.assertNotVerifyingAgain(id);
 
-    const undecided = listAwaitingDecision(db, id);
+    // What a project's own checks found is decided as code findings are
+    // (D-197): a failing test nobody looked at is not in a report either way.
+    const undecided = [...listAwaitingDecision(db, id), ...listUndecidedCheckFindings(db, id)];
     if (undecided.length > 0) {
       return Response.json(
         {

@@ -19,6 +19,7 @@ import {
 } from "@/lib/domain/state-machines";
 import { completeness, refutedOnlySentence } from "@/lib/review/report";
 import { ConfirmationQueue, type Finding } from "@/components/confirmation";
+import { CheckFindings, isUndecidedCheck, type CheckFindingRow } from "@/components/check-findings";
 import { Loading, PageBody, PageHeader, PageLoading } from "@/components/page";
 import {
   Badge,
@@ -162,6 +163,8 @@ interface Snapshot {
   };
   notes: { kind: string; message: string; at: string }[];
   findings: Finding[];
+  /** What the project's own checks found (D-197); absent from an older server. */
+  checkFindings?: CheckFindingRow[];
   /** Null only if the project was deleted out from under the review. */
   project: { id: string; name: string } | null;
   /** Median milliseconds per stage for this model, measured on this machine. */
@@ -811,6 +814,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     ["verified", "open_question"].includes(finding.status),
   ).length;
   const decidedRows = queueRows.length - undecidedRows;
+  // Decided as code findings are, and counted with them (D-197).
+  const checkRows = snapshot.checkFindings ?? [];
+  const undecidedChecks = checkRows.filter(isUndecidedCheck).length;
+  const toDecide = queueRows.length + checkRows.length;
+  const decided = decidedRows + checkRows.length - undecidedChecks;
   const done = new Set(
     snapshot.stages.filter((row) => row.status === "succeeded").map((r) => r.stage),
   );
@@ -931,24 +939,24 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 Scan view
               </Button>
             ) : null}
-            {review.status === "awaiting_confirmation" && queueRows.length > 0 ? (
+            {review.status === "awaiting_confirmation" && toDecide > 0 ? (
               // Its own row on a phone, so the buttons after it stay together.
               <span className="mr-2 flex w-full items-center gap-2 text-dense sm:w-auto">
                 <span className="text-[var(--color-ink-muted)] tabular-nums">
-                  {decidedRows} of {queueRows.length} decided
+                  {decided} of {toDecide} decided
                 </span>
                 <span
                   role="progressbar"
-                  aria-valuenow={decidedRows}
+                  aria-valuenow={decided}
                   aria-valuemin={0}
-                  aria-valuemax={queueRows.length}
+                  aria-valuemax={toDecide}
                   aria-label="Findings decided"
                   className="gauge-track h-1.5 w-32 overflow-hidden rounded-sm"
                 >
                   <span
                     className="block h-full bg-[var(--color-accent)] transition-[width] duration-[var(--motion-considered)]"
                     style={{
-                      width: `${queueRows.length === 0 ? 0 : (decidedRows / queueRows.length) * 100}%`,
+                      width: `${toDecide === 0 ? 0 : (decided / toDecide) * 100}%`,
                     }}
                   />
                 </span>
@@ -1153,13 +1161,18 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {["awaiting_confirmation", "complete"].includes(review.status) ? (
               <FinishedSummary snapshot={snapshot} />
             ) : null}
-            {review.status === "awaiting_confirmation" && reported.length > 0 ? (
+            {review.status === "awaiting_confirmation" &&
+            (reported.length > 0 || checkRows.length > 0) ? (
               <>
+                {checkRows.length > 0 ? (
+                  <CheckFindings rows={checkRows} deciding onChanged={() => void reload()} />
+                ) : null}
                 <ConfirmationQueue
                   reviewId={id}
                   model={review.model}
                   verifierModel={review.verifierModel ?? null}
                   findings={findings}
+                  checks={{ total: checkRows.length, undecided: undecidedChecks }}
                   onChanged={() => void reload()}
                   onCheckoutLeft={setCheckoutLeft}
                 />
@@ -1171,6 +1184,13 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               <>
                 {checkoutLeft ? (
                   <p className="mb-4 text-sm text-[var(--color-ink-muted)]">{checkoutLeft}</p>
+                ) : null}
+                {checkRows.length > 0 ? (
+                  <CheckFindings
+                    rows={checkRows}
+                    deciding={false}
+                    onChanged={() => void reload()}
+                  />
                 ) : null}
                 <ReportPanel
                   reviewId={id}

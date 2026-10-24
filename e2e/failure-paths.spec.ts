@@ -1166,6 +1166,96 @@ for (const held of [
   });
 }
 
+test("a project's failing test is decided above the queue, and counted (WP-I)", async ({
+  page,
+}) => {
+  // D-197: what a project's own checks find is decided as a code finding
+  // is, above the queue, and a review completes only once it is. The count
+  // is put back after, as the theater tests do, so the answers serve again.
+  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = projects.projects.find((project) => project.name === "app")!;
+  const failing = join(E2E_ROOT, "scripts", "failing-tests.cjs");
+  mkdirSync(join(E2E_ROOT, "scripts"), { recursive: true });
+  writeFileSync(failing, 'console.log("2 failing: totals, refunds"); process.exit(1);\n');
+  const checks = (testCommand: string | null) => ({
+    enabled: testCommand !== null,
+    installCommand: null,
+    testCommand,
+    e2eCommand: null,
+    screenshotDir: null,
+    designStandardPath: null,
+  });
+  let reviewUrl = "";
+  try {
+    const on = await page.request.put(`/api/projects/${app.id}/checks`, {
+      data: checks(`"${process.execPath}" "${failing}"`),
+    });
+    expect(on.status()).toBe(200);
+    await startAReview(page);
+    reviewUrl = page.url();
+    await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
+
+    const section = page.getByRole("region", { name: "Tests and design" });
+    await expect(section).toContainText("The tests fail on this branch.");
+    await expect(section).toContainText("Exited with code 1, as the app ran it.");
+    await expect(section.getByRole("group", { name: "Where it failed" })).toContainText(
+      "2 failing: totals, refunds",
+    );
+    // Counted with the code findings: nine of those, and this.
+    await expect(page.getByText("0 of 10 decided")).toBeVisible();
+    await expect(page.getByText(/1 from the project's checks left to decide/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Complete review" })).toBeDisabled();
+
+    const evidence = join(
+      fileURLToPath(new URL("..", import.meta.url)),
+      "review",
+      `${new Date().toISOString().slice(0, 10)}-e2e`,
+    );
+    mkdirSync(evidence, { recursive: true });
+    const shoot = async (name: string) => {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const box = await section.boundingBox();
+      if (!box) throw new Error("The section has no box to photograph.");
+      await page.screenshot({
+        path: join(evidence, `${name}.png`),
+        fullPage: true,
+        clip: box,
+        animations: "disabled",
+      });
+    };
+    const desktop = page.viewportSize();
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await shoot(`checks-queue-${scheme}`);
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const sideways = await sidewaysOverflow(page);
+    expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
+    await shoot("checks-queue-phone");
+    if (desktop) await page.setViewportSize(desktop);
+
+    // Dismissed only with a reason, which is kept and shown.
+    const dismiss = section.getByRole("button", { name: "Dismiss" });
+    await expect(dismiss).toBeDisabled();
+    await section.getByPlaceholder("Why is this not a problem?").fill("Flaky on this machine.");
+    await dismiss.click();
+    await expect(section).toContainText("Dismissed: Flaky on this machine.");
+    await expect(page.getByText("1 of 10 decided")).toBeVisible();
+    await expect(page.getByText(/from the project's checks/)).toHaveCount(0);
+  } finally {
+    await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(null) });
+    if (reviewUrl !== "") {
+      const reviewId = reviewUrl.split("/").pop()!;
+      await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
+    }
+    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
+  }
+});
+
 test("a usage limit pauses the review, says when it clears, and resumes to the end", async ({
   page,
 }) => {
@@ -2684,6 +2774,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
   };
   // The class whose 404 each segment's id must get.
   const notFound: Record<string, string> = {
+    "check-findings": "CheckFindingNotFoundError",
     findings: "FindingNotFoundError",
     models: "ModelNotFoundError",
     projects: "ProjectNotFoundError",
@@ -2703,6 +2794,8 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "PATCH projects/[id]": { data: { name: "Swept" } },
     "GET projects/[id]/branches": {},
     "GET projects/[id]/checks": {},
+    "POST check-findings/[id]/confirm": { data: {} },
+    "POST check-findings/[id]/dismiss": { data: { reason: "Asked by the sweep." } },
     "PUT projects/[id]/checks": {
       data: {
         enabled: false,

@@ -202,6 +202,7 @@ describe("an error thrown by another copy of its module", () => {
     const projects = await import("@/server/db/repositories/projects");
     const rulesets = await import("@/server/db/repositories/rulesets");
     const findings = await import("@/server/db/repositories/findings");
+    const checkFindings = await import("@/server/db/repositories/check-findings");
     const models = await import("@/server/db/repositories/models");
     const reviews = await import("@/server/db/repositories/reviews");
     const machines = await import("@/lib/domain/state-machines");
@@ -214,6 +215,7 @@ describe("an error thrown by another copy of its module", () => {
       [new rulesets.RulesetNotFoundError("x"), 404],
       [new rulesets.RuleNotFoundError("x", "y"), 404],
       [new findings.FindingNotFoundError("x"), 404],
+      [new checkFindings.CheckFindingNotFoundError("x"), 404],
       [new models.ModelNotFoundError("x"), 404],
       [new machines.IllegalTransitionError("review", "complete", "running", []), 409],
       [new findings.OpenQuestionNotConfirmableError("x"), 409],

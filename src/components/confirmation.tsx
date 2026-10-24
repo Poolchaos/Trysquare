@@ -117,6 +117,7 @@ export function ConfirmationQueue({
   model,
   verifierModel,
   findings,
+  checks = { total: 0, undecided: 0 },
   onChanged,
   onCheckoutLeft,
 }: {
@@ -126,6 +127,11 @@ export function ConfirmationQueue({
   /** The model that proves each finding again (WP-E), null before the review first ran. */
   verifierModel: string | null;
   findings: Finding[];
+  /**
+   * What the project's own checks found (D-197), decided above the queue but
+   * counted here, since a review completes only once those are decided too.
+   */
+  checks?: { total: number; undecided: number };
   onChanged: () => void | Promise<void>;
   /** Completed, but the review's checkout would not go: the server's note saying so. */
   onCheckoutLeft: (note: string) => void;
@@ -565,25 +571,26 @@ export function ConfirmationQueue({
         {/* The decided count and its bar live in the page toolbar; what only
             this header can say is what remains, by severity. */}
         <p className="text-dense text-[var(--color-ink-muted)]" aria-live="polite">
-          {undecided.length === 0
-            ? `All ${queue.length} decided.`
-            : SEVERITY_ORDER.filter((severity) =>
-                undecided.some((finding) => finding.severity.toUpperCase() === severity),
-              )
-                .map(
+          {undecided.length + checks.undecided === 0
+            ? `All ${queue.length + checks.total} decided.`
+            : [
+                ...SEVERITY_ORDER.filter((severity) =>
+                  undecided.some((finding) => finding.severity.toUpperCase() === severity),
+                ).map(
                   (severity) =>
                     `${undecided.filter((finding) => finding.severity.toUpperCase() === severity).length} ${severity.toLowerCase()}`,
-                )
-                .join(", ") + " left to decide"}
+                ),
+                ...(checks.undecided > 0 ? [`${checks.undecided} from the project's checks`] : []),
+              ].join(", ") + " left to decide"}
         </p>
         <Button
           ref={completeRef}
           variant="primary"
           onClick={() => void complete()}
-          disabled={undecided.length > 0 || busy || againBusy}
+          disabled={undecided.length + checks.undecided > 0 || busy || againBusy}
           title={
-            undecided.length > 0
-              ? `${undecided.length} finding(s) still need a decision`
+            undecided.length + checks.undecided > 0
+              ? `${undecided.length + checks.undecided} finding(s) still need a decision`
               : "Close the review and write the report"
           }
         >

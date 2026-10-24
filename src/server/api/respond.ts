@@ -105,6 +105,7 @@ export const ERROR_STATUSES: readonly (readonly [name: string, status: 404 | 409
   ["RulesetNotFoundError", 404],
   ["RuleNotFoundError", 404],
   ["FindingNotFoundError", 404],
+  ["CheckFindingNotFoundError", 404],
   ["ModelNotFoundError", 404],
   ["IllegalTransitionError", 409],
   ["OpenQuestionNotConfirmableError", 409],

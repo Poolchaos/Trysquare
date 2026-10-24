@@ -209,6 +209,13 @@ rule text), mechanism, quoted code rendered inside real file context
 (reason required) / edit comment. Progress bar: n of m decided. Finishing
 renders the report.
 
+Above the queue, what the project's own checks found (WP-I, D-197): a
+section of its own, Tests and design, one card each, the command, the
+output where it failed and the path of the whole log where a code finding
+shows its code; Confirm, or Dismiss with a reason. Counted with the code
+findings in n of m decided and in what is left to decide, and Complete
+review waits on them too. Read only once the review is complete.
+
 Above the queue, and above the report once complete, the finished review in
 its five steps (WP-G): how the findings were proven (raised, proven once,
 proven by both, open question) and what each step came to, refuted told

@@ -4,10 +4,12 @@
  * from the stages' answers, so a resume does not add a second copy.
  */
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { assertFindingTransition, findingStatusSchema } from "@/lib/domain/state-machines";
 import { newId, nowIso } from "@/lib/ids";
 import type { Db } from "../client";
-import { checkFindings } from "../schema";
+import { checkFindings, reviews } from "../schema";
+import { OpenQuestionNotConfirmableError, ReviewNotDecidingError } from "./findings";
 
 export type CheckFinding = typeof checkFindings.$inferSelect;
 
@@ -81,4 +83,67 @@ export function listCheckFindings(db: Db, reviewId: string): CheckFinding[] {
 
 export function deleteCheckFindingsForReview(db: Db, reviewId: string): void {
   db.delete(checkFindings).where(eq(checkFindings.reviewId, reviewId)).run();
+}
+
+export class CheckFindingNotFoundError extends Error {
+  constructor(readonly checkFindingId: string) {
+    super(`No finding from a project's own checks has the id "${checkFindingId}".`);
+    this.name = "CheckFindingNotFoundError";
+  }
+}
+
+export function requireCheckFinding(db: Db, id: string): CheckFinding {
+  const row = db.select().from(checkFindings).where(eq(checkFindings.id, id)).get();
+  if (row === undefined) throw new CheckFindingNotFoundError(id);
+  return row;
+}
+
+/**
+ * A person's decision, on the same transitions as a code finding's: only
+ * one proven reaches the report, and only while the review waits on them.
+ */
+function decide(
+  db: Db,
+  id: string,
+  to: "confirmed" | "dismissed",
+  patch: Partial<typeof checkFindings.$inferInsert> = {},
+): CheckFinding {
+  const row = requireCheckFinding(db, id);
+  const status =
+    db.select({ status: reviews.status }).from(reviews).where(eq(reviews.id, row.reviewId)).get()
+      ?.status ?? "missing";
+  if (status !== "awaiting_confirmation") throw new ReviewNotDecidingError(row.reviewId, status);
+  const from = findingStatusSchema.parse(row.status);
+  if (to === "confirmed" && from === "open_question") throw new OpenQuestionNotConfirmableError(id);
+  assertFindingTransition(from, to);
+  const result = db
+    .update(checkFindings)
+    .set({ ...patch, status: to, decidedAt: nowIso() })
+    .where(and(eq(checkFindings.id, id), eq(checkFindings.status, from)))
+    .run();
+  if (result.changes === 0) {
+    throw new Error(`Finding "${id}" changed status concurrently; nothing was overwritten.`);
+  }
+  return requireCheckFinding(db, id);
+}
+
+export function confirmCheckFinding(db: Db, id: string): CheckFinding {
+  return decide(db, id, "confirmed");
+}
+
+export function dismissCheckFinding(db: Db, id: string, reason: string): CheckFinding {
+  if (reason.trim() === "") {
+    throw new Error("A dismissal needs a reason: it is the record of why it was left out.");
+  }
+  return decide(db, id, "dismissed", {
+    dismissReason: reason,
+    dismissedFrom: requireCheckFinding(db, id).status,
+  });
+}
+
+/** Proven or open, so waiting on a person, which a review completes only without. */
+export function listUndecidedCheckFindings(db: Db, reviewId: string): CheckFinding[] {
+  return listCheckFindings(db, reviewId).filter(
+    (row) => row.status === "verified" || row.status === "open_question",
+  );
 }
