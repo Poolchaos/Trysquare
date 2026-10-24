@@ -578,10 +578,29 @@ export function buildSeededRepos(root) {
   commitAll(appDir, "migrate prefs to the new contract");
   // Lines and consumers are read while this branch is checked out; the
   // repaired prefs.ts moved every marker below it.
+  // Where a defect's change was made, its line found as every line is, or
+  // null for a deleted file (D-195). One shape in both lists of defects.
+  const siteOf = (defect) =>
+    defect.changeSite === undefined
+      ? {}
+      : {
+          changeSite: {
+            ...defect.changeSite,
+            line:
+              defect.changeSite.marker === undefined
+                ? null
+                : lineOf(
+                    defect.changeSite.repo === "app" ? appDir : coreDir,
+                    defect.changeSite.file,
+                    defect.changeSite.marker,
+                  ),
+          },
+        };
   const fixedDefects = DEFECTS.filter((defect) => defect.kind !== "cross-repo").map((defect) => ({
     kind: "addition",
     ...defect,
     line: lineOf(appDir, defect.file, defect.marker),
+    ...siteOf(defect),
   }));
   const verifiedConsumers = Object.fromEntries(
     CHANGED_SYMBOLS.map((symbol) => [symbol, consumersOf(appDir, symbol)]),
@@ -597,22 +616,7 @@ export function buildSeededRepos(root) {
       kind: "addition",
       ...defect,
       line: lineOf(defect.repo === "app" ? appDir : coreDir, defect.file, defect.marker),
-      ...(defect.changeSite === undefined
-        ? {}
-        : {
-            changeSite: {
-              repo: defect.changeSite.repo,
-              file: defect.changeSite.file,
-              line:
-                defect.changeSite.marker === undefined
-                  ? null
-                  : lineOf(
-                      defect.changeSite.repo === "app" ? appDir : coreDir,
-                      defect.changeSite.file,
-                      defect.changeSite.marker,
-                    ),
-            },
-          }),
+      ...siteOf(defect),
     })),
     cleanFiles: CLEAN_FILES,
     changedSymbols: CHANGED_SYMBOLS,

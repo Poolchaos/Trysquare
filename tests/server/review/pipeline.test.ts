@@ -912,6 +912,23 @@ describe("the proof a verified finding carries", () => {
     expect([finding.lineStart, finding.lineEnd]).toEqual([2, 2]);
   });
 
+  it("takes its lines from the step at the cited lines nearest the failure", async () => {
+    // A path entering a wide citation at the trigger: the first step in range
+    // put the finding on the trigger, the signature, not the cast (round 6).
+    const both = { ...step(1), lineEnd: 2, quote: SOURCE.split("\n").slice(0, 2).join("\n") };
+    await proveWith({ evidence: [both, step(2)] });
+    const finding = listFindings(db, reviewId)[0]!;
+    expect(statusOf(finding)).toBe("verified");
+    expect([finding.lineStart, finding.lineEnd]).toEqual([2, 2]);
+  });
+
+  it("names each line it quoted once, when none is the cited one", async () => {
+    await proveWith({ evidence: [step(1), step(1), step(3)] });
+    expect(listFindings(db, reviewId)[0]!.verificationNote).toBe(
+      "Verification quoted line 1 and line 3, which do not overlap the cited line 2.",
+    );
+  });
+
   it("kills a proof that never reaches the cited lines", async () => {
     // Still the guard of D-99: a true quotation of other code proves nothing
     // about this finding.
@@ -1069,6 +1086,16 @@ describe("the second verifier (WP-E, D-188)", () => {
     expect(finding.verificationNote).toBe(
       "The second verifier, claude-opus-5-5, gave no verdict for it.",
     );
+  });
+
+  it("verifies one the second proves through the cited lines, ending where it fails", async () => {
+    // D-193's case, which left three real defects open: the second verifier
+    // ends its path at the harm past the cited line (D-194).
+    const { finding } = await both({ verdicts: [proof({ evidence: [step(2), step(1)] })] });
+    expect(statusOf(finding)).toBe("verified");
+    expect(JSON.parse(finding.secondProofJson ?? "null")).toMatchObject({
+      evidence: [{ lineStart: 2 }, { lineStart: 1 }],
+    });
   });
 
   it("takes a label spelled as the first verifier's parser takes it", async () => {

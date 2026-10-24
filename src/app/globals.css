@@ -133,6 +133,10 @@ body {
      too long to break scrolls itself; the document does not move. Set here
      rather than per screen so a new screen cannot forget it. */
   overflow-x: hidden;
+  /* A word longer than its box, a path or an engine's JSON, breaks inside
+     it rather than running out of the card. break-word, not anywhere: it
+     leaves every box's smallest size as it was, so no layout moves. */
+  overflow-wrap: break-word;
   /* Counts, token totals and line numbers line up column-wise when they are
      tabular, and a review screen is mostly numbers in columns. */
   font-variant-numeric: tabular-nums;

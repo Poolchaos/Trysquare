@@ -898,7 +898,9 @@ export function ConfirmationQueue({
             ) : null}
 
             {showContext ? (
-              <div className="mt-3 grid gap-3">
+              // Bounded, so a long line scrolls in its pane: the grid took the
+              // longest line's width and ran past the card (review round 6).
+              <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3">
                 {shownContext?.hunk ? (
                   <div>
                     <h4 className="mb-1 text-xs font-medium">What the change did here</h4>

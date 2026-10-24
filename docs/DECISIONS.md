@@ -4767,3 +4767,22 @@ verified evidence, in writing, here.
   missed. The matching is scripts/lib/demo-score.ts, tested. Scored again
   under it, WP-H's verified findings are 8/11, the three still missed being
   the three open questions D-194 addresses. Rejected: keeping the key.
+- 2026-10-23 Review round 6 (over d9ec2fc, f657fd1, 3024725, 62e8b7d and
+  fdfa1b4), two read-only reviewers, each finding read again in the code
+  and shown failing before it was fixed. A verified finding took its lines
+  from the first step at the cited lines, on a wide citation the trigger:
+  it takes the last, nearest the failure, which keeps proofs that end at
+  the cited lines where they were. The refusal note names each line once,
+  "do not" for several. A test covers the second verifier proving through
+  the cited lines and ending past them, D-193's case; it failed on the code
+  before D-194. Three older bare grids took the width of their longest
+  word: Show code's panes ran 21px past the card at desktop and 199px past
+  a phone; the read-only findings list, the stage list and the refuted
+  list, with a long quotation, error and note put in, 642px past a phone.
+  Each is bounded, the paths may break, and the body wraps a word longer
+  than its box (break-word, which moves no layout). The journey measures
+  the code panes against the card at both widths; the cancelled review is
+  measured at a phone with long text put into its snapshot. The key's
+  change site is resolved in both lists of defects and tested against its
+  marker. Left: the overflow helper can miss naming an absolutely placed
+  element or name a fixed one; it only names, the measure is the page's.

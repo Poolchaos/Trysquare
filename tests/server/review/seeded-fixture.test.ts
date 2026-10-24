@@ -8,7 +8,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -35,6 +35,7 @@ let manifest: {
     deletedFile?: string;
     dependsOnSymbol?: string;
     crossRepo?: boolean;
+    changeSite?: { repo: string; file: string; marker?: string; line: number | null };
   }[];
   cleanFiles: string[];
   changedSymbols: string[];
@@ -93,6 +94,26 @@ describe("the seeded change set", () => {
       const lines = readFileSync(join(repo, defect.file), "utf8").split("\n");
       const actual = lines[defect.line - 1] ?? "";
       expect(actual, `${defect.id} at ${defect.file}:${defect.line}`).toContain(defect.marker);
+    }
+  });
+
+  it("really changed each defect's other place where the key names one", () => {
+    // The key accepts the change as well as the harm (D-195), so that line
+    // drifting would score a finding at the wrong place as found.
+    const sited = manifest.defects.filter((defect) => defect.changeSite !== undefined);
+    expect(sited.map((defect) => defect.id).sort()).toEqual([
+      "deleted-module-live-caller",
+      "silently-shortened-default",
+    ]);
+    for (const { changeSite: site } of sited) {
+      const repo = site!.repo === "app" ? appDir : coreDir;
+      if (site!.line === null) {
+        // A deleted file, anywhere in which counts: gone on the branch.
+        expect(existsSync(join(repo, site!.file)), site!.file).toBe(false);
+      } else {
+        const lines = readFileSync(join(repo, site!.file), "utf8").split("\n");
+        expect(lines[site!.line - 1], `${site!.file}:${site!.line}`).toContain(site!.marker);
+      }
     }
   });
 

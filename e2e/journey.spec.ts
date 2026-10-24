@@ -533,6 +533,47 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "What the change did here" })).toBeVisible();
     await expect(page.getByText(/^@@ -\d+,\d+ \+\d+,\d+ @@/m)).toBeVisible();
     await expect(page.getByRole("heading", { name: "The file as it stands" })).toBeVisible();
+    // The code scrolls inside its card: the panes' grid took the width of
+    // the longest line and ran past the card, at every width (round 6).
+    const codeCard = page
+      .getByRole("group", { name: "The file around this finding" })
+      .locator("xpath=ancestor::div[contains(concat(' ', @class, ' '), ' p-4 ')][1]");
+    const pastCard = async () => {
+      const card = (await codeCard.boundingBox())!;
+      let most = Number.NEGATIVE_INFINITY;
+      for (const name of ["The change at this line", "The file around this finding"]) {
+        const pane = (await page.getByRole("group", { name }).boundingBox())!;
+        most = Math.max(most, Math.round(pane.x + pane.width - (card.x + card.width)));
+      }
+      return most;
+    };
+    expect(await pastCard()).toBeLessThanOrEqual(0);
+    // From the whole page, clipped to the card: an element shot scrolled
+    // it into view and drew the fixed top bar across it.
+    const shootCard = async (name: string) => {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const box = await codeCard.boundingBox();
+      if (!box) throw new Error("The card has no box to photograph.");
+      await page.screenshot({
+        path: join(EVIDENCE, `${name}.png`),
+        fullPage: true,
+        clip: box,
+        animations: "disabled",
+      });
+    };
+    mkdirSync(EVIDENCE, { recursive: true });
+    const wide = page.viewportSize();
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await shootCard(`show-code-${scheme}`);
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await pastCard()).toBeLessThanOrEqual(0);
+    const narrow = await sidewaysOverflow(page);
+    expect(narrow.by, narrow.culprits.join("\n")).toBeLessThanOrEqual(0);
+    await shootCard("show-code-phone");
+    if (wide) await page.setViewportSize(wide);
     await page.locator("body").press("Enter");
 
     // And how the verifier proved it: the trigger, each step of the path to

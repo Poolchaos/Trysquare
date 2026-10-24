@@ -832,7 +832,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           : "Every hunk was accounted for and nothing survived verification."}
       </Empty>
     ) : (
-      <ul className="grid gap-3">
+      <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {reported.map((finding) => (
           <li key={finding.id}>
             <Card className="p-4">
@@ -847,7 +847,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 {finding.status === "open_question" ? (
                   <Badge tone="question">open question</Badge>
                 ) : null}
-                <Mono className="text-xs text-[var(--color-ink-muted)]">
+                <Mono className="min-w-0 text-xs break-all text-[var(--color-ink-muted)]">
                   {finding.filePath}:{finding.lineStart}
                 </Mono>
               </div>
@@ -1571,7 +1571,7 @@ function RunDetail({
     <>
       <Card className="mb-6 p-4">
         <h2 className="mb-3 text-heading font-medium">Stages</h2>
-        <ol className="grid gap-1">
+        <ol className="grid grid-cols-[minmax(0,1fr)] gap-1">
           {STAGES.map(([stage, label, description]) => {
             const attempts = snapshot.stages.filter((row) => row.stage === stage);
             const last = attempts[attempts.length - 1];
@@ -1678,12 +1678,12 @@ function RunDetail({
             Raised by the review, then refuted by verification or discarded by the quotation check,
             each with its reason. None of these reach the report.
           </p>
-          <ul className="grid gap-3">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
             {refuted.map((finding) => (
               <li key={finding.id} className="text-sm">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone={severityTone(finding.severity)}>{finding.severity}</Badge>
-                  <Mono className="text-xs text-[var(--color-ink-muted)]">
+                  <Mono className="min-w-0 text-xs break-all text-[var(--color-ink-muted)]">
                     {finding.filePath}:{finding.lineStart}
                   </Mono>
                 </div>

@@ -148,8 +148,7 @@ async function checkProof(
       why:
         inFile.length === 0
           ? `The proof never passes through the cited ${finding.filePath}.`
-          : `Verification quoted ${inFile.map(spanOf).join(" and ")}, which does not ` +
-            `overlap the cited ${spanOf(finding)}.`,
+          : quotedElsewhere([...new Set(inFile.map(spanOf))], spanOf(finding)),
     };
   }
 
@@ -184,9 +183,15 @@ function proofOf(verdict: ProvenVerdict) {
   };
 }
 
-/** The first step at the cited lines, which checkProof requires there is. */
+/**
+ * The step at the cited lines, which checkProof requires there is; the last
+ * of several, the one nearest the failure, since a path from the trigger
+ * usually enters a wide citation at the trigger (review round 6).
+ */
 function citedStep(finding: Finding, evidence: ProvenVerdict["evidence"]) {
-  return evidence.find((step) => step.path === finding.filePath && rangesOverlap(finding, step));
+  return evidence.findLast(
+    (step) => step.path === finding.filePath && rangesOverlap(finding, step),
+  );
 }
 
 function markProven(context: VerificationContext, held: HeldProof, second?: ProvenVerdict): void {
@@ -341,6 +346,11 @@ function assertVerdictsMatch(verdicts: readonly { ref: string }[], candidateCoun
     named.set(index, verdict.ref);
   }
   if (problems.length > 0) throw new VerdictsMismatchError(problems);
+}
+
+function quotedElsewhere(spans: readonly string[], cited: string): string {
+  const verb = spans.length === 1 ? "does" : "do";
+  return `Verification quoted ${spans.join(" and ")}, which ${verb} not overlap the cited ${cited}.`;
 }
 
 function spanOf(range: { lineStart: number; lineEnd: number }): string {

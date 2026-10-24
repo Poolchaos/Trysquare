@@ -16,6 +16,7 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Locator, type Route } from "@playwright/test";
 import { answerOnce, routeUntilStopped } from "./answer-once";
+import { sidewaysOverflow } from "./overflow";
 import { APP_REPO, COUNTER_FILE, E2E_ROOT, LIMIT_TRIGGER, STALL_TRIGGER } from "./setup";
 
 /** Unix seconds, and deliberately a fixed moment so the banner is checkable. */
@@ -1101,6 +1102,63 @@ for (const held of [
       await page.getByRole("button", { name: "Cancel", exact: true }).click();
       await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
       await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
+
+      if (held.what === "the second") {
+        // Cancelled with its findings raised: the read-only list and the run
+        // detail, unfolded, read on a phone without the page scrolling
+        // sideways; their bare grids took the width of a quoted line (round 6).
+        await expect(page.getByRole("heading", { name: /^Findings \(/ })).toBeVisible();
+        // With the text this page shows at its longest: a quotation, a stage's
+        // error and a refutation's note as one unbroken token each, which
+        // engine output can be. The run itself writes none so long.
+        const token = "0123456789".repeat(14);
+        const stopLong = await routeUntilStopped(page, "**/api/reviews/*", async (route) => {
+          if (route.request().url().endsWith("/attention")) return route.fallback();
+          const response = await route.fetch();
+          const body = (await response.json()) as {
+            stages: { errorClass: string | null; errorText: string | null }[];
+            findings: Record<string, unknown>[];
+          };
+          const [first, second, ...rest] = body.findings;
+          await route.fulfill({
+            response,
+            json: {
+              ...body,
+              // The last stage failed rather than cancelled, so its error shows.
+              stages: body.stages.map((stage, index, all) =>
+                index === all.length - 1
+                  ? { ...stage, errorClass: "invalid_output", errorText: token }
+                  : stage,
+              ),
+              findings: [
+                { ...first, quotedCode: token },
+                {
+                  ...second,
+                  status: "killed",
+                  killedBy: "verification",
+                  filePath: `app/${token}.ts`,
+                  verificationNote: token,
+                },
+                ...rest,
+              ],
+            },
+          });
+        });
+        await page.reload();
+        await expect(page.getByRole("heading", { name: "Refuted in verification" })).toBeVisible({
+          timeout: 30_000,
+        });
+        await page.setViewportSize({ width: 390, height: 844 });
+        const sideways = await sidewaysOverflow(page);
+        expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.locator("body").screenshot({
+          path: join(evidence, "cancelled-findings-phone.png"),
+          animations: "disabled",
+        });
+        if (desktop) await page.setViewportSize(desktop);
+        await stopLong();
+      }
     } finally {
       rmSync(STALL_TRIGGER, { force: true });
       writeFileSync(COUNTER_FILE, callsBefore, "utf8");
