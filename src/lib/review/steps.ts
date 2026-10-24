@@ -168,11 +168,36 @@ const noneOr = (n: number, rest: string) => `${n === 0 ? "none" : n} ${rest}`;
  * before the second verifier (WP-E) have no verifier model, and their proven
  * findings were proven once.
  */
+/** What grading the project's screens came to (WP-I step 5), when it ran. */
+export interface DesignTallies {
+  /** Screens graded C or D by the first grader. */
+  raised: number;
+  /** Of those, graded C or D again by the second. */
+  proven: number;
+  /** Of those, passed by the second, so open questions. */
+  open: number;
+}
+
+export function designTallies(
+  rows: readonly { kind: string; status: string; dismissedFrom?: string | null }[],
+): DesignTallies {
+  const screens = rows.filter((row) => row.kind === "design");
+  const isOpen = (row: (typeof screens)[number]) =>
+    row.status === "open_question" ||
+    (row.status === "dismissed" && row.dismissedFrom === "open_question");
+  return {
+    raised: screens.length,
+    proven: screens.filter((row) => !isOpen(row) && row.status !== "candidate").length,
+    open: screens.filter(isOpen).length,
+  };
+}
+
 export function stepResult(
   index: number,
-  facts: StepFacts & { status: string; secondVerifier: boolean },
+  facts: StepFacts & { status: string; secondVerifier: boolean; design?: DesignTallies },
 ): string {
   const { tallies } = facts;
+  const design = facts.design?.raised ? facts.design : undefined;
   switch (index) {
     case 0:
       return facts.rules === null
@@ -183,9 +208,17 @@ export function stepResult(
         ? "1 changed file classed by risk and read with what it calls into."
         : `${facts.files} changed files classed by risk and read with what they call into.`;
     case 2:
-      return `${tallies.raised === 0 ? "No candidates" : counted(tallies.raised, "candidate", "candidates")} raised, and every change and deletion accounted for.`;
+      return (
+        `${tallies.raised === 0 ? "No candidates" : counted(tallies.raised, "candidate", "candidates")} raised, and every change and deletion accounted for.` +
+        (design ? ` ${counted(design.raised, "screen", "screens")} graded C or D.` : "")
+      );
     case 3: {
-      if (tallies.raised === 0) return "Nothing to prove.";
+      const screens = design
+        ? ` The second grader agreed on ${design.proven} of ${counted(design.raised, "screen", "screens")} graded C or D${design.open > 0 ? `, leaving ${design.open} open` : ""}.`
+        : "";
+      if (tallies.raised === 0) {
+        return design ? `Nothing to prove in the code.${screens}` : "Nothing to prove.";
+      }
       const proven = facts.secondVerifier
         ? noneOr(tallies.provenTwice, "proven by both verifiers")
         : noneOr(tallies.provenOnce, "proven");
@@ -194,7 +227,7 @@ export function stepResult(
           ? "no open questions"
           : counted(tallies.open, "open question", "open questions");
       const line = `${proven}, ${open}, ${noneOr(tallies.refuted, "refuted")}, ${noneOr(tallies.discarded, "discarded")} for quoting code that was not there.`;
-      return line.charAt(0).toUpperCase() + line.slice(1);
+      return line.charAt(0).toUpperCase() + line.slice(1) + screens;
     }
     default:
       return facts.status === "complete"

@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { REVIEW_STAGES } from "@/lib/domain/enums";
 import {
   STEPS,
+  designTallies,
   findingTallies,
   stepCount,
   stepResult,
@@ -271,5 +272,55 @@ describe("what each step spent", () => {
       { requests: 1, ms: 0 },
       { requests: 0, ms: 0 },
     ]);
+  });
+});
+
+describe("what grading the screens came to (WP-I step 5)", () => {
+  const facts = {
+    rules: 14,
+    files: 13,
+    tallies: {
+      raised: 2,
+      provenOnce: 2,
+      proven: 2,
+      provenTwice: 2,
+      open: 0,
+      refuted: 0,
+      discarded: 0,
+      withSecond: 0,
+      toProve: 0,
+    },
+    waiting: 2,
+    status: "awaiting_confirmation",
+    secondVerifier: true,
+  };
+
+  it("counts the screens graded C or D, and what the second grader made of them", () => {
+    const design = designTallies([
+      { kind: "design", status: "verified" },
+      { kind: "design", status: "confirmed" },
+      { kind: "design", status: "open_question" },
+      { kind: "design", status: "dismissed", dismissedFrom: "open_question" },
+      { kind: "test", status: "verified" },
+    ]);
+    expect(design).toEqual({ raised: 4, proven: 2, open: 2 });
+    expect(stepResult(2, { ...facts, design })).toBe(
+      "2 candidates raised, and every change and deletion accounted for. 4 screens graded C or D.",
+    );
+    expect(stepResult(3, { ...facts, design })).toMatch(
+      /\. The second grader agreed on 2 of 4 screens graded C or D, leaving 2 open\.$/,
+    );
+  });
+
+  it("says nothing of screens when none was graded C or D", () => {
+    const none = { ...facts, design: designTallies([]) };
+    expect(stepResult(2, none)).toBe(
+      "2 candidates raised, and every change and deletion accounted for.",
+    );
+    const empty = { ...none, tallies: { ...facts.tallies, raised: 0 } };
+    expect(stepResult(3, empty)).toBe("Nothing to prove.");
+    expect(stepResult(3, { ...empty, design: { raised: 1, proven: 1, open: 0 } })).toBe(
+      "Nothing to prove in the code. The second grader agreed on 1 of 1 screen graded C or D.",
+    );
   });
 });

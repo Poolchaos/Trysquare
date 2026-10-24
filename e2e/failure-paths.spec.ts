@@ -1410,7 +1410,17 @@ for (const name of ["home.png", "rulesets.png"]) {
   try {
     const on = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(true) });
     expect(on.status()).toBe(200);
-    await startAReview(page);
+    // Said before Start: what runs, and that grading adds requests counted
+    // only once the e2e has saved its screenshots (WP-I step 5).
+    await fillANewReview(page);
+    const said = page.getByTestId("project-checks");
+    await expect(said).toContainText("The project's own checks run first", { timeout: 30_000 });
+    await expect(said).toContainText("On a throwaway copy of the branch, as you:");
+    await expect(said).toContainText("save-screens.cjs");
+    await expect(said).toContainText("one more request for each eight");
+    await shootAll(page, said, "preflight-checks");
+    await page.getByRole("button", { name: "Start review" }).click();
+    await expect(page).toHaveURL(/\/reviews\/[A-Z0-9]+$/i, { timeout: 60_000 });
     reviewId = page.url().split("/").pop()!;
     await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
 
@@ -1420,6 +1430,12 @@ for (const name of ["home.png", "rulesets.png"]) {
     await expect(section).toContainText("Graded D again by the second grader");
     // Only the D: the A raised nothing.
     await expect(section).not.toContainText("rulesets.png");
+    // And the five steps say what grading came to (WP-I step 5).
+    const steps = page.getByRole("region", { name: "How the review went" }).getByRole("listitem");
+    await expect(steps.nth(2)).toContainText("1 screen graded C or D.");
+    await expect(steps.nth(3)).toContainText(
+      "The second grader agreed on 1 of 1 screen graded C or D.",
+    );
     const image = section.getByRole("img", { name: /The screenshot graded D/ });
     await expect(image).toBeVisible();
     expect(await image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);

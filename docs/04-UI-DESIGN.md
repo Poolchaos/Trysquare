@@ -166,7 +166,11 @@ hit count, composed prompt token estimate, the selected profile, every
 request by stage, and whether the model's window splits the work or a file
 is too large for it on its own. Choosing a model
 whose profile is weaker than `full-context` states plainly that the review
-will run as more, smaller requests and why.
+will run as more, smaller requests and why. When the project's own checks are on, it
+says first that they run, which commands, on a throwaway copy of the branch
+and as you, and, with an e2e, that its screenshots are then graded at a
+request for each eight and one for each eight graded C or D, counted once
+the e2e has saved them (WP-I step 5).
 
 **Linked project section:** when the project has a dependency link (e.g.
 app -> shared-core), an optional "Include <dependency>" toggle appears with

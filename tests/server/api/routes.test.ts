@@ -944,6 +944,7 @@ describe("looking before you pay", () => {
       requestsByStage: Record<string, number>;
       requestsSplit: boolean;
       contextWindow: number | null;
+      checks: unknown;
     };
 
     // The same commits creating a review would pin, and the same counts the
@@ -965,6 +966,8 @@ describe("looking before you pay", () => {
     expect(body.estimatedTokens).toBeGreaterThan(0);
     // Every request the run makes, not S3's rule batches alone, which was
     // four short of every run (WP-F): one each, and full-context's one pass.
+    // This project's own checks are off, so none is said (WP-I step 5).
+    expect(body.checks).toBeNull();
     expect(body.requestsByStage).toEqual({
       s1_risk: 1,
       s2_comprehension: 1,

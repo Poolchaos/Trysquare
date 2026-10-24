@@ -26,6 +26,7 @@ import { availabilityOf } from "@/lib/models/availability";
 import { reviewModelSchema } from "@/lib/models/model-id";
 import { getModel } from "@/server/db/repositories/models";
 import { recordFetch, requireClonedProject } from "@/server/db/repositories/projects";
+import { getProjectChecks } from "@/server/db/repositories/project-checks";
 import { loadRuleset } from "@/server/db/repositories/rulesets";
 import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
 import { git } from "@/server/gitops/run";
@@ -228,8 +229,28 @@ export function POST(request: Request): Promise<Response> {
       profile,
       modelProfile: registeredProfile.success ? registeredProfile.data : null,
       downgradedFrom: resolution.downgradedFrom,
+      // The project's own commands, said before Start since they run its
+      // code on this machine, and whether its screens will be graded, whose
+      // requests are known only once its e2e has saved them (WP-I step 5).
+      checks: projectChecksSaid(getProjectChecks(db, project.id)),
     });
   });
+}
+
+function projectChecksSaid(checks: ReturnType<typeof getProjectChecks>) {
+  if (!checks.enabled) return null;
+  return {
+    commands: (
+      [
+        ["install", checks.installCommand],
+        ["tests", checks.testCommand],
+        ["e2e", checks.e2eCommand],
+      ] as const
+    )
+      .filter((entry): entry is readonly ["install" | "tests" | "e2e", string] => entry[1] !== null)
+      .map(([step, command]) => ({ step, command })),
+    grades: checks.e2eCommand !== null,
+  };
 }
 
 function sidePins(side: Side) {

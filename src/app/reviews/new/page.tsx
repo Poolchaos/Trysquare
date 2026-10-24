@@ -107,6 +107,11 @@ interface Preflight {
   /** A file is too large for the window on its own, and is sent anyway. */
   requestsOversized: boolean;
   passesByProfile: Record<string, number>;
+  /** The project's own checks when on (WP-I); absent from an older server. */
+  checks?: {
+    commands: { step: "install" | "tests" | "e2e"; command: string }[];
+    grades: boolean;
+  } | null;
 }
 
 /** The stages that ask a model, as the run screen names them. */
@@ -1260,6 +1265,28 @@ function NewReview() {
                   request can need one more if its answer comes back in the wrong shape.
                 </p>
               </div>
+
+              {preflight.checks ? (
+                // Before Start, since they run the branch's own code on this
+                // machine, and grading adds requests nobody can count until
+                // the e2e has saved its screenshots (WP-I step 5).
+                <div data-testid="project-checks" className="mt-3 text-xs">
+                  <p className="font-medium">The project&apos;s own checks run first</p>
+                  <p className="text-[var(--color-ink-muted)]">
+                    On a throwaway copy of the branch, as you:{" "}
+                    {preflight.checks.commands.map((entry, index) => (
+                      <span key={entry.step}>
+                        {index > 0 ? ", then " : ""}
+                        <Mono className="break-all">{entry.command}</Mono>
+                      </span>
+                    ))}
+                    .
+                    {preflight.checks.grades
+                      ? " Its screenshots are then graded: one more request for each eight, and one for each eight graded C or D, counted once the e2e has saved them."
+                      : ""}
+                  </p>
+                </div>
+              ) : null}
 
               {emptyHalves.length > 0 ? (
                 <div className="mt-3">

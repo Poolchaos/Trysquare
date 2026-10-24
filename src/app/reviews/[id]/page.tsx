@@ -57,6 +57,7 @@ import {
 import type { SignIn } from "@/lib/engine/sign-in-command";
 import {
   STEPS,
+  designTallies,
   findingTallies,
   stepCount,
   stepResult,
@@ -1491,6 +1492,8 @@ function FinishedSummary({ snapshot }: { snapshot: Snapshot }) {
     waiting: snapshot.findings.filter((finding) => finding.status === "verified").length,
     status: review.status,
     secondVerifier,
+    // What grading the project's screens came to, beside the code's (WP-I).
+    design: designTallies(snapshot.checkFindings ?? []),
   };
   const usage = stepUsage(snapshot.stages);
   const funnel: [string, number, ReactNode, string][] = [
