@@ -96,9 +96,13 @@ three runs, 1.45s, 1.46s and 1.54s wall clock, of which the pipeline itself
 reports 0.6s; the rest is npm and tsx starting up). It is the fastest way to
 confirm an install is sound, and it is the evidence behind gate G1.
 
-Drop `--fake` and the same demo runs against a real model on your
-subscription, defaulting to Opus 5.5, the recommended model (D-184).
-That spends usage.
+Ask for `-- --real` (or `-- --model <id>`) and the same demo runs against
+a real model on your subscription, defaulting to Opus 5.5, the recommended
+model (D-184). That spends usage. Told neither, a demo says how to run it
+and stops, having spent nothing. In Windows PowerShell, npm drops a bare
+`--` before the script sees it (measured 2026-10-24, D-203); the demos
+read the flag npm kept instead, so these commands mean the same in every
+shell.
 
 Both forms write their score and full event log into `review/<date>-fg2/`,
 which is gitignored, so the evidence stays on your machine.
@@ -113,7 +117,7 @@ on, lets its e2e photograph twelve screenshots in the review's throwaway
 copy, grades them, and scores each against the key. On the fake engine
 the grades follow the key, so it proves the plumbing only (measured
 2026-10-24 on this machine: three runs, each "5/5 planted screenshots
-found" and 2.9s as the demo reports it). Without `--fake` it grades with
+found" and 2.9s as the demo reports it). With `-- --real` it grades with
 a real model, as `demo:fixture` does, and spends usage. Each run's evidence
 goes to its own folder, `review/<date>-design/<time>-<model>/`, the time in
 UTC: the score, every grade each grader gave with the screenshots they were
@@ -205,9 +209,9 @@ silently used the real CLI:
 - Pressing Probe on the Settings screen, or a probe control in the model
   picker. Each probe is a real call, which is why nothing probes on a timer or
   at startup.
-- `npm run demo:fixture` or `npm run demo:design` **without** `--fake`.
-  Each says how the CLI is signed in first, and stops, having spent
-  nothing, when that bills per token or may, unless `--per-token` is
+- `npm run demo:fixture` or `npm run demo:design` with `--real` or
+  `--model`. Each says how the CLI is signed in first, and stops, having
+  spent nothing, when that bills per token or may, unless `--per-token` is
   passed.
 
 Checking sign-in on Settings runs the CLI's own auth status and spends

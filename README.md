@@ -207,8 +207,9 @@ npm run demo:fixture -- --fake
 ```
 
 That builds two small git repositories with known defects planted in them,
-reviews them end to end, and scores the result against the answer key. Drop
-the `--fake` and it runs against a real model on your subscription.
+reviews them end to end, and scores the result against the answer key. Ask
+for `-- --real` instead and it runs against a real model on your
+subscription; told neither, it says how to run it and spends nothing.
 
 Two environment variables matter. `TRYSQUARE_DATA` is the data root, holding
 `db.sqlite`, `projects/`, `runs/` and `exports/`, and defaults to

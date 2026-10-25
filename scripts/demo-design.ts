@@ -12,6 +12,7 @@
  * `--per-token` says it may spend.
  *
  *   npm run demo:design -- --fake
+ *   npm run demo:design -- --real
  *   npm run demo:design -- --model claude-opus-5-5
  */
 
@@ -26,26 +27,14 @@ import { requireReview } from "@/server/db/repositories/reviews";
 import { listForReview } from "@/server/db/repositories/stage-executions";
 import type { ReviewEvent } from "@/server/jobs/bus";
 import { screenshotsDir } from "@/server/review/screenshots";
+import { readDemoOptions, type DemoOptions } from "./lib/demo-args";
 import { readyForReview } from "./lib/demo-cli";
 import { reviewDesignFixture } from "./lib/design-demo";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..");
 
-/** The recommended model (D-184); `--model` picks another. */
-const DEFAULT_MODEL = "claude-opus-5-5";
-
 const log = (line = "") => process.stdout.write(`${line}\n`);
-
-function parseArgs(argv: readonly string[]) {
-  const modelAt = argv.indexOf("--model");
-  return {
-    model: modelAt === -1 ? DEFAULT_MODEL : (argv[modelAt + 1] ?? DEFAULT_MODEL),
-    fake: argv.includes("--fake"),
-    keep: argv.includes("--keep"),
-    perToken: argv.includes("--per-token"),
-  };
-}
 
 function renderEvent(event: ReviewEvent): void {
   if (event.kind === "stage" && event.phase !== "replayed") log(`  ${event.stage} started`);
@@ -74,7 +63,12 @@ function gradesOf(rows: ReturnType<typeof listForReview>) {
 }
 
 async function main(): Promise<number> {
-  const options = parseArgs(process.argv.slice(2));
+  const asked = readDemoOptions("npm run demo:design", process.argv.slice(2), process.env);
+  if ("refusal" in asked) {
+    log(asked.refusal);
+    return 1;
+  }
+  const { options } = asked;
   const startedAt = Date.now();
   const dataDir = mkdtempSync(join(tmpdir(), "trysquare-design-demo-"));
   log("Trysquare design demo");
@@ -114,7 +108,7 @@ async function main(): Promise<number> {
 
 function report(
   run: NonNullable<Awaited<ReturnType<typeof reviewDesignFixture>>>,
-  options: ReturnType<typeof parseArgs> & { dataDir: string; startedAt: number; events: string[] },
+  options: DemoOptions & { dataDir: string; startedAt: number; events: string[] },
 ): number {
   const { dataDir, startedAt, events } = options;
   const { db, reviewId, score, manifest } = run;

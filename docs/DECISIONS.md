@@ -5055,3 +5055,18 @@ verified evidence, in writing, here.
   The unmigrated consumer was proven citing no rule. One run, so no rate
   is claimed. Evidence in `review/2026-10-24-fg2/122029-claude-opus-5-5/`
   (gitignored).
+- 2026-10-24 D-203 An outside audit (finding 1, read again here) found the
+  free command spending: in Windows PowerShell 5.1, npm is npm.ps1, which
+  swallows a bare `--`, so `npm run demo:fixture -- --fake` reached the
+  script with no arguments and ran a real review. Measured here with a
+  script that prints its arguments: `npm run show -- --fake` gave none,
+  and npm kept the flag as npm_config_fake; npm.cmd, a quoted '--' or a
+  doubled `-- --` passed it. So the demos read their flags from the
+  arguments and from npm's npm_config_ variables (a --model npm took for
+  its own leaves the id as a bare argument), and a real run is one asked
+  for, by `--real` or `--model`: told neither, or told both, or anything
+  it cannot read, a demo says how to run it and stops, having spent
+  nothing. Rejected: telling PowerShell users to quote the `--`, which the
+  README's own command would still have broken; making the fake run the
+  default, which would let a mistyped real request pass as a free one
+  that measured nothing.

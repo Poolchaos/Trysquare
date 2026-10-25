@@ -9,11 +9,13 @@
  *
  * `--fake` routes every model call through the test double, which makes the
  * whole demo free and deterministic. That mode proves the plumbing. It proves
- * nothing about review quality, which is what the real run is for. The real
- * run says how the CLI is signed in first, and stops, having spent nothing,
- * when that bills per token or may, unless `--per-token` says it may spend.
+ * nothing about review quality, which is what the real run is for, run only
+ * when `--real` or `--model` asks for it (D-203). The real run says how the
+ * CLI is signed in first, and stops, having spent nothing, when that bills
+ * per token or may, unless `--per-token` says it may spend.
  *
  *   npm run demo:fixture -- --fake
+ *   npm run demo:fixture -- --real
  *   npm run demo:fixture -- --model claude-fable-5-1
  */
 
@@ -36,6 +38,7 @@ import {
 } from "@/server/db/repositories/projects";
 import { createReview, requireReview } from "@/server/db/repositories/reviews";
 import { cloneBare, diffText, mergeBase, resolveBranch } from "@/server/gitops/repo";
+import { readDemoOptions } from "./lib/demo-args";
 import { readyForReview } from "./lib/demo-cli";
 import { findsDefect } from "./lib/demo-score";
 import { JobManager } from "@/server/jobs/manager";
@@ -44,26 +47,6 @@ import type { ReviewEvent } from "@/server/jobs/bus";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..");
 const FIXTURES = join(REPO_ROOT, "tests", "fixtures");
-
-/** The recommended model (D-184); `--model` picks another. */
-const DEFAULT_MODEL = "claude-opus-5-5";
-
-interface Options {
-  model: string;
-  fake: boolean;
-  keep: boolean;
-  perToken: boolean;
-}
-
-function parseArgs(argv: readonly string[]): Options {
-  const modelAt = argv.indexOf("--model");
-  return {
-    model: modelAt === -1 ? DEFAULT_MODEL : (argv[modelAt + 1] ?? DEFAULT_MODEL),
-    fake: argv.includes("--fake"),
-    keep: argv.includes("--keep"),
-    perToken: argv.includes("--per-token"),
-  };
-}
 
 const log = (line = "") => process.stdout.write(`${line}\n`);
 
@@ -97,7 +80,12 @@ interface Manifest {
 }
 
 async function main(): Promise<number> {
-  const options = parseArgs(process.argv.slice(2));
+  const asked = readDemoOptions("npm run demo:fixture", process.argv.slice(2), process.env);
+  if ("refusal" in asked) {
+    log(asked.refusal);
+    return 1;
+  }
+  const { options } = asked;
   const startedAt = Date.now();
 
   const dataDir = mkdtempSync(join(tmpdir(), "trysquare-demo-"));
