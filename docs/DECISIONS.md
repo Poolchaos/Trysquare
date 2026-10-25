@@ -5473,3 +5473,9 @@ verified evidence, in writing, here.
   as it stands: a finished review's page reopens its stream every ten
   minutes, one reading and one connection per open tab, which is also how
   it learns that the review was deleted elsewhere.
+- 2026-10-25 Review round 13, on D-222: deleting a project removed its
+  clone without retries, after its row was already gone, so on Windows a
+  process held in the clone left the clone with no row, which the delete
+  route promises cannot happen. The clone's removal retries as a review's
+  folders do, shown failing first with a process held in the clone; the
+  throwaway copy and the checks folder take the same shared options.

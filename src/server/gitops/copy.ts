@@ -10,6 +10,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { git } from "./run";
+import { REMOVE_RETRYING } from "./worktree";
 
 export async function makeThrowawayCopy(
   repoDir: string,
@@ -42,5 +43,5 @@ export async function makeThrowawayCopy(
  * hold a file in it for a moment after the tree is killed (EBUSY, EPERM).
  */
 export async function removeThrowawayCopy(copyDir: string): Promise<void> {
-  await rm(copyDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  await rm(copyDir, REMOVE_RETRYING);
 }

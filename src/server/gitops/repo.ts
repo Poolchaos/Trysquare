@@ -11,6 +11,7 @@ import { resolve } from "node:path";
 import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
 import { validateGitUrl } from "@/lib/git/url";
 import { git, GitCommandError, gitSucceeds, toLines } from "./run";
+import { REMOVE_RETRYING } from "./worktree";
 
 export interface BranchInfo {
   name: string;
@@ -335,6 +336,7 @@ export async function fileAtCommit(
   }
 }
 
+/** With retries, as a review's folders are (review round 13, D-222). */
 export async function removeRepo(repoDir: string): Promise<void> {
-  await rm(repoDir, { recursive: true, force: true });
+  await rm(repoDir, REMOVE_RETRYING);
 }

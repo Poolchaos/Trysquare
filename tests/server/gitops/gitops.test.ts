@@ -4,7 +4,7 @@
  * actually does, so a fake would only test my beliefs about it.
  */
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,6 +24,7 @@ import {
   listBranches,
   mergeBase,
   readChangeSet,
+  removeRepo,
   resolveBranch,
   resolveCommit,
 } from "@/server/gitops/repo";
@@ -135,6 +136,24 @@ describe("comparing branches", () => {
     // unrelated.ts landed on main after the split and must not appear.
     expect(files).toEqual(["app.ts", "new-file.ts"]);
   });
+
+  it("removes a clone a process holds for a moment", async () => {
+    // Review round 13, as D-222 for a review's folders: on Windows a folder a
+    // process sits in refuses removal (EBUSY) until it lets go, and a deleted
+    // project's clone outlived its row. Elsewhere it is simply removed.
+    const held = join(root, "held.git");
+    mkdirSync(join(held, "objects"), { recursive: true });
+    const holder = spawn(process.execPath, ["-e", "setTimeout(() => {}, 600)"], {
+      cwd: join(held, "objects"),
+    });
+    await new Promise((resolve) => holder.once("spawn", resolve));
+    try {
+      await removeRepo(held);
+    } finally {
+      if (holder.exitCode === null) await new Promise((resolve) => holder.once("exit", resolve));
+    }
+    expect(existsSync(held)).toBe(false);
+  }, 30_000);
 
   it("knows whether a branch has been merged into the target", async () => {
     const featureTip = await resolveCommit(cloneDir, "feature/totals");

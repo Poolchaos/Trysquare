@@ -16,6 +16,7 @@ import type { ProjectChecks } from "@/lib/projects/checks";
 import type { Db } from "../db/client";
 import { appendRunNote } from "../db/repositories/reviews";
 import { makeThrowawayCopy, removeThrowawayCopy } from "../gitops/copy";
+import { REMOVE_RETRYING } from "../gitops/worktree";
 import { runProjectChecks, type ChecksRun, type CommandResult } from "../projectrun/run";
 
 export interface ChecksResult extends ChecksRun {
@@ -132,7 +133,7 @@ export async function runChecksForReview(
   // A result for another commit or other checks is not this one's.
   // With retries: what a crashed run left running can hold a file in it for
   // a moment on Windows (review round 7).
-  await rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  await rm(dir, REMOVE_RETRYING);
   const copyDir = join(dir, "copy");
   await mkdir(dir, { recursive: true });
   let run: ChecksRun;
