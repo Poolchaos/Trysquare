@@ -17,7 +17,7 @@
  */
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
 import { send } from "@/components/request";
 import { Badge, Card, Empty, Mono, StatTile, statusLabel, statusTone } from "@/components/ui";
@@ -187,18 +187,28 @@ export default function HomePage() {
   const [boardAttempt, setBoardAttempt] = useState(0);
 
   // The same narrow endpoint the bar polls, so a running review appears here
-  // without a second source of truth about what is running.
+  // without a second source of truth about what is running. What it says is
+  // kept, so the scoreboard is read again when it changes, a run started or
+  // ended or a review newly waiting on a person: read once, its Needs you
+  // list drifted from the bar's (audit finding U3).
+  const lastAttention = useRef<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
-      const sent = await send<{ active: LiveRun | null }>(
+      const sent = await send<{ active: LiveRun | null; awaiting: number }>(
         "/api/reviews/attention",
         {},
         "What is running could not be read",
       );
       // A dashboard that cannot reach the server says so through the
       // scoreboard's own error, not twice.
-      if (sent.ok && !cancelled) setLive(sent.body.active);
+      if (!sent.ok || cancelled) return;
+      setLive(sent.body.active);
+      const said = `${sent.body.active?.id ?? ""}|${sent.body.active?.status ?? ""}|${sent.body.awaiting}`;
+      if (lastAttention.current !== null && lastAttention.current !== said) {
+        setBoardAttempt((attempt) => attempt + 1);
+      }
+      lastAttention.current = said;
     };
     const timer = setInterval(() => void check(), 4000);
     void check();
@@ -208,14 +218,14 @@ export default function HomePage() {
     };
   }, []);
 
-  // Ticks only while something is running, so a quiet dashboard is not
-  // re-rendered once a second for ever. Keyed to whether a run exists rather
-  // than to the polled object, which is a new identity every four seconds and
-  // would restart the clock each time it arrived.
+  // Every second while something is running, every minute otherwise: the
+  // waiting and last-reviewed times are relative too, and on a quiet
+  // dashboard they froze (audit finding U3). Keyed to whether a run exists
+  // rather than to the polled object, which is a new identity every four
+  // seconds and would restart the clock each time it arrived.
   const running = live !== null;
   useEffect(() => {
-    if (!running) return;
-    const tick = setInterval(() => setNow(Date.now()), 1000);
+    const tick = setInterval(() => setNow(Date.now()), running ? 1000 : 60_000);
     return () => clearInterval(tick);
   }, [running]);
 

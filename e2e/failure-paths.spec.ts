@@ -1943,6 +1943,41 @@ test("a run whose start is not stamped yet can still be hidden", async ({ page }
   }
 });
 
+test("a quiet dashboard keeps its times and its waiting list current", async ({ page }) => {
+  // Audit finding U3: the clock behind "waiting 4m ago" ticked only while a
+  // run was live, so a quiet dashboard froze; and the scoreboard was read
+  // once, so its Needs you list drifted from the top bar. The clock is the
+  // test's own, and what the bar polls is answered as quiet, then as one
+  // more review waiting on a person.
+  await page.clock.install();
+  let boards = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/scoreboard") boards += 1;
+  });
+  let awaiting: number | null = null;
+  const stop = await routeUntilStopped(page, "**/api/reviews/attention", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { awaiting: number };
+    awaiting ??= body.awaiting;
+    await route.fulfill({ response, json: { ...body, active: null, awaiting } });
+  });
+  try {
+    await page.goto("/");
+    const waiting = page.getByText(/^waiting (just now|\d+[mhd] ago)$/).first();
+    await expect(waiting).toBeVisible({ timeout: 30_000 });
+    const before = await waiting.textContent();
+    await page.clock.fastForward("05:00");
+    await expect(waiting).not.toHaveText(before!);
+
+    const read = boards;
+    awaiting = (awaiting ?? 0) + 1;
+    await page.clock.fastForward("00:05");
+    await expect.poll(() => boards).toBeGreaterThan(read);
+  } finally {
+    await stop();
+  }
+});
+
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
   // Only proven findings reach the report: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test

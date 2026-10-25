@@ -5587,9 +5587,10 @@ verified evidence, in writing, here.
   then. The status badge is now a live region, so the ending is heard as
   the badge changes, and the review's name takes the focus if nothing else
   holds it (a separate status line saying the same words first was tried,
-  and made every check for the status's words find two); a run hidden before its start is stamped is keyed on a
-  stand-in that moves to the start once there is one, so the next run
-  still opens on the theater. Browser tests cover both.
+  and made every check for the status's words find two); a run hidden
+  before its start is stamped is keyed on a stand-in that moves to the
+  start once there is one, so the next run still opens on the theater.
+  Browser tests cover both.
 - 2026-10-25 CI run 40218250308 failed on Windows: a headless test's
   cleanup could not remove its temporary folder (ENOTEMPTY). runStage
   settled as soon as it asked its log to close, not once it had, so the
@@ -5598,3 +5599,12 @@ verified evidence, in writing, here.
   same. A stage now settles only once its log is closed, on every path. A
   test holds the log's close back and sees the stage wait for it; it fails
   on the old code on every platform.
+- 2026-10-25 An outside audit's finding U3, read again here: the
+  dashboard's clock ticked only while a run was live, but its waiting and
+  last-reviewed times are relative too, so on a quiet dashboard they froze;
+  and its scoreboard was read once, so the Needs you list drifted from the
+  top bar's poll. The clock now ticks every minute when nothing runs, and
+  the scoreboard is read again when what the bar polls changes: a run
+  started or ended, or the count waiting on a person. Not on every poll,
+  the scoreboard being the heavier read. A browser test drives the page's
+  clock.
