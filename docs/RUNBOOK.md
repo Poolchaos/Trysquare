@@ -139,8 +139,19 @@ Every step below is free until you press Start review.
    a `file:///path/to/repo` URL, or on Windows `C:\path\to\repo`, is a
    fast way to try this on something you already have. A network share
    (`\\host\share` or a `file://` URL with a host) is refused, because
-   opening one sends your Windows credentials to that host.
-2. **Import a ruleset.** Rulesets screen. Paste a markdown protocol document,
+   opening one sends your Windows credentials to that host. An https address
+   carrying a password or token is refused too: the app stores no secrets,
+   so let git sign in with its credential helper or an SSH key (D-208).
+2. **Optionally, turn on the project's own checks.** On the project's page,
+   Tests and design is off until you turn it on. On, every review of the
+   project first runs the install, tests and e2e commands you give it, in a
+   throwaway copy of the branch under review, through your shell and as
+   you: the branch's own code runs with your privileges, so turn it on only
+   for a repository you would run yourself. A command that fails is a
+   finding, and every screenshot the e2e saves in the folder you name is
+   graded A to D, against the design standard file you may name. The
+   pre-flight lists the commands before Start, and nothing runs until then.
+3. **Import a ruleset.** Rulesets screen. Paste a markdown protocol document,
    give it a name and a tier, Import. The document becomes numbered rules and
    process directives. Rules must be headings at level three or deeper whose
    text starts with a number and a dot, like `### 1. Unawaited promise`. A
@@ -151,7 +162,7 @@ Every step below is free until you press Start review.
    because it replaces that ruleset's rules and undoes any rule switched off
    or re-graded since: Replace goes ahead, Keep it leaves the ruleset as it
    was. The same document again changes nothing and is not asked about.
-3. **Set up the review.** Open the project, pick a branch, and press Review on
+4. **Set up the review.** Open the project, pick a branch, and press Review on
    its row, or go to New review. Choose the branch to compare against, the
    ruleset, the model, and the effort. The CLI's top effort tier is
    deliberately not offered and is refused by the server, on cost: the CLI
@@ -166,7 +177,7 @@ Every step below is free until you press Start review.
    check, never as an instruction, and a change that does not do what it says
    is itself a finding. An Advanced fold offers a deliberate profile
    downgrade with the per-profile request counts beside it.
-4. **Read the pre-flight.** It appears once the branches, ruleset and model
+5. **Read the pre-flight.** It appears once the branches, ruleset and model
    are chosen, and costs nothing: the commits it would pin and when their refs
    were fetched, file and hunk counts, sweep hits, changed exported symbols,
    an estimated token count, and the number of model requests over every
@@ -182,10 +193,10 @@ Every step below is free until you press Start review.
    nothing is wrong, but a pattern read as text matches different things from
    one read as a regex. A pattern that could not run at all is a refusal: fix
    it first, because the review will not finish on an incomplete sweep.
-5. **Start the review.** This is the step that spends usage. The run screen
+6. **Start the review.** This is the step that spends usage. The run screen
    shows which stages have finished, a live activity log, and a running tally
    of fresh input tokens, cached reads, output tokens and cost equivalent.
-6. **Decide every finding.** When the run reaches awaiting confirmation, the
+7. **Decide every finding.** When the run reaches awaiting confirmation, the
    findings become a queue grouped by severity, worst first. Keyboard: `j` and
    `k` to move, Shift+C to confirm (a bare `c` does nothing, D-132), `d` to
    jump to the dismissal reason, `e` to rewrite the comment before confirming (the engine's wording is kept beside
@@ -194,7 +205,7 @@ Every step below is free until you press Start review.
    are printed at the foot of the queue. Dismissing needs a written reason;
    confirming does not. The rule a finding names expands to the author's
    verbatim markdown from the ruleset the review was frozen with.
-7. **Complete and export.** The Complete button unlocks only when every
+8. **Complete and export.** The Complete button unlocks only when every
    finding is decided, and the server refuses otherwise. Completing renders
    the report: what was found, what was examined, and what was dismissed and
    why. Copy it, or Export to write it under `exports/` in your data root,

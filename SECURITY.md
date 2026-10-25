@@ -23,7 +23,10 @@ whole categories of vulnerability, but it leaves some that matter:
 - **Code execution from a reviewed repository.** Trysquare clones and reads
   repositories that may be untrusted. Anything that lets a reviewed repository
   execute code, escape its worktree, or write outside the data directory is in
-  scope and serious.
+  scope and serious. The one exception is a project's own checks, which run
+  its install, tests and e2e only when you have turned them on for that
+  project and given the commands; see the trust model below. A way for them
+  to run without that, or outside their throwaway copy, is in scope.
 - **Prompt injection from reviewed content.** A repository under review could
   contain text crafted to manipulate the model, for example to suppress
   findings or to try to widen its own permissions. Trysquare is designed to
@@ -60,3 +63,11 @@ Reviewing a repository means reading whatever is in it. Treat a review of an
 untrusted repository with the same caution as opening it in your editor. If you
 find a way that reading a repository turns into something more than reading, we
 want to hear about it.
+
+Turning on a project's own checks is the exception, and a deliberate one: each
+review of that project then runs the commands you gave, through your shell and
+as you, in a throwaway copy of the branch under review. The branch's own code
+runs with your privileges, as it would if you ran its tests yourself, so turn
+them on only for a repository you would run yourself. They are off for every
+project until you turn them on, and the pre-flight names the commands before
+anything runs.

@@ -5140,3 +5140,14 @@ verified evidence, in writing, here.
   off a phone on a long address, its grid column unbounded; bounded.
   Rejected: redacting only, which would keep storing a secret the form
   says is never stored.
+- 2026-10-25 D-209 An outside audit's finding 4, read again here: WP-I
+  runs a project's own install, tests and e2e as the person, through the
+  shell (D-191, D-196), the largest change to the app's trust model, and
+  neither SECURITY.md nor the RUNBOOK said so. SECURITY.md still called any
+  execution of a reviewed repository's code in scope and serious, and its
+  trust model said a review only reads; the RUNBOOK's first-review
+  walkthrough never named the feature. SECURITY.md now carves the checks
+  out of that item, keeping a way to run them without being turned on, or
+  outside their copy, in scope, and says in its trust model what they run
+  and as whom; the walkthrough has a step for them, saying the same and to
+  turn them on only for a repository the person would run themselves.
