@@ -67,7 +67,7 @@ export function Button({
 }) {
   const styles = {
     primary:
-      "bg-[var(--color-accent)] text-[var(--color-accent-ink)] border-transparent hover:bg-[var(--color-accent-hover)]",
+      "bg-[var(--color-accent)] text-[var(--color-accent-ink)] border-transparent enabled:hover:bg-[var(--color-accent-hover)]",
     secondary:
       "bg-[var(--color-surface)] border-[var(--color-border-strong)] hover:bg-[var(--color-surface-sunken)]",
     quiet: "border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]",

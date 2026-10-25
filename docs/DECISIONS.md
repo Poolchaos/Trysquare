@@ -5533,3 +5533,9 @@ verified evidence, in writing, here.
   Complete review takes it, from the page or from that title. A browser
   test confirms, from the keyboard, a proven finding followed by an open
   question; the journey's own check that Complete takes the focus holds.
+- 2026-10-25 Review round 14, on the primary button's hover: the hover
+  colour applied to a disabled button too, so it changed under the pointer
+  as if it could be pressed, where the fading it replaced lost to the
+  disabled fade. It now applies only to an enabled button. The theme test
+  checks that its hover took before it measures, and a second test hovers
+  a disabled primary button and finds it unchanged.

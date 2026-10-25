@@ -215,8 +215,12 @@ test("a primary button keeps its contrast under the pointer", async ({ page }) =
   await page.getByRole("main").getByRole("link", { name: "app", exact: true }).click();
   const primary = page.getByRole("button", { name: "New review" });
   await expect(primary).toBeVisible({ timeout: 30_000 });
+  const background = () => primary.evaluate((button) => getComputedStyle(button).backgroundColor);
+  const resting = await background();
   await primary.hover();
   await settled(page);
+  // The pointer took: what is measured below is the hovered button.
+  expect(await background()).not.toBe(resting);
   mkdirSync(EVIDENCE, { recursive: true });
   await page
     .locator("header")
@@ -233,6 +237,19 @@ test("a primary button keeps its contrast under the pointer", async ({ page }) =
     ),
     `a hovered primary button in ${test.info().project.name}`,
   ).toEqual([]);
+});
+
+test("a disabled primary button does not answer the pointer", async ({ page }) => {
+  // Review round 14: the hover moved a disabled button's colour too, as if it
+  // could be pressed; the fading it replaced lost to the disabled fade.
+  await page.goto("/projects");
+  const add = page.getByRole("button", { name: "Add project" });
+  await expect(add).toBeDisabled({ timeout: 30_000 });
+  const background = () => add.evaluate((button) => getComputedStyle(button).backgroundColor);
+  const resting = await background();
+  await add.hover({ force: true });
+  await settled(page);
+  expect(await background()).toBe(resting);
 });
 
 test("the billing notice has no accessibility violations", async ({ page }) => {
