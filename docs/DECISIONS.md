@@ -5403,3 +5403,15 @@ verified evidence, in writing, here.
   that moment, as for the frame limit (4.23). Rejected: the audit's two
   fixes, for the reason above; and erroring the stream to free the socket,
   which would drop the reconnect frame a live page reads.
+- 2026-10-25 D-222 An outside audit's finding S7, read again here. (a)
+  Deleting a review removed its worktrees and folders without retries,
+  where the throwaway copy retries ten times 200 ms apart. Shown on this
+  machine (two runs each): a folder a running process sits in refuses
+  removal at once with EBUSY, and is removed with those retries once the
+  process ends; a file node holds open does not block it. Every removal on
+  the delete path now retries the same way. (b) A review naming a linked
+  repository without its commits made the delete throw from the guard
+  that refuses to run half a change; it now clears the review's folders
+  and the row. No code writes such a row, the linked fields being all or
+  nothing in createReview from the first migration, so only a hand-edited
+  database holds one.

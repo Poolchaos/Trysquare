@@ -99,6 +99,7 @@ import { fetchAll, resolveCommit } from "../gitops/repo";
 import {
   addWorktree,
   assertWorktreeClean,
+  REMOVE_RETRYING,
   removeWorktree,
   worktreeBaseline,
   worktreeBaselineSchema,
@@ -961,12 +962,21 @@ export async function removeReviewWorktrees(
   const linkedProject =
     review.linkedProjectId === null ? undefined : requireProject(db, review.linkedProjectId);
 
-  for (const side of sidesOf(review, project, linkedProject, root, reviewId)) {
+  let sides: ReturnType<typeof sidesOf> = [];
+  try {
+    sides = sidesOf(review, project, linkedProject, root, reviewId);
+  } catch (error) {
+    // A guard against reading half a change, not against clearing it away: a
+    // review naming a linked repository without its commits could otherwise
+    // never be deleted (audit finding S7). Its folder still goes below.
+    if (!(error instanceof LinkedReviewIncompleteError)) throw error;
+  }
+  for (const side of sides) {
     if (existsSync(side.worktreeDir)) await removeWorktree(side.clonePath, side.worktreeDir);
   }
   // The registration outlives the directory, so a later worktree add at the
   // same path would be refused by git without this.
-  await rm(worktreeRootDir(root, reviewId), { recursive: true, force: true });
+  await rm(worktreeRootDir(root, reviewId), REMOVE_RETRYING);
 }
 
 /** Everything on disk for a review, including the evidence. Deletion only. */
@@ -977,7 +987,7 @@ export async function removeReviewArtifacts(
 ): Promise<void> {
   const root = dataDir ?? resolveDataDir(process.env, homedir());
   await removeReviewWorktrees(db, reviewId, root);
-  await rm(runDirFor(root, reviewId), { recursive: true, force: true });
+  await rm(runDirFor(root, reviewId), REMOVE_RETRYING);
 }
 
 export class ReviewStillRunningError extends Error {

@@ -8,7 +8,7 @@
  * that stubbed git away would not see any of them.
  */
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   existsSync,
@@ -1192,6 +1192,39 @@ describe("clearing up after a review", () => {
     expect(existsSync(runDir(dataDir, reviewId))).toBe(false);
     expect(getReview(db, reviewId)).toBeUndefined();
   }, 120_000);
+
+  it("deletes a review whose folder a process holds for a moment", async () => {
+    // Audit finding S7: on Windows a folder a process still sits in refuses
+    // removal (EBUSY), and the delete gave up at once. Elsewhere it is simply
+    // removed, so this proves the retry on Windows and the delete everywhere.
+    const reviewId = seedReview();
+    const logs = join(runDir(dataDir, reviewId), "logs");
+    mkdirSync(logs, { recursive: true });
+    const holder = spawn(process.execPath, ["-e", "setTimeout(() => {}, 600)"], { cwd: logs });
+    await new Promise((resolve) => holder.once("spawn", resolve));
+    try {
+      await deleteReviewEntirely(db, reviewId, dataDir);
+    } finally {
+      if (holder.exitCode === null) await new Promise((resolve) => holder.once("exit", resolve));
+    }
+    expect(existsSync(runDir(dataDir, reviewId))).toBe(false);
+    expect(getReview(db, reviewId)).toBeUndefined();
+  }, 30_000);
+
+  it("deletes a linked review that records no commits for its linked repository", async () => {
+    // Audit finding S7: the guard that refuses to run half a change also
+    // refused to clear it away, so such a review could never be deleted. No
+    // code writes one, the linked fields being all or nothing, so the row is
+    // made by hand here, as a hand-edited database would hold it.
+    const reviewId = seedReview({ linked: true });
+    db.update(reviews).set({ linkedFromCommit: null }).where(eq(reviews.id, reviewId)).run();
+    mkdirSync(worktreeRootDir(dataDir, reviewId), { recursive: true });
+
+    await deleteReviewEntirely(db, reviewId, dataDir);
+
+    expect(existsSync(worktreeRootDir(dataDir, reviewId))).toBe(false);
+    expect(getReview(db, reviewId)).toBeUndefined();
+  }, 30_000);
 
   it("leaves the clone untouched by all of it", async () => {
     // The app never writes inside a project it was given. A worktree add and

@@ -72,6 +72,13 @@ export async function addWorktree(
 }
 
 /**
+ * With retries: on Windows a folder a process still sits in, one a stage left
+ * running or a virus scanner, refuses removal (EBUSY) until it lets go, and a
+ * review would be undeletable for as long as it held on (audit finding S7).
+ */
+export const REMOVE_RETRYING = { recursive: true, force: true, maxRetries: 10, retryDelay: 200 };
+
+/**
  * Removes a worktree and its administrative entry.
  *
  * `--force` is used here, unlike on creation: by this point the review is over
@@ -82,7 +89,7 @@ export async function removeWorktree(repoDir: string, worktreeDir: string): Prom
     await git(["worktree", "remove", "--force", worktreeDir], { cwd: repoDir });
   } catch {
     // The directory may already be gone, or never have been registered.
-    await rm(worktreeDir, { recursive: true, force: true });
+    await rm(worktreeDir, REMOVE_RETRYING);
   }
   await git(["worktree", "prune"], { cwd: repoDir }).catch(() => undefined);
 }
