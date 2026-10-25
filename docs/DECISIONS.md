@@ -5209,3 +5209,12 @@ verified evidence, in writing, here.
   counts at b0deb2f; all are current now, the gate's from ./verify.sh
   --e2e at 97e18fa (1390 unit tests passing, 11 skipped, 108 browser
   tests).
+- 2026-10-25 D-211 An outside audit's finding 5, read again here: every
+  route reads its body through readJson or readOptionalJson, and both
+  buffered and parsed whatever arrived, the one input with no bound; the
+  request guard limits who may call, not how much. A body is now refused
+  with 413 past 4 MiB, before reading when its length is declared and
+  while reading when it is not. The largest body the app takes is a pasted
+  protocol document, and the sample one is 10,846 bytes, so the limit is
+  nearly four hundred of it. A test that streamed an unbounded body before
+  the limit existed ran its worker out of memory, which is the failure.

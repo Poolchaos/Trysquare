@@ -48,13 +48,53 @@ export function notFound(what: string): Response {
  * names the field, which is what makes the error worth showing.
  */
 export async function readJson<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
+  const text = await readBody(request);
   let raw: unknown;
   try {
-    raw = await request.json();
+    raw = JSON.parse(text);
   } catch {
     throw notJson();
   }
   return validated(raw, schema);
+}
+
+/**
+ * The largest body a request may carry. A pasted protocol document is the
+ * largest the app takes, and the sample one is 10,846 bytes; this is nearly
+ * four hundred of it. Every body was buffered whole, however large (audit
+ * finding 5).
+ */
+export const MAX_BODY_BYTES = 4 * 1024 * 1024;
+
+/** The body as text, refused past the limit, declared or found while read. */
+async function readBody(request: Request): Promise<string> {
+  const declared = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) throw tooLarge();
+  if (request.body === null) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel();
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function tooLarge(): Response {
+  return Response.json(
+    {
+      error: `The request body is over ${MAX_BODY_BYTES} bytes, the most a request may carry.`,
+      code: "BodyTooLarge",
+    },
+    { status: 413 },
+  );
 }
 
 /**
@@ -64,7 +104,7 @@ export async function readJson<T>(request: Request, schema: z.ZodType<T>): Promi
  * taken as no comment and a start's malformed ruleset as none (5.8, A8).
  */
 export async function readOptionalJson<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
-  const text = await request.text();
+  const text = await readBody(request);
   if (text.trim() === "") return validated({}, schema);
   let raw: unknown;
   try {
