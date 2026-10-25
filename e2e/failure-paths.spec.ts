@@ -2524,6 +2524,48 @@ test("a page the server let go of opens a new stream rather than polling", async
   await stopAnswering();
 });
 
+test("a review that finished with nothing to decide can be completed", async ({ page }) => {
+  // Review round 13: a finished run waits on a person even with no findings,
+  // and its page offered no Complete review, the queue that holds it being
+  // mounted only with findings to decide, so the commonest clean outcome could
+  // not be finished; D-224's empty text then called it stopped. The fixture's
+  // review always finds something, so its reading is answered as a finished
+  // one with nothing on the table.
+  const asClean = async (route: import("@playwright/test").Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const response = await route.fetch();
+    const body = (await response.json()) as { review: { status: string } };
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        running: false,
+        queued: false,
+        review: { ...body.review, status: "awaiting_confirmation" },
+        findings: [],
+        checkFindings: [],
+      },
+    });
+  };
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await page.route("**/api/reviews/*", asClean);
+  try {
+    await row.getByRole("link").click();
+    await expect(
+      page.getByText("No code findings: the review raised none that verification kept."),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("All 0 decided.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Complete review" })).toBeEnabled();
+    await expect(page.getByText("None were reported before the review stopped.")).toHaveCount(0);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, page.getByRole("main"), "review-finished-clean");
+  } finally {
+    await page.unroute("**/api/reviews/*", asClean);
+  }
+});
+
 test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {
   // Number("") is 0, and zero removes the ceiling: clearing the field and
   // leaving it lifted the cap on every model call without a word (5.3).

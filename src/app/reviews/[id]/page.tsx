@@ -66,6 +66,7 @@ import {
   stepStates,
   stepUsage,
 } from "@/lib/review/steps";
+import { emptyFindings } from "@/lib/review/empty-findings";
 
 /**
  * The whole pipeline, not only the stages that call a model.
@@ -510,14 +511,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     return sent.body;
   }
 
-  /**
-   * Asks the server to cancel, and says why when it did not: a dropped
-   * request, a refusal, or a review with nothing left to cancel. The answer
-   * used to be ignored, so a cancel that failed looked like one that worked
-   * (5.1). Empty when the cancel took.
-   */
   /** Takes a review waiting its turn out of the line; it keeps its status (D-224). */
   async function leaveQueue() {
+    // A cancel asked before it joined the line is not asked of it now
+    // (review round 13).
+    setConfirmingCancelFor(null);
     setLeaving(true);
     try {
       const sent = await send<{ left?: boolean }>(
@@ -538,6 +536,12 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     }
   }
 
+  /**
+   * Asks the server to cancel, and says why when it did not: a dropped
+   * request, a refusal, or a review with nothing left to cancel. The answer
+   * used to be ignored, so a cancel that failed looked like one that worked
+   * (5.1). Empty when the cancel took.
+   */
   async function cancelReview(): Promise<string> {
     const response = await fetch(`/api/reviews/${id}/cancel`, { method: "POST" }).catch(
       (error: unknown) => (error instanceof Error ? error : new Error(String(error))),
@@ -608,6 +612,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     }
     // Said for this start; the next is asked afresh.
     setBilling(null);
+    // Nor is a cancel asked of the draft it was (review round 13).
+    setConfirmingCancelFor(null);
     watchAgain();
   }
 
@@ -893,28 +899,22 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const executing = executingStage(snapshot, done);
   const reported = findings.filter((finding) => finding.status !== "killed");
 
+  const empty = emptyFindings(
+    snapshot.review.status as ReviewStatus,
+    snapshot.running,
+    snapshot.queued,
+  );
   /**
    * The findings as a list you can only read.
    *
-   * Used while a review is still running, and after it is complete. Between
-   * those two the confirmation queue takes over, because that is the one
-   * moment the findings are a thing to act on rather than a thing to look at.
+   * Used whenever there is nothing to decide: before a review runs, while it
+   * runs, once it stopped short, and once it finished with nothing on the
+   * table. The confirmation queue takes over while findings wait on a person,
+   * and the report once the review is complete.
    */
-  // Said of the review as it stands: a draft, or one waiting its turn, was
-  // told every hunk had been accounted for before anything had run (D-224).
-  const [emptyTitle, emptyText] = snapshot.running
-    ? [
-        "Nothing reported yet",
-        "Findings appear once the adversarial pass has run and each one has been checked against the file.",
-      ]
-    : snapshot.queued || snapshot.review.status === "draft"
-      ? ["Nothing reported yet", "Findings appear once the review has run."]
-      : snapshot.review.status === "complete"
-        ? ["No findings", "Every hunk was accounted for and nothing survived verification."]
-        : ["No findings", "None were reported before the review stopped."];
   const renderReadOnly = () =>
     reported.length === 0 ? (
-      <Empty title={emptyTitle}>{emptyText}</Empty>
+      <Empty title={empty.title}>{empty.text}</Empty>
     ) : (
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {reported.map((finding) => (
@@ -1243,8 +1243,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {["awaiting_confirmation", "complete"].includes(review.status) ? (
               <FinishedSummary snapshot={snapshot} />
             ) : null}
-            {review.status === "awaiting_confirmation" &&
-            (reported.length > 0 || checkRows.length > 0) ? (
+            {/* Mounted with nothing to decide too: it offers Complete review,
+                and a run that found nothing had no way to finish (review
+                round 13). */}
+            {review.status === "awaiting_confirmation" ? (
               <>
                 {checkRows.length > 0 ? (
                   <CheckFindings rows={checkRows} deciding onChanged={() => void reload()} />

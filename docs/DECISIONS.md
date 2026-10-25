@@ -5442,3 +5442,19 @@ verified evidence, in writing, here.
   short says none were reported before it stopped. Rejected: keeping the
   cancel and saying on the button that it is final, which the maintainer
   declined.
+- 2026-10-25 Review round 13, on D-224: the status-aware empty findings
+  text read "None were reported before the review stopped" for a review
+  that had finished with nothing to report, the commonest way to have
+  none, since a finished run waits on a person even with no findings; and
+  the complete review's text was never shown, the report taking its place.
+  The text is now chosen in lib, one sentence per status, unit-tested for
+  each: a finished review, awaiting a person or complete, says every hunk
+  was accounted for; a draft, that findings appear once it has run; a
+  resume waiting its turn, once it has run on. A cancel asked of a draft
+  before it was started and joined the line no longer comes back when it
+  leaves the line. Shooting that screen showed a worse fault, there since
+  311d041 (2026-07-31): the confirmation queue, which holds Complete
+  review, was mounted only with findings or check rows to decide, so a run
+  that found nothing waited on a person with no way to finish. It is now
+  mounted for every review awaiting a person; with nothing in it, it says
+  so and offers Complete review, which the server already allowed.
