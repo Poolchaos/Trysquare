@@ -8,7 +8,7 @@
  */
 
 import { z } from "zod";
-import { repoSlug, validateGitUrl } from "@/lib/git/url";
+import { repoSlug, validateGitUrl, withoutCredentials } from "@/lib/git/url";
 import { projectRepoDir } from "@/lib/paths";
 import {
   createProject,
@@ -41,7 +41,7 @@ export function GET(): Promise<Response> {
     // Both were already a query away and the row said neither.
     return ok({
       projects: projects.map((project) => ({
-        ...project,
+        ...withoutCredentials(project),
         reviewCount: listReviewsForProject(db, project.id).length,
         dependencies: listDependencyLinks(db, project.id).map((link) => ({
           id: link.dependencyProjectId,

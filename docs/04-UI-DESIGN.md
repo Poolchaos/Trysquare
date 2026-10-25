@@ -134,8 +134,10 @@ choose rules, run).
   count. Row action: fetch now.
 - Add project: URL field, clone progress with live git output tail,
   failure shows stderr verbatim. Uses machine git credentials as-is (SSH
-  agent, credential helper); the app stores no secrets. An address that is
-  already a project is refused with a link to it. A failed clone opens like
+  agent, credential helper); the app stores no secrets, so an http(s)
+  address carrying a user name, password or token is refused, and never
+  echoed back (D-208); an SSH user is a name and is taken. An address that
+  is already a project is refused with a link to it. A failed clone opens like
   any project: its page shows git's error and offers Retry clone, which
   removes what git left and clones again.
 - Detail: branches (live list, filterable, ahead/behind vs default, and a

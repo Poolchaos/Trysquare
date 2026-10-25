@@ -2557,6 +2557,34 @@ test("an emptied budget field keeps its ceiling rather than removing it", async 
   expect(stored.settings.stageMaxBudgetUsd).toBe(Number(before));
 });
 
+test("an address carrying a token is refused, and the token is never shown back", async ({
+  page,
+}) => {
+  // The app stores no secrets, as the form says: a token in the address was
+  // kept in the table, shown on the project's pages and echoed in every git
+  // error (audit finding 2, D-208).
+  await page.goto("/projects");
+  const token = "ghp_SECRET0123456789";
+  await page
+    .getByPlaceholder("git@github.com:you/your-app.git")
+    .fill(`https://user:${token}@github.com/acme/app.git`);
+  await page.getByRole("button", { name: "Add project" }).click();
+  await expect(
+    page.getByText(/let git sign in with its credential helper or an SSH key instead/),
+  ).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(token);
+  await expect(page.getByRole("main").locator("li").filter({ hasText: "acme" })).toHaveCount(0);
+  // The card, so the refusal under the form is in the picture.
+  await shootAll(
+    page,
+    page.getByRole("main").locator("form").first().locator(".."),
+    "project-add-token-refused",
+  );
+  // The list beside it, which ran off a phone on a long address until its
+  // column was bounded (found by the phone check above).
+  await shootAll(page, page.getByRole("main").locator("ul").first(), "projects-list");
+});
+
 test("a failed clone can be opened, tried again and deleted; a known address is named", async ({
   page,
 }) => {

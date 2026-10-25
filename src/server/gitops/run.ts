@@ -13,6 +13,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { redactUrlCredentials } from "@/lib/git/url";
 
 export class GitCommandError extends Error {
   constructor(
@@ -21,10 +22,13 @@ export class GitCommandError extends Error {
     readonly stderr: string,
     readonly timedOut: boolean,
   ) {
+    // Without an address's credentials: a project added before they were
+    // refused still has them, and this message is stored and served.
+    const command = redactUrlCredentials(args.join(" "));
     super(
       timedOut
-        ? `git ${args.join(" ")} timed out. A hang is a failure, not something to wait out.`
-        : `git ${args.join(" ")} failed with exit code ${exitCode}: ${stderr.trim() || "(no stderr)"}`,
+        ? `git ${command} timed out. A hang is a failure, not something to wait out.`
+        : `git ${command} failed with exit code ${exitCode}: ${redactUrlCredentials(stderr.trim()) || "(no stderr)"}`,
     );
     this.name = "GitCommandError";
   }

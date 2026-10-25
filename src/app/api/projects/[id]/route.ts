@@ -1,6 +1,7 @@
 /** One project, with its dependency links and its reviews. Or gone. */
 
 import { z } from "zod";
+import { withoutCredentials } from "@/lib/git/url";
 import {
   CloneNotReadyError,
   type ProjectHasReviewsError,
@@ -31,7 +32,7 @@ export async function GET(
     const byId = new Map(listProjects(db).map((project) => [project.id, project.name]));
 
     return ok({
-      project: requireProject(db, id),
+      project: withoutCredentials(requireProject(db, id)),
       links: links.map((link) => ({
         ...link,
         dependencyName: byId.get(link.dependencyProjectId) ?? "a project that is gone",
@@ -94,7 +95,7 @@ export async function PATCH(
       setDefaultBranch(db, id, body.defaultBranch);
     }
     if (body.name !== undefined) renameProject(db, id, body.name);
-    return ok({ project: requireProject(db, id) });
+    return ok({ project: withoutCredentials(requireProject(db, id)) });
   });
 }
 

@@ -9,12 +9,37 @@
  * array, never a shell string.
  */
 
+/**
+ * Text with any http(s) address's credentials replaced, as git prints
+ * addresses in its messages: an error must not carry a token it was given
+ * into a stored clone error, a response or a screen (audit finding 2). An
+ * SSH user is a name, not a secret, and is left.
+ */
+export function redactUrlCredentials(text: string): string {
+  return text.replace(/\b(https?:\/\/)[^/@\s"'`]+@/gi, "$1***@");
+}
+
+/**
+ * A project as the API serves it: its address and its clone error without
+ * credentials, which a project added before they were refused may hold.
+ * The row keeps them, since git still needs them to fetch.
+ */
+export function withoutCredentials<T extends { gitUrl: string; cloneError: string | null }>(
+  project: T,
+): T {
+  return {
+    ...project,
+    gitUrl: redactUrlCredentials(project.gitUrl),
+    cloneError: project.cloneError === null ? null : redactUrlCredentials(project.cloneError),
+  };
+}
+
 export class InvalidGitUrlError extends Error {
-  constructor(
-    readonly url: string,
-    reason: string,
-  ) {
-    super(`"${url}" is not a usable git URL: ${reason}`);
+  readonly url: string;
+  constructor(url: string, reason: string) {
+    const said = redactUrlCredentials(url);
+    super(`"${said}" is not a usable git URL: ${reason}`);
+    this.url = said;
     this.name = "InvalidGitUrlError";
   }
 }
@@ -49,6 +74,17 @@ export function validateGitUrl(rawUrl: string): string {
 
   if (/[\r\n\0]/.test(url)) {
     throw new InvalidGitUrlError(rawUrl, "it contains a newline or null byte");
+  }
+
+  // The app stores no secrets: git signs in with this machine's credential
+  // helper or SSH key. A token in the address was kept in the projects table,
+  // shown on its pages and echoed in every git error (audit finding 2).
+  if (/^https?:\/\/[^/@\s]+@/i.test(url)) {
+    throw new InvalidGitUrlError(
+      rawUrl,
+      "it carries a user name, password or token for the server, and this app stores no " +
+        "secrets: let git sign in with its credential helper or an SSH key instead",
+    );
   }
 
   // `\\host\share`, `//host/share` and a file URL naming a host all reach

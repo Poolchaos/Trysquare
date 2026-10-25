@@ -8,6 +8,7 @@
  */
 
 import { projectRepoDir } from "@/lib/paths";
+import { withoutCredentials } from "@/lib/git/url";
 import { handler, ok } from "@/server/api/respond";
 import { requireProject, setClonePath, setCloneStatus } from "@/server/db/repositories/projects";
 import { removeRepo } from "@/server/gitops/repo";
@@ -59,6 +60,6 @@ export async function POST(
     }
     setClonePath(db, id, clonePath);
     void cloneProjectInBackground(db, id, project.gitUrl, clonePath);
-    return ok({ project: requireProject(db, id) });
+    return ok({ project: withoutCredentials(requireProject(db, id)) });
   });
 }

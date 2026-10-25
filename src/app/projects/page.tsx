@@ -188,7 +188,10 @@ export default function ProjectsPage() {
             the rules to review them against.
           </Empty>
         ) : (
-          <ul className="grid gap-3">
+          // One column no wider than the page: an auto column grew to the
+          // address, which truncates only inside a bounded one, and the row
+          // ran off a phone.
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
             {projects.map((project) => (
               <li key={project.id}>
                 <Card className="p-4">

@@ -5122,3 +5122,21 @@ verified evidence, in writing, here.
   on the project's own checks and the grading, saying what is watched in
   the default mode and that in Mode B the grader's word stands alone.
   No code change: Mode B has no session to watch.
+- 2026-10-25 D-208 An outside audit's finding 2, read again here: an
+  https address with a user and token (https://user:token@host/repo) was
+  accepted, kept in the projects table, shown on the Projects list and the
+  project page, and on any clone failure echoed whole into the error git's
+  message became, which was stored as the clone error and served by the
+  API; a refused address echoed it in its own error. Worse than the audit
+  put it: the add form says the app stores no secrets, and 04 specifies
+  machine credentials only, so the token address was never designed, only
+  not refused. Now an http(s) address carrying any user information is
+  refused at add, saying to let git sign in with its credential helper or
+  an SSH key, and the refusal does not repeat it; git's error text, a
+  refused address's error and every project the API serves have an
+  address's credentials replaced, for a project added before. An SSH user
+  (git@host, ssh://git@host) is a name, not a secret, and is taken. The
+  browser test that drives the refusal also found the Projects list running
+  off a phone on a long address, its grid column unbounded; bounded.
+  Rejected: redacting only, which would keep storing a secret the form
+  says is never stored.

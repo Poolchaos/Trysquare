@@ -40,7 +40,9 @@ whole categories of vulnerability, but it leaves some that matter:
   another site. A way past that, a request the app acts on that a page you
   merely visited sent, is in scope and serious.
 - **Exposure of credentials.** The app relies on the credentials your Claude
-  Code CLI already holds and should never read, copy, or log them.
+  Code CLI and your git already hold, and should never read, copy, or log
+  them. It refuses a repository address that carries a password or token,
+  and takes any it held from before out of what it shows and serves.
 
 ## What is out of scope
 
