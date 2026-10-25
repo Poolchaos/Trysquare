@@ -2826,8 +2826,9 @@ test("a stream frame that is not JSON is read past, and the review read again", 
   page,
 }) => {
   // Audit finding U5: a frame cut short by a proxy threw inside the page's
-  // listener and was lost, with the status change it carried. Answered once
-  // by the route with such a frame; not `times: 1`, see answerOnce.
+  // listener and was lost, with the status change it carried; and one that
+  // parsed to null threw at its kind (review round 14). Answered once by the
+  // route with one of each; not `times: 1`, see answerOnce.
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/reviews");
@@ -2837,20 +2838,36 @@ test("a stream frame that is not JSON is read past, and the review read again", 
     "/reviews/",
     "/api/reviews/",
   );
+  // In the order they were sent: the page reads the review, then opens its
+  // stream, so what came after the stream is what the stream caused.
+  const sent: { what: "read" | "stream"; at: number }[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (request.method() !== "GET") return;
+    if (path === reading.slice(2)) sent.push({ what: "read", at: Date.now() });
+    if (path === `${reading.slice(2)}/events`) sent.push({ what: "stream", at: Date.now() });
+  });
   const stopAnswering = await answerOnce(page, `${reading}/events`, (route) =>
     route.fulfill({
       status: 200,
       contentType: "text/event-stream",
-      body: 'event: update\ndata: {"kind":"status","sta\n\n',
+      body: 'event: update\ndata: {"kind":"status","sta\n\nevent: update\ndata: null\n\n',
     }),
   );
   try {
     await row.getByRole("link").click();
-    await page.waitForURL(/\/reviews\/[A-Z0-9]+$/);
-    const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
-    await expect(header.getByText("complete", { exact: true })).toBeVisible({ timeout: 10_000 });
-    // Time for the frame to be read; on the old page it throws here.
-    await page.waitForTimeout(1_500);
+    await page.waitForResponse((response) => response.url().endsWith("/events"));
+    await page.waitForTimeout(1_000);
+    const stream = sent.findIndex((entry) => entry.what === "stream");
+    expect(stream, "the stream was opened").toBeGreaterThan(0);
+    const streamAt = sent[stream]!.at;
+    // Within 800 ms of the stream: one reading as it opened, and one in place
+    // of each frame it could not read. A closed stream is opened again after
+    // a second at the soonest, and its fallback poll reads after two.
+    expect(
+      sent.slice(stream + 1).filter((entry) => entry.what === "read" && entry.at <= streamAt + 800)
+        .length,
+    ).toBe(3);
     expect(errors).toEqual([]);
   } finally {
     await stopAnswering();

@@ -669,6 +669,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       };
       try {
         parsed = JSON.parse((event as MessageEvent<string>).data) as typeof parsed;
+        // JSON, but not an event: "null" parsed, then threw at its kind
+        // (review round 14).
+        if (typeof parsed !== "object" || parsed === null) throw new Error("not an event");
       } catch {
         // A frame cut short by a proxy, or one a later server writes
         // otherwise, threw here and was lost, the status change it carried

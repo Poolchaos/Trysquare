@@ -5539,3 +5539,10 @@ verified evidence, in writing, here.
   disabled fade. It now applies only to an enabled button. The theme test
   checks that its hover took before it measures, and a second test hovers
   a disabled primary button and finds it unchanged.
+- 2026-10-25 Review round 14, on 96c9460: a stream frame that parsed to
+  null was not caught, and threw at its kind; it is now read past as the
+  unreadable frames are. The browser test did not show the review read
+  again, the readings it saw being the page's own; it now sends one frame
+  of each kind and counts the readings in the second after the stream
+  answers, one as it opened and one for each frame, before the fallback
+  poll could begin.
