@@ -5479,3 +5479,21 @@ verified evidence, in writing, here.
   route promises cannot happen. The clone's removal retries as a review's
   folders do, shown failing first with a process held in the clone; the
   throwaway copy and the checks folder take the same shared options.
+- 2026-10-25 Review round 13 (over 1190f29, 32bc8e0, 7160577 and
+  50af84d), four read-only reviewers, each finding read again in the code
+  and shown failing first where it could be. Fixed: the stored-credentials
+  notice called a user name a password and named a clone a failed clone
+  never made (4fca18a); a review that finished with nothing to decide
+  could not be completed from its page, the queue holding Complete review
+  being mounted only with findings, there since 311d041, and D-224's empty
+  text called such a review stopped (5024ea8); a reading taken before the
+  page's stream listened, and readings applied as they landed, with audit
+  finding U1 (523d2f3); a deleted project's clone removed without retries
+  (aae59c6). Left as they stand, with the reason: a finished review's page
+  reopens its stream every ten minutes, one reading and one connection per
+  open tab, which is also how it hears of a delete elsewhere; a review
+  naming a linked repository without its commits leaves its primary
+  worktree registered when deleted, harmless as ids are never reused, and
+  only a hand-edited database holds one; the page's batch counter, set
+  only by the stream, shows again at a stage's next request after a
+  reopen.

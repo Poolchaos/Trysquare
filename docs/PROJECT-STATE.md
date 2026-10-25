@@ -8,6 +8,13 @@ finding 3: the structure counts below recounted from the code).
 
 ## Status
 
+- 2026-10-25: two outside audits, each finding read again in the code and
+  fixed or answered, D-203 to D-224 with review rounds 10 to 13 over the
+  fixes (in DECISIONS); the maintainer decided D-215 (the local API stays
+  open to this machine, documented) and D-224 (a waiting review leaves the
+  line rather than being cancelled). `./verify.sh --e2e` exits 0 at
+  aae59c6 with 1423 unit tests passing, 11 skipped, and 112 browser tests.
+  The audit's U2 to U10 remain, in the maintainer's order.
 - 2026-10-24: WP-I is built (I1 to I6, three review rounds in DECISIONS):
   a project may turn its own install, tests and e2e on, run on a
   throwaway copy of the branch; a failing command is a finding the app
