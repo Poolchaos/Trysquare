@@ -657,7 +657,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     };
 
     source.addEventListener("update", (event) => {
-      const parsed = JSON.parse((event as MessageEvent<string>).data) as {
+      let parsed: {
         kind: string;
         stage?: string;
         phase?: string;
@@ -667,6 +667,16 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         batchNumber?: number;
         batchCount?: number;
       };
+      try {
+        parsed = JSON.parse((event as MessageEvent<string>).data) as typeof parsed;
+      } catch {
+        // A frame cut short by a proxy, or one a later server writes
+        // otherwise, threw here and was lost, the status change it carried
+        // with it. What it said is read from the review instead (audit
+        // finding U5).
+        void reload();
+        return;
+      }
 
       // Kept as a bounded tail: a long run emits thousands of engine lines,
       // and the page only ever shows the most recent of them. The archive is

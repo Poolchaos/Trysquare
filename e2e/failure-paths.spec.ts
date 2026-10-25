@@ -2759,6 +2759,41 @@ test("an error page for an answer is said, and the button comes back", async ({ 
   });
 });
 
+test("a stream frame that is not JSON is read past, and the review read again", async ({
+  page,
+}) => {
+  // Audit finding U5: a frame cut short by a proxy threw inside the page's
+  // listener and was lost, with the status change it carried. Answered once
+  // by the route with such a frame; not `times: 1`, see answerOnce.
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  const reading = `**${await row.getByRole("link").getAttribute("href")}`.replace(
+    "/reviews/",
+    "/api/reviews/",
+  );
+  const stopAnswering = await answerOnce(page, `${reading}/events`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'event: update\ndata: {"kind":"status","sta\n\n',
+    }),
+  );
+  try {
+    await row.getByRole("link").click();
+    await page.waitForURL(/\/reviews\/[A-Z0-9]+$/);
+    const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+    await expect(header.getByText("complete", { exact: true })).toBeVisible({ timeout: 10_000 });
+    // Time for the frame to be read; on the old page it throws here.
+    await page.waitForTimeout(1_500);
+    expect(errors).toEqual([]);
+  } finally {
+    await stopAnswering();
+  }
+});
+
 test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {
   // Number("") is 0, and zero removes the ceiling: clearing the field and
   // leaving it lifted the cap on every model call without a word (5.3).

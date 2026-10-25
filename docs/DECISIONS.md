@@ -5517,3 +5517,8 @@ verified evidence, in writing, here.
   each failure placed three of them: a failed fetch was said under the add
   form, as if adding had failed, and a failed probe or wipe at the top of
   Settings, a screen from the button; each is now said beside its control.
+- 2026-10-25 An outside audit's finding U5, read again here: a stream
+  frame that was not JSON threw inside the review page's listener, so the
+  frame was lost with whatever it carried, a status change among them.
+  Such a frame is now read past, and the review read again in its place. A
+  browser test sends one; on the old page it surfaces as an uncaught error.
