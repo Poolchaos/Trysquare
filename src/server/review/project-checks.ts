@@ -118,6 +118,9 @@ export async function runChecksForReview(
     Array.isArray(kept.screenshotsLeft) &&
     Array.isArray(kept.screenshotsScaled)
   ) {
+    // A copy the finished run could not remove is tried again here: the
+    // result standing, nothing else would reach it (review round 12).
+    await removeThrowawayCopy(join(dir, "copy")).catch(() => undefined);
     appendRunNote(db, options.reviewId, {
       kind: "note",
       message:
@@ -149,7 +152,7 @@ export async function runChecksForReview(
     await removeThrowawayCopy(copyDir).catch(() => undefined);
     throw failure;
   }
-  // A copy something still holds, on Windows, is said and left for the next
+  // A copy something still holds, on Windows, is said and left for a later
   // run to remove: thrown, it discarded the run that had just finished, and
   // in a finally it hid the error of one that had not (audit finding S3).
   try {
@@ -159,8 +162,8 @@ export async function runChecksForReview(
       kind: "note",
       message:
         `The throwaway copy at ${copyDir} could not be removed ` +
-        `(${removal instanceof Error ? removal.message : String(removal)}); the next run of ` +
-        `the checks removes it, or delete it by hand.`,
+        `(${removal instanceof Error ? removal.message : String(removal)}); each later run ` +
+        `of this review's checks tries again, or delete it by hand.`,
     });
   }
 

@@ -5366,3 +5366,9 @@ verified evidence, in writing, here.
   entity such as "&lt;" reads as written. Bare addresses and "@name" still
   link where the report is pasted; backslashes cannot stop that, and the
   report means them as text either way.
+- 2026-10-25 Review round 12, finding 4, on D-217: the note for a copy
+  that could not be removed said the next run of the checks would remove
+  it, but a resume on the same commit returns the kept result before any
+  removal, so nothing did until the review was deleted. A resume that keeps
+  the result now tries the removal again, and the note says each later run
+  of the review's checks tries again.

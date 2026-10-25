@@ -1,7 +1,7 @@
 /**
  * Removing a project's throwaway copy after its checks (audit finding S3):
  * a copy that will not go, held by something on Windows, is said and left
- * for the next run, not allowed to throw away the run that just finished,
+ * for a later run, not allowed to throw away the run that just finished,
  * nor to hide the error of one that failed.
  */
 
@@ -9,6 +9,7 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { checksDir } from "@/lib/paths";
 import { NO_CHECKS } from "@/lib/projects/checks";
 import { readRunNotes, requireReview } from "@/server/db/repositories/reviews";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "../db/helpers";
@@ -57,7 +58,36 @@ const asked = () => ({
   checks: { ...NO_CHECKS, enabled: true, testCommand: "npm test" },
 });
 
+const FINISHED = {
+  commands: [
+    {
+      step: "tests",
+      command: "npm test",
+      exitCode: 0,
+      timedOut: false,
+      cancelled: false,
+      durationMs: 1200,
+      logPath: "tests.log",
+      tail: "",
+    },
+  ],
+  screenshots: [],
+  screenshotsLeft: [],
+  screenshotsScaled: [],
+};
+
 describe("a throwaway copy that will not be removed", () => {
+  it("is tried again by a resume that keeps the finished run's result", async () => {
+    // Review round 12: the note promised the next run would remove it, and
+    // a resume on the same commit returned the kept result before any did.
+    runProjectChecks.mockResolvedValue(FINISHED);
+    await runChecksForReview(ctx.db, asked());
+    removeThrowawayCopy.mockClear().mockResolvedValue(undefined);
+    await runChecksForReview(ctx.db, asked());
+    expect(runProjectChecks).toHaveBeenCalledTimes(1);
+    expect(removeThrowawayCopy).toHaveBeenCalledWith(join(checksDir(dataDir, reviewId), "copy"));
+  });
+
   it("leaves the finished run standing, and says where the copy is", async () => {
     runProjectChecks.mockResolvedValue({
       commands: [
