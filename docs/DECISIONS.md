@@ -5546,3 +5546,12 @@ verified evidence, in writing, here.
   of each kind and counts the readings in the second after the stream
   answers, one as it opened and one for each frame, before the fallback
   poll could begin.
+- 2026-10-25 Review round 14, on 7f9398a: a decision looked for the next
+  finding to decide only below it, so with those left only above, the
+  queue stayed put and the focus fell to the page, and the focus recorded
+  for the move was left to fire on some later change; it now moves to the
+  first above when none is below, and records the focus only for a move
+  it makes. With no code finding left but the project's checks still to
+  decide, Complete is off, and the commit's word that Complete then takes
+  the focus was not so: the finding's title keeps it instead. Browser
+  tests cover both.

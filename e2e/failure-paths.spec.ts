@@ -1284,16 +1284,33 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
     // Every code finding decided, the check still not: Complete stays off
     // for the check alone (review round 7: it was off for the code findings).
     const read = (await (await page.request.get(`/api/reviews/${reviewId}`)).json()) as {
-      findings: { id: string; status: string }[];
+      findings: { id: string; status: string; issue: string }[];
     };
-    for (const finding of read.findings.filter((row) => row.status === "verified")) {
+    // All but one through the API, the last from the keyboard: with no code
+    // finding left and the check still open, the title keeps the focus
+    // rather than the page (review round 14).
+    const verified = read.findings.filter((row) => row.status === "verified");
+    for (const finding of verified.slice(0, -1)) {
       const confirmed = await page.request.post(`/api/findings/${finding.id}/confirm`, {
         data: {},
       });
       expect(confirmed.status()).toBe(200);
     }
     await page.reload();
+    await expect(page.getByText("8 of 10 decided")).toBeVisible({ timeout: 30_000 });
+    // The queue opens on its first row, decided; the one left is chosen.
+    await page
+      .getByRole("navigation", { name: "Findings" })
+      .getByRole("button")
+      .filter({ hasText: verified.at(-1)!.issue })
+      .click();
+    const lastConfirm = page.getByRole("button", { name: "Confirm", exact: true });
+    await lastConfirm.focus();
+    await page.keyboard.press("Enter");
     await expect(page.getByText("9 of 10 decided")).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByRole("heading", { level: 3, name: verified.at(-1)!.issue }),
+    ).toBeFocused();
     await expect(page.getByText("1 from the project's checks left to decide")).toBeVisible();
     const complete = page.getByRole("button", { name: "Complete review" });
     await expect(complete).toBeDisabled();
@@ -1794,6 +1811,60 @@ test("a decision that moves onto an open question leaves the focus on its title"
     const title = page.getByRole("heading", { level: 3 }).filter({ hasNotText: /\(\d+\)$/ });
     await expect(title).toBeFocused();
     await shootAll(page, page.getByRole("main"), "decided-onto-question");
+  } finally {
+    await stopConfirming();
+    await stop();
+  }
+});
+
+test("a decision with findings left only above it moves up to them", async ({ page }) => {
+  // Review round 14: the next finding to decide was looked for only below,
+  // so with those left above, the queue stayed put and the focus fell to the
+  // page. Staged the other way round from the test above: its criticals
+  // open questions, its warnings proven; Confirm answered here.
+  const listed = (await (await page.request.get("/api/reviews")).json()) as {
+    reviews: { id: string; status: string; findings: { confirmed: number; dismissed: number } }[];
+  };
+  const waiting = listed.reviews.find(
+    (review) =>
+      review.status === "awaiting_confirmation" &&
+      review.findings.confirmed === 0 &&
+      review.findings.dismissed === 0,
+  );
+  expect(waiting, "a review awaiting decisions, none made yet").toBeDefined();
+  const stop = await routeUntilStopped(page, `**/api/reviews/${waiting!.id}`, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as {
+      findings: { id: string; status: string; severity: string; verificationNote: string | null }[];
+    };
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        findings: body.findings.map((finding) =>
+          finding.status === "verified" && finding.severity === "CRITICAL"
+            ? { ...finding, status: "open_question", verificationNote: "Could not be settled." }
+            : finding,
+        ),
+      },
+    });
+  });
+  const stopConfirming = await routeUntilStopped(page, "**/api/findings/*/confirm", (route) =>
+    route.fulfill({ status: 200, json: {} }),
+  );
+  try {
+    await page.goto(`/reviews/${waiting!.id}`);
+    await expect(page.getByTestId("not-proven")).toBeVisible({ timeout: 30_000 });
+    // The last row, a proven warning, every finding still to decide above it.
+    await page.locator("body").press("G");
+    const confirm = page.getByRole("button", { name: "Confirm", exact: true });
+    await expect(confirm).toBeVisible();
+    await confirm.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("not-proven")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 3 }).filter({ hasNotText: /\(\d+\)$/ }),
+    ).toBeFocused();
   } finally {
     await stopConfirming();
     await stop();

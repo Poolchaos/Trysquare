@@ -451,25 +451,34 @@ export function ConfirmationQueue({
         // taken away when the reply lands (seen on CI, run 39005536267, where
         // `g g` back to the same row was overridden).
         if (moves.current !== movesWhenSent) return;
-        // A move like any other, so a control it takes away hands the focus to
-        // the next finding's title: Confirm, moved onto an open question,
-        // went with the focus in it, and Tab began again from the top (audit
-        // finding U6).
-        // After the last one, Complete review takes it instead (round 7).
-        if (queue.some((row) => row.id !== finding.id && UNDECIDED.has(row.status))) {
+        // The next finding to decide after this one, or else the first above
+        // it: with those left only above, the queue stayed put and its
+        // Confirm went with the focus (review round 14).
+        const at = queue.findIndex((row) => row.id === finding.id);
+        const open = (row: Finding, position: number) =>
+          position !== at && UNDECIDED.has(row.status);
+        let next = queue.findIndex((row, position) => position > at && open(row, position));
+        if (next === -1) next = queue.findIndex(open);
+        if (next !== -1) {
+          // A move like any other, so a control it takes away hands the focus
+          // to the next finding's title: Confirm, moved onto an open question,
+          // went with the focus in it, and Tab began again from the top
+          // (audit finding U6).
           focusedAtMove.current = focusedWhenSent;
+          setSelected(next);
+        } else if (checks.undecided > 0) {
+          // No code finding left, the project's checks still to decide, so
+          // Complete stays off: the title keeps the focus, not the page.
+          requestAnimationFrame(() => {
+            if (document.activeElement === document.body) titleRef.current?.focus();
+          });
         }
-        setSelected((index) => {
-          const next = queue.findIndex(
-            (row, position) => position > index && UNDECIDED.has(row.status),
-          );
-          return next === -1 ? index : next;
-        });
+        // After the last of everything, Complete review takes it (round 7).
       } finally {
         setBusy(false);
       }
     },
-    [onChanged, queue],
+    [onChanged, queue, checks.undecided],
   );
 
   // Fetches the code around the finding whose context pane is open, once per
