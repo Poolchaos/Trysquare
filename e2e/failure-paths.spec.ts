@@ -2801,12 +2801,22 @@ test("an error page for an answer is said, and the button comes back", async ({ 
     await page.goto("/rulesets");
     await page.getByLabel("Name").fill("Gateway sweep");
     await page.getByPlaceholder("Paste the markdown protocol here").fill("# Gateway sweep\n");
+    let imports = 0;
+    const counting = (request: import("@playwright/test").Request) => {
+      if (new URL(request.url()).pathname === "/api/rulesets/import") imports += 1;
+    };
+    page.on("request", counting);
     await page.getByRole("button", { name: "Import", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Importing..." })).toBeDisabled();
+    const importing = page.getByRole("button", { name: "Importing..." });
+    await expect(importing).toBeDisabled();
+    // A second press, Enter in the form, while the first is out: sent once.
+    await page.getByLabel("Name").press("Enter");
     release();
     const form = page.getByRole("main").locator("form").first();
     await expect(form.getByText("The document could not be imported.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Import", exact: true })).toBeEnabled();
+    expect(imports).toBe(1);
+    page.off("request", counting);
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, form, "gateway-import");
     await stop();
@@ -2889,7 +2899,9 @@ test("an error page for an answer is said, and the button comes back", async ({ 
     } finally {
       await page.unroute("**/api/system/data", refuse);
     }
+    // Kept, the message goes with the question it answered.
     await page.getByRole("button", { name: "Keep it all" }).click();
+    await expect(page.getByText("The data could not be deleted.")).toHaveCount(0);
   });
 });
 

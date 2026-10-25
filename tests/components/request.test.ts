@@ -35,6 +35,17 @@ describe("a screen's request", () => {
     expect(sent.ok === false && sent.error).toBe("The report could not be exported.");
   });
 
+  it("says a success it cannot read failed, rather than passing on nothing", async () => {
+    // Review round 14: read as {}, it was drawn as a ruleset and threw.
+    answering(new Response("<html>Gateway</html>", { status: 200 }));
+    expect(await send("/x", {}, "This ruleset could not be read again")).toEqual({
+      ok: false,
+      status: 200,
+      error: "This ruleset could not be read again: the server's answer could not be read.",
+      body: {},
+    });
+  });
+
   it("passes the server's own refusal through, with the rest of its body", async () => {
     answering(
       Response.json(

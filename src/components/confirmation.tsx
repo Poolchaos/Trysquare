@@ -583,15 +583,19 @@ export function ConfirmationQueue({
     setError("");
     setBusy(true);
     try {
-      const response = await fetch(`/api/reviews/${reviewId}/complete`, { method: "POST" });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        setError(body.error ?? "The review could not be completed.");
-        if (response.status === 409) await onChanged();
+      // Through send(): a dropped connection rejected past this handler with
+      // nothing said (review round 14).
+      const sent = await send<{ cleanupNote?: string }>(
+        `/api/reviews/${reviewId}/complete`,
+        { method: "POST" },
+        "The review could not be completed",
+      );
+      if (!sent.ok) {
+        setError(sent.error);
+        if (sent.status === 409) await onChanged();
         return;
       }
-      const body = (await response.json().catch(() => ({}))) as { cleanupNote?: string };
-      if (body.cleanupNote) onCheckoutLeft(body.cleanupNote);
+      if (sent.body.cleanupNote) onCheckoutLeft(sent.body.cleanupNote);
       await onChanged();
     } finally {
       setBusy(false);

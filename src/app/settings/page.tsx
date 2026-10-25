@@ -647,7 +647,14 @@ export default function SettingsPage() {
               >
                 {wiping ? "Deleting..." : "Yes, delete everything"}
               </Button>
-              <Button variant="quiet" onClick={() => setConfirmingWipe(false)}>
+              <Button
+                variant="quiet"
+                onClick={() => {
+                  setConfirmingWipe(false);
+                  // Gone with the question it answered (review round 14).
+                  setWipeError("");
+                }}
+              >
                 Keep it all
               </Button>
               <span className="text-xs text-[var(--color-ink-muted)]">

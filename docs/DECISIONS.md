@@ -5555,3 +5555,13 @@ verified evidence, in writing, here.
   decide, Complete is off, and the commit's word that Complete then takes
   the focus was not so: the finding's title keeps it instead. Browser
   tests cover both.
+- 2026-10-25 Review round 14, on 5400e6b: send() read a success whose
+  body was not JSON as {}, which a ruleset's page then drew and threw on;
+  every route answers JSON, so such an answer is now a failure that says
+  the server's answer could not be read. Complete review still fetched
+  bare, so a dropped connection was not said; it reads through send().
+  The house-style law also reads r["json"](); a planted one passed it at
+  first, its quick check for ".json(" skipping the file, and is flagged
+  now. A failed wipe's message now goes when its question is kept. The browser test now presses Import a
+  second time while the first is out and counts one request, as its
+  commit said it did.

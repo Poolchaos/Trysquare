@@ -381,16 +381,19 @@ function clientReadLines(path, text) {
     (path.startsWith("src/app/") && !path.startsWith("src/app/api/")) ||
     path.startsWith("src/components/");
   if (!client || !SOURCE.test(path) || path === "src/components/request.ts") return [];
-  if (!text.includes(".json(")) return [];
+  // Any mention, not ".json(": r["json"]() has none, and passed unread.
+  if (!text.includes("json")) return [];
   const source = parsed(path, text);
   const found = [];
   const visit = (node) => {
-    if (
-      ts.isCallExpression(node) &&
-      node.arguments.length === 0 &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      node.expression.name.text === "json"
-    ) {
+    const callee = ts.isCallExpression(node) ? node.expression : undefined;
+    const readsJson =
+      callee !== undefined &&
+      ((ts.isPropertyAccessExpression(callee) && callee.name.text === "json") ||
+        (ts.isElementAccessExpression(callee) &&
+          ts.isStringLiteralLike(callee.argumentExpression) &&
+          callee.argumentExpression.text === "json"));
+    if (ts.isCallExpression(node) && node.arguments.length === 0 && readsJson) {
       const parent = node.parent;
       const caught =
         ts.isPropertyAccessExpression(parent) &&

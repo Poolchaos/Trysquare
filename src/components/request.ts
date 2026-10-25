@@ -29,10 +29,23 @@ export async function send<T>(url: string, init: RequestInit, failure: string): 
     const reason = error instanceof Error ? error.message : String(error);
     return { ok: false, status: null, error: `${failure}: ${reason}`, body: {} };
   }
-  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const read = (await response.json().catch(() => undefined)) as unknown;
+  const body =
+    typeof read === "object" && read !== null ? (read as Record<string, unknown>) : undefined;
   if (!response.ok) {
-    const error = typeof body.error === "string" ? body.error : `${failure}.`;
-    return { ok: false, status: response.status, error, body };
+    const error = typeof body?.error === "string" ? body.error : `${failure}.`;
+    return { ok: false, status: response.status, error, body: body ?? {} };
+  }
+  // Every route answers JSON. A success that cannot be read went through as
+  // an empty one, and a screen drew {} as a ruleset and threw (review round
+  // 14).
+  if (body === undefined) {
+    return {
+      ok: false,
+      status: response.status,
+      error: `${failure}: the server's answer could not be read.`,
+      body: {},
+    };
   }
   return { ok: true, status: response.status, body: body as T };
 }
