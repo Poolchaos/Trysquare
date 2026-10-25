@@ -5232,3 +5232,13 @@ verified evidence, in writing, here.
   findings were proven and its five steps, then the queue; and the stage
   timeline shows Prepare and Audit with no tokens, not greyed. No gate
   compares the copies to the suite's output; the README says so instead.
+- 2026-10-25 D-213 An outside audit's finding 9, read again here: the
+  nothing-hidden gate watched src, tests, e2e, scripts and drizzle, so a
+  root config (playwright.config.ts, verify.sh), a doc or a CI workflow
+  could be gitignored with every gate green; next-env.d.ts showed the shape,
+  ignored and unseen. It now watches the root's own files, docs and
+  .github too, and names what is meant to be ignored: the files a tool
+  writes (next-env.d.ts, *.tsbuildinfo), secrets (.env, .env.*, *.key,
+  *.pem) and docs/private. Shown here: a new root file, newtool.config.ts,
+  named in .gitignore, failed the new gate and passed the old. A file git
+  already tracks is not the hole: naming it in .gitignore leaves it tracked.

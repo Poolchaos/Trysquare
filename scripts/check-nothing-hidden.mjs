@@ -17,15 +17,39 @@
 
 import { execFileSync } from "node:child_process";
 
-const WATCHED = ["src", "tests", "e2e", "scripts", "drizzle"];
+const WATCHED = ["src", "tests", "e2e", "scripts", "drizzle", "docs", ".github"];
+
+/**
+ * The repository root's own files too, its configs and verify.sh: one
+ * ignored there passed every gate (audit finding 9). A glob pathspec's `*`
+ * stops at a slash, so this is the root's files and not its folders, whose
+ * build output and dependencies are meant to be ignored.
+ */
+const ROOT_FILES = ":(glob)*";
+
+/**
+ * What is ignored on purpose, each said: files a tool writes (Next's type
+ * stub, TypeScript's build info), secrets that must never be committed, and
+ * the private working material .gitignore names.
+ */
+const MEANT_TO_BE_IGNORED = [
+  /^next-env\.d\.ts$/,
+  /\.tsbuildinfo$/,
+  /^\.env(\..*)?$/,
+  /\.(key|pem)$/,
+  /^docs\/private\//,
+];
 
 function hiddenFiles() {
   const output = execFileSync(
     "git",
-    ["ls-files", "--others", "--ignored", "--exclude-standard", "--", ...WATCHED],
+    ["ls-files", "--others", "--ignored", "--exclude-standard", "--", ...WATCHED, ROOT_FILES],
     { encoding: "utf8" },
   );
-  return output.split("\n").filter((line) => line.trim() !== "");
+  return output
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .filter((file) => !MEANT_TO_BE_IGNORED.some((meant) => meant.test(file)));
 }
 
 let hidden;
@@ -60,4 +84,6 @@ if (hidden.length > 0) {
   process.exit(1);
 }
 
-console.log(`check-nothing-hidden: clean (nothing ignored under ${WATCHED.join(", ")}).`);
+console.log(
+  `check-nothing-hidden: clean (nothing ignored at the root or under ${WATCHED.join(", ")}).`,
+);
