@@ -149,6 +149,18 @@ a large context window can hold an entire rule set at once and a smaller one
 cannot. What never adapts is coverage: weaker models get more, smaller
 requests, never a shortened rule set.
 
+A project can also have its own checks turned on. Its install, tests and e2e
+then run as you, on a throwaway copy of the branch, before any model is asked,
+and a command that fails is a finding the app proves from its exit code and
+output. Every screenshot the e2e saves is graded A to D by the review's model,
+against the project's design standard when it names one; one graded C or D is
+graded again by the model of the other family, and both must fail it for it to
+stand. In the default mode the app watches each grading session and refuses a
+grade of a screenshot it never opened. In the interactive mode, where a review
+runs in your own terminal, nothing is watched, so there the grader's word that
+it opened each image stands alone. A project with no e2e is reported as
+"design not checked", never given a grade.
+
 ## Requirements
 
 - Windows, macOS or Linux. Every push passes the whole test suite on all

@@ -5111,3 +5111,14 @@ verified evidence, in writing, here.
   it now runs the narrowing profile first. Cosmetic: no coverage rested on
   the notes. Notes a resume should add, such as the checks' result being
   reused, still are.
+- 2026-10-24 D-207 An outside audit's finding 13, read again here: in
+  Mode B a design grade's "opened" is the grader's word alone, since the
+  answer is a file a session the person runs writes, and nothing of that
+  session is the app's to watch; docs/03 said so, and that a replayed
+  answer was checked when it was given. The README line it cited, that the
+  program checks the verifier's own work, is about code findings, whose
+  quoted code is byte-compared, so it did not oversell the grades; but the
+  README said nothing of the design check at all. It now has a paragraph
+  on the project's own checks and the grading, saying what is watched in
+  the default mode and that in Mode B the grader's word stands alone.
+  No code change: Mode B has no session to watch.
