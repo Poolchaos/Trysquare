@@ -55,15 +55,15 @@ export async function detectMerged(db: Db, reviews: readonly Review[]): Promise<
       }
       const tip = await tips.get(branch);
       if (tip === null || tip === undefined || notMergedAt.get(review.id) === tip) continue;
-      // Against the branch it was going into, as it stands now.
-      if (await isAncestor(project.clonePath, review.fromCommit, review.intoBranch)) {
+      if (await isAncestor(project.clonePath, review.fromCommit, tip)) {
         markReviewMerged(db, review.id);
       } else {
         notMergedAt.set(review.id, tip);
       }
     } catch {
-      // A clone that has gone missing is not a reason to fail a list. The
-      // badge is a convenience; the review is the record.
+      // A clone that has gone missing, or git that could not answer, is not a
+      // reason to fail a list, and nothing is kept: the next look asks again.
+      // The badge is a convenience; the review is the record.
     }
   }
 }

@@ -10,7 +10,7 @@ import { rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
 import { validateGitUrl } from "@/lib/git/url";
-import { git, gitSucceeds, toLines } from "./run";
+import { git, GitCommandError, gitSucceeds, toLines } from "./run";
 
 export interface BranchInfo {
   name: string;
@@ -202,15 +202,21 @@ export async function divergence(
   return { ahead: Number(aheadRaw), behind: Number(behindRaw) };
 }
 
-/** True once the target branch contains the reviewed commit, i.e. it merged. */
-export async function isAncestor(
-  repoDir: string,
-  commit: string,
-  ofBranch: string,
-): Promise<boolean> {
-  return gitSucceeds(["merge-base", "--is-ancestor", commit, branchRef(ofBranch)], {
-    cwd: repoDir,
-  });
+/**
+ * True once `tip` contains the reviewed commit, i.e. it merged. A commit,
+ * not a branch name: an answer is kept for the tip it was asked of, and a
+ * fetch could move the branch between reading its tip and asking. Throws when
+ * git cannot say: only exit 1 means no, and a timeout or a failed spawn read
+ * as no was kept until the branch next moved (review round 12).
+ */
+export async function isAncestor(repoDir: string, commit: string, tip: string): Promise<boolean> {
+  try {
+    await git(["merge-base", "--is-ancestor", commit, tip], { cwd: repoDir });
+    return true;
+  } catch (error) {
+    if (error instanceof GitCommandError && error.exitCode === 1) return false;
+    throw error;
+  }
 }
 
 export async function diffText(repoDir: string, base: string, head: string): Promise<string> {

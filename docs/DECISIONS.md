@@ -5348,3 +5348,11 @@ verified evidence, in writing, here.
   no stage dispositioned. A resume now compares each hit's rule,
   path and line with the fresh sweep, as D-205 does the files and hunks,
   and is refused on any difference.
+- 2026-10-25 Review round 12, finding 1, on D-218: `isAncestor` read any
+  failure of git as no, so a check that timed out or could not spawn was
+  kept as not merged until the target branch next moved, which on a quiet
+  branch is never, and a merged review went without its badge. Only git's
+  exit 1 now means no; any other failure throws, and nothing is kept, the
+  next look asking again. It is asked of the tip just read rather than the
+  branch's name, which a fetch could move between the two, so the answer is
+  kept for the commit it was about.

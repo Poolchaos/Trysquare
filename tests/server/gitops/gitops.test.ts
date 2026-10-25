@@ -138,10 +138,18 @@ describe("comparing branches", () => {
 
   it("knows whether a branch has been merged into the target", async () => {
     const featureTip = await resolveCommit(cloneDir, "feature/totals");
-    expect(await isAncestor(cloneDir, featureTip, "main")).toBe(false);
+    const mainTip = await resolveBranch(cloneDir, "main");
+    expect(await isAncestor(cloneDir, featureTip, mainTip)).toBe(false);
 
     const base = await mergeBase(cloneDir, "main", "feature/totals");
-    expect(await isAncestor(cloneDir, base, "main")).toBe(true);
+    expect(await isAncestor(cloneDir, base, mainTip)).toBe(true);
+  });
+
+  it("says nothing about a merge git could not judge, rather than no", async () => {
+    // Exit 128, not 1: an answer of no here was kept until the branch moved
+    // (review round 12).
+    const mainTip = await resolveBranch(cloneDir, "main");
+    await expect(isAncestor(cloneDir, "0".repeat(40), mainTip)).rejects.toThrow(/exit code 128/);
   });
 
   it("reads a file as it was before the change, for reviewing deletions", async () => {
@@ -471,7 +479,7 @@ describe("a tag with a branch's name (4.22)", () => {
   });
 
   it("does not call a branch merged because a tag of that name holds it", async () => {
-    expect(await isAncestor(tagged, featureTip, "main")).toBe(false);
+    expect(await isAncestor(tagged, featureTip, await resolveBranch(tagged, "main"))).toBe(false);
   });
 
   it("finds the merge base and the distance between the branches themselves", async () => {
