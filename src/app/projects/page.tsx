@@ -26,7 +26,7 @@ interface Project {
   lastFetchedAt: string | null;
   reviewCount: number;
   dependencies: { id: string; name: string; packageName: string }[];
-  cleanAddress?: string | null;
+  storedCredentials?: { kind: string; address: string } | null;
 }
 
 /**
@@ -270,7 +270,11 @@ export default function ProjectsPage() {
                       </Badge>
                     ))}
                   </div>
-                  <StoredCredentialsNotice cleanAddress={project.cleanAddress} className="mt-3" />
+                  <StoredCredentialsNotice
+                    stored={project.storedCredentials}
+                    cloned={project.cloneStatus === "ready"}
+                    className="mt-3"
+                  />
                   {project.cloneError ? (
                     // Focusable and named: it scrolls sideways, and a box
                     // that scrolls must be reachable by keyboard.

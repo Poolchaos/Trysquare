@@ -139,8 +139,8 @@ choose rules, run).
   token, or on http(s) any user name, is refused, the refusal naming the
   address to add instead and not repeating them (D-208); an SSH user is a
   name and is taken. A project added with one before then says on its card
-  and its page that a password or token is still kept, and names the
-  address to add instead (D-223). An address that
+  and its page that a password or token, or a user name, is still kept,
+  and names the address to add instead (D-223). An address that
   is already a project is refused with a link to it. A failed clone opens like
   any project: its page shows git's error and offers Retry clone, which
   removes what git left and clones again.

@@ -39,7 +39,7 @@ interface Detail {
     cloneStatus: string;
     cloneError: string | null;
     lastFetchedAt: string | null;
-    cleanAddress?: string | null;
+    storedCredentials?: { kind: string; address: string } | null;
   };
   links: { id: string; dependencyName: string; packageName: string }[];
   linkable: { id: string; name: string }[];
@@ -290,7 +290,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <Problem>{followProblem}</Problem>
           </div>
         ) : null}
-        <StoredCredentialsNotice cleanAddress={project.cleanAddress} className="mb-4" />
+        <StoredCredentialsNotice
+          stored={project.storedCredentials}
+          cloned={project.cloneStatus === "ready"}
+          className="mb-4"
+        />
         {project.cloneError ? (
           <pre className="mb-4 overflow-x-auto rounded border border-[var(--color-critical)] bg-[var(--color-critical-soft)] p-3 text-xs text-[var(--color-critical)]">
             {project.cloneError}

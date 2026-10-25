@@ -26,16 +26,26 @@ export function redactUrlCredentials(text: string): string {
   return text.replace(HTTP_USERINFO, "$1***@").replace(PASSWORD_USERINFO, "$1***@");
 }
 
+/** What an address carries that Trysquare would have to store, and the address without it. */
+interface Credentials {
+  kind: "a password or token" | "a user name or token";
+  address: string;
+}
+
 /**
- * The address to add instead of one that carries credentials, or null when it
- * carries none: any user on http(s), where a name alone can be a token, and a
- * password on any scheme (D-208; review round 10).
+ * The credentials an address carries, or null when it carries none: any user
+ * on http(s), where a name alone can be a token, and a password on any scheme
+ * (D-208; review round 10).
  */
-export function addressWithoutCredentials(url: string): string | null {
+export function credentialsIn(url: string): Credentials | null {
   const address = url.trim();
   const http = /^https?:\/\/[^/\s]*@/i.test(address);
   const password = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s]*@/i.test(address);
-  return http || password ? address.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/\s]*@/i, "$1") : null;
+  if (!http && !password) return null;
+  return {
+    kind: password ? "a password or token" : "a user name or token",
+    address: address.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/\s]*@/i, "$1"),
+  };
 }
 
 /**
@@ -43,17 +53,18 @@ export function addressWithoutCredentials(url: string): string | null {
  * credentials, which a project added before they were refused may hold. The
  * row keeps what was added: a fetch reads the clone's own remote, and Retry
  * clone now refuses the address, so such a project is deleted and added
- * again without them. `cleanAddress` is that address, so its screens can say
- * the credentials are still kept (audit finding R3, D-223).
+ * again without them. `storedCredentials` says what it carries and the
+ * address to add instead, so its screens can say what is still kept (audit
+ * finding R3, D-223).
  */
 export function withoutCredentials<T extends { gitUrl: string; cloneError: string | null }>(
   project: T,
-): T & { cleanAddress: string | null } {
+): T & { storedCredentials: Credentials | null } {
   return {
     ...project,
     gitUrl: redactUrlCredentials(project.gitUrl),
     cloneError: project.cloneError === null ? null : redactUrlCredentials(project.cloneError),
-    cleanAddress: addressWithoutCredentials(project.gitUrl),
+    storedCredentials: credentialsIn(project.gitUrl),
   };
 }
 
@@ -105,15 +116,14 @@ export function validateGitUrl(rawUrl: string): string {
   // shown on its pages and echoed in every git error (audit finding 2).
   // Any user on http(s), where a name alone can be a token; a password on
   // any scheme (review round 10: ssh://user:password@ was taken).
-  const bare = addressWithoutCredentials(url);
-  if (bare !== null) {
-    const password = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s]*@/i.test(url);
+  const carried = credentialsIn(url);
+  if (carried !== null) {
     throw new InvalidGitUrlError(
       rawUrl,
       "it carries credentials",
-      `This address carries ${password ? "a password or token" : "a user name or token"}, ` +
-        `which Trysquare would have to store. Add ${bare} instead and let git's credential ` +
-        `helper sign in, or use the repository's SSH address.`,
+      `This address carries ${carried.kind}, which Trysquare would have to store. Add ` +
+        `${carried.address} instead and let git's credential helper sign in, or use the ` +
+        `repository's SSH address.`,
     );
   }
 

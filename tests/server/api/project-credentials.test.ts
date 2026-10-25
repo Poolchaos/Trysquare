@@ -55,7 +55,9 @@ describe("a project whose address carries a token", () => {
       expect(body).toContain("https://***@github.com/acme/app.git");
       // The address to add instead, so the screens can say a token is still
       // kept for it (audit finding R3, D-223).
-      expect(body).toContain('"cleanAddress":"https://github.com/acme/app.git"');
+      expect(body).toContain(
+        '"storedCredentials":{"kind":"a password or token","address":"https://github.com/acme/app.git"}',
+      );
     }
     expect(failure.message).not.toContain(TOKEN);
   });

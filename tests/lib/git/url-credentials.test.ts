@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import {
   InvalidGitUrlError,
-  addressWithoutCredentials,
+  credentialsIn,
   redactUrlCredentials,
   validateGitUrl,
 } from "@/lib/git/url";
@@ -65,20 +65,27 @@ describe("the address to add instead", () => {
   it("is the address without its credentials, by the rule an address is refused by", () => {
     // Audit finding R3, D-223: what a project's screens offer in place of an
     // address kept from before D-208.
-    expect(addressWithoutCredentials(`https://user:${TOKEN}@github.com/acme/app.git`)).toBe(
-      "https://github.com/acme/app.git",
-    );
-    expect(addressWithoutCredentials(`https://${TOKEN}@github.com/acme/app.git`)).toBe(
-      "https://github.com/acme/app.git",
-    );
-    expect(addressWithoutCredentials(`ssh://git:${TOKEN}@host/a.git`)).toBe("ssh://host/a.git");
+    expect(credentialsIn(`https://user:${TOKEN}@github.com/acme/app.git`)).toEqual({
+      kind: "a password or token",
+      address: "https://github.com/acme/app.git",
+    });
+    // A name alone, as Bitbucket's addresses carry, is said as one: the
+    // notice called it a password (review round 13).
+    expect(credentialsIn("https://phill@bitbucket.org/team/repo.git")).toEqual({
+      kind: "a user name or token",
+      address: "https://bitbucket.org/team/repo.git",
+    });
+    expect(credentialsIn(`ssh://git:${TOKEN}@host/a.git`)).toEqual({
+      kind: "a password or token",
+      address: "ssh://host/a.git",
+    });
     for (const clean of [
       "https://github.com/acme/app.git",
       "ssh://git@host/a.git",
       "git@github.com:acme/app.git",
       "file:///C:/repos/app.git",
     ]) {
-      expect(addressWithoutCredentials(clean)).toBeNull();
+      expect(credentialsIn(clean)).toBeNull();
     }
   });
 });

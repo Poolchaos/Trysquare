@@ -2619,25 +2619,45 @@ test("a project kept with a token in its address says so, and how to be rid of i
   // an address keeps its token in the database and the clone's settings, and
   // the screens, which no longer show it, said nothing of it. The fixture's
   // address carries none, so the server's answer is made to read as one that
-  // does; what the server serves is a unit test.
-  type Served = { name: string; gitUrl: string; cleanAddress?: string | null };
-  const kept = (project: Served): Served =>
-    project.name === "app"
-      ? {
-          ...project,
-          gitUrl: "https://***@github.com/acme/app.git",
-          cleanAddress: "https://github.com/acme/app.git",
-        }
-      : project;
+  // does; what the server serves is a unit test. The list reads it as a clone
+  // that failed, which left no clone to hold it, and the page as one whose
+  // address carries a user name alone (review round 13).
+  type Served = {
+    name: string;
+    gitUrl: string;
+    cloneStatus: string;
+    storedCredentials?: { kind: string; address: string } | null;
+  };
+  const kept = (project: Served, inList: boolean): Served =>
+    project.name !== "app"
+      ? project
+      : inList
+        ? {
+            ...project,
+            gitUrl: "https://***@github.com/acme/app.git",
+            cloneStatus: "failed",
+            storedCredentials: {
+              kind: "a password or token",
+              address: "https://github.com/acme/app.git",
+            },
+          }
+        : {
+            ...project,
+            gitUrl: "https://***@github.com/acme/app.git",
+            storedCredentials: {
+              kind: "a user name or token",
+              address: "https://github.com/acme/app.git",
+            },
+          };
   const asKept = async (route: import("@playwright/test").Route) => {
     const response = await route.fetch();
     const body = (await response.json()) as { projects?: Served[]; project?: Served };
     await route.fulfill({
       response,
       json: body.projects
-        ? { ...body, projects: body.projects.map(kept) }
+        ? { ...body, projects: body.projects.map((project) => kept(project, true)) }
         : body.project
-          ? { ...body, project: kept(body.project) }
+          ? { ...body, project: kept(body.project, false) }
           : body,
     });
   };
@@ -2653,10 +2673,11 @@ test("a project kept with a token in its address says so, and how to be rid of i
     await expect(
       card.getByText("A password or token is still kept for this address."),
     ).toBeVisible();
+    // No clone, so only the database holds it.
     await expect(card).toContainText(
-      "Delete this project and add https://github.com/acme/app.git instead to be rid of it.",
+      "it stays on this machine, in Trysquare's database. Delete this project and add " +
+        "https://github.com/acme/app.git instead to be rid of it.",
     );
-    await expect(card).not.toContainText("ghp_");
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, card, "project-token-kept-card");
 
@@ -2664,8 +2685,11 @@ test("a project kept with a token in its address says so, and how to be rid of i
     await expect(page.getByRole("heading", { name: "app", level: 1 })).toBeVisible();
     const notice = page
       .getByRole("main")
-      .getByText("A password or token is still kept for this address.");
+      .getByText("A user name or token is still kept for this address.");
     await expect(notice).toBeVisible();
+    await expect(page.getByRole("main")).toContainText(
+      "in Trysquare's database and in the clone's settings.",
+    );
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, page.getByRole("main"), "project-token-kept-page");
   } finally {
