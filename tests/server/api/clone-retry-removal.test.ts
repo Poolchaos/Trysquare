@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const { removeRepo, cloneInBackground } = vi.hoisted(() => ({
-  removeRepo: vi.fn(async (_dir: string): Promise<void> => undefined),
+  removeRepo: vi.fn<(dir: string) => Promise<void>>(async () => undefined),
   cloneInBackground: vi.fn(async (): Promise<void> => undefined),
 }));
 

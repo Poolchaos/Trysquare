@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const { removeRepo } = vi.hoisted(() => ({
-  removeRepo: vi.fn(async (_dir: string): Promise<void> => {
+  removeRepo: vi.fn<(dir: string) => Promise<void>>(async () => {
     throw Object.assign(new Error("ENOTEMPTY: directory not empty, rmdir 'repo.git'"), {
       code: "ENOTEMPTY",
     });
