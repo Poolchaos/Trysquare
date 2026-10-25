@@ -5242,3 +5242,11 @@ verified evidence, in writing, here.
   *.pem) and docs/private. Shown here: a new root file, newtool.config.ts,
   named in .gitignore, failed the new gate and passed the old. A file git
   already tracks is not the hole: naming it in .gitignore leaves it tracked.
+- 2026-10-25 D-214 An outside audit's finding 10, read again here: the
+  request guard refuses a browser request from another site, and a request
+  with no Origin header, as any non-browser program sends, passes it, so
+  any program on the machine, under any account, can call every route, the
+  data wipe among them. By design, and the out-of-scope case of an attacker
+  already on the machine, but SECURITY.md did not say it; it does now, in
+  its trust model. The finding's second half, that a project's own
+  checks run as the person, was closed by D-209.
