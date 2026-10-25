@@ -14,7 +14,7 @@
 import { ACTIVE_REVIEW_STATUSES } from "@/lib/domain/state-machines";
 import { requireProject } from "../db/repositories/projects";
 import { markReviewMerged, type Review } from "../db/repositories/reviews";
-import { isAncestor } from "../gitops/repo";
+import { isAncestor, resolveBranch } from "../gitops/repo";
 import type { Db } from "../db/client";
 
 /**
@@ -28,16 +28,38 @@ import type { Db } from "../db/client";
  */
 const MID_RUN: readonly string[] = [...ACTIVE_REVIEW_STATUSES];
 
+/**
+ * Per review, the target branch's tip it was last found not merged at. A
+ * review is asked of git again only once that branch has moved: every load
+ * of the list spawned git once per review not yet merged, however long the
+ * history and however still the branches (audit finding S4). Kept for the
+ * server's life; a restart asks each once more.
+ */
+const notMergedAt = new Map<string, string>();
+
 export async function detectMerged(db: Db, reviews: readonly Review[]): Promise<void> {
+  // Each branch's tip read once per look, however many reviews target it.
+  const tips = new Map<string, Promise<string | null>>();
   for (const review of reviews) {
     if (review.mergedDetectedAt !== null) continue;
     if (MID_RUN.includes(review.status)) continue;
 
     try {
       const project = requireProject(db, review.projectId);
+      const branch = `${project.clonePath}\0${review.intoBranch}`;
+      if (!tips.has(branch)) {
+        tips.set(
+          branch,
+          resolveBranch(project.clonePath, review.intoBranch).catch(() => null),
+        );
+      }
+      const tip = await tips.get(branch);
+      if (tip === null || tip === undefined || notMergedAt.get(review.id) === tip) continue;
       // Against the branch it was going into, as it stands now.
       if (await isAncestor(project.clonePath, review.fromCommit, review.intoBranch)) {
         markReviewMerged(db, review.id);
+      } else {
+        notMergedAt.set(review.id, tip);
       }
     } catch {
       // A clone that has gone missing is not a reason to fail a list. The

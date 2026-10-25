@@ -5322,3 +5322,12 @@ verified evidence, in writing, here.
   the checks to remove (it clears the folder first) or a person to delete;
   a failed run keeps its own error, the removal tried and its failure
   dropped.
+- 2026-10-25 D-218 An outside audit's finding S4, read again here and
+  shown failing first: every load of the reviews list spawned git once per
+  review not yet merged and not running, one after another, so a long
+  history cost a git process per review on each look. Now each review
+  keeps, for the server's life, the target branch's tip it was last found
+  not merged at, and is asked again only once that branch has moved; each
+  branch's tip is read once per look. A quiet list costs one git call per
+  target branch. The answer for a tip cannot change, the reviewed commit
+  being pinned, so nothing is missed; a restart asks each once more.
