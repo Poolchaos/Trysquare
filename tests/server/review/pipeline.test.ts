@@ -761,6 +761,21 @@ describe("refusing to accept an incomplete stage", () => {
     expect(notes[0]?.message).toContain("29 (reduce((sum)");
   });
 
+  it("completes when two patterns of one rule match the same line", async () => {
+    // An outside audit's finding 11: each pattern seeded its own hit, the
+    // answer names a hit by path, line and rule alone, so one disposition
+    // reached the first and the second stayed pending, refused at S6 after
+    // the whole run was spent, on every resume alike.
+    const twoPatterns = [rule("3", ["typescript"], ["\\bas\\b", "payload"])];
+    const answers = { ...BASE_ANSWERS, s5_verification: { verdicts: [] } };
+
+    const result = await run(answers, { rules: twoPatterns });
+
+    expect(result.coverage.totalSweepHits).toBe(1);
+    expect(result.coverage.pendingSweepHits).toBe(0);
+    expect(listSweepHits(db, reviewId).map((hit) => [hit.ruleCode, hit.line])).toEqual([["3", 2]]);
+  });
+
   it("does not repeat the literal-pattern note when a run is resumed", async () => {
     // The note is written beside the sweep, and a resumed run re-runs the
     // sweep to re-check it. Writing the note again would have every resume

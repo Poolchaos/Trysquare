@@ -133,8 +133,14 @@ export function runSweeps(
     for (const hunk of target.file.hunks) {
       for (const added of addedLineNumbers(hunk)) {
         linesScanned += 1;
+        // One hit per rule and line, named by the first pattern that matched:
+        // a hit is dispositioned by path, line and rule, so a second pattern
+        // of the same rule seeded a hit no answer could reach, and the
+        // review failed its audit after the whole run (audit finding 11).
+        const hitBy = new Set<string>();
         for (const { ruleCode, pattern, regex } of compiled) {
-          if (!regex.test(added.text)) continue;
+          if (hitBy.has(ruleCode) || !regex.test(added.text)) continue;
+          hitBy.add(ruleCode);
           hits.push({
             ruleCode,
             pattern,

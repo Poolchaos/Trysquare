@@ -64,7 +64,10 @@ S1 work its risk-tagged files first (U12).
    - `stats.json`: per-repo and combined counts
 4. Run the **mechanical sweeps**: for every enabled rule with sweepPatterns,
    run the regexes over changed files' added lines (and whole changed files
-   where the protocol says so). Persist every hit as a sweep_hit (pending).
+   where the protocol says so). Persist every hit as a sweep_hit (pending),
+   one per rule and line, named by the first of its patterns that matched:
+   a hit is dispositioned by path, line and rule, so a second pattern's hit
+   could never be reached (audit finding 11, D-204).
    Sweeps are implemented in Node (read the file, apply the regex), NOT by
    shelling out to ripgrep: `rg` is not guaranteed to exist as a binary (on
    the maintainer's machine it is a shell function from an editor integration and is

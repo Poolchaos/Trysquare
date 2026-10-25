@@ -66,6 +66,20 @@ describe("mechanical sweeps", () => {
     expect(outcome.hits).toHaveLength(3);
   });
 
+  it("records one hit per rule and line, however many of its patterns match", () => {
+    // A hit is dispositioned by path, line and rule, so a second pattern of
+    // the same rule made a hit no answer could reach (audit finding 11).
+    // Two rules on one line are two hits: each is its own disposition.
+    const outcome = runSweeps(TARGETS, [
+      { code: "7", sweepPatterns: ["TODO", "finish"] },
+      { code: "8", sweepPatterns: ["TODO"] },
+    ]);
+    expect(outcome.hits.map((hit) => [hit.ruleCode, hit.line, hit.pattern])).toEqual([
+      ["7", 13, "TODO"],
+      ["8", 13, "TODO"],
+    ]);
+  });
+
   it("counts what it scanned, so a sweep that ran is distinguishable from one that did not", () => {
     const outcome = runSweeps(TARGETS, RULES);
     expect(outcome.linesScanned).toBe(3);

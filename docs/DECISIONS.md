@@ -5070,3 +5070,17 @@ verified evidence, in writing, here.
   README's own command would still have broken; making the fake run the
   default, which would let a mistyped real request pass as a free one
   that measured nothing.
+- 2026-10-24 D-204 An outside audit's finding 11, read again here and
+  reproduced by a failing test before the fix: two sweep patterns of one
+  rule matching the same added line seeded two sweep hits with the same
+  path, line and rule. The stage's answer names a hit by those three alone
+  and the recording found the first, so the second stayed pending, S3's
+  reconciliation (keyed the same way) passed, and S6 refused the review
+  after the whole run was spent: "1 of 2 sweep hits undispositioned", on
+  every resume alike. The sweep now records one hit per rule and line,
+  named by the first pattern that matched; two rules on one line are still
+  two hits, each its own disposition. A review seeded with the duplicates
+  before this is refused on resume by the sweep-count check, asked to start
+  again, which it could not have finished anyway. Rejected: a pattern field
+  in the answer, which asks the model to tell apart what it is not asked
+  to judge.
