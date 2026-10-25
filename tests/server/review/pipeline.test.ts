@@ -819,6 +819,19 @@ describe("refusing to accept an incomplete stage", () => {
     expect(risk).toHaveLength(1);
   });
 
+  it("writes a planning note on the resume when the first run stopped before it", async () => {
+    // Tied to the first run (D-206), a note was lost for good when that run
+    // stopped after seeding and before reaching it: a limit, a restart, or a
+    // refused answer (review round 10).
+    const answers = { ...BASE_ANSWERS, s5_verification: { verdicts: [] } };
+    await expect(run({ ...answers, s1_risk: { files: "not a list" } })).rejects.toThrow();
+    await run(answers);
+    const risk = readRunNotes(requireReview(db, reviewId)).filter((note) =>
+      note.message.startsWith("Worked 1 risk-tagged file(s) first"),
+    );
+    expect(risk).toHaveLength(1);
+  });
+
   it("does not repeat the literal-pattern note when a run is resumed", async () => {
     // The note is written beside the sweep, and a resumed run re-runs the
     // sweep to re-check it. Writing the note again would have every resume

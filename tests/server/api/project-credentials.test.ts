@@ -1,7 +1,7 @@
 /**
  * A project added before credentials in its address were refused (audit
- * finding 2, D-208): the row keeps them, since git still fetches with them,
- * but no response carries them, nor the clone error git's message wrote.
+ * finding 2, D-208): the row keeps what was added, but no response carries
+ * them, nor the clone error git's message wrote.
  */
 
 import { mkdtempSync, rmSync } from "node:fs";

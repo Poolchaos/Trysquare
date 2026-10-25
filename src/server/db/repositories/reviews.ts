@@ -276,6 +276,19 @@ export function appendRunNote(db: Db, reviewId: string, note: Omit<RunNote, "at"
     .run();
 }
 
+/**
+ * A note a run writes about its own plan, which a resume plans again over
+ * replayed answers: written once, by whichever run gets there first. Tied
+ * to the first run instead, it was lost for good when that run stopped
+ * before reaching it (review round 10).
+ */
+export function appendRunNoteOnce(db: Db, reviewId: string, note: Omit<RunNote, "at">): void {
+  const said = readRunNotes(requireReview(db, reviewId)).some(
+    (existing) => existing.kind === note.kind && existing.message === note.message,
+  );
+  if (!said) appendRunNote(db, reviewId, note);
+}
+
 export function markReviewMerged(db: Db, reviewId: string, detectedAt = nowIso()): void {
   db.update(reviews).set({ mergedDetectedAt: detectedAt }).where(eq(reviews.id, reviewId)).run();
 }

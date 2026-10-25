@@ -152,9 +152,10 @@ requests, never a shortened rule set.
 A project can also have its own checks turned on. Its install, tests and e2e
 then run as you, on a throwaway copy of the branch, before any model is asked,
 and a command that fails is a finding the app proves from its exit code and
-output. Every screenshot the e2e saves is graded A to D by the review's model,
-against the project's design standard when it names one; one graded C or D is
-graded again by the model of the other family, and both must fail it for it to
+output. The screenshots the e2e saves in the folder named for them, up to 200,
+are graded A to D by the review's model, against the project's design standard
+when it names one; one graded C or D is graded again by a second model (Fable
+5.1 for an Opus review, Opus 5.5 otherwise), and both must fail it for it to
 stand. In the default mode the app watches each grading session and refuses a
 grade of a screenshot it never opened. In the interactive mode, where a review
 runs in your own terminal, nothing is watched, so there the grader's word that

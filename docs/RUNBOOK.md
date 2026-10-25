@@ -99,10 +99,11 @@ confirm an install is sound, and it is the evidence behind gate G1.
 Ask for `-- --real` (or `-- --model <id>`) and the same demo runs against
 a real model on your subscription, defaulting to Opus 5.5, the recommended
 model (D-184). That spends usage. Told neither, a demo says how to run it
-and stops, having spent nothing. In Windows PowerShell, npm drops a bare
-`--` before the script sees it (measured 2026-10-24, D-203); the demos
-read the flag npm kept instead, so these commands mean the same in every
-shell.
+and stops, having spent nothing, as does a flag it cannot read, such as
+`--no-real`. Windows PowerShell drops a bare `--` before npm sees it
+(measured 2026-10-24, D-203); the demos read the flag npm kept instead, so
+these commands mean the same in every shell. A model set in npm's own
+configuration (an `.npmrc`) is never taken for one asked for here.
 
 Both forms write their score and full event log into `review/<date>-fg2/`,
 which is gitignored, so the evidence stays on your machine.
@@ -139,18 +140,23 @@ Every step below is free until you press Start review.
    a `file:///path/to/repo` URL, or on Windows `C:\path\to\repo`, is a
    fast way to try this on something you already have. A network share
    (`\\host\share` or a `file://` URL with a host) is refused, because
-   opening one sends your Windows credentials to that host. An https address
-   carrying a password or token is refused too: the app stores no secrets,
-   so let git sign in with its credential helper or an SSH key (D-208).
+   opening one sends your Windows credentials to that host. An address
+   carrying a password or token, or on http(s) any user name, is refused
+   too, saying the address to add instead: let git sign in with its
+   credential helper or an SSH key (D-208). A project added with one before
+   that cannot be cloned again: delete it and add it without.
 2. **Optionally, turn on the project's own checks.** On the project's page,
-   Tests and design is off until you turn it on. On, every review of the
-   project first runs the install, tests and e2e commands you give it, in a
-   throwaway copy of the branch under review, through your shell and as
-   you: the branch's own code runs with your privileges, so turn it on only
-   for a repository you would run yourself. A command that fails is a
-   finding, and every screenshot the e2e saves in the folder you name is
-   graded A to D, against the design standard file you may name. The
-   pre-flight lists the commands before Start, and nothing runs until then.
+   Tests and design is off until you tick "Run this project's tests and e2e
+   on each review" and press Save checks. On, every review of the project
+   first runs the install, tests and e2e commands you give it, in a
+   throwaway copy of the branch under review, through the system shell
+   (cmd.exe on Windows, /bin/sh elsewhere, so write them for that shell)
+   and as you: the branch's own code runs with your privileges, so turn it
+   on only for a repository you would run yourself. A command that fails is
+   a finding. An e2e command needs the Screenshots folder it saves to, inside
+   the repository; the screenshots there, up to 200, are graded A to D,
+   against the Design standard, a file in the repository, if you name one.
+   The New review pre-flight lists the commands before Start.
 3. **Import a ruleset.** Rulesets screen. Paste a markdown protocol document,
    give it a name and a tier, Import. The document becomes numbered rules and
    process directives. Rules must be headings at level three or deeper whose
@@ -186,6 +192,9 @@ Every step below is free until you press Start review.
    the risk its first stage finds), a file too large for the window said, and
    the second verifier's, made only when the first proves a finding. Any
    request can need one more if its answer comes back in the wrong shape.
+   With the project's checks on, it names the commands that will run first,
+   and says that grading's requests are counted only once the e2e has saved
+   its screenshots.
    Two lines about
    the sweep are worth reading before you start. A pattern that is not a valid
    regular expression, which is how most people write `new Date(` or

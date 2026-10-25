@@ -5151,3 +5151,51 @@ verified evidence, in writing, here.
   outside their copy, in scope, and says in its trust model what they run
   and as whom; the walkthrough has a step for them, saying the same and to
   turn them on only for a repository the person would run themselves.
+- 2026-10-25 Review round 10 (over cc3bfb5, 3280bd7, 50b202a, 245cd70,
+  c671b33, 04fb904 and a60f8e4, the outside audit's fixes), two read-only
+  reviewers, one on the code and one on the docs and screens, each finding
+  read again in the code and, where it could be, shown failing first. 24
+  findings, none HIGH. The demos (D-203): a negated or valued flag (--no-real,
+  --real=false) reaches the script as an empty npm_config_ value, which was
+  read as the flag and started a paid run, and --no-per-token switched off
+  the per-token stop; an npm_config_ value now counts only as "true", any
+  other is refused, as is any flag the demo does not know. A model set in an
+  .npmrc reached every run and started one unasked; one npm holds with no
+  --model on the command is refused. The notes (D-206): tied to a review's
+  first run, a planning note was lost for good when that run stopped after
+  seeding and before it, a pause, a restart or a refused answer, and the
+  excluded-pairs note is the one record of what a narrowing profile left
+  out; each is now written once per review, by whichever run reaches it
+  first, and the quality gate's test is back as it was. The addresses
+  (D-208): the redaction stopped at a quote, so a refused password holding
+  one was repeated whole, and at the first @, leaving the rest of one
+  holding an @; it now runs to the last @ before the path, and a password
+  on any scheme is refused and replaced, where ssh://user:password@ had been
+  taken. The refusal said the address was "not a usable git URL", which
+  was untrue, and repeated the hint above it; it now names the address to
+  add instead. The project list's hint said the app stores no secrets,
+  untrue for a project added before; it now says no password or token in
+  the address. The comment that a project's row keeps a token because git
+  fetches with it was wrong: a fetch reads the clone's own remote, and
+  Retry clone now refuses such an address, so the RUNBOOK says to delete
+  and add such a project again. A refused resume (D-205) now names a
+  renamed project as a cause. The docs: SECURITY.md and the RUNBOOK said
+  the checks run "through your shell", where they run through the system
+  shell (cmd.exe on Windows); SECURITY.md carved the checks out of code
+  execution but not out of credentials and outbound traffic, which their
+  code can reach, and now says so, and that only the app's and Claude's
+  environment variables are withheld; its credential claim now says what
+  is redacted and that run notes from before may still hold a token. The
+  RUNBOOK names the checks' checkbox and Save checks, the e2e's folder and
+  the standard's place, the pre-flight's commands line, and the 200
+  screenshot limit; the README names the second grader's model;
+  FG2-CHECKLIST's commands, which now refused, and named Haiku, are the
+  current ones. The e2e test of the refusal now checks nothing was stored
+  through the API, asserts the address offered, and seeds a long address
+  for the list's phone check rather than rely on a long temporary path.
+  That check, with axe run on the failed row, found the list's clone error
+  box scrolling sideways without taking the focus (scrollable-region-
+  focusable, failing before the fix); it is focusable and named now.
+  Left: D-203 to D-207 are dated 2026-10-24 though decided on 2026-10-25,
+  the day they were committed; this log is append-only, so the dates stand
+  corrected here. Run notes written before D-208 are not redacted.

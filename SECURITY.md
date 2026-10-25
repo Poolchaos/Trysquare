@@ -36,7 +36,8 @@ whole categories of vulnerability, but it leaves some that matter:
 - **Writes into a reviewed repository.** The app must never modify code under
   review. Any path that does is a bug of the highest severity.
 - **Leaking your code or review results off the machine.** Any unexpected
-  outbound transmission is in scope.
+  outbound transmission by the app is in scope; what a project's own checks
+  do, once you turn them on, is that project's code (see the trust model).
 - **Reaching the app from a web page.** A page in your browser can address
   127.0.0.1 directly or rebind its own domain to it. The server refuses
   requests addressed to anything but this machine and API requests sent by
@@ -44,8 +45,10 @@ whole categories of vulnerability, but it leaves some that matter:
   merely visited sent, is in scope and serious.
 - **Exposure of credentials.** The app relies on the credentials your Claude
   Code CLI and your git already hold, and should never read, copy, or log
-  them. It refuses a repository address that carries a password or token,
-  and takes any it held from before out of what it shows and serves.
+  them. It refuses a repository address carrying a password or token (and,
+  on http or https, any user name, which can be a token), and takes one
+  held by a project added before that out of every project and git error
+  it serves. Run notes written before then may still hold one.
 
 ## What is out of scope
 
@@ -65,9 +68,11 @@ find a way that reading a repository turns into something more than reading, we
 want to hear about it.
 
 Turning on a project's own checks is the exception, and a deliberate one: each
-review of that project then runs the commands you gave, through your shell and
-as you, in a throwaway copy of the branch under review. The branch's own code
-runs with your privileges, as it would if you ran its tests yourself, so turn
-them on only for a repository you would run yourself. They are off for every
-project until you turn them on, and the pre-flight names the commands before
-anything runs.
+review of that project then runs the commands you gave, through the system
+shell (cmd.exe on Windows, /bin/sh elsewhere) and as you, in a throwaway copy of
+the branch under review. The branch's own code runs with your privileges, as it
+would if you ran its tests yourself: it can read your files and credentials,
+including the ones above, and reach the network. The app withholds only its own
+and Claude's environment variables from it. So turn the checks on only for a
+repository you would run yourself. They are off for every project until you
+turn them on, and the New review pre-flight names the commands before Start.

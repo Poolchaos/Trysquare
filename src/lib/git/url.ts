@@ -10,19 +10,28 @@
  */
 
 /**
- * Text with any http(s) address's credentials replaced, as git prints
- * addresses in its messages: an error must not carry a token it was given
- * into a stored clone error, a response or a screen (audit finding 2). An
- * SSH user is a name, not a secret, and is left.
+ * An address's user information, up to the last @ before its path: a
+ * password may hold a quote or an @ of its own (review round 10).
+ */
+const HTTP_USERINFO = /\b(https?:\/\/)[^/\s]*@/gi;
+/** Any other scheme's, only when it carries a password: an SSH user is a name. */
+const PASSWORD_USERINFO = /\b([a-z][a-z0-9+.-]*:\/\/)[^/\s:@]*:[^/\s]*@/gi;
+
+/**
+ * Text with any address's credentials replaced, as git prints addresses in
+ * its messages: an error must not carry a token it was given into a stored
+ * clone error, a response or a screen (audit finding 2).
  */
 export function redactUrlCredentials(text: string): string {
-  return text.replace(/\b(https?:\/\/)[^/@\s"'`]+@/gi, "$1***@");
+  return text.replace(HTTP_USERINFO, "$1***@").replace(PASSWORD_USERINFO, "$1***@");
 }
 
 /**
  * A project as the API serves it: its address and its clone error without
- * credentials, which a project added before they were refused may hold.
- * The row keeps them, since git still needs them to fetch.
+ * credentials, which a project added before they were refused may hold. The
+ * row keeps what was added: a fetch reads the clone's own remote, and Retry
+ * clone now refuses the address, so such a project is deleted and added
+ * again without them.
  */
 export function withoutCredentials<T extends { gitUrl: string; cloneError: string | null }>(
   project: T,
@@ -36,9 +45,10 @@ export function withoutCredentials<T extends { gitUrl: string; cloneError: strin
 
 export class InvalidGitUrlError extends Error {
   readonly url: string;
-  constructor(url: string, reason: string) {
+  /** `whole` says it all, for a refusal that is not about git's use of it. */
+  constructor(url: string, reason: string, whole?: string) {
     const said = redactUrlCredentials(url);
-    super(`"${said}" is not a usable git URL: ${reason}`);
+    super(whole ?? `"${said}" is not a usable git URL: ${reason}`);
     this.url = said;
     this.name = "InvalidGitUrlError";
   }
@@ -79,11 +89,18 @@ export function validateGitUrl(rawUrl: string): string {
   // The app stores no secrets: git signs in with this machine's credential
   // helper or SSH key. A token in the address was kept in the projects table,
   // shown on its pages and echoed in every git error (audit finding 2).
-  if (/^https?:\/\/[^/@\s]+@/i.test(url)) {
+  // Any user on http(s), where a name alone can be a token; a password on
+  // any scheme (review round 10: ssh://user:password@ was taken).
+  const http = /^https?:\/\/[^/\s]*@/i.test(url);
+  const password = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s]*@/i.test(url);
+  if (http || password) {
+    const bare = url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/\s]*@/i, "$1");
     throw new InvalidGitUrlError(
       rawUrl,
-      "it carries a user name, password or token for the server, and this app stores no " +
-        "secrets: let git sign in with its credential helper or an SSH key instead",
+      "it carries credentials",
+      `This address carries ${password ? "a password or token" : "a user name or token"}, ` +
+        `which Trysquare would have to store. Add ${bare} instead and let git's credential ` +
+        `helper sign in, or use the repository's SSH address.`,
     );
   }
 

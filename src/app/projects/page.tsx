@@ -140,7 +140,7 @@ export default function ProjectsPage() {
             <div className="min-w-64 flex-1">
               <Field
                 label="Add a project"
-                hint="Uses your machine's git credentials. This app stores no secrets."
+                hint="Uses your machine's git credentials, never a password or token in the address."
               >
                 <Input
                   value={gitUrl}
@@ -269,7 +269,14 @@ export default function ProjectsPage() {
                     ))}
                   </div>
                   {project.cloneError ? (
-                    <pre className="mt-3 overflow-x-auto rounded border border-[var(--color-critical)] bg-[var(--color-critical-soft)] p-3 text-xs text-[var(--color-critical)]">
+                    // Focusable and named: it scrolls sideways, and a box
+                    // that scrolls must be reachable by keyboard.
+                    <pre
+                      tabIndex={0}
+                      role="group"
+                      aria-label={`Why ${project.name} could not be cloned`}
+                      className="mt-3 overflow-x-auto rounded border border-[var(--color-critical)] bg-[var(--color-critical-soft)] p-3 text-xs text-[var(--color-critical)]"
+                    >
                       {project.cloneError}
                     </pre>
                   ) : null}

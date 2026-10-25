@@ -68,9 +68,14 @@ Alongside it, and also free:
 Run the smoke yourself when you are ready to spend a little:
 
 ```
-npm run demo:fixture                                  # haiku, cheapest
-npm run demo:fixture -- --model claude-fable-5[1m]    # the real question
+npm run demo:fixture -- --real
+npm run demo:fixture -- --model "claude-fable-5[1m]"
 ```
+
+The first reviews it with the recommended model, Opus 5.5 (D-184); the
+second with Fable 5.1, the real question. The id is quoted because zsh reads
+its brackets as a pattern. Told neither `--real` nor `--model`, the demo
+spends nothing (D-203).
 
 Each run writes its own directory under `review/<date>-fg2/`, named by time
 and model, holding the score, the full event log, and every finding's text

@@ -44,16 +44,39 @@ describe("a demo's options", () => {
       options: { fake: false, model: "claude-fable-5-1" },
     });
     // PowerShell's npm: --model taken as npm's own, its id left as the only
-    // bare argument; or given as --model=id.
+    // bare argument.
     expect(read(["claude-fable-5-1"], { npm_config_model: "true" })).toMatchObject({
       options: { fake: false, model: "claude-fable-5-1" },
-    });
-    expect(read([], { npm_config_model: "claude-fable-5-1" })).toMatchObject({
-      options: { model: "claude-fable-5-1" },
     });
     expect(read([], { npm_config_real: "true", npm_config_per_token: "true" })).toMatchObject({
       options: { fake: false, perToken: true },
     });
+  });
+
+  it("refuse a negated or valued flag, which npm passes as empty or false", () => {
+    // Measured in review round 10: --no-real and --real=false both reach
+    // the script as npm_config_real="", which read as present started a
+    // paid run, and --no-per-token switched off the per-token stop.
+    for (const value of ["", "false"]) {
+      expect(read([], { npm_config_real: value })).toHaveProperty("refusal");
+      expect(read(["--fake"], { npm_config_per_token: value })).toHaveProperty("refusal");
+      expect(read([], { npm_config_fake: value })).toHaveProperty("refusal");
+    }
+    for (const argv of [["--no-real"], ["--real=false"], ["--fake", "--no-per-token"]]) {
+      expect(read(argv), argv.join(" ")).toHaveProperty("refusal");
+    }
+  });
+
+  it("refuse a model set in npm's configuration rather than on the command", () => {
+    // An .npmrc model=..., or npm_config_model in the environment, reached
+    // every demo run and started a real review nobody asked for.
+    expect(read([], { npm_config_model: "claude-fable-5-1" })).toEqual({
+      refusal:
+        "A model, claude-fable-5-1, was set in npm's configuration rather than on this " +
+        "command. Give it here, as npm run demo:fixture -- --model <id>, to run a real review " +
+        "with it.",
+    });
+    expect(read(["--fake"], { npm_config_model: "claude-fable-5-1" })).toHaveProperty("refusal");
   });
 
   it("refuse what it cannot read, rather than guess a paid run", () => {

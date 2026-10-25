@@ -2562,27 +2562,54 @@ test("an address carrying a token is refused, and the token is never shown back"
 }) => {
   // The app stores no secrets, as the form says: a token in the address was
   // kept in the table, shown on the project's pages and echoed in every git
-  // error (audit finding 2, D-208).
+  // error (audit finding 2, D-208; review round 10).
   await page.goto("/projects");
+  const address = page.getByPlaceholder("git@github.com:you/your-app.git");
   const token = "ghp_SECRET0123456789";
-  await page
-    .getByPlaceholder("git@github.com:you/your-app.git")
-    .fill(`https://user:${token}@github.com/acme/app.git`);
+  await address.fill(`https://user:${token}@github.com/acme/app.git`);
   await page.getByRole("button", { name: "Add project" }).click();
   await expect(
-    page.getByText(/let git sign in with its credential helper or an SSH key instead/),
+    page.getByText(
+      "This address carries a password or token, which Trysquare would have to store. Add " +
+        "https://github.com/acme/app.git instead and let git's credential helper sign in, or " +
+        "use the repository's SSH address.",
+    ),
   ).toBeVisible();
   await expect(page.locator("body")).not.toContainText(token);
-  await expect(page.getByRole("main").locator("li").filter({ hasText: "acme" })).toHaveCount(0);
+  // Nothing was stored, as the server keeps it, not only as the list shows.
+  const stored = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { gitUrl: string }[];
+  };
+  expect(stored.projects.some((project) => project.gitUrl.includes("acme"))).toBe(false);
   // The card, so the refusal under the form is in the picture.
   await shootAll(
     page,
     page.getByRole("main").locator("form").first().locator(".."),
     "project-add-token-refused",
   );
-  // The list beside it, which ran off a phone on a long address until its
-  // column was bounded (found by the phone check above).
-  await shootAll(page, page.getByRole("main").locator("ul").first(), "projects-list");
+
+  // A project whose address is long, which ran the list off a phone until
+  // its column was bounded; seeded here, as the fixture's own address is
+  // long only where the temporary folder is (review round 10).
+  const long = `file://${join(E2E_ROOT, "a-repository-whose-address-is-far-too-long-for-any-phone-to-show.git")}`;
+  await address.fill(long);
+  await page.getByRole("button", { name: "Add project" }).click();
+  const row = page.getByRole("main").locator("li").filter({ hasText: "far-too-long" });
+  await expect(row.getByText("clone failed")).toBeVisible({ timeout: 60_000 });
+  try {
+    // Its git error scrolls sideways, so it must take the focus to be read
+    // by keyboard (review round 10).
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, page.getByRole("main").locator("ul").first(), "projects-list");
+  } finally {
+    const listed = (await (await page.request.get("/api/projects")).json()) as {
+      projects: { id: string; gitUrl: string }[];
+    };
+    for (const project of listed.projects.filter((each) => each.gitUrl === long)) {
+      const removed = await page.request.delete(`/api/projects/${project.id}`);
+      expect.soft(removed.status(), "the long-address project removed").toBe(200);
+    }
+  }
 });
 
 test("a failed clone can be opened, tried again and deleted; a known address is named", async ({
