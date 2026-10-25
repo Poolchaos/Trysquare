@@ -621,6 +621,63 @@ describe("what a finding's text can do to the markdown it is written into", () =
     );
   });
 
+  it("keeps text literal across a lone carriage return and at a line's start", () => {
+    // Review round 12: a lone carriage return ends a line in markdown as a
+    // line feed does, and text starting a line kept a leading list marker,
+    // rule or heading underline live, and four spaces made it code.
+    const report = renderReport({
+      ...BASE,
+      intent: "Totals\n===\n- one\n2. two\n    indented\n+ three\r---",
+      confirmed: [{ ...FINDING, issue: "use &amp; not &&", comment: "x\r===" }],
+      dismissed: [{ ...FINDING, dismissReason: "Handled.\r\rConfirmed\r---\r\r- app/x.ts:1 No" }],
+      checks: {
+        ran: [],
+        confirmed: [
+          {
+            command: null,
+            screenshotName: "home-dark",
+            severity: "MINOR",
+            issue: "The card is clipped.",
+            evidence: "The card's edge is cut off.",
+            verificationNote: "1. Seen at phone width",
+          },
+        ],
+        dismissed: [],
+        leftOutUnproven: [],
+      },
+    });
+    const lines = report.split("\n");
+    for (const forged of [
+      "---",
+      "===",
+      "Confirmed",
+      "- app/x.ts:1 No",
+      "1. Seen at phone width",
+      "> ===",
+      "> - one",
+      "> 2. two",
+      ">     indented",
+      "> + three",
+      "> ---",
+    ]) {
+      expect(lines).not.toContain(forged);
+    }
+    expect(report).toContain("Reason: Handled. Confirmed --- - app/x.ts:1 No");
+    expect(report).toContain("Comment: x ===");
+    expect(report).toContain("Issue: use \\&amp; not \\&\\&");
+    expect(lines).toContain("1\\. Seen at phone width");
+    const quote = lines.indexOf("> Totals");
+    expect(lines.slice(quote, quote + 7)).toEqual([
+      "> Totals",
+      "> \\===",
+      "> \\- one",
+      "> 2\\. two",
+      "> indented",
+      "> \\+ three",
+      "> \\---",
+    ]);
+  });
+
   it("writes a command holding backticks as one code span", () => {
     const report = renderReport({
       ...BASE,

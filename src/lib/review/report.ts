@@ -139,14 +139,27 @@ export interface ReportInput {
  * and "## Confirmed" wrote a section of its own, and with markdown's own
  * characters escaped, so a link, an image or raw HTML reads as the text it
  * is. A finding's words can be steered by the code under review.
+ *
+ * A lone carriage return ends a line in markdown as a line feed does, and
+ * some of this text starts a line, where a leading "-", "+", "=" or "1." is
+ * a list, a rule or a heading's underline and four spaces are code; and an
+ * entity such as "&lt;" is read as the character it names (review round 12).
  */
 function md(text: string): string {
-  return text.replace(/\s*\r?\n\s*/g, " ").replace(/[\\`*_[\]<>#!~|]/g, "\\$&");
+  return text
+    .replace(LINE_BREAK, " ")
+    .trim()
+    .replace(/[\\`*_[\]<>#!~|&]/g, "\\$&")
+    .replace(/^(\d+)([.)])/, "$1\\$2")
+    .replace(/^[-+=]/, "\\$&");
 }
+
+/** Every line ending markdown knows, with the spaces either side of it. */
+const LINE_BREAK = /\s*(?:\r\n?|\n)\s*/g;
 
 /** One line of code, in a span longer than any run of backticks inside it. */
 function code(text: string): string {
-  const flat = text.replace(/\s*\r?\n\s*/g, " ");
+  const flat = text.replace(LINE_BREAK, " ");
   const longest = Math.max(0, ...(flat.match(/`+/g) ?? []).map((run) => run.length));
   const ticks = "`".repeat(longest + 1);
   const pad = flat.startsWith("`") || flat.endsWith("`") ? " " : "";
@@ -179,7 +192,7 @@ export function renderReport(input: ReportInput): string {
     lines.push("");
     lines.push("As described by its author, and checked against the code rather than taken on:");
     lines.push("");
-    lines.push(...input.intent.split(/\r?\n/).map((line) => `> ${md(line)}`));
+    lines.push(...input.intent.split(/\r\n?|\n/).map((line) => `> ${md(line)}`));
     lines.push("");
   }
 

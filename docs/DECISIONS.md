@@ -5356,3 +5356,13 @@ verified evidence, in writing, here.
   next look asking again. It is asked of the tip just read rather than the
   branch's name, which a fetch could move between the two, so the answer is
   kept for the commit it was about.
+- 2026-10-25 Review round 12, findings 2 and 3, on D-216: the report
+  folded only line feeds, while markdown also ends a line at a lone
+  carriage return, so a reason holding one still wrote a heading or a list
+  of its own; and text that starts a line (a check's verification note, the
+  intent's lines) kept a leading "-", "+", "=", "1." or four spaces live, a
+  list, a rule, a heading's underline or code. Every line ending is folded,
+  the text trimmed, and a leading marker escaped. "&" is escaped too, so an
+  entity such as "&lt;" reads as written. Bare addresses and "@name" still
+  link where the report is pasted; backslashes cannot stop that, and the
+  report means them as text either way.
