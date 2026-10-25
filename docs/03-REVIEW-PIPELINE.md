@@ -351,6 +351,11 @@ splits the work instead and records the split in the run log.
   completed-stage results are kept so restart is cheap.
 - Server restart: running reviews become `interrupted`; resume re-runs the
   interrupted stage only.
+- A resume reuses the ledger seeded on the first run only when it is the
+  change read now: the same files, the same hunks at the same lines, and
+  as many sweep hits. Otherwise it was seeded in part, or by a version of
+  the app that read the change differently, and the resume is refused,
+  asking for the review to be started again (D-205).
 
 ## 6. Engine quality gate (the app's own proof)
 

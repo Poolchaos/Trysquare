@@ -305,6 +305,44 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   // differently. Either way its hits are not this run's, and ones never
   // dispositioned would leave the review reading as a clean sweep.
   if (alreadySeeded) {
+    // The files and hunks too, not the sweep alone: S3 is asked about the
+    // change read now and held to the ledger read then, so a hunk the
+    // seeding never had, and the answer never named, went unreviewed while
+    // the review completed covered (audit finding 12).
+    const shape = (
+      path: string,
+      hunk: {
+        hunkIndex: number;
+        oldStart: number;
+        oldLines: number;
+        newStart: number;
+        newLines: number;
+      },
+    ) =>
+      `${path}#${hunk.hunkIndex}:${hunk.oldStart},${hunk.oldLines}:${hunk.newStart},${hunk.newLines}`;
+    const freshFiles = input.files.map((entry) => qualified(entry.slug, entry.file.path));
+    const freshHunks = input.files.flatMap((entry) =>
+      entry.file.hunks.map((hunk) => shape(qualified(entry.slug, entry.file.path), hunk)),
+    );
+    const storedHunks = ledgerFiles.flatMap((file) =>
+      listHunks(db, file.id).map((hunk) => shape(file.path, hunk)),
+    );
+    const same = (a: readonly string[], b: readonly string[]) =>
+      a.length === b.length && [...a].sort().join("\n") === [...b].sort().join("\n");
+    if (
+      !same(
+        ledgerFiles.map((file) => file.path),
+        freshFiles,
+      ) ||
+      !same(storedHunks, freshHunks)
+    ) {
+      throw new Error(
+        `This review's ledger holds ${storedHunks.length} hunk(s) in ${ledgerFiles.length} ` +
+          `file(s) where the change has ${freshHunks.length} hunk(s) in ${freshFiles.length} ` +
+          `file(s), or as many read differently: it was seeded by a version of the app that ` +
+          `read the change differently. Start the review again rather than resume it.`,
+      );
+    }
     const stored = listSweepHits(db, reviewId).length;
     if (stored !== sweepHitRows.length) {
       throw new Error(

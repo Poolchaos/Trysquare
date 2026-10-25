@@ -776,6 +776,36 @@ describe("refusing to accept an incomplete stage", () => {
     expect(listSweepHits(db, reviewId).map((hit) => [hit.ruleCode, hit.line])).toEqual([["3", 2]]);
   });
 
+  it("refuses to resume a ledger seeded from a different reading of the change", async () => {
+    // An outside audit's finding 12: a resume reused the seeded files and
+    // hunks, checking only the sweep's count against a fresh read. A hunk the
+    // seeding never had, and the answer never named, was then not reviewed,
+    // and the review completed covered.
+    const answers = { ...BASE_ANSWERS, s5_verification: { verdicts: [] } };
+    await run(answers);
+
+    const twoHunks = parseUnifiedDiff(
+      [
+        "diff --git a/orders.ts b/orders.ts",
+        "--- a/orders.ts",
+        "+++ b/orders.ts",
+        "@@ -1,2 +1,4 @@",
+        " export function total(items: Item[]) {",
+        "+  const user = payload as User;",
+        "+  return items.reduce((sum, item) => sum + item.price, 0);",
+        " }",
+        "@@ -9,1 +11,2 @@",
+        " const tail = 0;",
+        "+const later = 1;",
+        "",
+      ].join("\n"),
+    ).map((file) => ({ repo: "primary" as const, slug: "app", file }));
+
+    await expect(run(answers, { files: twoHunks })).rejects.toThrow(
+      "This review's ledger holds 1 hunk(s) in 1 file(s) where the change has 2 hunk(s) in 1 file(s)",
+    );
+  });
+
   it("does not repeat the literal-pattern note when a run is resumed", async () => {
     // The note is written beside the sweep, and a resumed run re-runs the
     // sweep to re-check it. Writing the note again would have every resume

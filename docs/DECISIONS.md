@@ -5084,3 +5084,17 @@ verified evidence, in writing, here.
   again, which it could not have finished anyway. Rejected: a pattern field
   in the answer, which asks the model to tell apart what it is not asked
   to judge.
+- 2026-10-24 D-205 An outside audit's finding 12, read again here and
+  reproduced by a failing test before the fix: a resume reused the ledger's
+  seeded files and hunks, and compared only the sweep's hit count with a
+  fresh read. S3 is asked about the change read now and held to the ledger
+  read then, so a drift the model reported against was refused loudly as a
+  hunk not in the change set, but a hunk the seeding never had and the
+  answer never named was not reviewed, and the review completed covered:
+  the test's resume over a parse with one more hunk completed. A resume now
+  also compares the ledger's files and every hunk's index and lines with
+  the fresh read, and is refused on any difference, as the sweep's count
+  already was. Narrower than the audit put it: only a reading of the diff
+  that changed between the first run and the resume, an app upgrade
+  between them, could cause it; the diff is taken the same way each time
+  (D-110).
