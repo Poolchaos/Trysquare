@@ -29,22 +29,36 @@ const ROOT_FILES = ":(glob)*";
 
 /**
  * What is ignored on purpose, each said: files a tool writes (Next's type
- * stub, TypeScript's build info), secrets that must never be committed, and
- * the private working material .gitignore names.
+ * stub, TypeScript's build info), secrets that must never be committed (an
+ * .env.example is meant to be, and is not excused), the private working
+ * material .gitignore names, and what a person's global ignore file keeps
+ * out of every repository: an operating system's folder files and Claude
+ * Code's personal notes (review round 11).
  */
 const MEANT_TO_BE_IGNORED = [
   /^next-env\.d\.ts$/,
   /\.tsbuildinfo$/,
-  /^\.env(\..*)?$/,
+  /^\.env(\.(?!example$)[^/]+)?$/,
   /\.(key|pem)$/,
   /^docs\/private\//,
+  /(^|\/)(\.DS_Store|Thumbs\.db|desktop\.ini)$/i,
+  /^CLAUDE\.local\.md$/,
 ];
+
+/**
+ * git without the variables that change how a pathspec is read: with
+ * GIT_LITERAL_PATHSPECS set, the root's `:(glob)*` matched nothing and the
+ * check passed having looked at nothing (review round 11).
+ */
+const gitEnv = Object.fromEntries(
+  Object.entries(process.env).filter(([name]) => !/^GIT_\w*PATHSPECS$/i.test(name)),
+);
 
 function hiddenFiles() {
   const output = execFileSync(
     "git",
     ["ls-files", "--others", "--ignored", "--exclude-standard", "--", ...WATCHED, ROOT_FILES],
-    { encoding: "utf8" },
+    { encoding: "utf8", env: gitEnv },
   );
   return output
     .split("\n")

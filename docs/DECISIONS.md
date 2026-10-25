@@ -5250,3 +5250,40 @@ verified evidence, in writing, here.
   already on the machine, but SECURITY.md did not say it; it does now, in
   its trust model. The finding's second half, that a project's own
   checks run as the person, was closed by D-209.
+- 2026-10-25 Review round 11 (over 048227f, 2b29711, 24f8a9a, 0872b8c,
+  92b9f58, 2591656 and 74d5325), one read-only reviewer, each finding read
+  again in the code and, where it could be, shown failing first. Ten
+  findings, two MEDIUM. D-211's reasoning was wrong for the running app:
+  Next copies an API request's body for the proxy up to its own
+  proxyClientMaxBodySize, 10 MiB by default (node_modules/next/dist/server/
+  body-streams.js, Next 16.3.8), so bodies were bounded there and a longer
+  one was cut short and read as not JSON; and the out-of-memory test was
+  one that bypassed Next, not evidence about the app. The cap adds a 413
+  that says so, and holds only while Next's limit stays above it; the doc
+  comment now says this. Decoding the body by hand kept a leading
+  byte-order mark, which request.json() had dropped, so a JSON file
+  PowerShell 5.1 wrote was refused; TextDecoder drops it. A body of exactly
+  the limit is now tested, and the 413 says "4 MiB" rather than a byte
+  count. D-214 was wrong to call another account on the machine the
+  out-of-scope case: an ordinary second account controls neither this
+  machine nor this account, and through the API it can set the CLI path the
+  app runs, or a project's check commands, and so run code as this
+  account; SECURITY.md now says so and that the app is for a machine whose
+  other accounts are trusted. Whether to close it is the maintainer's to
+  decide. The nothing-hidden gate (D-213) read nothing at the root under
+  GIT_LITERAL_PATHSPECS and passed; git's pathspec variables are withheld
+  from it. A file a global ignore keeps out (.DS_Store, Thumbs.db,
+  desktop.ini, CLAUDE.local.md) would have failed it locally while CI
+  passed; they are named, and an .env.example, meant to be committed, is
+  no longer excused. A test now builds a repository and runs the gate in
+  it, failing on the version before. The rule route's change (24f8a9a) was
+  untested; a code holding a % now answers 404, where the double decode
+  answered 500. PROJECT-STATE's lib list was still partial; it lists every
+  folder now, and says each command was last re-proven on 2026-10-22,
+  ./verify.sh on every change since. The README's light queue image caught
+  the top bar still saying "Reviewing" beside a review awaiting a decision,
+  a wrong state; the journey now waits for the bar to settle before the
+  shot, and the image is re-shot (A). The fake CLI's path in its Activity
+  panel names no user and is kept. A README line was rewrapped. Left: the
+  commit message of 2b29711 cited the out-of-memory test as its evidence;
+  this entry corrects it.

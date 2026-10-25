@@ -59,10 +59,15 @@ export async function readJson<T>(request: Request, schema: z.ZodType<T>): Promi
 }
 
 /**
- * The largest body a request may carry. A pasted protocol document is the
- * largest the app takes, and the sample one is 10,846 bytes; this is nearly
- * four hundred of it. Every body was buffered whole, however large (audit
- * finding 5).
+ * The largest body a request may carry, refused with a 413. A pasted
+ * protocol document is the largest the app takes, and the sample one is
+ * 10,846 bytes; this is nearly four hundred of it (audit finding 5).
+ *
+ * Next copies an API request's body for the proxy (src/proxy.ts) up to its
+ * own proxyClientMaxBodySize, 10 MiB by default, and drops the rest, so the
+ * running app never buffered more than that; what this adds is a refusal
+ * that says so, where an oversized body was cut short and read as not JSON.
+ * It holds only while Next's limit stays above this one (review round 11).
  */
 export const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
@@ -84,13 +89,15 @@ async function readBody(request: Request): Promise<string> {
     }
     chunks.push(value);
   }
-  return Buffer.concat(chunks).toString("utf8");
+  // TextDecoder drops a leading byte-order mark, as request.json() did: a
+  // JSON file PowerShell 5.1 writes carries one (review round 11).
+  return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
 function tooLarge(): Response {
   return Response.json(
     {
-      error: `The request body is over ${MAX_BODY_BYTES} bytes, the most a request may carry.`,
+      error: "The request body is over 4 MiB, the most a request may carry.",
       code: "BodyTooLarge",
     },
     { status: 413 },

@@ -45,6 +45,25 @@ describe("a request body", () => {
     expect(await readJson(request, any)).toEqual({ text: "a protocol" });
   });
 
+  it("is read at exactly the limit, and when it starts with a byte-order mark", async () => {
+    // Exactly the limit, a byte short of a refusal: a check off by one
+    // passed every test before.
+    const atLimit = JSON.stringify({ text: "" }).length;
+    const text = "a".repeat(MAX_BODY_BYTES - atLimit);
+    const exact = new Request("http://localhost/x", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+    expect((await readJson(exact, any)).text).toHaveLength(text.length);
+    // A JSON file PowerShell 5.1 writes starts with one; request.json() took
+    // it, and decoding the bytes by hand refused it (review round 11).
+    const marked = new Request("http://localhost/x", {
+      method: "POST",
+      body: `\uFEFF${JSON.stringify({ text: "a protocol" })}`,
+    });
+    expect(await readJson(marked, any)).toEqual({ text: "a protocol" });
+  });
+
   it("is refused when it says it is over the limit, before it is read", async () => {
     const request = new Request("http://localhost/x", {
       method: "POST",
@@ -53,7 +72,10 @@ describe("a request body", () => {
     });
     const refused = await refusal(readJson(request, any));
     expect(refused.status).toBe(413);
-    expect((await refused.json()).code).toBe("BodyTooLarge");
+    expect(await refused.json()).toEqual({
+      error: "The request body is over 4 MiB, the most a request may carry.",
+      code: "BodyTooLarge",
+    });
   });
 
   it("is refused when it turns out over the limit as it is read", async () => {

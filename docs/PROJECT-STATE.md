@@ -106,8 +106,9 @@ TypeScript runs strict plus `noUncheckedIndexedAccess`,
 
 ## Commands
 
-See `CLAUDE.md` section 3, whose commands were last re-proven on this
-Windows 11 machine on 2026-10-22: `./verify.sh`, with `--build` and
+See `CLAUDE.md` section 3, whose commands were each last re-proven on this
+Windows 11 machine on 2026-10-22, `./verify.sh` itself on every change
+since: `./verify.sh`, with `--build` and
 `--e2e`, `npm run dev`, `npm run start`, `npm test`, `npm run typecheck`,
 `npm run lint`, `npm run format`, `npm run e2e` and `npm run
 db:generate`. `./verify.sh` is the single gate. At 97e18fa it passes
@@ -153,14 +154,21 @@ are accepted; anything else is refused by name.
 ## Structure
 
 - `CLAUDE.md` - charter. `docs/` - specs, ledgers, plans.
-- `src/lib/` - pure and I/O free: paths, ids, domain enums and state machines,
-  git diff and URL parsing, a branch pair kept apart, changed exported
-  symbols, mechanical sweeps, the quotation check, stage schemas, budget
-  arithmetic, ruleset import with a fidelity gate, prompt composition, batch
-  planning, the report renderer, the request guard, matching an error by
-  the name its class sets, the five steps a review is read as, grading
-  screens A to D, and a project's own checks and the environment their
-  commands get.
+- `src/lib/` - pure and I/O free, by folder: `domain` (enums, state
+  machines, the shutdown order); `engine` (the CLI's arguments, its event
+  stream, shell quoting, the sign-in command); `git` (diff and URL
+  parsing, a branch pair kept apart, changed exported symbols, the changes
+  read only as a pointer such as submodules and LFS files, a path inside
+  a repository); `http` (the
+  request guard); `models` (availability, effort support, full model ids,
+  the second verifier's pairing); `projects` (a project's own checks and
+  the environment their commands get); `review` (budget arithmetic,
+  coverage, evidence, profiles, the quotation check, the report renderer,
+  request planning, risk order, rule codes, the run summary, stage schemas,
+  the five steps, mechanical sweeps, grading screens A to D); `rulesets`
+  (import with a fidelity gate, prompt composition and batch planning);
+  `settings` (the CLI path); and paths, ids and matching an error by the
+  name its class sets.
 - `src/server/db/` - schema (16 tables), client, migrations 0000 to 0017, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings, stage executions, the scoreboard, a project's checks and what

@@ -101,11 +101,11 @@ The three screenshots are of the seeded test fixture, whose defects are
 planted on purpose and whose findings say so. They are the browser suite's own
 screenshots, copied here by hand rather than staged for the README, last on
 2026-10-25; the suite takes them again on every CI run, so a copy here can fall
-behind the screens. What they show is the fake engine's scripted review. The real-model smoke runs described in
-Status happened locally and their evidence, including every finding's text,
-lives under `review/`, which is deliberately not committed. No real model has
-reviewed a real project through this app yet: that is the next gate, and it is
-the maintainer's to drive.
+behind the screens. What they show is the fake engine's scripted review. The
+real-model smoke runs described in Status happened locally and their evidence,
+including every finding's text, lives under `review/`, which is deliberately
+not committed. No real model has reviewed a real project through this app yet:
+that is the next gate, and it is the maintainer's to drive.
 
 A finished review leads with how its findings were proven and the five steps
 it was read in, then the queue, and the run's own account of itself folds away

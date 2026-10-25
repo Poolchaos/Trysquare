@@ -464,6 +464,11 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // From the top: the top bar is fixed, and a body capture of a scrolled
     // page drew it across the middle of the screen, over the queue.
     await page.evaluate(() => window.scrollTo(0, 0));
+    // The top bar asks on its own timer, and caught early it still said
+    // "Reviewing" beside a review awaiting a decision (review round 11).
+    await expect(page.getByLabel(/^\d+ awaiting your decision$/)).toBeVisible({
+      timeout: 30_000,
+    });
     await page.locator("body").screenshot({
       path: join(EVIDENCE, "journey-confirmation.png"),
       animations: "disabled",

@@ -65,10 +65,11 @@ whole categories of vulnerability, but it leaves some that matter:
 The server's guard is against web pages, not against your own machine. A
 browser request from another site is refused, but any program on this machine,
 yours or another account's, can reach 127.0.0.1, send no Origin header and call
-any route, the one that deletes every project, review and ruleset (`DELETE
-/api/system/data`) among them. That is the out-of-scope case above, of an
-attacker already on your machine, said here so it is not mistaken for a
-guarantee.
+any route as you would: delete every project, review and ruleset (`DELETE
+/api/system/data`), set the path of the Claude CLI the app runs, or set the
+commands a project's checks run. Another account on a shared machine can
+therefore run code as you through it. Run Trysquare only on a machine whose
+other accounts you trust, or where you are the only user.
 
 Reviewing a repository means reading whatever is in it. Treat a review of an
 untrusted repository with the same caution as opening it in your editor. If you

@@ -692,6 +692,17 @@ describe("importing a ruleset", () => {
     );
     expect(patched.status).toBe(200);
     expect(((await patched.json()) as { version: number }).version).toBe(version + 1);
+
+    // A code is read as Next gives it, decoded once: decoded again, one
+    // holding a % threw and answered 500 (audit finding 6, round 11).
+    const unknown = await routes.rule.PATCH(
+      new Request("http://localhost", {
+        method: "PATCH",
+        body: JSON.stringify({ severity: target }),
+      }),
+      { params: Promise.resolve({ id: rulesetId, code: "5%" }) },
+    );
+    expect(unknown.status).toBe(404);
   });
 
   it("duplicates a ruleset into another tier as its own version 1", async () => {
