@@ -806,6 +806,19 @@ describe("refusing to accept an incomplete stage", () => {
     );
   });
 
+  it("does not repeat what it notes about the run's plan when a run is resumed", async () => {
+    // An outside audit's finding 14: the risk-tagged-first note, and the
+    // adversarial stage's notes on its division, were written again on
+    // every resume, which re-runs the pipeline over replayed answers.
+    const answers = { ...BASE_ANSWERS, s5_verification: { verdicts: [] } };
+    await run(answers);
+    await run(answers);
+    const risk = readRunNotes(requireReview(db, reviewId)).filter((note) =>
+      note.message.startsWith("Worked 1 risk-tagged file(s) first"),
+    );
+    expect(risk).toHaveLength(1);
+  });
+
   it("does not repeat the literal-pattern note when a run is resumed", async () => {
     // The note is written beside the sweep, and a resumed run re-runs the
     // sweep to re-check it. Writing the note again would have every resume

@@ -478,11 +478,14 @@ describe("what a narrower profile costs", () => {
     // change set touches README.md, whose only theme is general, so decomposed
     // genuinely excludes the technology-themed rules against it; the count
     // must be real and the pairs must be written onto the run.
-    const full = await runGate({ profile: "full-context" });
-    expect(full.excludedPairs).toBe(0);
-
+    // Decomposed first: both runs share one review, and its notes on how the
+    // work was divided are written on its first run only (audit finding 14),
+    // as a resume of one review always plans the same division.
     const decomposed = await runGate({ profile: "decomposed" });
     expect(decomposed.excludedPairs).toBeGreaterThan(0);
+
+    const full = await runGate({ profile: "full-context" });
+    expect(full.excludedPairs).toBe(0);
 
     const note = readRunNotes(requireReview(db, reviewId)).find(
       (entry) => entry.kind === "excluded-pairs",

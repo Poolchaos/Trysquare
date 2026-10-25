@@ -452,7 +452,9 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       tags: tagsByPath.get(qualified(entry.slug, entry.file.path)) ?? [],
     }))
     .filter((entry) => entry.tags.length > 0);
-  if (tagged.length > 0) {
+  // Written on the first run only, as the notes above: a resume runs the
+  // plan again over replayed answers (audit finding 14).
+  if (!alreadySeeded && tagged.length > 0) {
     appendRunNote(db, reviewId, {
       kind: "note",
       message:
@@ -481,7 +483,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
 
   // S3: the adversarial pass. How it is divided depends on the model; what it
   // must account for does not.
-  const adversarial = await runAdversarialStage(input, ordered, orderedLedgerFiles);
+  const adversarial = await runAdversarialStage(input, ordered, orderedLedgerFiles, !alreadySeeded);
 
   const expectedHunks: HunkRef[] = ledgerFiles.flatMap((file) =>
     listHunks(db, file.id).map((hunk) => ({ path: file.path, hunkIndex: hunk.hunkIndex })),
@@ -872,6 +874,8 @@ async function runAdversarialStage(
   input: PipelineInput,
   content: StageContentInput,
   ledgerFiles: readonly { path: string }[],
+  /** Whether this is the review's first run, not a resume over replays. */
+  firstRun: boolean,
 ): Promise<
   AdversarialStageOutput & {
     requestCount: number;
@@ -885,7 +889,7 @@ async function runAdversarialStage(
   assertBatchesCoverEverything(plan, input.rules, filePaths);
 
   if (plan.excluded.length > 0) {
-    appendRunNote(input.db, input.reviewId, {
+    noteOnFirstRun(firstRun, input, {
       kind: "excluded-pairs",
       message:
         `The ${input.profile} profile did not check ${plan.excluded.length} rule/file pair(s): ` +
@@ -920,6 +924,7 @@ async function runAdversarialStage(
       content,
       input.systemPromptFor("s3_adversarial", { rules: batch.rules }),
       batch.files,
+      firstRun,
     ),
   }));
   const totalRequests = planned.reduce((count, entry) => count + entry.groups.length, 0);
@@ -988,7 +993,7 @@ async function runAdversarialStage(
     }
 
     if (groups.length > 1) {
-      appendRunNote(input.db, input.reviewId, {
+      noteOnFirstRun(firstRun, input, {
         kind: "batch-split",
         message:
           `Batch ${index + 1}${batch.theme ? ` (${batch.theme})` : ""} was split into ` +
@@ -1007,11 +1012,25 @@ async function runAdversarialStage(
  * waste requests or fail anyway, and the model refusing an oversized prompt is
  * a clearer signal than a number invented here.
  */
+/**
+ * What a stage notes about how it divided its work, written on a review's
+ * first run only: a resume plans the same division again over replayed
+ * answers, and wrote each note again (audit finding 14).
+ */
+function noteOnFirstRun(
+  firstRun: boolean,
+  input: PipelineInput,
+  note: Parameters<typeof appendRunNote>[2],
+): void {
+  if (firstRun) appendRunNote(input.db, input.reviewId, note);
+}
+
 function splitBatchToFit(
   input: PipelineInput,
   content: StageContentInput,
   systemPrompt: string,
   files: readonly string[],
+  firstRun: boolean,
 ): string[][] {
   const fit = fitBatch(
     files,
@@ -1024,7 +1043,7 @@ function splitBatchToFit(
     // Nothing left to divide. It is still sent, and still reported: silently
     // sending an oversized prompt is how a request fails for a reason the run
     // never records.
-    appendRunNote(input.db, input.reviewId, {
+    noteOnFirstRun(firstRun, input, {
       kind: "oversized-prompt",
       message:
         `${files[0] ?? "(no file)"} does not fit the context window on its own (about ` +
@@ -1036,7 +1055,7 @@ function splitBatchToFit(
     for (const item of fit.oversized) {
       // Sent anyway. Being told the prompt is too large is strictly better than
       // deciding here not to review the file.
-      appendRunNote(input.db, input.reviewId, {
+      noteOnFirstRun(firstRun, input, {
         kind: "oversized-prompt",
         message:
           `${item.key} does not fit the context window on its own (about ` +

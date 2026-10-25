@@ -5098,3 +5098,16 @@ verified evidence, in writing, here.
   that changed between the first run and the resume, an app upgrade
   between them, could cause it; the diff is taken the same way each time
   (D-110).
+- 2026-10-24 D-206 An outside audit's finding 14, read again here and
+  reproduced by a failing test before the fix: a resume runs the pipeline
+  again over replayed answers, and five run notes were written again each
+  time: the risk-tagged files worked first, the rule and file pairs a
+  narrowing profile left out, a batch split to fit, and the two notes on a
+  prompt too large for the window. Each is now written on a review's first
+  run only, as the literal-pattern and pointer notes already were; a
+  resume plans the same division, since a review's model and profile are
+  frozen. The quality gate's excluded-pairs test ran one review under two
+  profiles and read the second run's note, a resume the app never makes;
+  it now runs the narrowing profile first. Cosmetic: no coverage rested on
+  the notes. Notes a resume should add, such as the checks' result being
+  reused, still are.
