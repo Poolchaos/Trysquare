@@ -207,6 +207,34 @@ for (const screen of SCREENS) {
   });
 }
 
+test("a primary button keeps its contrast under the pointer", async ({ page }) => {
+  // Faded to nine-tenths on hover, the light theme's primary button read
+  // 4.41:1, under AA's 4.5:1; no screen above is measured with the pointer
+  // on one, so it was found only when a test left it there.
+  await page.goto("/projects");
+  await page.getByRole("main").getByRole("link", { name: "app", exact: true }).click();
+  const primary = page.getByRole("button", { name: "New review" });
+  await expect(primary).toBeVisible({ timeout: 30_000 });
+  await primary.hover();
+  await settled(page);
+  mkdirSync(EVIDENCE, { recursive: true });
+  await page
+    .locator("header")
+    .filter({ has: page.getByRole("heading", { level: 1 }) })
+    .screenshot({
+      path: join(EVIDENCE, `primary-hover-${test.info().project.name}.png`),
+      caret: "hide",
+    });
+
+  const results = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
+  expect(
+    results.violations.flatMap((violation) =>
+      violation.nodes.map((node) => `${node.target.join(" ")}: ${node.any[0]?.message ?? ""}`),
+    ),
+    `a hovered primary button in ${test.info().project.name}`,
+  ).toEqual([]);
+});
+
 test("the billing notice has no accessibility violations", async ({ page }) => {
   // On its warning colours, in each theme: no page showed it while axe ran,
   // since the suite's fake draws on a subscription (review of D-161).

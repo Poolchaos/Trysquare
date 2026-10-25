@@ -5497,3 +5497,11 @@ verified evidence, in writing, here.
   only a hand-edited database holds one; the page's batch counter, set
   only by the stream, shows again at a stage's next request after a
   reopen.
+- 2026-10-25 A primary button under the pointer faded to nine-tenths
+  opacity, which in the light theme read 4.41:1 to 4.46:1 against its ink,
+  under AA's 4.5:1; axe found it only when a test for audit finding U2
+  left the pointer on one, no screen being measured hovered before. The
+  hover now moves the accent away from the ink, darker in light and
+  lighter in dark (--color-accent-hover), and a theme test hovers a
+  primary button and measures it in both themes; it fails on the old
+  style in light.

@@ -28,6 +28,9 @@
   --color-ink-faint: oklch(52% 0.008 250);
 
   --color-accent: oklch(50% 0.11 200);
+  /* Further from the ink, not faded toward the page: a primary button under
+     the pointer fell to 4.41:1 at nine-tenths opacity. */
+  --color-accent-hover: oklch(45% 0.11 200);
   --color-accent-ink: oklch(99% 0.002 220);
   --color-accent-soft: oklch(94% 0.035 200);
 
@@ -100,6 +103,7 @@
     --color-ink-faint: oklch(69% 0.009 245);
 
     --color-accent: oklch(80% 0.13 200);
+    --color-accent-hover: oklch(86% 0.11 200);
     --color-accent-ink: oklch(15% 0.012 245);
     --color-accent-soft: oklch(29% 0.06 200);
 
