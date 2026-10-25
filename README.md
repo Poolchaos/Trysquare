@@ -98,23 +98,24 @@ renders as a dash rather than as a confident zero.
 it cites and the code it quotes.](docs/images/confirmation-queue.png)
 
 The three screenshots are of the seeded test fixture, whose defects are
-planted on purpose and whose findings say so; they are produced by the browser
-suite on every CI run rather than staged for the README, so what they show is
-the fake engine's scripted review. The real-model smoke runs described in
+planted on purpose and whose findings say so. They are the browser suite's own
+screenshots, copied here by hand rather than staged for the README, last on
+2026-10-25; the suite takes them again on every CI run, so a copy here can fall
+behind the screens. What they show is the fake engine's scripted review. The real-model smoke runs described in
 Status happened locally and their evidence, including every finding's text,
 lives under `review/`, which is deliberately not committed. No real model has
 reviewed a real project through this app yet: that is the next gate, and it is
 the maintainer's to drive.
 
-The queue is what the screen leads with, and the run's own account of itself
-folds away behind Run detail. The panel worth opening there is Coverage: it
-says how many files, hunks and sweep hits were accounted for, which is what
-separates "nothing is wrong" from "nothing was looked at". Its stage timeline
-greys the two ends, Prepare and Audit, because those are the deterministic
-halves that no model touches.
+A finished review leads with how its findings were proven and the five steps
+it was read in, then the queue, and the run's own account of itself folds away
+behind Run detail. The panel worth opening there is Coverage: it says how many
+files, hunks and sweep hits were accounted for, which is what separates
+"nothing is wrong" from "nothing was looked at". Its stage timeline shows the
+two ends, Prepare and Audit, with no tokens or cost, because those are the
+deterministic halves that no model touches.
 
-![The same review in the dark theme, showing the report it
-produced.](docs/images/run-screen-dark.png)
+![The same review in the dark theme.](docs/images/run-screen-dark.png)
 
 Both themes are first-class and both are photographed and checked for contrast
 on every CI run.

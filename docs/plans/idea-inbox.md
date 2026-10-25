@@ -80,9 +80,6 @@ pulled deliberately.
   seconds the server answered none of one test's API requests (the trace
   holds the page and its scripts, no API response), then answered the next
   test in 0.8 s; macOS and Linux passed. Re-run to see if it recurs.
-- 2026-10-22: README's three screenshots (docs/images) were last taken in
-  c09b2ad on 2026-08-25, and the screens have changed since, last in
-  3169502. Re-shoot them from the theme pass and compare (D-179).
 - 2026-10-22: the preflight route (src/app/api/reviews/preflight/route.ts)
   and the review service (src/server/review/service.ts) still fetch a
   linked pair's clones one after the other, as review creation did until
@@ -94,6 +91,9 @@ pulled deliberately.
 Kept so the record of what was captured, and where it went, survives. Removing
 the line entirely would lose the trail.
 
+- 2026-10-22 README's three screenshots were last taken in c09b2ad on
+  2026-08-25. DONE 2026-10-25, re-shot from the browser suite and the
+  README's claim about them corrected (D-212).
 - 2026-10-23 (maintainer) A review that also runs the project's tests and
   photographs its screens, grading the design A to D. PULLED the same day
   into the proof-and-steps plan as WP-I and WP-J (D-191).

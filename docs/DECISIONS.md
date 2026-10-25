@@ -5218,3 +5218,17 @@ verified evidence, in writing, here.
   protocol document, and the sample one is 10,846 bytes, so the limit is
   nearly four hundred of it. A test that streamed an unbounded body before
   the limit existed ran its worker out of memory, which is the failure.
+- 2026-10-25 D-212 An outside audit's finding 8, read again here: the
+  README's three images were last taken on 2026-08-25 (c09b2ad), the screens
+  have changed since, and the README said they were "produced by the
+  browser suite on every CI run", true of the suite's own screenshots, not
+  of the copies committed beside it. They are copied again from the
+  suite's run in 24f8a9a's gate, each looked at: the dashboard (B, its list is the
+  suite's own test reviews), the confirmation queue (A) and the same review
+  in the dark theme (A). The theme pass's dark review is now the design
+  test's, 5003 pixels tall and another review, so the dark image is the
+  journey's own. The README says the copies are made by hand, and when. Two
+  sentences beside them were stale too: a review leads with how its
+  findings were proven and its five steps, then the queue; and the stage
+  timeline shows Prepare and Audit with no tokens, not greyed. No gate
+  compares the copies to the suite's output; the README says so instead.
