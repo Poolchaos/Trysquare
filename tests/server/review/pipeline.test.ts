@@ -832,6 +832,19 @@ describe("refusing to accept an incomplete stage", () => {
     expect(risk).toHaveLength(1);
   });
 
+  it("refuses to resume a ledger whose sweep hits sit elsewhere, though as many", async () => {
+    // An outside audit's finding R2: a resume compared only the number of
+    // sweep hits, so as many at other lines passed, and the hit the sweep
+    // finds now was never dispositioned.
+    const answers = { ...BASE_ANSWERS, s5_verification: { verdicts: [] } };
+    await run(answers);
+    // The same number of hits, one, now on line 3 rather than line 2.
+    const elsewhere = [rule("3", ["typescript"], ["reduce"])];
+    await expect(run(answers, { rules: elsewhere })).rejects.toThrow(
+      "This review's ledger holds 1 sweep hit(s) where the sweep finds 1, or as many at other lines or for other rules",
+    );
+  });
+
   it("does not repeat the literal-pattern note when a run is resumed", async () => {
     // The note is written beside the sweep, and a resumed run re-runs the
     // sweep to re-check it. Writing the note again would have every resume

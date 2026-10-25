@@ -5341,3 +5341,10 @@ verified evidence, in writing, here.
   context line's leading space, is still read as context. The ledger keeps
   each hunk's header counts, not its lines, so a review seeded before is
   read the same on resume.
+- 2026-10-25 D-220 An outside audit's finding R2, read again here and
+  shown failing first: on resume the sweep's hits were checked only by
+  their number, so as many hits at other lines, or for other rules, passed,
+  and S3 was held to the ledger's hits while the sweep found others, which
+  no stage dispositioned. A resume now compares each hit's rule,
+  path and line with the fresh sweep, as D-205 does the files and hunks,
+  and is refused on any difference.

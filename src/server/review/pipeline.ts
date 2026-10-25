@@ -300,7 +300,7 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
 
   // Over frozen commits, a frozen ruleset and a diff taken the same way every
   // time (D-110), the sweep finds the same hits on every run. A resumed
-  // ledger holding a different number was seeded in part, before seeding
+  // ledger holding other hits was seeded in part, before seeding
   // was one transaction, or by a version of the app that read the diff
   // differently. Either way its hits are not this run's, and ones never
   // dispositioned would leave the review reading as a clean sweep.
@@ -344,12 +344,18 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
           `again rather than resume it.`,
       );
     }
-    const stored = listSweepHits(db, reviewId).length;
-    if (stored !== sweepHitRows.length) {
+    // The hits themselves, not their number: as many hits at other lines,
+    // or for other rules, passed a count and left the hits the sweep finds
+    // now undispositioned (audit finding R2).
+    const hitKey = (hit: { ruleCode: string; path: string; line: number }) =>
+      `${hit.ruleCode}#${hit.path}#${hit.line}`;
+    const stored = listSweepHits(db, reviewId);
+    if (!same(stored.map(hitKey), sweepHitRows.map(hitKey))) {
       throw new Error(
-        `This review's ledger holds ${stored} sweep hit(s) where the sweep finds ` +
-          `${sweepHitRows.length}: it was seeded only in part, or by a version of the app ` +
-          `that read the change differently. Start the review again rather than resume it.`,
+        `This review's ledger holds ${stored.length} sweep hit(s) where the sweep finds ` +
+          `${sweepHitRows.length}, or as many at other lines or for other rules: it was seeded ` +
+          `only in part, or by a version of the app that read the change differently. Start ` +
+          `the review again rather than resume it.`,
       );
     }
   }
