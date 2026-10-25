@@ -5565,3 +5565,18 @@ verified evidence, in writing, here.
   now. A failed wipe's message now goes when its question is kept. The browser test now presses Import a
   second time while the first is out and counts one request, as its
   commit said it did.
+- 2026-10-25 Review round 14 (over 62ea5e4, 5400e6b, 96c9460 and
+  7f9398a), three read-only reviewers, each finding read again in the code
+  and shown failing first. Fixed: a disabled primary button answered the
+  pointer (63af752); a frame of null still threw, and the test did not show
+  the review read again (fdea47f); the queue stayed put with findings left
+  only above, and nothing kept the focus with only the checks left
+  (4bb2a30); an unreadable success read as empty, Complete review still
+  fetched bare, the law missed r["json"](), a wipe's message outlived its
+  question, and the test claimed a second press it did not make (3105704).
+  Left as they stand, with the reason: a run of unreadable frames reads
+  the review once each, as status frames already do, bounded by the
+  frames a damaged transport delivers; the queue test that stages
+  criticals proven counts its key presses from them and would fail rather
+  than pass were an open-question critical to sort among them; an HTML
+  error page says what failed but not why, carrying no words of its own.
