@@ -5590,3 +5590,11 @@ verified evidence, in writing, here.
   and made every check for the status's words find two); a run hidden before its start is stamped is keyed on a
   stand-in that moves to the start once there is one, so the next run
   still opens on the theater. Browser tests cover both.
+- 2026-10-25 CI run 40218250308 failed on Windows: a headless test's
+  cleanup could not remove its temporary folder (ENOTEMPTY). runStage
+  settled as soon as it asked its log to close, not once it had, so the
+  log was still open, and on Windows an open file keeps its folder; any
+  caller removing a run's folder straight after a stage could meet the
+  same. A stage now settles only once its log is closed, on every path. A
+  test holds the log's close back and sees the stage wait for it; it fails
+  on the old code on every platform.

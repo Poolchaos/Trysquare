@@ -124,6 +124,16 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
   log.on("error", (error: Error) => {
     logError = error;
   });
+  // Closed before the stage settles, not just asked to close: a caller that
+  // removed the run's folder next found the log still open, and on Windows an
+  // open file keeps its folder (CI run 40218250308, ENOTEMPTY).
+  const closeLog = (last?: string) =>
+    new Promise<void>((closed) => {
+      if (log.closed) return closed();
+      log.once("close", () => closed());
+      if (last === undefined) log.end();
+      else log.end(last);
+    });
 
   const argv = [...cli.prefixArgs, ...args];
   log.write(
@@ -137,11 +147,14 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
     // its answer. A person's cancel in the same window still lets the stage
     // finish and be checkpointed, as the 2026-07-30 W4 decision has it.
     if (options.signal?.aborted && options.signal.reason === SHUTDOWN) {
-      log.end("# not started: the server is stopping\n");
-      reject(
-        new StageFailedError("cancelled", "The server is stopping, so the stage was not started.", {
-          logPath: options.logPath,
-        }),
+      void closeLog("# not started: the server is stopping\n").then(() =>
+        reject(
+          new StageFailedError(
+            "cancelled",
+            "The server is stopping, so the stage was not started.",
+            { logPath: options.logPath },
+          ),
+        ),
       );
       return;
     }
@@ -165,11 +178,12 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
       }
     })();
     if (spawned instanceof Error) {
-      log.end(`# could not start: ${spawned.message}\n`);
-      reject(
-        new StageFailedError("spawn", `Could not start "${cli.display}": ${spawned.message}`, {
-          logPath: options.logPath,
-        }),
+      void closeLog(`# could not start: ${spawned.message}\n`).then(() =>
+        reject(
+          new StageFailedError("spawn", `Could not start "${cli.display}": ${spawned.message}`, {
+            logPath: options.logPath,
+          }),
+        ),
       );
       return;
     }
@@ -197,8 +211,7 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
       settled = true;
       clearTimeout(timer);
       clearTimeout(escalation);
-      log.end();
-      fn();
+      void closeLog().then(fn);
     };
 
     // A stopped stage settles when its process has gone, not when it was
