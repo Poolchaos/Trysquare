@@ -5372,3 +5372,18 @@ verified evidence, in writing, here.
   removal, so nothing did until the review was deleted. A resume that keeps
   the result now tries the removal again, and the note says each later run
   of the review's checks tries again.
+- 2026-10-25 Review round 12 (over 756bdc4, b4ee59d, 8fb8a3f, 7570a8b and
+  07d5473), three read-only reviewers, each finding read again in the code
+  and shown failing first. Fixed: a failed git check kept as not merged
+  (855680d); report text that a lone carriage return, or a leading marker at a
+  line's start, still made markdown of, and entities that decoded (2dfc2d6); a
+  held throwaway copy the note promised a later run would remove, which a
+  resume keeping the result never reached (c5bb99b); D-220's message and
+  comment, which named only other lines (in 07d5473). Left as they stand,
+  with the reason: the merged check's map is never pruned, but holds one
+  short entry per review made in the server's life, which a restart clears;
+  a hunk whose header undercounts its lines would now drop the rest, but
+  the diff comes only from git, which does not miscount; the sweep-hit key
+  leaves out the repository as the hunk key does, which matters only for a
+  linked repository sharing the primary's slug; bare addresses and "@name"
+  still link where the report is pasted, which no escape prevents.

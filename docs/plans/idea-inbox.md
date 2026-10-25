@@ -76,6 +76,14 @@ pulled deliberately.
   seconds the server answered none of one test's API requests (the trace
   holds the page and its scripts, no API response), then answered the next
   test in 0.8 s; macOS and Linux passed. Re-run to see if it recurs.
+  Again locally, 2026-10-25, in a `./verify.sh --e2e` gate started in
+  the background (so not the shell's 600-second move, blamed for the same
+  death earlier that day): the server stopped during "the scan theater
+  counts the findings while the second verifier works", nothing on stderr
+  and no crash in the Windows event log; the test alone, and the gate run
+  again on the same tree, passed. Four gates since ran with a preloaded
+  trace in the server (start, a 2-second heartbeat, signals, exit code and
+  the caller of process.exit, uncaught errors) and none lost it.
 - 2026-10-22: the preflight route (src/app/api/reviews/preflight/route.ts)
   and the review service (src/server/review/service.ts) still fetch a
   linked pair's clones one after the other, as review creation did until
