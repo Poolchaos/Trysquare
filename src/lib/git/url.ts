@@ -27,19 +27,33 @@ export function redactUrlCredentials(text: string): string {
 }
 
 /**
+ * The address to add instead of one that carries credentials, or null when it
+ * carries none: any user on http(s), where a name alone can be a token, and a
+ * password on any scheme (D-208; review round 10).
+ */
+export function addressWithoutCredentials(url: string): string | null {
+  const address = url.trim();
+  const http = /^https?:\/\/[^/\s]*@/i.test(address);
+  const password = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s]*@/i.test(address);
+  return http || password ? address.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/\s]*@/i, "$1") : null;
+}
+
+/**
  * A project as the API serves it: its address and its clone error without
  * credentials, which a project added before they were refused may hold. The
  * row keeps what was added: a fetch reads the clone's own remote, and Retry
  * clone now refuses the address, so such a project is deleted and added
- * again without them.
+ * again without them. `cleanAddress` is that address, so its screens can say
+ * the credentials are still kept (audit finding R3, D-223).
  */
 export function withoutCredentials<T extends { gitUrl: string; cloneError: string | null }>(
   project: T,
-): T {
+): T & { cleanAddress: string | null } {
   return {
     ...project,
     gitUrl: redactUrlCredentials(project.gitUrl),
     cloneError: project.cloneError === null ? null : redactUrlCredentials(project.cloneError),
+    cleanAddress: addressWithoutCredentials(project.gitUrl),
   };
 }
 
@@ -91,10 +105,9 @@ export function validateGitUrl(rawUrl: string): string {
   // shown on its pages and echoed in every git error (audit finding 2).
   // Any user on http(s), where a name alone can be a token; a password on
   // any scheme (review round 10: ssh://user:password@ was taken).
-  const http = /^https?:\/\/[^/\s]*@/i.test(url);
-  const password = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s]*@/i.test(url);
-  if (http || password) {
-    const bare = url.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/\s]*@/i, "$1");
+  const bare = addressWithoutCredentials(url);
+  if (bare !== null) {
+    const password = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s]*@/i.test(url);
     throw new InvalidGitUrlError(
       rawUrl,
       "it carries credentials",

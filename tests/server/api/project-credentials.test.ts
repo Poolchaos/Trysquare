@@ -53,6 +53,9 @@ describe("a project whose address carries a token", () => {
       const body = await response.text();
       expect(body).not.toContain(TOKEN);
       expect(body).toContain("https://***@github.com/acme/app.git");
+      // The address to add instead, so the screens can say a token is still
+      // kept for it (audit finding R3, D-223).
+      expect(body).toContain('"cleanAddress":"https://github.com/acme/app.git"');
     }
     expect(failure.message).not.toContain(TOKEN);
   });

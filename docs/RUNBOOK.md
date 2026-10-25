@@ -144,7 +144,9 @@ Every step below is free until you press Start review.
    carrying a password or token, or on http(s) any user name, is refused
    too, saying the address to add instead: let git sign in with its
    credential helper or an SSH key (D-208). A project added with one before
-   that cannot be cloned again: delete it and add it without.
+   that cannot be cloned again, and its card and page say the password or
+   token is still kept on this machine: delete it and add the address they
+   name (D-223).
 2. **Optionally, turn on the project's own checks.** On the project's page,
    Tests and design is off until you tick "Run this project's tests and e2e
    on each review" and press Save checks. On, every review of the project

@@ -5,7 +5,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { InvalidGitUrlError, redactUrlCredentials, validateGitUrl } from "@/lib/git/url";
+import {
+  InvalidGitUrlError,
+  addressWithoutCredentials,
+  redactUrlCredentials,
+  validateGitUrl,
+} from "@/lib/git/url";
 
 const TOKEN = "ghp_SECRET0123456789";
 
@@ -53,6 +58,28 @@ describe("an address that carries credentials", () => {
     expect(validateGitUrl("https://github.com/acme/app.git")).toBe(
       "https://github.com/acme/app.git",
     );
+  });
+});
+
+describe("the address to add instead", () => {
+  it("is the address without its credentials, by the rule an address is refused by", () => {
+    // Audit finding R3, D-223: what a project's screens offer in place of an
+    // address kept from before D-208.
+    expect(addressWithoutCredentials(`https://user:${TOKEN}@github.com/acme/app.git`)).toBe(
+      "https://github.com/acme/app.git",
+    );
+    expect(addressWithoutCredentials(`https://${TOKEN}@github.com/acme/app.git`)).toBe(
+      "https://github.com/acme/app.git",
+    );
+    expect(addressWithoutCredentials(`ssh://git:${TOKEN}@host/a.git`)).toBe("ssh://host/a.git");
+    for (const clean of [
+      "https://github.com/acme/app.git",
+      "ssh://git@host/a.git",
+      "git@github.com:acme/app.git",
+      "file:///C:/repos/app.git",
+    ]) {
+      expect(addressWithoutCredentials(clean)).toBeNull();
+    }
   });
 });
 

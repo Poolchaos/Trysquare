@@ -48,7 +48,9 @@ whole categories of vulnerability, but it leaves some that matter:
   them. It refuses a repository address carrying a password or token (and,
   on http or https, any user name, which can be a token), and takes one
   held by a project added before that out of every project and git error
-  it serves. Run notes written before then may still hold one.
+  it serves; that project's screens say one is still kept on this machine,
+  in the database and the clone's settings, and how to be rid of it. Run
+  notes written before then may still hold one.
 
 ## What is out of scope
 

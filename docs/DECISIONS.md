@@ -5415,3 +5415,13 @@ verified evidence, in writing, here.
   and the row. No code writes such a row, the linked fields being all or
   nothing in createReview from the first migration, so only a hand-edited
   database holds one.
+- 2026-10-25 D-223 An outside audit's finding R3, read again here: a
+  project added before D-208 keeps its password or token in its row and in
+  its clone's remote, and since the API serves the address redacted,
+  nothing said which projects still hold one. Each project is now served
+  with `cleanAddress`, the address to add instead, worked out by the rule
+  an address is refused by, or null; the Projects list and the project's
+  page then say a password or token is still kept on this machine and that
+  deleting the project and adding that address is the way to be rid of
+  it. Rejected: removing the token from the row and the clone's settings
+  in place, which would write inside a clone, and the app never does.

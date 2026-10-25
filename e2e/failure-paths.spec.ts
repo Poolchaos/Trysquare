@@ -2612,6 +2612,68 @@ test("an address carrying a token is refused, and the token is never shown back"
   }
 });
 
+test("a project kept with a token in its address says so, and how to be rid of it", async ({
+  page,
+}) => {
+  // Audit finding R3, D-223: a project added before D-208 refused tokens in
+  // an address keeps its token in the database and the clone's settings, and
+  // the screens, which no longer show it, said nothing of it. The fixture's
+  // address carries none, so the server's answer is made to read as one that
+  // does; what the server serves is a unit test.
+  type Served = { name: string; gitUrl: string; cleanAddress?: string | null };
+  const kept = (project: Served): Served =>
+    project.name === "app"
+      ? {
+          ...project,
+          gitUrl: "https://***@github.com/acme/app.git",
+          cleanAddress: "https://github.com/acme/app.git",
+        }
+      : project;
+  const asKept = async (route: import("@playwright/test").Route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { projects?: Served[]; project?: Served };
+    await route.fulfill({
+      response,
+      json: body.projects
+        ? { ...body, projects: body.projects.map(kept) }
+        : body.project
+          ? { ...body, project: kept(body.project) }
+          : body,
+    });
+  };
+  const one = /\/api\/projects\/[^/?]+$/;
+  await page.route("**/api/projects", asKept);
+  await page.route(one, asKept);
+  try {
+    await page.goto("/projects");
+    const card = page
+      .getByRole("main")
+      .locator("li")
+      .filter({ has: page.getByRole("link", { name: "app", exact: true }) });
+    await expect(
+      card.getByText("A password or token is still kept for this address."),
+    ).toBeVisible();
+    await expect(card).toContainText(
+      "Delete this project and add https://github.com/acme/app.git instead to be rid of it.",
+    );
+    await expect(card).not.toContainText("ghp_");
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, card, "project-token-kept-card");
+
+    await card.getByRole("link", { name: "app", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "app", level: 1 })).toBeVisible();
+    const notice = page
+      .getByRole("main")
+      .getByText("A password or token is still kept for this address.");
+    await expect(notice).toBeVisible();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, page.getByRole("main"), "project-token-kept-page");
+  } finally {
+    await page.unroute("**/api/projects", asKept);
+    await page.unroute(one, asKept);
+  }
+});
+
 test("a failed clone can be opened, tried again and deleted; a known address is named", async ({
   page,
 }) => {
