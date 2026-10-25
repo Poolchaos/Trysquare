@@ -5580,3 +5580,13 @@ verified evidence, in writing, here.
   criticals proven counts its key presses from them and would fail rather
   than pass were an open-question critical to sort among them; an HTML
   error page says what failed but not why, carrying no words of its own.
+- 2026-10-25 An outside audit's finding U7, read again here: a run that
+  ended took the theater, or Scan view when it was hidden, with it, and
+  the focus fell to the page with nothing said; and Hide keyed the hidden
+  run on its start, null for a moment after it begins, so Hide did nothing
+  then. The status badge is now a live region, so the ending is heard as
+  the badge changes, and the review's name takes the focus if nothing else
+  holds it (a separate status line saying the same words first was tried,
+  and made every check for the status's words find two); a run hidden before its start is stamped is keyed on a
+  stand-in that moves to the start once there is one, so the next run
+  still opens on the theater. Browser tests cover both.

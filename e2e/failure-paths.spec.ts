@@ -1871,6 +1871,78 @@ test("a decision with findings left only above it moves up to them", async ({ pa
   }
 });
 
+test("a watched run that ends while hidden says so, and the focus stays on the page", async ({
+  page,
+}) => {
+  // Audit finding U7: hidden, the theater leaves the focus on Scan view, and
+  // a run that ended took Scan view with it; the focus fell to the page and
+  // nothing said the run was over. Held in a stage, hidden, then cancelled
+  // from outside, as another tab would. The count is put back as in the
+  // theater tests.
+  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 30_000 }), "utf8");
+  try {
+    await startAReview(page);
+    const theater = page.getByRole("dialog", { name: /^Watching the review of/ });
+    await expect(theater).toBeVisible({ timeout: 60_000 });
+    await expect(theater.getByText("Risk started")).toBeVisible({ timeout: 60_000 });
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: "Scan view" })).toBeFocused();
+
+    const reviewId = new URL(page.url()).pathname.split("/").pop();
+    const cancelled = await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
+    expect(cancelled.status()).toBe(200);
+    // Said by the status badge, a live region.
+    await expect(page.getByRole("status").filter({ hasText: /^cancelled$/ })).toHaveCount(1, {
+      timeout: 60_000,
+    });
+    await expect(page.getByTestId("review-heading")).toBeFocused();
+    await shootAll(
+      page,
+      page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) }),
+      "run-ended-hidden",
+    );
+  } finally {
+    rmSync(STALL_TRIGGER, { force: true });
+    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
+  }
+});
+
+test("a run whose start is not stamped yet can still be hidden", async ({ page }) => {
+  // Audit finding U7: Hide stored the run's start, null for a moment after a
+  // run begins, so Hide did nothing then. A finished review is answered as
+  // one running with no start stamped.
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  const reading = `**${await row.getByRole("link").getAttribute("href")}`.replace(
+    "/reviews/",
+    "/api/reviews/",
+  );
+  const stop = await routeUntilStopped(page, reading, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { review: { status: string } };
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        running: true,
+        review: { ...body.review, status: "running", startedAt: null },
+      },
+    });
+  });
+  try {
+    await row.getByRole("link").click();
+    const theater = page.getByRole("dialog", { name: /^Watching the review of/ });
+    await expect(theater).toBeVisible({ timeout: 30_000 });
+    await page.keyboard.press("Escape");
+    await expect(theater).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Scan view" })).toBeVisible();
+  } finally {
+    await stop();
+  }
+});
+
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
   // Only proven findings reach the report: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test

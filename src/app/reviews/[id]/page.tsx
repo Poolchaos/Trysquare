@@ -427,6 +427,9 @@ function CoveragePanel({
   );
 }
 
+/** The key of a run hidden before its start was stamped. */
+const UNSTAMPED = "unstamped";
+
 export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -462,6 +465,29 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   useEffect(() => {
     if (minimizedRun !== null) scanViewRef.current?.focus();
   }, [minimizedRun]);
+  // A run that ends takes the theater, or Scan view, with it, and the focus
+  // fell to the page with nothing said; the review's name takes the focus,
+  // only if nothing else holds it, and the status badge, a live region, says
+  // how it ended (audit finding U7).
+  const headingRef = useRef<HTMLSpanElement>(null);
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    const running = snapshot?.running ?? false;
+    if (wasRunning.current && !running) {
+      if (document.activeElement === null || document.activeElement === document.body) {
+        headingRef.current?.focus();
+      }
+    }
+    wasRunning.current = running;
+  }, [snapshot?.running]);
+  // Hidden before its start was stamped, a run was keyed on a start of null
+  // and Hide did nothing; the key moves to the start with the reading that
+  // brings it, so the next run still opens on the theater (audit finding U7).
+  function show(fresh: Snapshot) {
+    setSnapshot(fresh);
+    const started = fresh.review.startedAt;
+    if (started) setMinimizedRun((hidden) => (hidden === UNSTAMPED ? started : hidden));
+  }
   // Ticks only while something is running, so a finished review is not
   // re-rendered once a second forever.
   const [now, setNow] = useState(() => Date.now());
@@ -564,7 +590,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
   async function reload() {
     const fresh = await fetchSnapshot();
-    if (fresh && fresh !== "superseded") setSnapshot(fresh);
+    if (fresh && fresh !== "superseded") show(fresh);
   }
 
   /** A new run needs a new stream: the old one was closed by the run that ended. */
@@ -636,7 +662,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       const fresh = await fetchSnapshot();
       if (cancelled || fresh === "superseded") return;
       // A review that cannot be read is not a review that is slow to read.
-      if (fresh) setSnapshot(fresh);
+      if (fresh) show(fresh);
       else {
         // The server's words, which a fixed sentence replaced (D-138).
         setLoadError(lastReadError.current);
@@ -767,7 +793,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             }
             return;
           }
-          setSnapshot(fresh);
+          show(fresh);
           if (!fresh.running && !fresh.queued && poll !== undefined) {
             clearInterval(poll);
             poll = undefined;
@@ -888,7 +914,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
   const { review, findings } = snapshot;
 
-  const scanMinimized = minimizedRun !== null && minimizedRun === review.startedAt;
+  const scanMinimized =
+    minimizedRun !== null && (minimizedRun === UNSTAMPED || minimizedRun === review.startedAt);
   if (snapshot.running && !scanMinimized) {
     return (
       <ScanTheater
@@ -897,7 +924,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         now={now}
         batch={batch}
         streaming={streaming}
-        onMinimize={() => setMinimizedRun(review.startedAt)}
+        onMinimize={() => setMinimizedRun(review.startedAt ?? UNSTAMPED)}
         onCancel={async () => {
           const problem = await cancelReview();
           await reload();
@@ -997,7 +1024,12 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             ) : null}
             {/* Wraps between the names, not inside one: kept on one row, a
                 phone broke the branch mid-word with "into main" beside it. */}
-            <span className="flex flex-wrap items-baseline gap-x-2">
+            <span
+              ref={headingRef}
+              tabIndex={-1}
+              data-testid="review-heading"
+              className="flex flex-wrap items-baseline gap-x-2"
+            >
               <Mono className="min-w-0 break-all">{review.fromBranch}</Mono>
               <span className="text-[var(--color-ink-faint)]">into</span>
               <Mono className="min-w-0 break-all">{review.intoBranch}</Mono>
@@ -1006,9 +1038,13 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         }
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
-            <Badge tone={statusTone(review.status)}>
-              {snapshot.queued ? "queued" : statusLabel(review.status)}
-            </Badge>
+            {/* Heard as it changes: a run that ended while its theater was
+                hidden went unsaid (audit finding U7). */}
+            <span role="status">
+              <Badge tone={statusTone(review.status)}>
+                {snapshot.queued ? "queued" : statusLabel(review.status)}
+              </Badge>
+            </span>
             {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}
             <Sha value={review.fromCommit} />
             <span>{review.model}</span>
