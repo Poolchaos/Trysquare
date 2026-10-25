@@ -2647,6 +2647,118 @@ test("a run that ends before its page's stream listens is still seen to end", as
   }
 });
 
+test("an error page for an answer is said, and the button comes back", async ({ page }) => {
+  // Audit finding U2: these handlers read the answer as JSON bare, so a
+  // proxy's HTML error page threw inside them, nothing was said, and the
+  // button went back to idle as if it had worked. Each is answered here with
+  // such a page. Import, which a double click sent twice, is also held a
+  // moment to see it refuse a second click.
+  const gateway = { status: 502, contentType: "text/html", body: "<h1>502 Bad Gateway</h1>" };
+
+  await test.step("importing a ruleset", async () => {
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const stop = await answerOnce(page, "**/api/rulesets/import", async (route) => {
+      await held;
+      await route.fulfill(gateway);
+    });
+    await page.goto("/rulesets");
+    await page.getByLabel("Name").fill("Gateway sweep");
+    await page.getByPlaceholder("Paste the markdown protocol here").fill("# Gateway sweep\n");
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Importing..." })).toBeDisabled();
+    release();
+    const form = page.getByRole("main").locator("form").first();
+    await expect(form.getByText("The document could not be imported.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Import", exact: true })).toBeEnabled();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, form, "gateway-import");
+    await stop();
+  });
+
+  await test.step("changing a rule", async () => {
+    await page.goto("/rulesets");
+    await page.getByRole("main").getByRole("link", { name: "Example protocol" }).first().click();
+    const rule = page.getByRole("main").getByRole("checkbox").first();
+    await expect(rule).toBeEnabled({ timeout: 30_000 });
+    const stop = await answerOnce(page, "**/api/rulesets/*/rules/*", (route) =>
+      route.fulfill(gateway),
+    );
+    const before = await rule.isChecked();
+    await rule.click();
+    await expect(page.getByText("The rule could not be changed.")).toBeVisible();
+    await expect(rule).toBeEnabled();
+    expect(await rule.isChecked()).toBe(before);
+    await stop();
+  });
+
+  await test.step("fetching a project", async () => {
+    const stop = await answerOnce(page, "**/api/projects/*/fetch", (route) =>
+      route.fulfill(gateway),
+    );
+    await page.goto("/projects");
+    const card = page
+      .getByRole("main")
+      .locator("li")
+      .filter({ has: page.getByRole("link", { name: "app", exact: true }) });
+    await card.getByRole("button", { name: "Fetch now" }).click();
+    // On the project's own card, naming it, not under the add form.
+    await expect(card.getByText("app could not be fetched.")).toBeVisible();
+    await expect(page.locator("form").getByText("could not be fetched")).toHaveCount(0);
+    await expect(card.getByRole("button", { name: "Fetch now" })).toBeEnabled();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, card, "gateway-fetch");
+    await stop();
+  });
+
+  await test.step("probing a model", async () => {
+    const stop = await answerOnce(page, "**/api/models/*/probe", (route) => route.fulfill(gateway));
+    await page.goto("/settings");
+    const probe = page.getByRole("button", { name: "Probe", exact: true }).first();
+    await expect(probe).toBeEnabled({ timeout: 30_000 });
+    await probe.click();
+    // Beside the models, not a screen above them at the top of the page.
+    const failed = page.getByText("The probe failed.");
+    await expect(failed).toBeVisible();
+    expect((await failed.boundingBox())!.y).toBeGreaterThan(
+      (await page.getByRole("heading", { name: "Models" }).boundingBox())!.y,
+    );
+    await expect(probe).toBeEnabled();
+    await stop();
+  });
+
+  await test.step("deleting all data", async () => {
+    // Answered by the route alone: were it to reach the server, every later
+    // test would find nothing to read.
+    let answered = 0;
+    const refuse = async (route: import("@playwright/test").Route) => {
+      answered += 1;
+      await route.fulfill(gateway);
+    };
+    await page.route("**/api/system/data", refuse);
+    try {
+      await page.getByRole("button", { name: "Delete all data" }).click();
+      await page.getByRole("button", { name: "Yes, delete everything" }).click();
+      // In the Danger zone, beside the button pressed.
+      const danger = page
+        .getByRole("main")
+        .locator("div")
+        .filter({ has: page.getByRole("heading", { name: "Danger zone" }) })
+        .last();
+      await expect(danger.getByText("The data could not be deleted.")).toBeVisible();
+      expect(answered).toBe(1);
+      await expect(page.getByRole("button", { name: "Yes, delete everything" })).toBeEnabled();
+      expect(await accessibilityViolations(page)).toEqual([]);
+      await shootAll(page, danger, "gateway-settings");
+    } finally {
+      await page.unroute("**/api/system/data", refuse);
+    }
+    await page.getByRole("button", { name: "Keep it all" }).click();
+  });
+});
+
 test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {
   // Number("") is 0, and zero removes the ceiling: clearing the field and
   // leaving it lifted the cap on every model call without a word (5.3).

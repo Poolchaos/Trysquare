@@ -365,6 +365,45 @@ function managerErrorLines(path, text) {
   return found;
 }
 
+/**
+ * A screen reads a response's body through send() (src/components/request.ts),
+ * which turns a body that is not JSON into words to show. Read bare, an
+ * error page from a proxy (an HTML 502) threw inside the handler: nothing
+ * said, and the button back to idle as if it had worked (audit finding U2).
+ * A `.json()` with a `.catch` after it decides for itself what a bad body
+ * means, and passes.
+ */
+const CLIENT_READS_LAW =
+  "A screen reads a response through send(), or with .json().catch(...), never a bare .json()";
+
+function clientReadLines(path, text) {
+  const client =
+    (path.startsWith("src/app/") && !path.startsWith("src/app/api/")) ||
+    path.startsWith("src/components/");
+  if (!client || !SOURCE.test(path) || path === "src/components/request.ts") return [];
+  if (!text.includes(".json(")) return [];
+  const source = parsed(path, text);
+  const found = [];
+  const visit = (node) => {
+    if (
+      ts.isCallExpression(node) &&
+      node.arguments.length === 0 &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === "json"
+    ) {
+      const parent = node.parent;
+      const caught =
+        ts.isPropertyAccessExpression(parent) &&
+        parent.name.text === "catch" &&
+        ts.isCallExpression(parent.parent);
+      if (!caught) found.push(source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return found;
+}
+
 function collectFiles(entryPath, acc) {
   let stats;
   try {
@@ -440,6 +479,9 @@ for (const file of files) {
   }
   for (const line of boundaryLines(path, text)) {
     violations.push(`${path}:${line}: ${BOUNDARY_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
+  }
+  for (const line of clientReadLines(path, text)) {
+    violations.push(`${path}:${line}: ${CLIENT_READS_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
   }
   for (const line of managerErrorLines(path, text)) {
     violations.push(`${path}:${line}: ${MANAGER_ERRORS_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);

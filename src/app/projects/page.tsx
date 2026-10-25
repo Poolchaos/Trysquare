@@ -51,6 +51,9 @@ export default function ProjectsPage() {
   const [gitUrl, setGitUrl] = useState("");
   const [adding, setAdding] = useState(false);
   const [fetching, setFetching] = useState("");
+  // Said on the project's own card: under the add form, a failed fetch read
+  // as an address that could not be added (audit finding U2's screenshots).
+  const [fetchProblem, setFetchProblem] = useState<{ id: string; message: string } | null>(null);
   const [error, setError] = useState("");
   /** The project an address already is, when adding it again was refused. */
   const [duplicateOf, setDuplicateOf] = useState("");
@@ -231,15 +234,16 @@ export default function ProjectsPage() {
                         <Button
                           disabled={fetching !== ""}
                           onClick={async () => {
-                            setError("");
+                            setFetchProblem(null);
                             setFetching(project.id);
                             try {
-                              const response = await fetch(`/api/projects/${project.id}/fetch`, {
-                                method: "POST",
-                              });
-                              if (!response.ok) {
-                                const body = (await response.json()) as { error?: string };
-                                setError(body.error ?? "The fetch did not work.");
+                              const sent = await send(
+                                `/api/projects/${project.id}/fetch`,
+                                { method: "POST" },
+                                `${project.name} could not be fetched`,
+                              );
+                              if (!sent.ok) {
+                                setFetchProblem({ id: project.id, message: sent.error });
                                 return;
                               }
                               await load();
@@ -270,6 +274,11 @@ export default function ProjectsPage() {
                       </Badge>
                     ))}
                   </div>
+                  {fetchProblem?.id === project.id ? (
+                    <div className="mt-3">
+                      <Problem>{fetchProblem.message}</Problem>
+                    </div>
+                  ) : null}
                   <StoredCredentialsNotice
                     stored={project.storedCredentials}
                     cloned={project.cloneStatus === "ready"}

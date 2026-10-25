@@ -15,6 +15,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { send } from "@/components/request";
 
 const LINKS = [
   { href: "/", label: "Dashboard", icon: "M2 8h4v6H2zM7 4h4v10H7zM12 9h2v5h-2z" },
@@ -58,18 +59,17 @@ export function TopBar() {
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
-      try {
-        // The narrow endpoint, not the whole reviews list: this runs every
-        // four seconds on every screen for the lifetime of the tab.
-        const response = await fetch("/api/reviews/attention");
-        if (!response.ok) return;
-        const body = (await response.json()) as Attention;
-        if (cancelled) return;
-        setActive(body.active);
-        setAwaiting(body.awaiting);
-      } catch {
-        // A bar that cannot reach the server is not worth an error message.
-      }
+      // The narrow endpoint, not the whole reviews list: this runs every
+      // four seconds on every screen for the lifetime of the tab. A bar that
+      // cannot reach the server is not worth an error message.
+      const sent = await send<Attention>(
+        "/api/reviews/attention",
+        {},
+        "What waits on you could not be read",
+      );
+      if (!sent.ok || cancelled) return;
+      setActive(sent.body.active);
+      setAwaiting(sent.body.awaiting);
     };
     const timer = setInterval(() => void check(), 4000);
     void check();

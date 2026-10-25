@@ -5505,3 +5505,15 @@ verified evidence, in writing, here.
   lighter in dark (--color-accent-hover), and a theme test hovers a
   primary button and measures it in both themes; it fails on the old
   style in light.
+- 2026-10-25 An outside audit's finding U2, read again here: eight
+  handlers read an answer as JSON bare, so a proxy's HTML error page threw
+  inside them, nothing was said, and the button went back to idle as if it
+  had worked; Import had no busy flag, so a second click landed as a
+  ruleset that already existed. Every screen now reads through send(), and
+  the house-style gate refuses a bare .json() in client code (outside the
+  API routes and request.ts), mutation-proved: before the change it named
+  exactly the fifteen bare reads found by hand, the audit's eight and seven
+  more, and none with a .catch. A failed ruleset re-read says so. Shooting
+  each failure placed three of them: a failed fetch was said under the add
+  form, as if adding had failed, and a failed probe or wipe at the top of
+  Settings, a screen from the button; each is now said beside its control.

@@ -38,6 +38,7 @@ export default function RulesetsPage() {
   // ruleset: it is asked, not done (5.9, A5). Dropped when the form changes,
   // so Replace never sends a name or document the question was not about.
   const [replacing, setReplacing] = useState("");
+  const [importing, setImporting] = useState(false);
 
   // Why the list could not be read, said where it would be (5.13, U9): a
   // failed read used to leave the list empty for good, with no word.
@@ -76,14 +77,30 @@ export default function RulesetsPage() {
   }, [loadAttempt]);
 
   async function importRuleset(replace: boolean) {
+    // One at a time: a second click while the first was out landed as a
+    // ruleset that already exists (audit finding U2).
+    if (importing) return;
+    setImporting(true);
+    try {
+      await importNow(replace);
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function importNow(replace: boolean) {
     setError("");
     setResult("");
     setReplacing("");
-    const response = await fetch("/api/rulesets/import", {
-      method: "POST",
-      body: JSON.stringify({ name, tier, markdown, ...(replace ? { replace: true } : {}) }),
-    });
-    const body = (await response.json()) as {
+    const sent = await send(
+      "/api/rulesets/import",
+      {
+        method: "POST",
+        body: JSON.stringify({ name, tier, markdown, ...(replace ? { replace: true } : {}) }),
+      },
+      "The document could not be imported",
+    );
+    const body = sent.body as {
       error?: string;
       code?: string;
       unmapped?: { line: number; text: string }[];
@@ -93,15 +110,15 @@ export default function RulesetsPage() {
       changed?: boolean;
       fidelity?: { totalLines: number; mappedLines: number };
     };
-    if (response.status === 409 && body.code === "RulesetExists") {
+    if (sent.status === 409 && body.code === "RulesetExists") {
       setReplacing(body.error ?? `A ruleset called "${name}" already exists.`);
       return;
     }
-    if (!response.ok) {
+    if (!sent.ok) {
       // A blocked import names the lines it would have dropped, so the fix is
       // an edit to the document rather than a guess.
       setError(
-        (body.error ?? "The document could not be imported.") +
+        sent.error +
           (body.unmapped?.length
             ? " " +
               body.unmapped
@@ -187,6 +204,7 @@ export default function RulesetsPage() {
                     <Button
                       type="button"
                       variant="primary"
+                      disabled={importing}
                       onClick={() => void importRuleset(true)}
                     >
                       Replace {name.trim()}
@@ -203,8 +221,12 @@ export default function RulesetsPage() {
                 </p>
               ) : null}
               <div>
-                <Button type="submit" variant="primary" disabled={name === "" || markdown === ""}>
-                  Import
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={importing || name === "" || markdown === ""}
+                >
+                  {importing ? "Importing..." : "Import"}
                 </Button>
               </div>
             </form>

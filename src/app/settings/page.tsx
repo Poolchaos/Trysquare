@@ -119,6 +119,11 @@ export default function SettingsPage() {
   const [checkingCli, setCheckingCli] = useState(true);
   const [probing, setProbing] = useState("");
   const [error, setError] = useState("");
+  // Said beside the control that failed: at the top of the page, a probe's or
+  // a wipe's failure was a screen away from the button pressed, out of sight
+  // on a phone (audit finding U2's screenshots).
+  const [modelsError, setModelsError] = useState("");
+  const [wipeError, setWipeError] = useState("");
   const [saved, setSaved] = useState(false);
   const [confirmingWipe, setConfirmingWipe] = useState(false);
   const [wiping, setWiping] = useState(false);
@@ -264,18 +269,19 @@ export default function SettingsPage() {
   }
 
   async function probe(id: string) {
-    setError("");
+    setModelsError("");
     setProbing(id);
     try {
-      const response = await fetch(`/api/models/${encodeURIComponent(id)}/probe`, {
-        method: "POST",
-      });
-      if (!response.ok) {
-        setError(((await response.json()) as { error?: string }).error ?? "The probe failed.");
+      const probed = await send(
+        `/api/models/${encodeURIComponent(id)}/probe`,
+        { method: "POST" },
+        "The probe failed",
+      );
+      if (!probed.ok) {
+        setModelsError(probed.error);
         return;
       }
-      const refreshed = (await (await fetch("/api/models")).json()) as { models: Model[] };
-      setModels(refreshed.models);
+      await readModelsAgain("The probe finished, but the models could not be read again");
     } finally {
       setProbing("");
     }
@@ -289,7 +295,7 @@ export default function SettingsPage() {
    * button becomes the reason a review pauses.
    */
   async function probeAll() {
-    setError("");
+    setModelsError("");
     for (const model of models ?? []) {
       setProbing(model.id);
       try {
@@ -300,8 +306,13 @@ export default function SettingsPage() {
       }
     }
     setProbing("");
-    const refreshed = (await (await fetch("/api/models")).json()) as { models: Model[] };
-    setModels(refreshed.models);
+    await readModelsAgain("The probes finished, but the models could not be read again");
+  }
+
+  async function readModelsAgain(failure: string) {
+    const listed = await send<{ models: Model[] }>("/api/models", {}, failure);
+    if (listed.ok) setModels(listed.body.models);
+    else setModelsError(listed.error);
   }
 
   return (
@@ -524,6 +535,11 @@ export default function SettingsPage() {
             {probing === "" ? "Probe all" : "Probing..."}
           </Button>
         </div>
+        {modelsError ? (
+          <div className="mb-3">
+            <Problem>{modelsError}</Problem>
+          </div>
+        ) : null}
 
         {models === null ? (
           <Loading
@@ -585,6 +601,11 @@ export default function SettingsPage() {
             on disk. Exported reports are kept: a report is the thing a review was for. Refused
             while a review is running.
           </p>
+          {wipeError ? (
+            <div className="mb-3">
+              <Problem>{wipeError}</Problem>
+            </div>
+          ) : null}
 
           {wiped ? (
             <p className="mb-3 text-sm text-[var(--color-good)]">{wiped}</p>
@@ -594,16 +615,17 @@ export default function SettingsPage() {
                 variant="primary"
                 disabled={wiping}
                 onClick={async () => {
-                  setError("");
+                  setWipeError("");
                   setWiping(true);
                   try {
-                    const response = await fetch("/api/system/data", { method: "DELETE" });
-                    const body = (await response.json()) as {
+                    const sent = await send<{
                       deleted?: { projects: number; reviews: number; rulesets: number };
-                      error?: string;
+                    }>("/api/system/data", { method: "DELETE" }, "The data could not be deleted");
+                    const body = sent.body as {
+                      deleted?: { projects: number; reviews: number; rulesets: number };
                     };
-                    if (!response.ok || !body.deleted) {
-                      setError(body.error ?? "The data could not be deleted.");
+                    if (!sent.ok || !body.deleted) {
+                      setWipeError(sent.ok ? "The data could not be deleted." : sent.error);
                       return;
                     }
                     setWiped(
@@ -611,8 +633,13 @@ export default function SettingsPage() {
                         `review(s) and ${body.deleted.rulesets} ruleset(s). Exports were kept.`,
                     );
                     setConfirmingWipe(false);
-                    const refreshed = (await (await fetch("/api/system")).json()) as SystemInfo;
-                    setSystem(refreshed);
+                    const refreshed = await send<SystemInfo>(
+                      "/api/system",
+                      {},
+                      "The data was deleted, but this machine's details could not be read again",
+                    );
+                    if (refreshed.ok) setSystem(refreshed.body);
+                    else setWipeError(refreshed.error);
                   } finally {
                     setWiping(false);
                   }

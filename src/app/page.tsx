@@ -191,15 +191,14 @@ export default function HomePage() {
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
-      try {
-        const response = await fetch("/api/reviews/attention");
-        if (!response.ok || cancelled) return;
-        const body = (await response.json()) as { active: LiveRun | null };
-        if (!cancelled) setLive(body.active);
-      } catch {
-        // A dashboard that cannot reach the server says so through the
-        // scoreboard's own error, not twice.
-      }
+      const sent = await send<{ active: LiveRun | null }>(
+        "/api/reviews/attention",
+        {},
+        "What is running could not be read",
+      );
+      // A dashboard that cannot reach the server says so through the
+      // scoreboard's own error, not twice.
+      if (sent.ok && !cancelled) setLive(sent.body.active);
     };
     const timer = setInterval(() => void check(), 4000);
     void check();

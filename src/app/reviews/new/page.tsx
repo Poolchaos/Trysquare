@@ -401,17 +401,18 @@ function NewReview() {
     setError("");
     setProbing(id);
     try {
-      const response = await fetch(`/api/models/${encodeURIComponent(id)}/probe`, {
-        method: "POST",
-      });
-      if (!response.ok) {
+      const probing = await send<{ model: Omit<Model, "availability"> }>(
+        `/api/models/${encodeURIComponent(id)}/probe`,
+        { method: "POST" },
+        "The probe did not complete",
+      );
+      if (!probing.ok) {
         // Said out loud. A probe that failed silently left the row reading
         // unknown with no reason, so the only thing to do was press it again.
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        setError(body.error ?? "The probe did not complete.");
+        setError(probing.error);
         return;
       }
-      const { model: probed } = (await response.json()) as { model: Omit<Model, "availability"> };
+      const probed = probing.body.model;
       const listed = await send<{ models: Model[] }>(
         "/api/models",
         {},
@@ -612,32 +613,38 @@ function NewReview() {
         }
         setDraft(null);
       }
-      const created = await fetch("/api/reviews", {
-        method: "POST",
-        body: JSON.stringify({
-          ...choices,
-          ...(billing === null ? {} : { billingShown: billing.state }),
-        }),
-      });
-      const body = (await created.json()) as Refused & { review?: { id: string } };
-      if (!created.ok || !body.review) {
-        showRefusal(body);
-        setError(body.error ?? "The review could not be created.");
+      const created = await send<{ review?: { id: string } }>(
+        "/api/reviews",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ...choices,
+            ...(billing === null ? {} : { billingShown: billing.state }),
+          }),
+        },
+        "The review could not be created",
+      );
+      if (!created.ok || !created.body.review) {
+        showRefusal(created.body as Refused);
+        setError(created.ok ? "The review could not be created." : created.error);
         return;
       }
-      const reviewId = body.review.id;
+      const reviewId = created.body.review.id;
 
-      const started = await fetch(`/api/reviews/${reviewId}/start`, {
-        method: "POST",
-        body: JSON.stringify({
-          rulesetId,
-          ...(billing === null ? {} : { billingShown: billing.state }),
-        }),
-      });
+      const started = await send(
+        `/api/reviews/${reviewId}/start`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            rulesetId,
+            ...(billing === null ? {} : { billingShown: billing.state }),
+          }),
+        },
+        "The review was created but could not be started",
+      );
       if (!started.ok) {
-        const problem = (await started.json()) as Refused;
-        showRefusal(problem);
-        setError(problem.error ?? "The review was created but could not be started.");
+        showRefusal(started.body as Refused);
+        setError(started.error);
         setDraft(reviewId);
         return;
       }

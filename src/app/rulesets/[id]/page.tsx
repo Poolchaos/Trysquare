@@ -55,9 +55,16 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   const [duplicateName, setDuplicateName] = useState("");
   const [duplicated, setDuplicated] = useState("");
 
+  // Read again after a change; one that fails says so, where it used to
+  // leave the page showing the ruleset as it was before (audit finding U2).
   const load = useCallback(async () => {
-    const response = await fetch(`/api/rulesets/${id}`);
-    if (response.ok) setDetail((await response.json()) as Detail);
+    const sent = await send<Detail>(
+      `/api/rulesets/${id}`,
+      {},
+      "This ruleset could not be read again",
+    );
+    if (sent.ok) setDetail(sent.body);
+    else setError(sent.error);
   }, [id]);
 
   useEffect(() => {
@@ -80,12 +87,13 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
     setError("");
     setBusy(code);
     try {
-      const response = await fetch(`/api/rulesets/${id}/rules/${encodeURIComponent(code)}`, {
-        method: "PATCH",
-        body: JSON.stringify(patch),
-      });
-      if (!response.ok) {
-        setError(((await response.json()) as { error?: string }).error ?? "That did not work.");
+      const sent = await send(
+        `/api/rulesets/${id}/rules/${encodeURIComponent(code)}`,
+        { method: "PATCH", body: JSON.stringify(patch) },
+        "The rule could not be changed",
+      );
+      if (!sent.ok) {
+        setError(sent.error);
         return;
       }
       await load();
@@ -98,20 +106,23 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
     setError("");
     setBusy("duplicate");
     try {
-      const response = await fetch(`/api/rulesets/${id}/duplicate`, {
-        method: "POST",
-        body: JSON.stringify({
-          tier: duplicateTier,
-          ...(duplicateName.trim() === "" ? {} : { name: duplicateName.trim() }),
-        }),
-      });
-      const body = (await response.json()) as { rulesetId?: string; error?: string };
-      if (!response.ok || !body.rulesetId) {
-        setError(body.error ?? "The ruleset could not be duplicated.");
+      const sent = await send<{ rulesetId?: string }>(
+        `/api/rulesets/${id}/duplicate`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            tier: duplicateTier,
+            ...(duplicateName.trim() === "" ? {} : { name: duplicateName.trim() }),
+          }),
+        },
+        "The ruleset could not be duplicated",
+      );
+      if (!sent.ok || !sent.body.rulesetId) {
+        setError(sent.ok ? "The ruleset could not be duplicated." : sent.error);
         return;
       }
       setDuplicating(false);
-      setDuplicated(body.rulesetId);
+      setDuplicated(sent.body.rulesetId);
     } finally {
       setBusy("");
     }
