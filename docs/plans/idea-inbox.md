@@ -85,6 +85,11 @@ pulled deliberately.
   linked pair's clones one after the other, as review creation did until
   D-181 item 7; and a failed fetch's error does not say which repository
   it was.
+- 2026-10-25: a launch token, as Jupyter has: the server prints a one-time
+  URL holding a secret when it starts, and every page and API call needs it,
+  kept in a cookie after the first visit, so another account on a shared
+  machine cannot call the API as the person (D-215). Every e2e test would
+  have to open the app through it.
 
 ## Retired
 

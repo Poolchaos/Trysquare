@@ -5287,3 +5287,14 @@ verified evidence, in writing, here.
   panel names no user and is kept. A README line was rewrapped. Left: the
   commit message of 2b29711 cited the out-of-memory test as its evidence;
   this entry corrects it.
+- 2026-10-25 D-215 DECIDED by the maintainer: the local API stays open to
+  any program on the machine, and the risk is documented, not closed in
+  code. Review round 11 found that a request with no Origin header passes
+  the guard, so another account on a shared machine can set the Claude CLI
+  path the app runs, or a project's check commands, and run code as the
+  person. The app is local and single-user (CLAUDE.md section 8), and the
+  maintainer is the one user of the machine it runs on. SECURITY.md says it
+  plainly, and that Trysquare is for a machine whose other accounts are
+  trusted. Rejected for now: a launch token every page and call must carry
+  (in the idea inbox), and refusing those two routes without the app's own
+  Origin, which would leave the others, the data wipe among them, open.
