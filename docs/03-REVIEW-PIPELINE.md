@@ -94,7 +94,8 @@ S1 work its risk-tagged files first (U12).
    screenshot the CLI's Read will show scaled down, past 2000 pixels on a
    side (D-201); the result is kept as
    `runs/<id>/checks/result.json`, a run note says each command's outcome,
-   and the copy is removed. A resume reuses the result for the same commit
+   and the copy is removed, or, when something still holds it, said in a
+   run note and left for the next run (D-217). A resume reuses the result for the same commit
    and the same checks, unless it was kept before the design standard, the
    hashes and the scaling notes were, when they run again. The dependency of a linked review
    is not run.

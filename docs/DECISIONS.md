@@ -5312,3 +5312,13 @@ verified evidence, in writing, here.
   way, and every other written value is kept on its line with markdown's
   own characters escaped; the author's intent stays a quotation, line by
   line. The HTML export escaped already and is unchanged.
+- 2026-10-25 D-217 An outside audit's finding S3, read again here and
+  shown failing first: the throwaway copy was removed in a finally, so a
+  removal that failed after its retries, a file something still held on
+  Windows, threw away the checks run that had just finished, no result was
+  kept and the review failed in preparation; and when the run itself had
+  failed, the removal's error hid that one. Now a finished run stands and
+  the copy it could not remove is said in a run note, for the next run of
+  the checks to remove (it clears the folder first) or a person to delete;
+  a failed run keeps its own error, the removal tried and its failure
+  dropped.

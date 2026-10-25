@@ -145,8 +145,23 @@ export async function runChecksForReview(
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     });
     standard = await readStandard(copyDir, options.checks.designStandardPath);
-  } finally {
+  } catch (failure) {
+    await removeThrowawayCopy(copyDir).catch(() => undefined);
+    throw failure;
+  }
+  // A copy something still holds, on Windows, is said and left for the next
+  // run to remove: thrown, it discarded the run that had just finished, and
+  // in a finally it hid the error of one that had not (audit finding S3).
+  try {
     await removeThrowawayCopy(copyDir);
+  } catch (removal) {
+    appendRunNote(db, options.reviewId, {
+      kind: "note",
+      message:
+        `The throwaway copy at ${copyDir} could not be removed ` +
+        `(${removal instanceof Error ? removal.message : String(removal)}); the next run of ` +
+        `the checks removes it, or delete it by hand.`,
+    });
   }
 
   for (const command of run.commands) {
