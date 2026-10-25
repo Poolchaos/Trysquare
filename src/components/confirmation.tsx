@@ -220,7 +220,10 @@ export function ConfirmationQueue({
     wereUndecided.current = leftToDecide > 0;
     if (!lastDecided.current || busy) return;
     lastDecided.current = false;
-    if (document.activeElement === null || document.activeElement === document.body) {
+    // From the page, or from the last finding's title, which only marks where
+    // the person is and has nothing left to do (audit finding U6).
+    const held = document.activeElement;
+    if (held === null || held === document.body || held === titleRef.current) {
       completeRef.current?.focus();
     }
   }, [leftToDecide, busy]);
@@ -266,7 +269,12 @@ export function ConfirmationQueue({
   useEffect(() => {
     const before = focusedAtMove.current;
     focusedAtMove.current = null;
-    if (before && before !== document.body && !before.isConnected) titleRef.current?.focus();
+    // Only when the focus is on the page: gone with its control, or given up
+    // while the control was disabled. Focus that landed somewhere, Complete
+    // review after the last decision, stays where it is.
+    if (before && before !== document.body && document.activeElement === document.body) {
+      titleRef.current?.focus();
+    }
   }, [current?.id]);
   useEffect(() => {
     if (againFor !== null) {
@@ -395,6 +403,9 @@ export function ConfirmationQueue({
       setAgainNotice("");
       // A stale move must not take the focus when this decision moves on.
       focusedAtMove.current = null;
+      // Read now: the button pressed is disabled while the decision is out,
+      // and a disabled button gives the focus up to the page.
+      const focusedWhenSent = document.activeElement;
       setBusy(true);
       const movesWhenSent = moves.current;
       try {
@@ -440,6 +451,14 @@ export function ConfirmationQueue({
         // taken away when the reply lands (seen on CI, run 39005536267, where
         // `g g` back to the same row was overridden).
         if (moves.current !== movesWhenSent) return;
+        // A move like any other, so a control it takes away hands the focus to
+        // the next finding's title: Confirm, moved onto an open question,
+        // went with the focus in it, and Tab began again from the top (audit
+        // finding U6).
+        // After the last one, Complete review takes it instead (round 7).
+        if (queue.some((row) => row.id !== finding.id && UNDECIDED.has(row.status))) {
+          focusedAtMove.current = focusedWhenSent;
+        }
         setSelected((index) => {
           const next = queue.findIndex(
             (row, position) => position > index && UNDECIDED.has(row.status),

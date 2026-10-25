@@ -5522,3 +5522,14 @@ verified evidence, in writing, here.
   frame was lost with whatever it carried, a status change among them.
   Such a frame is now read past, and the review read again in its place. A
   browser test sends one; on the old page it surfaces as an uncaught error.
+- 2026-10-25 An outside audit's finding U6, read again here: a decision
+  moves the queue to the next finding to decide without counting as a
+  move, so when that was an open question, the Confirm that had the focus
+  went with it and Tab began again from the top. Recording the focus at
+  the move was not enough: the button is disabled while the decision is
+  out, and a disabled button gives the focus up to the page, so it is read
+  when the decision is sent. The next finding's title takes it when the
+  focus is left on the page and another finding remains; after the last,
+  Complete review takes it, from the page or from that title. A browser
+  test confirms, from the keyboard, a proven finding followed by an open
+  question; the journey's own check that Complete takes the focus holds.

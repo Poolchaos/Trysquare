@@ -1737,6 +1737,69 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   await expect(page.getByText(/The limit clears at/)).toBeHidden();
 });
 
+test("a decision that moves onto an open question leaves the focus on its title", async ({
+  page,
+}) => {
+  // Audit finding U6: confirming a finding moves to the next one to decide,
+  // and when that is an open question its Confirm goes, with the focus in
+  // it; Tab began again from the top. The review the next test reads is
+  // staged as that test stages it, its criticals proven and the rest open
+  // questions, and Confirm is answered here, so nothing is decided on it.
+  const listed = (await (await page.request.get("/api/reviews")).json()) as {
+    reviews: { id: string; status: string; findings: { confirmed: number; dismissed: number } }[];
+  };
+  const waiting = listed.reviews.find(
+    (review) =>
+      review.status === "awaiting_confirmation" &&
+      review.findings.confirmed === 0 &&
+      review.findings.dismissed === 0,
+  );
+  expect(waiting, "a review awaiting decisions, none made yet").toBeDefined();
+  let criticals = 0;
+  const stop = await routeUntilStopped(page, `**/api/reviews/${waiting!.id}`, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as {
+      findings: { id: string; status: string; severity: string; verificationNote: string | null }[];
+    };
+    criticals = body.findings.filter(
+      (finding) => finding.status === "verified" && finding.severity === "CRITICAL",
+    ).length;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        findings: body.findings.map((finding) =>
+          finding.status !== "verified" || finding.severity === "CRITICAL"
+            ? finding
+            : { ...finding, status: "open_question", verificationNote: "Could not be settled." },
+        ),
+      },
+    });
+  });
+  const stopConfirming = await routeUntilStopped(page, "**/api/findings/*/confirm", (route) =>
+    route.fulfill({ status: 200, json: {} }),
+  );
+  try {
+    await page.goto(`/reviews/${waiting!.id}`);
+    const confirm = page.getByRole("button", { name: "Confirm", exact: true });
+    await expect(confirm).toBeVisible({ timeout: 30_000 });
+    expect(criticals, "proven criticals to confirm").toBeGreaterThan(0);
+    // The last proven critical, so the next to decide is an open question.
+    for (let step = 1; step < criticals; step += 1) await page.locator("body").press("j");
+    // From the keyboard, which keeps the focus on the button; a mouse click
+    // leaves none on it by design, so it has none to lose.
+    await confirm.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("not-proven")).toBeVisible();
+    const title = page.getByRole("heading", { level: 3 }).filter({ hasNotText: /\(\d+\)$/ });
+    await expect(title).toBeFocused();
+    await shootAll(page, page.getByRole("main"), "decided-onto-question");
+  } finally {
+    await stopConfirming();
+    await stop();
+  }
+});
+
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
   // Only proven findings reach the report: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test
