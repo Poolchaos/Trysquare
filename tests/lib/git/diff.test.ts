@@ -170,6 +170,45 @@ describe("parsing real git output", () => {
   });
 });
 
+describe("a hunk's end (audit finding S2)", () => {
+  it("holds the lines its header declares, not the empty one after the final newline", () => {
+    // git ends its output with a newline; split on lines, that leaves an
+    // empty string, which was taken as one more context line of the last
+    // hunk, a line the file does not have.
+    const [file] = parseUnifiedDiff(
+      [
+        "diff --git a/a.ts b/a.ts",
+        "--- a/a.ts",
+        "+++ b/a.ts",
+        "@@ -1,2 +1,3 @@",
+        " const a = 1;",
+        "+const b = 2;",
+        " const c = 3;",
+        "",
+      ].join("\n"),
+    );
+    expect(file!.hunks[0]!.lines).toEqual([" const a = 1;", "+const b = 2;", " const c = 3;"]);
+  });
+
+  it("still takes an empty line inside a hunk as a context line", () => {
+    // Some tools strip a context line's leading space from an empty line.
+    const [file] = parseUnifiedDiff(
+      [
+        "diff --git a/a.ts b/a.ts",
+        "--- a/a.ts",
+        "+++ b/a.ts",
+        "@@ -1,3 +1,4 @@",
+        " const a = 1;",
+        "",
+        "+const b = 2;",
+        " const c = 3;",
+        "",
+      ].join("\n"),
+    );
+    expect(file!.hunks[0]!.lines).toEqual([" const a = 1;", "", "+const b = 2;", " const c = 3;"]);
+  });
+});
+
 describe("line numbering", () => {
   it("maps added lines to their real line numbers in the new file", () => {
     const file = fileOf("modified.ts");

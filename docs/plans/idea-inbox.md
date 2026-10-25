@@ -16,10 +16,6 @@ pulled deliberately.
 - 2026-08-04: a risk-tagged variant of the quality gate, so the risk-first
   ordering is exercised with non-empty tags somewhere outside the pipeline
   tests.
-- 2026-10-17: parseUnifiedDiff reads the empty line after a diff's final
-  newline as one more context line of the last hunk (src/lib/git/diff.ts,
-  the `line === ""` branch), so that hunk holds one line more than its
-  header declares; stop each hunk at its declared counts.
 - 2026-10-17: the probe's candidate models (fable-5, opus-5, sonnet-5,
   haiku-4-5) trail the bundled CLI 2.1.301's own model table, which lists
   fable-5-1, opus-5-5, sonnet-5-5 and haiku-5-5 (found during 4.7, D-122).
@@ -96,6 +92,9 @@ pulled deliberately.
 Kept so the record of what was captured, and where it went, survives. Removing
 the line entirely would lose the trail.
 
+- 2026-10-17 parseUnifiedDiff read the empty line after a diff's final
+  newline as one more context line of the last hunk. DONE 2026-10-25, each
+  hunk stopped at its declared counts (D-219).
 - 2026-10-22 README's three screenshots were last taken in c09b2ad on
   2026-08-25. DONE 2026-10-25, re-shot from the browser suite and the
   README's claim about them corrected (D-212).

@@ -5331,3 +5331,13 @@ verified evidence, in writing, here.
   branch's tip is read once per look. A quiet list costs one git call per
   target branch. The answer for a tip cannot change, the reviewed commit
   being pinned, so nothing is missed; a restart asks each once more.
+- 2026-10-25 D-219 An outside audit's finding S2, in the idea inbox since
+  2026-10-17, read again here and shown failing first: the diff parser took
+  an empty line as a context line whatever the hunk's header declared, so
+  the empty string after git's final newline joined the last hunk as a line
+  the file does not have, and prompts and the screens showed it. Each hunk
+  now counts down the old and new lines its header declares and ends when
+  both are spent; an empty line inside a hunk, from a tool that strips a
+  context line's leading space, is still read as context. The ledger keeps
+  each hunk's header counts, not its lines, so a review seeded before is
+  read the same on resume.

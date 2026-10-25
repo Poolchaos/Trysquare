@@ -192,6 +192,9 @@ export function parseUnifiedDiff(patch: string): ParsedFile[] {
   const files: ParsedFile[] = [];
   let current: ParsedFile | null = null;
   let currentHunk: ParsedHunk | null = null;
+  // Old and new lines the current hunk header said its body still holds.
+  let oldLeft = 0;
+  let newLeft = 0;
   // Paths taken from the --- and +++ lines, which are more reliable than the
   // "diff --git" line because that line is ambiguous for paths with spaces.
   let headerOldPath: string | null = null;
@@ -335,6 +338,8 @@ export function parseUnifiedDiff(patch: string): ParsedFile[] {
         lines: [],
       };
       current.hunks.push(currentHunk);
+      oldLeft = oldLines;
+      newLeft = newLines;
       continue;
     }
 
@@ -344,17 +349,29 @@ export function parseUnifiedDiff(patch: string): ParsedFile[] {
         currentHunk.lines.push(line);
         continue;
       }
+      // The header says how many lines the body holds. Past them, an empty
+      // line was taken as one more context line: the one after a diff's
+      // final newline gave the last hunk a line the file does not have
+      // (audit finding S2).
+      if (oldLeft <= 0 && newLeft <= 0) {
+        currentHunk = null;
+        continue;
+      }
       if (line.startsWith("+")) {
         current.addedLines += 1;
+        newLeft -= 1;
         currentHunk.lines.push(line);
         continue;
       }
       if (line.startsWith("-")) {
         current.removedLines += 1;
+        oldLeft -= 1;
         currentHunk.lines.push(line);
         continue;
       }
       if (line.startsWith(" ") || line === "") {
+        oldLeft -= 1;
+        newLeft -= 1;
         currentHunk.lines.push(line);
         continue;
       }
