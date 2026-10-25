@@ -29,6 +29,8 @@ export async function PATCH(
     const { db } = runtime();
     const { id, code } = await context.params;
     const patch = await readJson(request, body);
-    return ok(patchRule(db, id, decodeURIComponent(code), patch));
+    // Already decoded by Next, as every route's params are; a second decode
+    // would throw on a code holding a % (audit finding 6).
+    return ok(patchRule(db, id, code, patch));
   });
 }
