@@ -2550,7 +2550,13 @@ test("a review that finished with nothing to decide can be completed", async ({ 
   await page.goto("/reviews");
   const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
   await expect(row).toBeVisible({ timeout: 30_000 });
-  await page.route("**/api/reviews/*", asClean);
+  // The review's own address: "**/api/reviews/*" is the top bar's attention
+  // poll too.
+  const reading = `**${await row.getByRole("link").getAttribute("href")}`.replace(
+    "/reviews/",
+    "/api/reviews/",
+  );
+  await page.route(reading, asClean);
   try {
     await row.getByRole("link").click();
     await expect(
@@ -2562,7 +2568,82 @@ test("a review that finished with nothing to decide can be completed", async ({ 
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, page.getByRole("main"), "review-finished-clean");
   } finally {
-    await page.unroute("**/api/reviews/*", asClean);
+    await page.unroute(reading, asClean);
+  }
+});
+
+test("an older reading of a review landing last does not put back what it said", async ({
+  page,
+}) => {
+  // Audit finding U1: readings of a review were applied as they landed, so
+  // an older one landing after a newer one put back a status or a stage the
+  // run had left. The page's first reading is answered as a finished review
+  // read while it ran, and held until the others have landed.
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  // The review's own address: "**/api/reviews/*" is the top bar's attention
+  // poll too.
+  const reading = `**${await row.getByRole("link").getAttribute("href")}`.replace(
+    "/reviews/",
+    "/api/reviews/",
+  );
+  const stopAnswering = await answerOnce(page, reading, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { running: boolean; review: { status: string } };
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    await route.fulfill({
+      response,
+      json: { ...body, running: true, review: { ...body.review, status: "running" } },
+    });
+  });
+  try {
+    await row.getByRole("link").click();
+    // The review's own header: the list it was opened from says "complete"
+    // too, for a moment after the click.
+    await page.waitForURL(/\/reviews\/[A-Z0-9]+$/);
+    const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+    await page.waitForTimeout(2_500);
+    await expect(header.getByText("complete", { exact: true })).toBeVisible();
+    await expect(header.getByText("running", { exact: true })).toHaveCount(0);
+  } finally {
+    await stopAnswering();
+  }
+});
+
+test("a run that ends before its page's stream listens is still seen to end", async ({ page }) => {
+  // Review round 13: the page reads the review, then opens its stream, and a
+  // run ending between the two was announced to no stream; the page showed
+  // it running until the stream was next opened, up to ten minutes later
+  // (D-221). The reading taken before the stream listens is answered as that
+  // stale one: a finished review read as running. Not `times: 1`, see
+  // answerOnce.
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  // The review's own address: "**/api/reviews/*" is the top bar's attention
+  // poll too.
+  const reading = `**${await row.getByRole("link").getAttribute("href")}`.replace(
+    "/reviews/",
+    "/api/reviews/",
+  );
+  const stopAnswering = await answerOnce(page, reading, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { running: boolean; review: { status: string } };
+    await route.fulfill({
+      response,
+      json: { ...body, running: true, review: { ...body.review, status: "running" } },
+    });
+  });
+  try {
+    await row.getByRole("link").click();
+    // The review's own header: the list it was opened from says "complete"
+    // too, for a moment after the click.
+    await page.waitForURL(/\/reviews\/[A-Z0-9]+$/);
+    const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+    await expect(header.getByText("complete", { exact: true })).toBeVisible({ timeout: 10_000 });
+  } finally {
+    await stopAnswering();
   }
 });
 

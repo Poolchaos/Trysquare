@@ -5458,3 +5458,18 @@ verified evidence, in writing, here.
   that found nothing waited on a person with no way to finish. It is now
   mounted for every review awaiting a person; with nothing in it, it says
   so and offers Complete review, which the server already allowed.
+- 2026-10-25 An outside audit's finding U1, with review round 13's
+  finding on D-221: the review page applied each reading of a review as it
+  landed, so an older one landing after a newer one put back a status or a
+  stage the run had left; and it read the review before its stream
+  listened, so a run ending between the two was announced to no one and
+  the page showed it running until the stream was next opened, up to ten
+  minutes on. Each reading now counts, and one overtaken by a later reading
+  is dropped with its error; and the page reads the review again once its
+  stream listens. Browser tests pin each, and each fails with either half
+  taken away. D-221 said a reopened stream loses only engine lines: it
+  loses the feed's stage and note entries too, and the batch a stage is
+  on shows again at its next request; the stream's comment says so. Left
+  as it stands: a finished review's page reopens its stream every ten
+  minutes, one reading and one connection per open tab, which is also how
+  it learns that the review was deleted elsewhere.

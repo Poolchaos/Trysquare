@@ -31,8 +31,9 @@ const HEARTBEAT_MS = 15_000;
  * How far a reader may fall behind before the stream lets it go. Everything
  * for a tab that stopped reading used to queue for as long as the review ran
  * (4.23). The last frame tells the page to reconnect, and a new stream opens
- * with the whole picture; only the live tail of engine lines in between is
- * not replayed.
+ * with the whole picture; the live feed's entries sent in between, engine
+ * lines, stages and notes, are not replayed, and the batch a stage is on
+ * shows again at its next request (review round 13).
  */
 const MAX_FRAMES_BEHIND = 256;
 

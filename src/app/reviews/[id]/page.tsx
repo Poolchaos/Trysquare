@@ -445,6 +445,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   // again that could never work (D-138).
   const [loadMissing, setLoadMissing] = useState(false);
   const lastReadError = useRef("");
+  const readsAsked = useRef(0);
   // Which request of how many is in flight, for the stage that divides its
   // work. Cleared when a stage without batches starts, so it never describes
   // the stage before it.
@@ -494,11 +495,16 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   // is in the run notes, folded under Run detail.
   const [checkoutLeft, setCheckoutLeft] = useState("");
 
-  async function fetchSnapshot(): Promise<Snapshot | null> {
+  async function fetchSnapshot(): Promise<Snapshot | null | "superseded"> {
+    const asked = ++readsAsked.current;
     // A dropped request reads as no picture, as a refusal does. Thrown, it
     // escaped the theater's cancel, which then said nothing at all when the
     // server had gone away (review of 5.1 to 5.4).
     const sent = await send<Snapshot>(`/api/reviews/${id}`, {}, "This review could not be read");
+    // A reading asked for after this one speaks for the review instead:
+    // applied as they landed, an older one landing last put back a status or
+    // a stage the run had left (audit finding U1).
+    if (asked !== readsAsked.current) return "superseded";
     // No such review is no run to follow: its stream is not opened again and
     // the poll stops, where both went on for as long as the tab stayed open
     // (D-137).
@@ -558,7 +564,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
   async function reload() {
     const fresh = await fetchSnapshot();
-    if (fresh) setSnapshot(fresh);
+    if (fresh && fresh !== "superseded") setSnapshot(fresh);
   }
 
   /** A new run needs a new stream: the old one was closed by the run that ended. */
@@ -628,7 +634,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
     void (async () => {
       const fresh = await fetchSnapshot();
-      if (cancelled) return;
+      if (cancelled || fresh === "superseded") return;
       // A review that cannot be read is not a review that is slow to read.
       if (fresh) setSnapshot(fresh);
       else {
@@ -643,6 +649,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     source.onopen = () => {
       reconnects.current = 0;
       setStreaming(true);
+      // Read again once the stream listens: the reading above was taken
+      // before it did, and a run ending between the two was announced to no
+      // one, the page showing it running until the stream was next opened
+      // (review round 13).
+      void reload();
     };
 
     source.addEventListener("update", (event) => {
@@ -732,7 +743,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         if (cancelled) return;
         void (async () => {
           const fresh = await fetchSnapshot();
-          if (cancelled) return;
+          if (cancelled || fresh === "superseded") return;
           if (!fresh) {
             // A review that does not exist, or one a reading showed not
             // live: a run just started or resumed is unknown, so a dropped
