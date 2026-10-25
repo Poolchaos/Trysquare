@@ -74,8 +74,24 @@ async function readAvailable(response: Response, frames: number): Promise<string
   return text;
 }
 
-function open(signal = new AbortController().signal) {
-  return reviewEventStream(watcher, reviewId, { signal }, { heartbeatMs: 20 });
+function open(signal = new AbortController().signal, maxLifetimeMs?: number) {
+  return reviewEventStream(
+    watcher,
+    reviewId,
+    { signal },
+    { heartbeatMs: 20, ...(maxLifetimeMs === undefined ? {} : { maxLifetimeMs }) },
+  );
+}
+
+/** Everything the stream sends until it ends. */
+async function readToEnd(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<string> {
+  const decoder = new TextDecoder();
+  let text = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return text;
+    text += decoder.decode(value, { stream: true });
+  }
 }
 
 describe("opening the stream", () => {
@@ -177,6 +193,28 @@ describe("closing the stream", () => {
       text += decoder.decode(value, { stream: true });
     }
     expect(text.trimEnd().endsWith("event: reconnect\ndata: {}")).toBe(true);
+  });
+
+  it("lets go of a stopped reader on a quiet run once the stream's time is up", async () => {
+    // Audit finding S5, D-221: on a quiet run only heartbeats queue, and the
+    // buffers between the stream and the browser held some 62 hours of them
+    // before the frame limit above could see a backlog.
+    const response = open(undefined, 100);
+    const reader = response.body!.getReader();
+    await reader.read(); // the snapshot, then nothing more is read
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(bus.listenerCount(reviewId)).toBe(0);
+    expect((await readToEnd(reader)).trimEnd().endsWith("event: reconnect\ndata: {}")).toBe(true);
+  });
+
+  it("tells a page that is reading to open a new stream once the stream's time is up", async () => {
+    const response = open(undefined, 100);
+    const reader = response.body!.getReader();
+    const text = await readToEnd(reader); // read as it comes, heartbeats and all
+    expect(text).toContain(": heartbeat");
+    expect(text.trimEnd().endsWith("event: reconnect\ndata: {}")).toBe(true);
+    expect(bus.listenerCount(reviewId)).toBe(0);
   });
 
   it("keeps a reader that keeps up, however much happens", async () => {

@@ -36,8 +36,19 @@ const HEARTBEAT_MS = 15_000;
  */
 const MAX_FRAMES_BEHIND = 256;
 
+/**
+ * How long one stream lives before it tells the page to open another. A
+ * reader that stopped with its connection still open was let go only by the
+ * limit above, and on a quiet run only heartbeats queue: node's and the
+ * socket's buffers took 14,896 of them before the stream saw any backlog,
+ * some 62 hours at one each 15 seconds (audit finding S5, D-221). A page that
+ * is reading opens the next stream at once, with the whole picture.
+ */
+const MAX_LIFETIME_MS = 10 * 60_000;
+
 export interface StreamOptions {
   heartbeatMs?: number;
+  maxLifetimeMs?: number;
 }
 
 function frame(event: string, data: unknown): string {
@@ -53,6 +64,7 @@ export function reviewEventStream(
   const encoder = new TextEncoder();
   let unsubscribe: (() => void) | undefined;
   let heartbeat: ReturnType<typeof setInterval> | undefined;
+  let lifetime: ReturnType<typeof setTimeout> | undefined;
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -67,24 +79,28 @@ export function reviewEventStream(
           open = false;
           return;
         }
-        if ((controller.desiredSize ?? 0) < -MAX_FRAMES_BEHIND) {
-          // Read after everything already queued, and tells the page to open
-          // a new stream; a stream that simply ended reads as an error, and
-          // the page would fall back to polling.
-          try {
-            controller.enqueue(encoder.encode(frame("reconnect", {})));
-          } catch {
-            // The reader went away as well; there is no one left to tell.
-          }
-          close();
-        }
+        if ((controller.desiredSize ?? 0) < -MAX_FRAMES_BEHIND) letGo();
       };
+
+      // Read after everything already queued, and tells the page to open a
+      // new stream; a stream that simply ended reads as an error, and the
+      // page would fall back to polling.
+      function letGo(): void {
+        if (!open) return;
+        try {
+          controller.enqueue(encoder.encode(frame("reconnect", {})));
+        } catch {
+          // The reader went away as well; there is no one left to tell.
+        }
+        close();
+      }
 
       function close(): void {
         if (!open) return;
         open = false;
         unsubscribe?.();
         if (heartbeat) clearInterval(heartbeat);
+        if (lifetime) clearTimeout(lifetime);
         try {
           controller.close();
         } catch {
@@ -106,6 +122,8 @@ export function reviewEventStream(
       // Node keeps the process alive for a pending timer; a heartbeat should
       // not be a reason for the server to refuse to exit.
       heartbeat.unref?.();
+      lifetime = setTimeout(letGo, options.maxLifetimeMs ?? MAX_LIFETIME_MS);
+      lifetime.unref?.();
 
       if (request.signal.aborted) close();
       else request.signal.addEventListener("abort", close, { once: true });
@@ -114,6 +132,7 @@ export function reviewEventStream(
     cancel() {
       unsubscribe?.();
       if (heartbeat) clearInterval(heartbeat);
+      if (lifetime) clearTimeout(lifetime);
     },
   });
 

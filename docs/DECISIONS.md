@@ -5387,3 +5387,19 @@ verified evidence, in writing, here.
   leaves out the repository as the hunk key does, which matters only for a
   linked repository sharing the primary's slug; bare addresses and "@name"
   still link where the report is pasted, which no escape prevents.
+- 2026-10-25 D-221 An outside audit's finding S5, read again here: a
+  reader that stops with its connection open was let go only once 256
+  frames queued behind it, and on a quiet run only heartbeats queue, one
+  each 15 seconds. The audit put that at about 64 minutes; it is far longer.
+  Measured on this machine with node's http serving a ReadableStream to a
+  client that read one chunk and paused (three runs, scratch script): the
+  stream saw no backlog until 14,896 heartbeats, 208,544 bytes, had gone
+  into node's and the socket's buffers, some 62 hours; a client that kept
+  reading showed none in 50,000. Both fixes the audit offered, counting
+  only other frames or closing once heartbeats back up, act only after
+  that backlog appears. Each stream now lives at most ten minutes and then
+  sends the reconnect frame and closes; a page that is reading opens a new
+  stream at once, with a fresh snapshot, losing only engine lines sent in
+  that moment, as for the frame limit (4.23). Rejected: the audit's two
+  fixes, for the reason above; and erroring the stream to free the socket,
+  which would drop the reconnect frame a live page reads.

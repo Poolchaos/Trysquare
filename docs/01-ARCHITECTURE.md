@@ -58,7 +58,9 @@ Versions are pinned at WP-A and recorded in `PROJECT-STATE.md` once installed.
   immediately; UI subscribes via one SSE endpoint per review
   (`/api/reviews/[id]/events`). A dropped stream falls back to polling
   every two seconds and is opened again after a wait that doubles from one
-  second to thirty, while the run is live (5.12).
+  second to thirty, while the run is live (5.12). The server ends a stream
+  that is 256 frames behind, and every stream after ten minutes, with a last
+  frame telling the page to open a new one at once (4.23, D-221).
 - **Crash/restart:** on boot, any review in a running state is marked
   `interrupted`. Interrupted reviews are resumable: completed stages are
   never re-run; the interrupted stage restarts (or resumes its CLI session
