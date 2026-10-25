@@ -133,10 +133,43 @@ export interface ReportInput {
   completedAt: string | null;
 }
 
+/**
+ * Text a person or a model wrote, made literal for the markdown it goes into
+ * (audit finding S1): kept on its line, since a reason holding a line break
+ * and "## Confirmed" wrote a section of its own, and with markdown's own
+ * characters escaped, so a link, an image or raw HTML reads as the text it
+ * is. A finding's words can be steered by the code under review.
+ */
+function md(text: string): string {
+  return text.replace(/\s*\r?\n\s*/g, " ").replace(/[\\`*_[\]<>#!~|]/g, "\\$&");
+}
+
+/** One line of code, in a span longer than any run of backticks inside it. */
+function code(text: string): string {
+  const flat = text.replace(/\s*\r?\n\s*/g, " ");
+  const longest = Math.max(0, ...(flat.match(/`+/g) ?? []).map((run) => run.length));
+  const ticks = "`".repeat(longest + 1);
+  const pad = flat.startsWith("`") || flat.endsWith("`") ? " " : "";
+  return `${ticks}${pad}${flat}${pad}${ticks}`;
+}
+
+/**
+ * Lines of code in a fence longer than any run of backticks inside them: a
+ * fixed three ended at the first quoted line holding three, and the rest
+ * read as markdown (audit finding S1).
+ */
+function fenced(text: string): string[] {
+  const longest = Math.max(2, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  const fence = "`".repeat(longest + 1);
+  return [fence, text, fence];
+}
+
 export function renderReport(input: ReportInput): string {
   const lines: string[] = [];
 
-  lines.push(`# Review: ${input.projectName} ${input.fromBranch} into ${input.intoBranch}`);
+  lines.push(
+    `# Review: ${md(input.projectName)} ${md(input.fromBranch)} into ${md(input.intoBranch)}`,
+  );
   lines.push("");
   lines.push(summary(input));
   lines.push("");
@@ -146,7 +179,7 @@ export function renderReport(input: ReportInput): string {
     lines.push("");
     lines.push("As described by its author, and checked against the code rather than taken on:");
     lines.push("");
-    lines.push(`> ${input.intent.split("\n").join("\n> ")}`);
+    lines.push(...input.intent.split(/\r?\n/).map((line) => `> ${md(line)}`));
     lines.push("");
   }
 
@@ -182,19 +215,17 @@ export function renderReport(input: ReportInput): string {
     lines.push(checksIntro(allChecks));
     lines.push("");
     for (const check of confirmedChecks) {
-      lines.push(`### ${check.severity}: ${check.issue}`);
+      lines.push(`### ${check.severity}: ${md(check.issue)}`);
       lines.push("");
       if (check.command)
-        lines.push(`Ran \`${check.command}\`. ${check.verificationNote ?? ""}`.trimEnd());
+        lines.push(`Ran ${code(check.command)}. ${md(check.verificationNote ?? "")}`.trimEnd());
       if (check.screenshotName) {
-        lines.push(`Screenshot \`${check.screenshotName}\`: ${check.evidence}`);
-        if (check.verificationNote) lines.push("", check.verificationNote);
+        lines.push(`Screenshot ${code(check.screenshotName)}: ${md(check.evidence)}`);
+        if (check.verificationNote) lines.push("", md(check.verificationNote));
       }
       lines.push("");
       if (!check.screenshotName && check.evidence.trim() !== "") {
-        lines.push("```");
-        lines.push(check.evidence.trimEnd());
-        lines.push("```");
+        lines.push(...fenced(check.evidence.trimEnd()));
         lines.push("");
       }
     }
@@ -204,10 +235,10 @@ export function renderReport(input: ReportInput): string {
       lines.push("");
       for (const check of checks) {
         lines.push(
-          `- ${check.issue}` +
-            (check.command ? ` (\`${check.command}\`)` : "") +
-            (check.screenshotName ? ` (screenshot \`${check.screenshotName}\`)` : "") +
-            (check.dismissReason ? ` Reason: ${check.dismissReason}` : ""),
+          `- ${md(check.issue)}` +
+            (check.command ? ` (${code(check.command)})` : "") +
+            (check.screenshotName ? ` (screenshot ${code(check.screenshotName)})` : "") +
+            (check.dismissReason ? ` Reason: ${md(check.dismissReason)}` : ""),
         );
       }
       lines.push("");
@@ -227,8 +258,8 @@ export function renderReport(input: ReportInput): string {
     lines.push("");
     for (const finding of findings) {
       lines.push(
-        `- ${finding.filePath}:${finding.lineStart} ${finding.issue}` +
-          (finding.dismissReason ? ` Reason: ${finding.dismissReason}` : ""),
+        `- ${md(finding.filePath)}:${finding.lineStart} ${md(finding.issue)}` +
+          (finding.dismissReason ? ` Reason: ${md(finding.dismissReason)}` : ""),
       );
     }
     lines.push("");
@@ -363,14 +394,14 @@ export function refutedOnlySentence(coverage: {
  */
 function renderFinding(finding: ReportFinding): string[] {
   return [
-    `File: ${finding.filePath}`,
+    `File: ${md(finding.filePath)}`,
     `Lines: ${lineRange(finding)}`,
-    ...(finding.ruleCode ? [`Rule: ${finding.ruleCode}`] : []),
-    `Issue: ${finding.issue}`,
-    `Comment: ${finding.comment}`,
-    ...(finding.mechanism ? [`Mechanism: ${finding.mechanism}`] : []),
+    ...(finding.ruleCode ? [`Rule: ${md(finding.ruleCode)}`] : []),
+    `Issue: ${md(finding.issue)}`,
+    `Comment: ${md(finding.comment)}`,
+    ...(finding.mechanism ? [`Mechanism: ${md(finding.mechanism)}`] : []),
     "",
-    ...(finding.quotedCode ? ["```", finding.quotedCode, "```", ""] : []),
+    ...(finding.quotedCode ? [...fenced(finding.quotedCode), ""] : []),
   ];
 }
 
@@ -383,14 +414,14 @@ function lineRange(finding: ReportFinding): string {
 
 function footer(input: ReportInput): string[] {
   const rows = [
-    `- Ruleset: ${input.rulesetName} version ${input.rulesetVersion}`,
+    `- Ruleset: ${md(input.rulesetName)} version ${input.rulesetVersion}`,
     `- Model: ${input.model}, effort ${input.effort}, profile ${input.profile}`,
     `- Reviewed: ${input.fromCommit} against merge base ${input.mergeBaseCommit}`,
   ];
 
   if (input.linked) {
     rows.push(
-      `- Together with: ${input.linked.projectName} ${input.linked.fromBranch} ` +
+      `- Together with: ${md(input.linked.projectName)} ${md(input.linked.fromBranch)} ` +
         `at ${input.linked.fromCommit}`,
     );
   }

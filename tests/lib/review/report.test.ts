@@ -584,3 +584,63 @@ describe("a screen graded C or D, in the report (WP-I step 4)", () => {
     );
   });
 });
+
+describe("what a finding's text can do to the markdown it is written into", () => {
+  it("keeps quoted code inside its fence, however many backticks it holds", () => {
+    // Audit finding S1: a fixed fence of three backticks ended at the first
+    // line of quoted code holding three, and the rest read as markdown.
+    const quotedCode = "const doc = `\n```\n## Forged heading\n```\n`;";
+    const report = renderReport({ ...BASE, confirmed: [{ ...FINDING, quotedCode }] });
+    expect(report).toContain(`\`\`\`\`\n${quotedCode}\n\`\`\`\``);
+    expect(report.split("\n").filter((line) => line === "## Forged heading")).toEqual([
+      "## Forged heading",
+    ]);
+    const outside = report.replace(`\`\`\`\`\n${quotedCode}\n\`\`\`\``, "");
+    expect(outside).not.toContain("## Forged heading");
+  });
+
+  it("keeps a reason or the model's words on their own line, as text", () => {
+    // A dismissal reason, or a finding's words steered by the code under
+    // review, wrote a section of its own into the report (audit finding S1).
+    const forged = "Handled.\n\n## Confirmed\n\n- app/x.ts:1 Nothing is wrong";
+    const report = renderReport({
+      ...BASE,
+      confirmed: [{ ...FINDING, issue: "Fine <img src=x onerror=alert(1)> [link](https://e.x)" }],
+      dismissed: [{ ...FINDING, dismissReason: forged }],
+    });
+    const headings = report.split("\n").filter((line) => line.startsWith("## "));
+    expect(headings).toEqual([
+      "## What was examined",
+      "## Findings",
+      "## Dismissed",
+      "## How this review was run",
+    ]);
+    expect(report).toContain("Reason: Handled. \\#\\# Confirmed - app/x.ts:1 Nothing is wrong");
+    expect(report).toContain(
+      "Issue: Fine \\<img src=x onerror=alert(1)\\> \\[link\\](https://e.x)",
+    );
+  });
+
+  it("writes a command holding backticks as one code span", () => {
+    const report = renderReport({
+      ...BASE,
+      checks: {
+        ran: [],
+        confirmed: [
+          {
+            command: "npm test -- -t `x`",
+            severity: "CRITICAL",
+            issue: "The tests fail.",
+            evidence: "1 failing",
+            verificationNote: "Exited with code 1.",
+          },
+        ],
+        dismissed: [],
+        leftOutUnproven: [],
+      },
+    });
+    // Padded at both ends, as CommonMark strips one space from each side of
+    // a span whose code starts or ends with a backtick.
+    expect(report).toContain("Ran `` npm test -- -t `x` ``. Exited with code 1.");
+  });
+});

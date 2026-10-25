@@ -5298,3 +5298,17 @@ verified evidence, in writing, here.
   trusted. Rejected for now: a launch token every page and call must carry
   (in the idea inbox), and refusing those two routes without the app's own
   Origin, which would leave the others, the data wipe among them, open.
+- 2026-10-25 D-216 An outside audit's finding S1, read again here and
+  shown failing first: the exported markdown report wrote quoted code in a
+  fixed three-backtick fence, which ended at the first quoted line holding
+  three, so the rest of the code read as markdown; and it wrote dismissal
+  reasons, the model's issue, comment and mechanism, and the names a
+  person gives as they were, so a reason holding a line break and
+  "## Confirmed" wrote a section of its own, and a link, image or raw HTML
+  in a finding's words rendered as one. A finding's words can be steered
+  by the code under review, so a reviewed repository could write part of
+  its own report. Now quoted code and command output take a fence longer
+  than any run of backticks inside, a command or name a code span the same
+  way, and every other written value is kept on its line with markdown's
+  own characters escaped; the author's intent stays a quotation, line by
+  line. The HTML export escaped already and is unchanged.
