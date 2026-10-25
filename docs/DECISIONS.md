@@ -5425,3 +5425,20 @@ verified evidence, in writing, here.
   deleting the project and adding that address is the way to be rid of
   it. Rejected: removing the token from the row and the clone's settings
   in place, which would write inside a clone, and the app never does.
+- 2026-10-25 D-224 An outside audit's finding S6, the choice the
+  maintainer's: cancelling a review waiting its turn ended it as cancelled,
+  final, though it never ran, and the cancel route said only that it took
+  a queued review out of the line. The 2026-08-04 fix made it cancelled so
+  that a dequeue changed something every tab could see; that stands, and
+  is now done without ending the review. A review waiting its turn offers
+  Leave the line in place of Cancel, with no question asked: a new route
+  takes it out of the line, keeps its status, a draft still a draft, and
+  tells every watcher, so another tab stops showing it waiting. Out of the
+  line it offers what any review of its status does, Cancel and Delete
+  among them. The cancel route keeps its meaning for a caller that means
+  it. Its screen, shot for this, said a review that had not run had no
+  findings because every hunk was accounted for; a draft or a waiting
+  review now says findings appear once it has run, and one that stopped
+  short says none were reported before it stopped. Rejected: keeping the
+  cancel and saying on the button that it is final, which the maintainer
+  declined.

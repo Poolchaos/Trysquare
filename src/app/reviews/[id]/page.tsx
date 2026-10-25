@@ -472,6 +472,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   /** The status a Cancel was asked under, or null when none is being asked. */
   const [confirmingCancelFor, setConfirmingCancelFor] = useState<string | null>(null);
   const [cancellingHere, setCancellingHere] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [actionError, setActionError] = useState("");
   // Shown once the server refuses a Start or Resume for a sign-in billing per
   // token this page had not said, and sent with the next (review of D-161).
@@ -515,6 +516,28 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
    * used to be ignored, so a cancel that failed looked like one that worked
    * (5.1). Empty when the cancel took.
    */
+  /** Takes a review waiting its turn out of the line; it keeps its status (D-224). */
+  async function leaveQueue() {
+    setLeaving(true);
+    try {
+      const sent = await send<{ left?: boolean }>(
+        `/api/reviews/${id}/leave-queue`,
+        { method: "POST" },
+        "The review could not leave the line",
+      );
+      setActionError(
+        !sent.ok
+          ? sent.error
+          : sent.body.left === false
+            ? "It was no longer waiting: it had started, or left the line already."
+            : "",
+      );
+      await reload();
+    } finally {
+      setLeaving(false);
+    }
+  }
+
   async function cancelReview(): Promise<string> {
     const response = await fetch(`/api/reviews/${id}/cancel`, { method: "POST" }).catch(
       (error: unknown) => (error instanceof Error ? error : new Error(String(error))),
@@ -877,13 +900,21 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
    * those two the confirmation queue takes over, because that is the one
    * moment the findings are a thing to act on rather than a thing to look at.
    */
+  // Said of the review as it stands: a draft, or one waiting its turn, was
+  // told every hunk had been accounted for before anything had run (D-224).
+  const [emptyTitle, emptyText] = snapshot.running
+    ? [
+        "Nothing reported yet",
+        "Findings appear once the adversarial pass has run and each one has been checked against the file.",
+      ]
+    : snapshot.queued || snapshot.review.status === "draft"
+      ? ["Nothing reported yet", "Findings appear once the review has run."]
+      : snapshot.review.status === "complete"
+        ? ["No findings", "Every hunk was accounted for and nothing survived verification."]
+        : ["No findings", "None were reported before the review stopped."];
   const renderReadOnly = () =>
     reported.length === 0 ? (
-      <Empty title={snapshot.running ? "Nothing reported yet" : "No findings"}>
-        {snapshot.running
-          ? "Findings appear once the adversarial pass has run and each one has been checked against the file."
-          : "Every hunk was accounted for and nothing survived verification."}
-      </Empty>
+      <Empty title={emptyTitle}>{emptyText}</Empty>
     ) : (
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {reported.map((finding) => (
@@ -1063,7 +1094,13 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {/* The machine, not a status list: a list here would be the fourth
                 place to forget one, and it was (paused and interrupted reviews
                 had no way to be cancelled from the screen). */}
-            {snapshot.queued || canTransitionReview(review.status as ReviewStatus, "cancelled") ? (
+            {snapshot.queued ? (
+              // Out of the line, not ended: it has not run, and cancelling it
+              // here ended it for good (audit finding S6, D-224).
+              <Button disabled={leaving} onClick={() => void leaveQueue()}>
+                {leaving ? "Leaving..." : "Leave the line"}
+              </Button>
+            ) : canTransitionReview(review.status as ReviewStatus, "cancelled") ? (
               // Asks first: cancelled is terminal, and one click used to end
               // a review (5.1). The question belongs to the status it was
               // asked under: left armed, it outlived a run finishing, and one

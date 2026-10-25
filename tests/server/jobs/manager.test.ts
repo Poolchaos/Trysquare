@@ -315,6 +315,31 @@ describe("stopping a review", () => {
     expect(requireReview(db, second).status).toBe("cancelled");
   }, 240_000);
 
+  it("lets a review waiting its turn leave the line, still a draft", async () => {
+    // Audit finding S6, D-224: cancelling a queued review ended for good a
+    // review that never ran. Leaving the line keeps it as it was, and tells
+    // a watcher, so no other tab goes on showing it waiting.
+    const first = seedReview();
+    const second = seedReview();
+    start(first);
+    start(second);
+
+    const heard: string[] = [];
+    manager.subscribe(second, (event) => {
+      if (event.kind === "status") heard.push(event.status);
+    });
+
+    expect(manager.leaveQueue(second)).toBe(true);
+    expect(manager.queueDepth()).toBe(0);
+    expect(requireReview(db, second).status).toBe("draft");
+    expect(heard).toEqual(["draft"]);
+    // Not waiting any more, so nothing to leave, and the run ending does not
+    // start it.
+    expect(manager.leaveQueue(second)).toBe(false);
+    await manager.settled(first);
+    expect(requireReview(db, second).status).toBe("draft");
+  }, 240_000);
+
   it("cancels a draft that never started, without deleting its row", () => {
     // Previously the only way to be rid of a draft was to delete it, which on
     // a review that had already run would also discard its findings.

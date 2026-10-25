@@ -3238,7 +3238,23 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
     "ReviewAlreadyStartedError",
   );
 
-  // Both cancelled, the waiting one first, so neither runs on into the suites after.
+  // Waiting, it offers to leave the line, not to be cancelled: cancelling
+  // ended for good a review that never ran (audit finding S6, D-224).
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(0);
+  // Nor does it say every hunk was accounted for before anything has run.
+  await expect(page.getByText("Findings appear once the review has run.")).toBeVisible();
+  await expect(page.getByText(/Every hunk was accounted for/)).toHaveCount(0);
+  expect(await accessibilityViolations(page)).toEqual([]);
+  await shootAll(page, page.getByRole("main"), "review-queued");
+  await page.getByRole("button", { name: "Leave the line", exact: true }).click();
+  await expect(page.getByText(/Waiting for the running review to finish/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Start review" })).toBeVisible();
+  await expect(page.getByText("draft", { exact: true })).toBeVisible();
+  expect(await accessibilityViolations(page)).toEqual([]);
+  await shootAll(page, page.getByRole("main"), "review-left-line");
+
+  // Both cancelled, the one out of the line first, so neither runs on into
+  // the suites after.
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
   await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 30_000 });
@@ -3320,6 +3336,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "GET reviews/[id]": {},
     "DELETE reviews/[id]": {},
     "POST reviews/[id]/cancel": { data: {} },
+    "POST reviews/[id]/leave-queue": { data: {} },
     "POST reviews/[id]/complete": { data: {} },
     "GET reviews/[id]/context": { query: "?path=app/README.md&line=1" },
     "GET reviews/[id]/events": {},

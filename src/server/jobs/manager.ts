@@ -353,6 +353,20 @@ export class JobManager {
   }
 
   /**
+   * Takes a review waiting its turn out of the line, and nothing more: it
+   * keeps its status, a draft still a draft, and a watcher is told, so no tab
+   * goes on showing it waiting. A person's way out of the line; cancelling
+   * one ended for good a review that never ran (audit finding S6, D-224).
+   * False when it was not waiting.
+   */
+  leaveQueue(reviewId: string): boolean {
+    const status = statusOf(requireReview(this.requireDb(), reviewId));
+    if (!this.dequeue(reviewId)) return false;
+    this.bus.emit(reviewId, { kind: "status", status });
+    return true;
+  }
+
+  /**
    * Takes a review out of the queue without judging its status.
    *
    * For the delete paths: a queued review is about to stop existing, and the
