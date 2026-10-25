@@ -3,7 +3,8 @@
 The live cache. Current facts only; if a change makes a line here wrong,
 fixing it is part of that change. Dates are absolute (YYYY-MM-DD).
 
-Last verified: 2026-10-22, against the code at 89901b5 (MVP 7.2).
+Last verified: 2026-10-25, against the code at 97e18fa (an outside audit's
+finding 3: the structure counts below recounted from the code).
 
 ## Status
 
@@ -109,9 +110,9 @@ See `CLAUDE.md` section 3, whose commands were last re-proven on this
 Windows 11 machine on 2026-10-22: `./verify.sh`, with `--build` and
 `--e2e`, `npm run dev`, `npm run start`, `npm test`, `npm run typecheck`,
 `npm run lint`, `npm run format`, `npm run e2e` and `npm run
-db:generate`. `./verify.sh` is the single gate. At b0deb2f it passes
-with `--e2e` on Windows 11, 1188 unit tests passing and 10 skipped, plus
-99 browser tests (the journey, the failure paths, the theme and
+db:generate`. `./verify.sh` is the single gate. At 97e18fa it passes
+with `--e2e` on Windows 11, 1390 unit tests passing and 11 skipped, plus
+108 browser tests (the journey, the failure paths, the theme and
 screenshot pass, the phone-width pass, and axe over every screen in both
 themes; the shutdown pass runs on Linux and macOS only). `--e2e` implies `--build` since 2026-08-18, because Playwright serves
 the last build and without it the browser gate can pass against output that
@@ -156,19 +157,26 @@ are accepted; anything else is refused by name.
   git diff and URL parsing, a branch pair kept apart, changed exported
   symbols, mechanical sweeps, the quotation check, stage schemas, budget
   arithmetic, ruleset import with a fidelity gate, prompt composition, batch
-  planning, the report renderer, the request guard, and matching an error by
-  the name its class sets.
-- `src/server/db/` - schema (14 tables), client, migrations 0000 to 0015, and
+  planning, the report renderer, the request guard, matching an error by
+  the name its class sets, the five steps a review is read as, grading
+  screens A to D, and a project's own checks and the environment their
+  commands get.
+- `src/server/db/` - schema (16 tables), client, migrations 0000 to 0017, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
-  settings and stage executions.
-- `src/server/gitops/` - the only code that spawns git.
+  settings, stage executions, the scoreboard, a project's checks and what
+  they found.
+- `src/server/gitops/` - the only code that spawns git, including the
+  throwaway copy a project's own checks run in.
+- `src/server/projectrun/` - the only code that spawns a project's own
+  commands, in that copy (WP-I, D-196).
 - `src/server/engine/` - the only code that spawns claude, plus the
   `ReviewEngine` seam and the interactive (Mode B) engine, which spawns
   nothing and exchanges prompt and answer files with a person's own session.
 - `src/server/review/` - the pipeline, the verification stage's prompt and
   the checks on its verdicts, the engine runner, the checkpointing runner
   that makes a resumed stage free, the service that runs a review from a
-  row, merged detection, and the report assembler.
+  row, the project's checks within a review and the screenshots they
+  saved, merged detection, and the report assembler.
 - `src/server/jobs/` - the event bus, the job manager, and the SSE stream.
 - `src/server/projects/` - cloning a project in the background.
 - `src/server/runtime.ts` - the one door to the database and the job
@@ -177,7 +185,7 @@ are accepted; anything else is refused by name.
   it can run one; `real-path.ts` - a path resolved through its links.
 - `src/server/api/` - one response shape for every route.
 - `src/proxy.ts` - the request guard in front of every route (MVP WP 2.3).
-- `src/app/api/` - 36 route handlers. `src/app/` - 9 screens, plus a root
+- `src/app/api/` - 40 route handlers. `src/app/` - 9 screens, plus a root
   error boundary, a not-found page, and a metadata layout per segment.
 - `src/components/` - the shared UI vocabulary, the top bar, and the
   confirmation queue.
@@ -194,7 +202,7 @@ are accepted; anything else is refused by name.
 - `tests/` - unit and integration tests. `e2e/` - the browser journey, the
   failure paths, the theme and screenshot pass with the axe accessibility
   pass, and the shutdown pass.
-  `drizzle/` - sixteen committed migrations.
+  `drizzle/` - eighteen committed migrations.
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and

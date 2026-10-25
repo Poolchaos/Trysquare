@@ -5199,3 +5199,13 @@ verified evidence, in writing, here.
   Left: D-203 to D-207 are dated 2026-10-24 though decided on 2026-10-25,
   the day they were committed; this log is append-only, so the dates stand
   corrected here. Run notes written before D-208 are not redacted.
+- 2026-10-25 D-210 An outside audit's finding 3, read again here:
+  PROJECT-STATE's structure records had drifted through WP-I. Recounted
+  from the code at 97e18fa: 40 route handlers (it said 36), 16 tables (14),
+  18 migrations, 0000 to 0017 (0000 to 0015, "sixteen"), 9 screens (9). It
+  also left out server/projectrun, the throwaway copy in gitops, the
+  repositories for a project's checks, their findings and the scoreboard,
+  and the design, steps and checks modules in lib, and gave the gate's
+  counts at b0deb2f; all are current now, the gate's from ./verify.sh
+  --e2e at 97e18fa (1390 unit tests passing, 11 skipped, 108 browser
+  tests).
