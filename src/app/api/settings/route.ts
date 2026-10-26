@@ -12,6 +12,7 @@ import { SETTING_KEYS, readSettingOr, writeSettings } from "@/server/db/reposito
 import { handler, ok, readJson } from "@/server/api/respond";
 import { environmentClaudePath } from "@/server/cli-path";
 import { claudePathSchema } from "@/lib/settings/claude-path";
+import { requireRuleset } from "@/server/db/repositories/rulesets";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ const CATALOGUE = {
   [SETTING_KEYS.stageTimeoutMinutes]: { schema: z.number().int().positive(), fallback: 20 },
   [SETTING_KEYS.stageMaxBudgetUsd]: { schema: z.number().nonnegative(), fallback: 15 },
   [SETTING_KEYS.claudePath]: { schema: claudePathSchema, fallback: "" },
+  [SETTING_KEYS.defaultRulesetId]: { schema: z.string().min(1).nullable(), fallback: null },
 } as const;
 
 type Key = keyof typeof CATALOGUE;
@@ -81,6 +83,12 @@ export function PUT(request: Request): Promise<Response> {
         );
       }
       accepted.push([key, parsed.data]);
+    }
+    // A default names a ruleset that is there, or none (D-225).
+    for (const [key, value] of accepted) {
+      if (key === SETTING_KEYS.defaultRulesetId && typeof value === "string") {
+        requireRuleset(db, value);
+      }
     }
     writeSettings(db, accepted);
     // A raised limit is room for a waiting review now, not when a run ends.

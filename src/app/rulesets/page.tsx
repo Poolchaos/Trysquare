@@ -11,7 +11,17 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
-import { Button, Card, Empty, Field, Input, Problem, Select, Textarea } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  Field,
+  Input,
+  Problem,
+  Select,
+  Textarea,
+} from "@/components/ui";
 import { send } from "@/components/request";
 
 interface Ruleset {
@@ -43,10 +53,11 @@ export default function RulesetsPage() {
   // Why the list could not be read, said where it would be (5.13, U9): a
   // failed read used to leave the list empty for good, with no word.
   const [loadError, setLoadError] = useState("");
+  const [defaultId, setDefaultId] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
   const load = useCallback(async () => {
-    const sent = await send<{ rulesets: Ruleset[] }>(
+    const sent = await send<{ rulesets: Ruleset[]; defaultRulesetId: string | null }>(
       "/api/rulesets",
       {},
       "The rulesets could not be read",
@@ -57,19 +68,22 @@ export default function RulesetsPage() {
     }
     setLoadError("");
     setRulesets(sent.body.rulesets);
+    setDefaultId(sent.body.defaultRulesetId);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const sent = await send<{ rulesets: Ruleset[] }>(
+      const sent = await send<{ rulesets: Ruleset[]; defaultRulesetId: string | null }>(
         "/api/rulesets",
         {},
         "The rulesets could not be read",
       );
       if (cancelled) return;
-      if (sent.ok) setRulesets(sent.body.rulesets);
-      else setLoadError(sent.error);
+      if (sent.ok) {
+        setRulesets(sent.body.rulesets);
+        setDefaultId(sent.body.defaultRulesetId);
+      } else setLoadError(sent.error);
     })();
     return () => {
       cancelled = true;
@@ -270,6 +284,11 @@ export default function RulesetsPage() {
                                 >
                                   {ruleset.name}
                                 </Link>
+                                {ruleset.id === defaultId ? (
+                                  <span className="ml-2">
+                                    <Badge tone="accent">default</Badge>
+                                  </span>
+                                ) : null}
                                 <span className="block text-xs text-[var(--color-ink-muted)]">
                                   {ruleset.ruleCount} rule{ruleset.ruleCount === 1 ? "" : "s"}
                                   {ruleset.sourceDoc ? `, from ${ruleset.sourceDoc}` : ""}

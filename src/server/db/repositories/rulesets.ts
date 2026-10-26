@@ -22,6 +22,7 @@ import type { ImportedRuleset } from "@/lib/rulesets/model";
 import type { Db } from "../client";
 import { processDirectives, reviewRulesets, rules, rulesets } from "../schema";
 import { parseJsonColumn, serialiseJsonColumn } from "./json";
+import { SETTING_KEYS, readSetting } from "./settings";
 
 export type RulesetRow = typeof rulesets.$inferSelect;
 
@@ -304,6 +305,17 @@ function differsFromStored(db: Db, existing: RulesetRow, imported: ImportedRules
 /** The ruleset already stored under this name, if one is. */
 export function findRulesetByName(db: Db, name: string): RulesetRow | undefined {
   return db.select().from(rulesets).where(eq(rulesets.name, name)).get();
+}
+
+/**
+ * The ruleset new reviews start on, when one is chosen and still exists:
+ * deleting all data takes the rulesets and leaves the setting, so one gone
+ * reads as none chosen (D-225).
+ */
+export function defaultRulesetId(db: Db): string | null {
+  const chosen = readSetting(db, SETTING_KEYS.defaultRulesetId, z.string().nullable()) ?? null;
+  if (chosen === null) return null;
+  return db.select().from(rulesets).where(eq(rulesets.id, chosen)).get() ? chosen : null;
 }
 
 /** The ruleset row itself: its name, tier and version, not its rules. */

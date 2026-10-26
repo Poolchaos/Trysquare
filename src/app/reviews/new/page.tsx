@@ -309,7 +309,11 @@ function NewReview() {
           {},
           "The branches could not be listed",
         ),
-        send<{ rulesets: Ruleset[] }>("/api/rulesets", {}, "The rulesets could not be read"),
+        send<{ rulesets: Ruleset[]; defaultRulesetId?: string | null }>(
+          "/api/rulesets",
+          {},
+          "The rulesets could not be read",
+        ),
         send<{ models: Model[]; lastUsed: string | null }>(
           "/api/models",
           {},
@@ -369,7 +373,9 @@ function NewReview() {
       if (rulesetList.ok) {
         const listed = rulesetList.body.rulesets;
         setRulesets(listed);
-        setRulesetId((current) => current || (listed[0]?.id ?? ""));
+        // The default chosen on a ruleset's page, else the first (D-225).
+        const preferred = listed.find((row) => row.id === rulesetList.body.defaultRulesetId);
+        setRulesetId((current) => current || (preferred ?? listed[0])?.id || "");
       }
 
       // Only a model a probe currently vouches for is picked by default: the

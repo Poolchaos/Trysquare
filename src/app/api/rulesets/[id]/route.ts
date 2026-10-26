@@ -1,6 +1,6 @@
 /** One ruleset: what it checks, and which of those checks are switched on. */
 
-import { loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
+import { defaultRulesetId, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
 import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -31,6 +31,7 @@ export async function GET(
         sourceDoc: row.sourceDoc,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        isDefault: defaultRulesetId(db) === row.id,
       },
       directives: ruleset.directives.map((directive) => ({
         section: directive.section,

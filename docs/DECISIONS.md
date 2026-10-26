@@ -5622,3 +5622,16 @@ verified evidence, in writing, here.
   running; only the request itself could be stopped. They are now stopped
   with the dialog, however it closes, and a reply that lands after is not
   used. A browser test holds the sign-in read and finds Not now stops it.
+- 2026-10-26 D-225 The maintainer asked that the review protocol they use
+  for one app be a default a review can start on. The document cannot be
+  committed: the repository is public and the private-material gate
+  refuses it, so it is kept in docs/private and imported on this machine
+  from the Rulesets screen. Its five checklist steps were numbered again,
+  colliding with rules 1 to 5; D-63 stands (the maintainer chose it again),
+  so they were de-numbered in the private copy, which then imports with 66
+  rules, 72 directives and every one of its 3,071 lines accounted for. A
+  ruleset can now be made the default on its page (a setting,
+  defaultRulesetId, naming a ruleset that is there or none), the list marks
+  it, and a new review or a draft's Start begins on it, else on the first
+  by name as before. A default since deleted reads as none. Rejected:
+  shipping the protocol as a built-in ruleset, which would publish it.

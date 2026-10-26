@@ -46,4 +46,6 @@ export const SETTING_KEYS = {
   stageMaxBudgetUsd: "stageMaxBudgetUsd",
   /** The CLI reviews run through, the first setting that is not a number (6.1). */
   claudePath: "claudePath",
+  /** The ruleset a new review starts on, chosen on the ruleset's page (D-225). */
+  defaultRulesetId: "defaultRulesetId",
 } as const;

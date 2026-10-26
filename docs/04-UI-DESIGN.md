@@ -275,6 +275,9 @@ listed per project with merged badges; delete per 02 rules.
   since the import replaces its rules and undoes its edits; the same
   document is not. Export to markdown (round-trip clean).
 - Duplicate-to-tier action (e.g. copy a project rule into global).
+- Use by default for new reviews, on a ruleset's page (Stop using by
+  default undoes it); the list marks the default, and a new review, or a
+  draft's Start, begins on it rather than on the first by name (D-225).
 
 ### Settings
 

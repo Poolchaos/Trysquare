@@ -829,16 +829,17 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     if (!isDraft) return;
     let cancelled = false;
     void (async () => {
-      const sent = await send<{ rulesets: { id: string; name: string }[] }>(
-        "/api/rulesets",
-        {},
-        "The rulesets could not be read",
-      );
+      const sent = await send<{
+        rulesets: { id: string; name: string }[];
+        defaultRulesetId?: string | null;
+      }>("/api/rulesets", {}, "The rulesets could not be read");
       if (cancelled) return;
       setDraftReadProblem(sent.ok ? "" : sent.error);
       if (!sent.ok) return;
       setDraftRulesets(sent.body.rulesets);
-      setDraftRuleset((current) => current || (sent.body.rulesets[0]?.id ?? ""));
+      // The default chosen on a ruleset's page, else the first (D-225).
+      const preferred = sent.body.rulesets.find((row) => row.id === sent.body.defaultRulesetId);
+      setDraftRuleset((current) => current || (preferred ?? sent.body.rulesets[0])?.id || "");
     })();
     return () => {
       cancelled = true;

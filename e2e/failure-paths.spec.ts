@@ -3192,6 +3192,50 @@ test("a stream frame that is not JSON is read past, and the review read again", 
   }
 });
 
+test("a ruleset chosen as the default is the one a new review starts on", async ({ page }) => {
+  // D-225: a ruleset is made the default on its own page, the list says
+  // which, and a new review starts on it rather than on the first by name.
+  // A copy of the example named to come last is the default here, and the
+  // choice is undone after, so the tests after start where they did.
+  const listed = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string; name: string }[];
+  };
+  const example = listed.rulesets.find((ruleset) => ruleset.name === "Example protocol")!;
+  const made = await page.request.post(`/api/rulesets/${example.id}/duplicate`, {
+    data: { tier: "global", name: "Zz default sweep" },
+  });
+  expect(made.status()).toBe(201);
+  const { rulesetId } = (await made.json()) as { rulesetId: string };
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = projects.projects.find((project) => project.name === "app")!;
+  try {
+    await page.goto(`/rulesets/${rulesetId}`);
+    await page.getByRole("button", { name: "Use by default for new reviews" }).click();
+    const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+    await expect(header.getByText("default for new reviews")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Stop using by default" })).toBeVisible();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, header, "ruleset-default");
+
+    await page.goto("/rulesets");
+    const row = page.getByRole("main").locator("li").filter({ hasText: "Zz default sweep" });
+    await expect(row.getByText("default", { exact: true })).toBeVisible({ timeout: 30_000 });
+    await shootAll(page, row, "rulesets-default-row");
+
+    await page.goto(`/reviews/new?projectId=${app.id}`);
+    // The select that offers the copy: "Rules" also names the profile picker.
+    const rules = page
+      .locator("select")
+      .filter({ has: page.locator(`option[value="${rulesetId}"]`) });
+    await expect(rules).toHaveValue(rulesetId, { timeout: 30_000 });
+  } finally {
+    const cleared = await page.request.put("/api/settings", { data: { defaultRulesetId: null } });
+    expect.soft(cleared.status(), "the default cleared").toBe(200);
+  }
+});
+
 test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {
   // Number("") is 0, and zero removes the ceiling: clearing the field and
   // leaving it lifted the cap on every model call without a word (5.3).

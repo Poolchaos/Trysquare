@@ -22,6 +22,7 @@ interface Detail {
     sourceDoc: string | null;
     createdAt: string;
     updatedAt: string;
+    isDefault: boolean;
   };
   directives: { section: string; title: string; contentMd: string }[];
   rules: {
@@ -102,6 +103,26 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
     }
   }
 
+  /** The ruleset a new review starts on (D-225); one at a time, so it moves. */
+  async function makeDefault(on: boolean) {
+    setError("");
+    setBusy("default");
+    try {
+      const sent = await send(
+        "/api/settings",
+        { method: "PUT", body: JSON.stringify({ defaultRulesetId: on ? id : null }) },
+        "The default could not be changed",
+      );
+      if (!sent.ok) {
+        setError(sent.error);
+        return;
+      }
+      await load();
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function duplicate() {
     setError("");
     setBusy("duplicate");
@@ -159,10 +180,19 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
               {detail.rules.length} rule(s)
               {off > 0 ? `, ${off} switched off` : ""}
             </span>
+            {detail.ruleset.isDefault ? <Badge tone="accent">default for new reviews</Badge> : null}
           </span>
         }
         actions={
-          <span className="flex items-center gap-2">
+          <span className="flex flex-wrap items-center gap-2">
+            <Button
+              disabled={busy !== ""}
+              onClick={() => void makeDefault(!detail.ruleset.isDefault)}
+            >
+              {detail.ruleset.isDefault
+                ? "Stop using by default"
+                : "Use by default for new reviews"}
+            </Button>
             <Button onClick={() => setDuplicating((open) => !open)}>Duplicate to tier</Button>
             <a href={`/api/rulesets/${id}/export`} download>
               <Button>Export document</Button>
