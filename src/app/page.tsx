@@ -195,6 +195,7 @@ export default function HomePage() {
   useEffect(() => {
     let cancelled = false;
     let asked = 0;
+    let shown = 0;
     const check = async () => {
       const mine = ++asked;
       const sent = await send<{ active: LiveRun | null; awaiting: number }>(
@@ -202,13 +203,16 @@ export default function HomePage() {
         {},
         "What is running could not be read",
       );
-      // A reading overtaken by a later one says nothing: applied as it
+      // A reading older than one already shown says nothing: applied as it
       // landed, a run just started vanished for a poll, or one ended came
-      // back (audit finding U4).
-      if (mine !== asked) return;
+      // back (audit finding U4). Older than shown, not than asked: dropped
+      // once a later poll was sent, a server slower than the poll showed
+      // nothing at all (review round 15).
+      if (mine < shown) return;
       // A dashboard that cannot reach the server says so through the
       // scoreboard's own error, not twice.
       if (!sent.ok || cancelled) return;
+      shown = mine;
       setLive(sent.body.active);
       const said = `${sent.body.active?.id ?? ""}|${sent.body.active?.status ?? ""}|${sent.body.awaiting}`;
       if (lastAttention.current !== null && lastAttention.current !== said) {

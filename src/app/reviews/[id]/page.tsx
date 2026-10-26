@@ -449,6 +449,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const [loadMissing, setLoadMissing] = useState(false);
   const lastReadError = useRef("");
   const readsAsked = useRef(0);
+  const readsShown = useRef(0);
   // Which request of how many is in flight, for the stage that divides its
   // work. Cleared when a stage without batches starts, so it never describes
   // the stage before it.
@@ -527,10 +528,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     // escaped the theater's cancel, which then said nothing at all when the
     // server had gone away (review of 5.1 to 5.4).
     const sent = await send<Snapshot>(`/api/reviews/${id}`, {}, "This review could not be read");
-    // A reading asked for after this one speaks for the review instead:
-    // applied as they landed, an older one landing last put back a status or
-    // a stage the run had left (audit finding U1).
-    if (asked !== readsAsked.current) return "superseded";
+    // A reading older than one already shown says nothing: applied as they
+    // landed, an older one landing last put back a status or a stage the run
+    // had left (audit finding U1). Older than shown, not than asked: one that
+    // failed after it was asked threw away a good reading (review round 15).
+    if (asked < readsShown.current) return "superseded";
     // No such review is no run to follow: its stream is not opened again and
     // the poll stops, where both went on for as long as the tab stayed open
     // (D-137).
@@ -540,6 +542,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       lastReadError.current = sent.error;
       return null;
     }
+    readsShown.current = asked;
     return sent.body;
   }
 

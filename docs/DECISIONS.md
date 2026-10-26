@@ -5635,3 +5635,12 @@ verified evidence, in writing, here.
   it, and a new review or a draft's Start begins on it, else on the first
   by name as before. A default since deleted reads as none. Rejected:
   shipping the protocol as a built-in ruleset, which would publish it.
+- 2026-10-26 Review round 15, on 0a7d693 and 523d2f3: the guards U4 and
+  U1 added dropped a reading once a later one had been asked, not once a
+  later one had been shown. The dashboard and the top bar poll every four
+  seconds, so a server slower than that showed nothing at all, where before
+  it showed late; and a reading whose successor failed was thrown away with
+  nothing in its place. Each now drops only a reading older than one
+  already shown. Browser tests answer every poll in five seconds and find
+  the count shown, and fail every reading after a slow good one and find
+  the review shown; both fail on the guards as merged.

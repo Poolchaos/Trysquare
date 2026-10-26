@@ -2106,6 +2106,68 @@ test("closing Verify again stops the reads of what it would cost", async ({ page
   }
 });
 
+test("a reading slower than the poll still lands", async ({ page }) => {
+  // Review round 15: the polls dropped a reading once a later poll had been
+  // sent, so a server slower than the four-second poll showed nothing at all.
+  // Every reading here takes five seconds.
+  const real = (await (await page.request.get("/api/reviews/attention")).json()) as {
+    awaiting: number;
+  };
+  expect(real.awaiting, "a review waiting on a person, left by the tests before").toBeGreaterThan(
+    0,
+  );
+  const slow = async (route: import("@playwright/test").Route) => {
+    const response = await route.fetch();
+    await new Promise((resolve) => setTimeout(resolve, 5_000));
+    await route.fulfill({ response }).catch(() => undefined);
+  };
+  await page.route("**/api/reviews/attention", slow);
+  try {
+    await page.goto("/projects");
+    await expect(
+      page.locator(`[aria-label="${real.awaiting} awaiting your decision"]`),
+    ).toHaveCount(1, { timeout: 20_000 });
+  } finally {
+    await page.unroute("**/api/reviews/attention", slow);
+  }
+});
+
+test("a good reading is kept when the one asked after it fails", async ({ page }) => {
+  // Review round 15: a review's reading was dropped once a later one had
+  // been asked, so when that later one failed the page had nothing. The
+  // first reading is held a moment and answered as the server answers; every
+  // one after it fails.
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  const reading = `**${await row.getByRole("link").getAttribute("href")}`.replace(
+    "/reviews/",
+    "/api/reviews/",
+  );
+  let readings = 0;
+  const firstLate = async (route: import("@playwright/test").Route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    readings += 1;
+    if (readings > 1) {
+      await route.fulfill({ status: 500, json: { error: "The review could not be read." } });
+      return;
+    }
+    const response = await route.fetch();
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    await route.fulfill({ response }).catch(() => undefined);
+  };
+  await page.route(reading, firstLate);
+  try {
+    await row.getByRole("link").click();
+    await page.waitForURL(/\/reviews\/[A-Z0-9]+$/);
+    await expect.poll(() => readings, { timeout: 10_000 }).toBeGreaterThan(1);
+    const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+    await expect(header.getByText("complete", { exact: true })).toBeVisible({ timeout: 10_000 });
+  } finally {
+    await page.unroute(reading, firstLate);
+  }
+});
+
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
   // Only proven findings reach the report: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test

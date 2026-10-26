@@ -59,6 +59,7 @@ export function TopBar() {
   useEffect(() => {
     let cancelled = false;
     let asked = 0;
+    let shown = 0;
     const check = async () => {
       const mine = ++asked;
       // The narrow endpoint, not the whole reviews list: this runs every
@@ -69,11 +70,14 @@ export function TopBar() {
         {},
         "What waits on you could not be read",
       );
-      // A reading overtaken by a later one says nothing: applied as it
+      // A reading older than one already shown says nothing: applied as it
       // landed, a run just started vanished for a poll, or one ended came
-      // back (audit finding U4).
-      if (mine !== asked) return;
+      // back (audit finding U4). Older than shown, not than asked: dropped
+      // once a later poll was sent, a server slower than the poll showed
+      // nothing at all (review round 15).
+      if (mine < shown) return;
       if (!sent.ok || cancelled) return;
+      shown = mine;
       setActive(sent.body.active);
       setAwaiting(sent.body.awaiting);
     };
