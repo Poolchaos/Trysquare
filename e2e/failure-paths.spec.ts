@@ -1978,6 +1978,73 @@ test("a quiet dashboard keeps its times and its waiting list current", async ({ 
   }
 });
 
+test("an older reading of what is running does not put back what it said", async ({ page }) => {
+  // Audit finding U4: the dashboard's and the top bar's polls applied each
+  // reading as it landed, so a slow one overtaken by a later one put back a
+  // run that had ended, or a count since changed, until the next poll. The
+  // first round is held and answered stale, a run that is not there and
+  // seven more waiting; the next is answered as the server is; then the
+  // first lands.
+  const real = (await (await page.request.get("/api/reviews/attention")).json()) as {
+    awaiting: number;
+  };
+  // The first two readings are the two pollers' first, on load: held.
+  let held = 0;
+  let releaseStale = () => {};
+  const stale = new Promise<void>((resolve) => {
+    releaseStale = resolve;
+  });
+  let current = 0;
+  const stop = await routeUntilStopped(page, "**/api/reviews/attention", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { awaiting: number };
+    if (held < 2) {
+      held += 1;
+      await stale;
+      await route.fulfill({
+        response,
+        json: {
+          ...body,
+          awaiting: body.awaiting + 7,
+          active: {
+            id: "STALE",
+            status: "running",
+            projectName: "app",
+            fromBranch: "a-run-that-has-ended",
+            intoBranch: "main",
+            currentStage: null,
+            startedAt: new Date().toISOString(),
+            costEquivalentUsd: 0,
+          },
+        },
+      });
+      return;
+    }
+    await route.fulfill({ response, json: body });
+    current += 1;
+  });
+  try {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Review scoreboard", level: 1 })).toBeVisible();
+    // Both pollers' first readings are out, held; their next are answered.
+    await expect.poll(() => held, { timeout: 15_000 }).toBe(2);
+    await expect.poll(() => current, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+    releaseStale();
+    // Before the next poll could put things right, four seconds on.
+    await page.waitForTimeout(1_000);
+    // Read once, not waited on: a check that retries for its five seconds
+    // reaches the next poll, which puts things right, and passed on the old
+    // pages while the stale reading showed.
+    const said = (count: number) => page.locator(`[aria-label="${count} awaiting your decision"]`);
+    expect(await said(real.awaiting + 7).count()).toBe(0);
+    if (real.awaiting > 0) expect(await said(real.awaiting).count()).toBe(1);
+    expect(await page.getByText("a-run-that-has-ended").count()).toBe(0);
+  } finally {
+    releaseStale();
+    await stop();
+  }
+});
+
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
   // Only proven findings reach the report: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test

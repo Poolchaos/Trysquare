@@ -194,12 +194,18 @@ export default function HomePage() {
   const lastAttention = useRef<string | null>(null);
   useEffect(() => {
     let cancelled = false;
+    let asked = 0;
     const check = async () => {
+      const mine = ++asked;
       const sent = await send<{ active: LiveRun | null; awaiting: number }>(
         "/api/reviews/attention",
         {},
         "What is running could not be read",
       );
+      // A reading overtaken by a later one says nothing: applied as it
+      // landed, a run just started vanished for a poll, or one ended came
+      // back (audit finding U4).
+      if (mine !== asked) return;
       // A dashboard that cannot reach the server says so through the
       // scoreboard's own error, not twice.
       if (!sent.ok || cancelled) return;

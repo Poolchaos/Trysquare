@@ -58,7 +58,9 @@ export function TopBar() {
 
   useEffect(() => {
     let cancelled = false;
+    let asked = 0;
     const check = async () => {
+      const mine = ++asked;
       // The narrow endpoint, not the whole reviews list: this runs every
       // four seconds on every screen for the lifetime of the tab. A bar that
       // cannot reach the server is not worth an error message.
@@ -67,6 +69,10 @@ export function TopBar() {
         {},
         "What waits on you could not be read",
       );
+      // A reading overtaken by a later one says nothing: applied as it
+      // landed, a run just started vanished for a poll, or one ended came
+      // back (audit finding U4).
+      if (mine !== asked) return;
       if (!sent.ok || cancelled) return;
       setActive(sent.body.active);
       setAwaiting(sent.body.awaiting);

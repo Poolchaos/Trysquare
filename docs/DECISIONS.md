@@ -5608,3 +5608,11 @@ verified evidence, in writing, here.
   started or ended, or the count waiting on a person. Not on every poll,
   the scoreboard being the heavier read. A browser test drives the page's
   clock.
+- 2026-10-25 An outside audit's finding U4, read again here: the
+  dashboard's and the top bar's polls of what is running applied each
+  reading as it landed, so a slow one overtaken by a later one put back a
+  run that had ended, or an old count, until the next poll. Each poll now
+  counts its readings and drops one a later reading has overtaken, as the
+  review page does since U1. A browser test holds the first readings,
+  answers them stale after the next have landed, and finds nothing put
+  back.
