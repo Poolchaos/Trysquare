@@ -2045,6 +2045,67 @@ test("an older reading of what is running does not put back what it said", async
   }
 });
 
+test("closing Verify again stops the reads of what it would cost", async ({ page }) => {
+  // Audit finding U8: opening the dialog reads the settings and the sign-in
+  // to say what a request costs, and closing it left those reads running.
+  // The sign-in read is held; Not now must stop it.
+  const listed = (await (await page.request.get("/api/reviews")).json()) as {
+    reviews: { id: string; status: string; findings: { confirmed: number; dismissed: number } }[];
+  };
+  const waiting = listed.reviews.find(
+    (review) =>
+      review.status === "awaiting_confirmation" &&
+      review.findings.confirmed === 0 &&
+      review.findings.dismissed === 0,
+  );
+  expect(waiting, "a review awaiting decisions, none made yet").toBeDefined();
+  const stop = await routeUntilStopped(page, `**/api/reviews/${waiting!.id}`, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as {
+      findings: { id: string; status: string; severity: string; verificationNote: string | null }[];
+    };
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        findings: body.findings.map((finding) =>
+          finding.status === "verified"
+            ? { ...finding, status: "open_question", verificationNote: "Could not be settled." }
+            : finding,
+        ),
+      },
+    });
+  });
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let asked = false;
+  const holdAuth = async (route: import("@playwright/test").Route) => {
+    asked = true;
+    await held;
+    await route.fulfill({ status: 200, json: {} }).catch(() => undefined);
+  };
+  const stopped: string[] = [];
+  page.on("requestfailed", (request) => {
+    if (new URL(request.url()).pathname === "/api/auth")
+      stopped.push(request.failure()?.errorText ?? "");
+  });
+  try {
+    await page.goto(`/reviews/${waiting!.id}`);
+    await expect(page.getByTestId("not-proven")).toBeVisible({ timeout: 30_000 });
+    await page.route("**/api/auth", holdAuth);
+    await page.getByRole("button", { name: "Verify again" }).click();
+    await expect.poll(() => asked).toBe(true);
+    await page.getByRole("button", { name: "Not now" }).click();
+    await expect.poll(() => stopped.length).toBe(1);
+  } finally {
+    release();
+    await page.unroute("**/api/auth", holdAuth);
+    await stop();
+  }
+});
+
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
   // Only proven findings reach the report: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test

@@ -195,7 +195,16 @@ export function ConfirmationQueue({
   const focusAfterAgain = useRef<"verify" | "title" | null>(null);
   // A request left behind by leaving the page is stopped, not paid for.
   const againAbort = useRef<AbortController | null>(null);
-  useEffect(() => () => againAbort.current?.abort(), []);
+  // What a request costs is read as the dialog opens; closed or gone first,
+  // those reads went on unasked (audit finding U8).
+  const askAbort = useRef<AbortController | null>(null);
+  useEffect(
+    () => () => {
+      againAbort.current?.abort();
+      askAbort.current?.abort();
+    },
+    [],
+  );
   const reasonRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLTextAreaElement>(null);
   // The first half of a `g g`. Held in a ref because a pending key is not
@@ -286,6 +295,10 @@ export function ConfirmationQueue({
     if (target === "verify") verifyButtonRef.current?.focus();
     else if (target === "title") titleRef.current?.focus();
   }, [againFor]);
+  // However the dialog closed, the reads of what it costs stop with it.
+  useEffect(() => {
+    if (againFor === null) askAbort.current?.abort();
+  }, [againFor]);
   // The finding a sent verify-again is about: not decided until it answers.
   const verifyingId = againBusy ? againFor : null;
   const currentRule = rules?.find((rule) => rule.code === current?.ruleCode);
@@ -321,18 +334,23 @@ export function ConfirmationQueue({
     setAgainNotice("");
     setAgainTerms(null);
     setAgainFor(finding.id);
+    askAbort.current?.abort();
+    const asked = new AbortController();
+    askAbort.current = asked;
     const [settings, auth] = await Promise.all([
       send<{ settings: Record<string, unknown> }>(
         "/api/settings",
-        {},
+        { signal: asked.signal },
         "What verifying again costs could not be read",
       ),
       send<{ cli?: { state?: unknown; authMethod?: unknown } }>(
         "/api/auth",
-        {},
+        { signal: asked.signal },
         "How verifying again bills could not be read",
       ),
     ]);
+    // Closed while they were out: nothing to say, and no dialog to fill.
+    if (asked.signal.aborted) return;
     // Without both, the dialog could not say what Send costs, so it closes.
     if (!settings.ok) {
       setAgainFor(null);

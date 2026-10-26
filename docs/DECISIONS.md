@@ -5616,3 +5616,9 @@ verified evidence, in writing, here.
   review page does since U1. A browser test holds the first readings,
   answers them stale after the next have landed, and finds nothing put
   back.
+- 2026-10-25 An outside audit's finding U8, read again here: opening
+  Verify again reads the settings and the sign-in to say what a request
+  costs, and closing the dialog, or leaving the page, left those reads
+  running; only the request itself could be stopped. They are now stopped
+  with the dialog, however it closes, and a reply that lands after is not
+  used. A browser test holds the sign-in read and finds Not now stops it.
