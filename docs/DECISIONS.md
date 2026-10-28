@@ -5826,3 +5826,14 @@ verified evidence, in writing, here.
   says what is shown is the last reading, in a status region mounted from
   the start, since what a region is mounted with is not read out. The test
   marks the region before the failure and finds the notice in it after.
+- 2026-10-28 Review round 17, on 8b202dc and 2fe084a: the unknown-stage
+  test changed the theater's stage line but photographed only the header;
+  it now photographs the theater line too. The resumed-review test said
+  the queued reading came from the two-second poll, which had stopped at
+  the run's end; it comes from the watch Resume opens, and the comment now
+  says so. Left as they stand, with the reason: for a stage the page does
+  not know, no step is marked now, the dashboard's gauge shows no position
+  and the theater drops its usual time; that stage reaches a page only in
+  a tab left open across an upgrade, which a reload puts right. The
+  queued-before-the-ending race 2fe084a guards has no test: it needs a
+  Resume within 150 ms of the run's end.

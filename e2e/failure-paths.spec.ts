@@ -2413,9 +2413,10 @@ test("a review resumed into the line no longer says how its last run ended", asy
   const stopStarting = await routeUntilStopped(page, `${reading}/start`, (route) =>
     route.fulfill({ status: 200, json: { status: "queued" } }),
   );
-  // Its stream refused, so the page reads it on its two-second poll: the
-  // real stream of a review not running stays open and says nothing, and
-  // nothing would read the staged changes.
+  // Its stream refused, so the page polls every two seconds and reads the
+  // run end; the queued reading is the first the watch Resume opens makes.
+  // The real stream of a review not running stays open and says nothing,
+  // so nothing would read the staged changes.
   const stopStreaming = await routeUntilStopped(page, `${reading}/events`, (route) =>
     route.abort(),
   );
@@ -2465,8 +2466,12 @@ test("a stage the review screen does not know is named, and given no number", as
     await row.getByRole("link").click();
     const theater = page.getByRole("dialog", { name: /^Watching the review of/ });
     await expect(theater).toBeVisible({ timeout: 30_000 });
-    await expect(theater.getByText(/threat model/).first()).toBeVisible();
+    const stageLine = theater.getByText(/threat model/).first();
+    await expect(stageLine).toBeVisible();
     expect(await theater.getByText(/s7b/).count()).toBe(0);
+    // The theater's line, which 8b202dc changed, photographed too (review
+    // round 17).
+    await shootAll(page, stageLine.locator(".."), "unknown-stage-theater");
     await page.keyboard.press("Escape");
     await expect(theater).toHaveCount(0);
     const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
