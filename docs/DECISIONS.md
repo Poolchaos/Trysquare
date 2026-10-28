@@ -5739,3 +5739,22 @@ verified evidence, in writing, here.
   cancelled tests; the shutdown path alone settling early fails its own.
   The count is kept per test, as a close held back by one test landed in
   the next and a single regression read as two.
+- 2026-10-28 Review round 15 (over 0b748ae, 0a7d693, 523d2f3, e30a659,
+  da808f5, 345ccd4 and f9c5ce0), read-only reviewers, each finding read
+  again in the code, each fix shown failing on the code before it. Fixed:
+  the poll guards dropped a reading once a later one was asked rather than
+  shown (b5c753a); a failed scoreboard re-read was never asked again
+  (4da9ea5); Verify again's reads ran on after its finding was dismissed,
+  and its test did not look at the page (142e698); Stop using by default
+  cleared another ruleset's default, the wipe left the setting naming a
+  ruleset gone, and a draft's Start had no test (26ee655); a run's ending
+  went unsaid with the theater open, and a stand-in key guarded a state
+  that cannot occur (b58edd4); the log close was tested on one path of
+  three (bd4846a). Found while proving them: a click on Advanced missed
+  as the pre-flight card emptied under it (e0970e0); the themes test
+  photographed the project page mid-fetch (19a3f1d); and the e2e server
+  that died partway through local runs was ended by another project's
+  e2e runner freeing port 3100 (927dbf0). Left as they stand, with the
+  reason: a dialog opened again within milliseconds of a failed read now
+  keeps its reads, which no test reaches; the held pre-flight card is
+  mostly empty space while it waits, which reads as waiting.
