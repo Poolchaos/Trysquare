@@ -5644,3 +5644,13 @@ verified evidence, in writing, here.
   already shown. Browser tests answer every poll in five seconds and find
   the count shown, and fail every reading after a slow good one and find
   the review shown; both fail on the guards as merged.
+- 2026-10-28 Review round 15: the e2e server that died partway through
+  local runs (idea inbox, 2026-10-22 to 2026-10-25) was ended from outside.
+  Another project's e2e runner on this machine frees the ports its suite
+  uses before it starts, 3100 among them, by ending any node process
+  listening there with `taskkill /F /T`, which runs none of the server's
+  handlers: hence a trace with a heartbeat and no exit. On 2026-10-28 the
+  traced server's last heartbeat was 06:29:51Z, and that runner's emulators
+  started at 06:30:10Z. The suite now serves on 3417, which that runner
+  does not claim (its others are 14400 to 19499). Rejected: changing the
+  other project's runner, which is not this repository's to change.

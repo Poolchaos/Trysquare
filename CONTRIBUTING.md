@@ -55,7 +55,7 @@ npx playwright install --with-deps chromium
 ```
 
 Two traps that are not your fault when you hit them. An interrupted Playwright
-run can leave a server holding port 3100, and the next `--e2e` then fails
+run can leave a server holding port 3417, and the next `--e2e` then fails
 saying the port is in use; kill it and re-run, because reusing an existing
 server is refused on purpose (it would not have the fake engine in its
 environment). And a production build can rewrite `tsconfig.json`, which the

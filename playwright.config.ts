@@ -9,7 +9,10 @@ import {
   STALL_TRIGGER,
 } from "./e2e/setup";
 
-const PORT = 3100;
+// Not 3100: another project on this machine frees that port for its own
+// e2e by ending whatever node process holds it, and it ended this suite's
+// server mid-run (review round 15).
+const PORT = 3417;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 /**

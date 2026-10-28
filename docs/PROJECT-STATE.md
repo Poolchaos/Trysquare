@@ -246,7 +246,7 @@ own now (D-75, D-81).
 - Next's build rewrites `tsconfig.json` (sets `jsx: react-jsx`, adds
   `.next/dev/types`). Run prettier on it after a build or the format gate
   fails on the next run.
-- An interrupted Playwright run can leave its server holding port 3100, and
+- An interrupted Playwright run can leave its server holding port 3417, and
   the next `--e2e` then fails saying the port is in use. Reusing an existing
   server is deliberately not allowed, because it would run the journey
   against a server started without the fake engine.

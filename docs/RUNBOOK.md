@@ -254,7 +254,7 @@ against a fake CLI committed to the repository.
   it was frozen with, and stages already paid for replay for free.
 - **A usage limit pauses rather than fails.** The review moves to paused and
   keeps everything it has done. Resume when the limit clears.
-- **`./verify.sh --e2e` can fail on port 3100** after an interrupted Playwright
+- **`./verify.sh --e2e` can fail on port 3417** after an interrupted Playwright
   run. Kill whatever holds the port. Reusing an existing server is refused on
   purpose: it would not have been started with the fake engine, which is
   exactly the mistake that once spent real usage.

@@ -84,6 +84,13 @@ pulled deliberately.
   again on the same tree, passed. Four gates since ran with a preloaded
   trace in the server (start, a 2-second heartbeat, signals, exit code and
   the caller of process.exit, uncaught errors) and none lost it.
+  The local deaths EXPLAINED 2026-10-28: another project's e2e runner on
+  this machine frees its own ports before it starts, 3100 among them, by
+  ending the node process listening there with `taskkill /F /T`; the
+  traced server's last heartbeat was 06:29:51Z and that runner's
+  emulators started 06:30:10Z. The suite now serves on 3417. The CI
+  stall of 2026-10-23 is a different symptom on a machine with no such
+  runner, and stays open.
 - 2026-10-22: the preflight route (src/app/api/reviews/preflight/route.ts)
   and the review service (src/server/review/service.ts) still fetch a
   linked pair's clones one after the other, as review creation did until
