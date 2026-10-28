@@ -92,6 +92,15 @@ const STAGE_ORDER = [
   "s6_audit",
 ];
 
+/**
+ * A stage this page has no name for, from a server newer than it, read by
+ * its id rather than shown as nothing and "stage 0 of 10", as the review
+ * screen already does (audit finding U10).
+ */
+function stageName(stage: string): string {
+  return STAGE_NAMES[stage] ?? stage.replace(/^s\d+_/, "").replace(/_/g, " ");
+}
+
 const STAGE_NAMES: Record<string, string> = {
   s0_prepare: "Prepare",
   s1_risk: "Risk",
@@ -113,6 +122,12 @@ function ago(iso: string, now: number): string {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+/** How long a run has gone on: "just now elapsed" read as no span at all. */
+function elapsed(iso: string, now: number): string {
+  const since = ago(iso, now);
+  return since === "just now" ? "under a minute" : since.replace(" ago", "");
 }
 
 /** A widget: the machined panel with the uppercase mono label. */
@@ -347,14 +362,14 @@ export default function HomePage() {
                     {live.intoBranch}
                   </Mono>
                   <span className="text-body text-[var(--color-ink-muted)]">
-                    {live.currentStage ? STAGE_NAMES[live.currentStage] : "Preparing"}
-                    {live.currentStage
+                    {live.currentStage ? stageName(live.currentStage) : "Preparing"}
+                    {live.currentStage && STAGE_ORDER.includes(live.currentStage)
                       ? ` · stage ${STAGE_ORDER.indexOf(live.currentStage) + 1} of ${STAGE_ORDER.length}`
                       : ""}
                   </span>
                   {live.startedAt ? (
                     <span className="font-[family-name:var(--font-mono)] text-body tabular-nums">
-                      {ago(live.startedAt, now).replace(" ago", "")} elapsed
+                      {elapsed(live.startedAt, now)} elapsed
                     </span>
                   ) : null}
                   <span className="font-[family-name:var(--font-mono)] text-body tabular-nums">

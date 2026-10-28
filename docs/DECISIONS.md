@@ -5764,3 +5764,12 @@ verified evidence, in writing, here.
   words, several times a second on a busy run. Each entry is now numbered
   as it arrives and keyed by that. A browser test marks a row, slides the
   window by one, and finds the row still holding its line.
+- 2026-10-28 An outside audit's finding U10, read again here: a stage the
+  dashboard has no name for, from a server newer than the page, showed as
+  nothing and "stage 0 of 10". It is now named from its id, as the review
+  screen already does, and given no number. A browser test answers the
+  poll with a run on such a stage.
+- 2026-10-28 Review round 15, found grading U10's screenshots: a run on the
+  dashboard's Live scan that started under a minute ago read "just now
+  elapsed", the time-ago words read as a span. It now reads "under a minute
+  elapsed"; the U10 test asserts it.

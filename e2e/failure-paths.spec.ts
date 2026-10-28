@@ -2292,6 +2292,49 @@ test("a sliding feed keeps each row with its own entry", async ({ page }) => {
   }
 });
 
+test("the dashboard names a stage it does not know by its id", async ({ page }) => {
+  // Audit finding U10: a stage from a newer server showed as nothing and
+  // "stage 0 of 10". What the bar polls is answered with a run on one.
+  const stop = await routeUntilStopped(page, "**/api/reviews/attention", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        active: {
+          id: "NEWER",
+          status: "running",
+          projectName: "app",
+          fromBranch: "feature/newer-server",
+          intoBranch: "main",
+          currentStage: "s9_threat_model",
+          startedAt: new Date().toISOString(),
+          costEquivalentUsd: 0,
+        },
+      },
+    });
+  });
+  try {
+    await page.goto("/");
+    // The Live scan card holding the run's link; its stage line reads the
+    // name alone, with no number after it.
+    const card = page
+      .getByRole("main")
+      .locator('a[href="/reviews/NEWER"]')
+      .locator("xpath=ancestor::div[contains(@class, 'rounded-lg')][1]");
+    await expect(card.getByText("threat model", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+    expect(await card.getByText(/stage \d+ of/).count()).toBe(0);
+    // Started a moment ago: it read "just now elapsed" (review round 15).
+    await expect(card.getByText("under a minute elapsed")).toBeVisible();
+    await shootAll(page, card, "live-scan-unknown-stage");
+  } finally {
+    await stop();
+  }
+});
+
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
   // Only proven findings reach the report: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test
