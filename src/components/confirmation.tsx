@@ -295,9 +295,15 @@ export function ConfirmationQueue({
     if (target === "verify") verifyButtonRef.current?.focus();
     else if (target === "title") titleRef.current?.focus();
   }, [againFor]);
-  // However the dialog closed, the reads of what it costs stop with it.
+  // A dialog's reads of what it costs stop when it closes: its own, held as
+  // it opened, not whichever are current by the time the close is seen, which
+  // could be those of a dialog opened again at once (review round 15). One
+  // only hidden, its finding left for another, keeps its reads for when the
+  // person comes back.
   useEffect(() => {
-    if (againFor === null) askAbort.current?.abort();
+    if (againFor === null) return;
+    const reads = askAbort.current;
+    return () => reads?.abort();
   }, [againFor]);
   // The finding a sent verify-again is about: not decided until it answers.
   const verifyingId = againBusy ? againFor : null;
@@ -451,6 +457,9 @@ export function ConfirmationQueue({
           return;
         }
         setEditingFor(null);
+        // A dialog open for the finding just decided closes with it, rather
+        // than reading on for a finding that has left the queue.
+        setAgainFor((open) => (open === finding.id ? null : open));
         setDrafts((all) => {
           const rest = { ...all };
           delete rest[finding.id];

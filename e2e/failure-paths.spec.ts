@@ -2072,7 +2072,8 @@ test("an older reading of what is running does not put back what it said", async
 test("closing Verify again stops the reads of what it would cost", async ({ page }) => {
   // Audit finding U8: opening the dialog reads the settings and the sign-in
   // to say what a request costs, and closing it left those reads running.
-  // The sign-in read is held; Not now must stop it.
+  // The sign-in read is held; Not now must stop it, and so must dismissing
+  // the finding while its dialog is open (review round 15).
   const listed = (await (await page.request.get("/api/reviews")).json()) as {
     reviews: { id: string; status: string; findings: { confirmed: number; dismissed: number } }[];
   };
@@ -2123,6 +2124,24 @@ test("closing Verify again stops the reads of what it would cost", async ({ page
     await expect.poll(() => asked).toBe(true);
     await page.getByRole("button", { name: "Not now" }).click();
     await expect.poll(() => stopped.length).toBe(1);
+    // Stopped, not failed: nothing is said for a dialog the person closed.
+    await page.waitForTimeout(300);
+    expect(await page.getByText(/could not be read/).count()).toBe(0);
+
+    // The dismissal is answered here, so the finding stays for the tests
+    // after; routed once and never unrouted, as the journey's is.
+    await page.route(
+      "**/api/findings/*/dismiss",
+      (route) => route.fulfill({ status: 200, json: { status: "dismissed" } }),
+      { times: 1 },
+    );
+    asked = false;
+    await page.getByRole("button", { name: "Verify again" }).click();
+    await expect.poll(() => asked).toBe(true);
+    const reason = page.locator('input[id^="dismiss-reason-"]');
+    await reason.fill("Left out by the test.");
+    await reason.press("Enter");
+    await expect.poll(() => stopped.length).toBe(2);
   } finally {
     release();
     await page.unroute("**/api/auth", holdAuth);

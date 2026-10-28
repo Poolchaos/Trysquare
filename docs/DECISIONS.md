@@ -5690,3 +5690,16 @@ verified evidence, in writing, here.
   asked again. U4's test now waits for the
   scoreboard before looking for the phantom run, and reads the page well
   before the next poll could correct it.
+- 2026-10-26 Review round 15, on da808f5: its test stopped at the aborted
+  read and never looked at the page, so it passed with the guard that keeps
+  an aborted read from being said as a failure taken out; it now finds
+  nothing said after Not now. da808f5 said the reads stop however the
+  dialog closes, but dismissing the finding left its dialog open, unseen,
+  reading on; a decided finding now closes its dialog, and the test
+  dismisses one with its dialog open and finds the read stopped. A dialog
+  only hidden, its finding left for another, stays open and keeps its
+  reads for when the person comes back, which is now said where they are
+  stopped. The close stopped whichever reads were current when it was
+  seen; after a failed read it is seen a moment late, and a dialog opened
+  again in that moment lost its own. Each dialog now stops the reads it
+  opened with. That window is milliseconds and no test reaches it.
