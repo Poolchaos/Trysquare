@@ -2234,6 +2234,64 @@ test("a good reading is kept when the one asked after it fails", async ({ page }
   }
 });
 
+test("a sliding feed keeps each row with its own entry", async ({ page }) => {
+  // Audit finding U9: the feed was keyed by place, so once its window slid
+  // every row was redrawn with its neighbour's words. A finished review is
+  // read as running, its stream sends 125 lines and asks to be opened again,
+  // and the next stream, once a row is marked, sends one more.
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  const reading = `**${await row.getByRole("link").getAttribute("href")}`.replace(
+    "/reviews/",
+    "/api/reviews/",
+  );
+  const stopReading = await routeUntilStopped(page, reading, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { review: { status: string } };
+    await route.fulfill({
+      response,
+      json: { ...body, running: true, review: { ...body.review, status: "running" } },
+    });
+  });
+  const line = (n: number) =>
+    `event: update\ndata: ${JSON.stringify({ kind: "engine", detail: `row ${String(n).padStart(3, "0")}` })}\n\n`;
+  let streams = 0;
+  let release = () => {};
+  const marked = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stopStreaming = await routeUntilStopped(page, `${reading}/events`, async (route) => {
+    streams += 1;
+    if (streams === 1) {
+      const body = Array.from({ length: 125 }, (_, i) => line(i + 1)).join("");
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `${body}event: reconnect\ndata: {}\n\n`,
+      });
+      return;
+    }
+    if (streams === 2) await marked;
+    await route.fulfill({ status: 200, contentType: "text/event-stream", body: line(126) });
+  });
+  try {
+    await row.getByRole("link").click();
+    const theater = page.getByRole("dialog", { name: /^Watching the review of/ });
+    const sixty = theater.locator("li").filter({ hasText: "row 060" });
+    await expect(sixty).toHaveCount(1, { timeout: 30_000 });
+    await sixty.evaluate((element) => element.setAttribute("data-marked", "yes"));
+    release();
+    await expect(theater.locator("li").filter({ hasText: "row 126" })).toHaveCount(1);
+    // The marked row still holds the line it was marked on.
+    await expect(theater.locator('li[data-marked="yes"]')).toContainText("row 060");
+  } finally {
+    release();
+    await stopStreaming();
+    await stopReading();
+  }
+});
+
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
   // Only proven findings reach the report: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test

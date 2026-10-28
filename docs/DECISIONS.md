@@ -5758,3 +5758,9 @@ verified evidence, in writing, here.
   reason: a dialog opened again within milliseconds of a failed read now
   keeps its reads, which no test reaches; the held pre-flight card is
   mostly empty space while it waits, which reads as waiting.
+- 2026-10-28 An outside audit's finding U9, read again here: the review
+  page's two feeds were keyed by place, so once their windows slid every
+  entry moved down one and each row was redrawn with its neighbour's
+  words, several times a second on a busy run. Each entry is now numbered
+  as it arrives and keyed by that. A browser test marks a row, slides the
+  window by one, and finds the row still holding its line.

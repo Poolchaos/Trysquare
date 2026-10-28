@@ -133,10 +133,16 @@ function stageLabel(stage: string): string {
  * a durable note about the run. They read as one undifferentiated wall, which
  * is exactly what a person watching a long run cannot use.
  */
-type LiveEntry =
+type LiveEvent =
   | { kind: "stage"; stage: string; phase: string; batch?: { number: number; count: number } }
   | { kind: "engine"; detail: string }
   | { kind: "note"; message: string };
+/**
+ * Numbered as it arrives, for its key: keyed by place, once the window slid
+ * every entry moved down one and each row was redrawn with its neighbour's
+ * words, several times a second (audit finding U9).
+ */
+type LiveEntry = LiveEvent & { id: number };
 
 interface Snapshot {
   review: {
@@ -453,6 +459,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [live, setLive] = useState<LiveEntry[]>([]);
+  const entriesSeen = useRef(0);
   // Read by a stream reopening after a wait, when this render's snapshot is
   // stale: whether there is still a run to follow, and how many tries since
   // the last stream that opened.
@@ -746,7 +753,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       // Kept as a bounded tail: a long run emits thousands of engine lines,
       // and the page only ever shows the most recent of them. The archive is
       // the event log, not component state.
-      const push = (entry: LiveEntry) => setLive((all) => [...all, entry].slice(-200));
+      const push = (entry: LiveEvent) => {
+        entriesSeen.current += 1;
+        const id = entriesSeen.current;
+        setLive((all) => [...all, { ...entry, id }].slice(-200));
+      };
       if (parsed.kind === "stage" && parsed.stage && parsed.phase) {
         push({
           kind: "stage",
@@ -1471,14 +1482,14 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   aria-label="Activity log"
                   className="max-h-64 overflow-auto text-aside text-[var(--color-ink-muted)]"
                 >
-                  {live.slice(-40).map((entry, index) => (
+                  {live.slice(-40).map((entry) => (
                     // Engine output is arbitrary text, including whole JSON
                     // answers on one line. Without a wrap rule it widened its
                     // container until the page itself scrolled sideways, which
                     // 04 forbids outright. Anywhere, not break-word: that
                     // wrapped it on screen but still sized a phone's column
                     // to the longest path (CI on Linux, 2026-10-23).
-                    <li key={index} className="leading-5 [overflow-wrap:anywhere]">
+                    <li key={entry.id} className="leading-5 [overflow-wrap:anywhere]">
                       {entry.kind === "stage" ? (
                         <span className="text-[var(--color-ink)]">
                           {stageLabel(entry.stage)}{" "}
@@ -2554,8 +2565,8 @@ function ScanTheater({
             </p>
           ) : (
             <ul className="grid gap-0.5 text-dense">
-              {live.slice(-120).map((entry, index) => (
-                <li key={index} className="leading-6 [overflow-wrap:anywhere]">
+              {live.slice(-120).map((entry) => (
+                <li key={entry.id} className="leading-6 [overflow-wrap:anywhere]">
                   {entry.kind === "stage" ? (
                     <span className="font-medium text-[var(--color-ink)]">
                       {stageLabel(entry.stage)}{" "}
