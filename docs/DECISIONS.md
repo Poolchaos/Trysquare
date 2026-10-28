@@ -5732,3 +5732,10 @@ verified evidence, in writing, here.
   the run as running, with no await between, so no reading shows a run
   without its start. 345ccd4 took the audit's word for that state without
   checking it.
+- 2026-10-28 Review round 15, on 0b748ae: the log-close fix was tested only
+  for a stage that ran. Its two other paths, a stage the server stopped
+  before it began and one cancelled mid-run, now have tests with the close
+  held back. Settling without waiting for the close fails the ran and
+  cancelled tests; the shutdown path alone settling early fails its own.
+  The count is kept per test, as a close held back by one test landed in
+  the next and a single regression read as two.
