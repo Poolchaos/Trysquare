@@ -5781,3 +5781,10 @@ verified evidence, in writing, here.
   ("s7b threat model"); they strip it now. A browser test reads a finished review as running on
   s7b_threat_model and finds the name, without prefix or number, in the
   theater and the header.
+- 2026-10-28 Review round 16, on 4da9ea5: a failed scoreboard re-read was
+  asked again at the next poll, but still said nothing while the old
+  figures stood, which round 15 had named with the retry; and the error was
+  never cleared once a read landed. The dashboard now says, above the
+  figures, that they are the last ones read and are read again shortly,
+  and the notice goes when a read lands. The quiet-dashboard test finds it
+  after the failed re-read and finds it gone after the next.

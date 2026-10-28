@@ -2013,8 +2013,14 @@ test("a quiet dashboard keeps its times and its waiting list current", async ({ 
     awaiting += 1;
     await page.clock.fastForward("00:05");
     await expect.poll(() => boards).toBeGreaterThan(again);
+    // Said while the old figures stand (review round 16), and gone once a
+    // read lands.
+    const stale = page.getByText(/The figures below are the last ones read/);
+    await expect(stale).toBeVisible();
+    await shootAll(page, stale, "scoreboard-reread-failed");
     await page.clock.fastForward("00:05");
     await expect.poll(() => boards).toBeGreaterThan(again + 1);
+    await expect(stale).toHaveCount(0);
   } finally {
     await page.unroute("**/api/scoreboard", failOnce);
     await stop();

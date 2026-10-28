@@ -19,8 +19,17 @@
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
-import { send } from "@/components/request";
-import { Badge, Card, Empty, Mono, StatTile, statusLabel, statusTone } from "@/components/ui";
+import { asSentence, send } from "@/components/request";
+import {
+  Badge,
+  Card,
+  Empty,
+  Mono,
+  Problem,
+  StatTile,
+  statusLabel,
+  statusTone,
+} from "@/components/ui";
 
 interface Row {
   id: string;
@@ -268,6 +277,7 @@ export default function HomePage() {
       if (cancelled) return;
       if (sent.ok) {
         boardShown.current = true;
+        setError("");
         setBoard(sent.body);
       } else {
         setError(sent.error);
@@ -292,6 +302,17 @@ export default function HomePage() {
         subtitle="Everything here is counted from reviews this machine has run."
       />
       <PageBody>
+        {/* Said above the figures it could not refresh: retried at the next
+            poll, a failed re-read still left the board looking current
+            (review round 16). */}
+        {board !== null && error !== "" ? (
+          <div className="mb-4">
+            <Problem>
+              {asSentence(error)} The figures below are the last ones read, and are read again
+              shortly.
+            </Problem>
+          </div>
+        ) : null}
         {board === null ? (
           <Loading
             {...(error === "" ? {} : { error })}
