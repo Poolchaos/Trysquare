@@ -271,7 +271,8 @@ composed command uses an alias form.
 
 (key PK, value JSON): maxConcurrentReviews, stageTimeoutMinutes,
 stageMaxBudgetUsd, claudePath and defaultRulesetId (a ruleset's id or null;
-one that is not there is refused, and one gone since reads as none, D-225).
+one that is not there is refused, and deleting a ruleset clears a default
+that named it, D-225).
 Those five are the whole catalogue; any other key is refused by name. A data-directory display, a default model and a default
 engine mode are designed but not built (U10, U11).
 

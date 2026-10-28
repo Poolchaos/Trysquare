@@ -22,7 +22,7 @@ import type { ImportedRuleset } from "@/lib/rulesets/model";
 import type { Db } from "../client";
 import { processDirectives, reviewRulesets, rules, rulesets } from "../schema";
 import { parseJsonColumn, serialiseJsonColumn } from "./json";
-import { SETTING_KEYS, readSetting } from "./settings";
+import { SETTING_KEYS, readSetting, writeSetting } from "./settings";
 
 export type RulesetRow = typeof rulesets.$inferSelect;
 
@@ -279,6 +279,11 @@ export class RulesetNameTakenError extends Error {
  */
 export function deleteRuleset(db: Db, rulesetId: string): void {
   db.delete(rulesets).where(eq(rulesets.id, rulesetId)).run();
+  // A default left naming it was read back by the settings screen's API, and
+  // writing that back would be refused (review round 15).
+  if (readSetting(db, SETTING_KEYS.defaultRulesetId, z.string().nullable()) === rulesetId) {
+    writeSetting(db, SETTING_KEYS.defaultRulesetId, null);
+  }
 }
 
 /**
@@ -308,9 +313,9 @@ export function findRulesetByName(db: Db, name: string): RulesetRow | undefined 
 }
 
 /**
- * The ruleset new reviews start on, when one is chosen and still exists:
- * deleting all data takes the rulesets and leaves the setting, so one gone
- * reads as none chosen (D-225).
+ * The ruleset new reviews start on, when one is chosen and still exists. A
+ * deleted ruleset takes the default with it, but a database from before it
+ * did can still name one gone, and that reads as none chosen (D-225).
  */
 export function defaultRulesetId(db: Db): string | null {
   const chosen = readSetting(db, SETTING_KEYS.defaultRulesetId, z.string().nullable()) ?? null;

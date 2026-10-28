@@ -3354,6 +3354,7 @@ test("a ruleset chosen as the default is the one a new review starts on", async 
     projects: { id: string; name: string }[];
   };
   const app = projects.projects.find((project) => project.name === "app")!;
+  let draft: string | undefined;
   try {
     await page.goto(`/rulesets/${rulesetId}`);
     await page.getByRole("button", { name: "Use by default for new reviews" }).click();
@@ -3374,7 +3375,44 @@ test("a ruleset chosen as the default is the one a new review starts on", async 
       .locator("select")
       .filter({ has: page.locator(`option[value="${rulesetId}"]`) });
     await expect(rules).toHaveValue(rulesetId, { timeout: 30_000 });
+
+    // A draft's Start begins on it too (review round 15): a new review whose
+    // start is refused for this test, removed after.
+    await fillANewReview(page);
+    const stopRefusing = await answerOnce(page, "**/api/reviews/*/start", (route) =>
+      route.fulfill({ status: 500, json: { error: "Refused for this test.", code: "Test" } }),
+    );
+    const creation = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/reviews" &&
+        response.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: "Start review" }).click();
+    draft = ((await (await creation).json()) as { review: { id: string } }).review.id;
+    await expect(page.getByText("Refused for this test.")).toBeVisible();
+    await stopRefusing();
+    await page.goto(`/reviews/${draft}`);
+    await expect(page.getByLabel("Ruleset to start with")).toHaveValue(rulesetId, {
+      timeout: 30_000,
+    });
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, header, "draft-start-default");
+
+    // Stopped from its own page, no ruleset is the default.
+    await page.goto(`/rulesets/${rulesetId}`);
+    await page.getByRole("button", { name: "Stop using by default" }).click();
+    await expect(
+      page.getByRole("button", { name: "Use by default for new reviews" }),
+    ).toBeVisible();
+    const after = (await (await page.request.get("/api/rulesets")).json()) as {
+      defaultRulesetId: string | null;
+    };
+    expect(after.defaultRulesetId).toBeNull();
   } finally {
+    if (draft) {
+      const removed = await page.request.delete(`/api/reviews/${draft}`);
+      expect.soft(removed.status(), "the draft removed").toBe(200);
+    }
     const cleared = await page.request.put("/api/settings", { data: { defaultRulesetId: null } });
     expect.soft(cleared.status(), "the default cleared").toBe(200);
   }
@@ -4227,6 +4265,8 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "GET rulesets/[id]": {},
     "GET rulesets/[id]/export": {},
     "POST rulesets/[id]/duplicate": { data: { tier: "global", name: "Swept" } },
+    "PUT rulesets/[id]/default": {},
+    "DELETE rulesets/[id]/default": {},
     "PATCH rulesets/[id]/rules/[code]": { data: { enabled: true } },
   };
 

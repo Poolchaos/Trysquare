@@ -109,8 +109,8 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
     setBusy("default");
     try {
       const sent = await send(
-        "/api/settings",
-        { method: "PUT", body: JSON.stringify({ defaultRulesetId: on ? id : null }) },
+        `/api/rulesets/${id}/default`,
+        { method: on ? "PUT" : "DELETE" },
         "The default could not be changed",
       );
       if (!sent.ok) {

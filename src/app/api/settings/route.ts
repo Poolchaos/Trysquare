@@ -12,7 +12,7 @@ import { SETTING_KEYS, readSettingOr, writeSettings } from "@/server/db/reposito
 import { handler, ok, readJson } from "@/server/api/respond";
 import { environmentClaudePath } from "@/server/cli-path";
 import { claudePathSchema } from "@/lib/settings/claude-path";
-import { requireRuleset } from "@/server/db/repositories/rulesets";
+import { defaultRulesetId, requireRuleset } from "@/server/db/repositories/rulesets";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +39,8 @@ export function GET(): Promise<Response> {
         return [key, readSettingOr(db, key, entry.schema, entry.fallback)];
       }),
     );
+    // As the rulesets screen reads it: a default naming a ruleset gone is none.
+    settings[SETTING_KEYS.defaultRulesetId] = defaultRulesetId(db);
     // Not a setting, and not writable here: the path the server was started
     // with, which wins over the one kept here, so the screen can say so.
     return ok({ settings, environment: { claudePath: environmentClaudePath() ?? null } });

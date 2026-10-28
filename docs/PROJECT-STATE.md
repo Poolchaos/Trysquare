@@ -201,7 +201,7 @@ are accepted; anything else is refused by name.
   it can run one; `real-path.ts` - a path resolved through its links.
 - `src/server/api/` - one response shape for every route.
 - `src/proxy.ts` - the request guard in front of every route (MVP WP 2.3).
-- `src/app/api/` - 40 route handlers. `src/app/` - 9 screens, plus a root
+- `src/app/api/` - 42 route handlers. `src/app/` - 9 screens, plus a root
   error boundary, a not-found page, and a metadata layout per segment.
 - `src/components/` - the shared UI vocabulary, the top bar, and the
   confirmation queue.

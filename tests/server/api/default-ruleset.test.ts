@@ -1,7 +1,7 @@
 /**
  * The ruleset a new review starts on (D-225): chosen on a ruleset's page,
- * kept as a setting that names a ruleset that is there or none, and read
- * as none once that ruleset is gone.
+ * kept as a setting that names a ruleset that is there or none, stopped only
+ * by the one it names, and gone with that ruleset.
  */
 
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -35,9 +35,17 @@ async function save(body: object): Promise<Response> {
   );
 }
 
-async function listed(): Promise<{ rulesets: { id: string }[]; defaultRulesetId: string | null }> {
+async function listed(): Promise<{
+  rulesets: { id: string; name: string }[];
+  defaultRulesetId: string | null;
+}> {
   const { GET } = await import("@/app/api/rulesets/route");
   return (await GET()).json();
+}
+
+async function settingsRead(): Promise<{ defaultRulesetId: unknown }> {
+  const { GET } = await import("@/app/api/settings/route");
+  return ((await (await GET()).json()) as { settings: { defaultRulesetId: unknown } }).settings;
 }
 
 async function detail(id: string): Promise<{ ruleset: { isDefault: boolean } }> {
@@ -77,10 +85,55 @@ describe("the default ruleset", () => {
   });
 
   it("reads one that has since gone as none chosen", async () => {
-    // Deleting all data takes the rulesets and leaves the setting.
+    // A database from before a deleted ruleset took the default with it.
     const { runtime } = await import("@/server/runtime");
     const { writeSetting, SETTING_KEYS } = await import("@/server/db/repositories/settings");
     writeSetting(runtime().db, SETTING_KEYS.defaultRulesetId, "GONE-SINCE");
     expect((await listed()).defaultRulesetId).toBeNull();
+    expect((await settingsRead()).defaultRulesetId).toBeNull();
+  });
+
+  it("is stopped only by the ruleset it names", async () => {
+    // Review round 15: a page read before another tab chose a different
+    // default stopped with a plain clear, and cleared that one.
+    const { POST } = await import("@/app/api/rulesets/import/route");
+    const second = await POST(
+      new Request("http://local/api/rulesets/import", {
+        method: "POST",
+        body: JSON.stringify({ name: "Second protocol", tier: "global", markdown: EXAMPLE }),
+      }),
+    );
+    expect(second.status).toBe(201);
+    const { rulesets } = await listed();
+    const first = rulesets.find((row) => row.name === "Example protocol")!;
+    const other = rulesets.find((row) => row.name === "Second protocol")!;
+    const { PUT, DELETE } = await import("@/app/api/rulesets/[id]/default/route");
+    const at = (id: string) => ({ params: Promise.resolve({ id }) });
+    const asked = (method: string) => new Request("http://local/x", { method });
+
+    expect((await PUT(asked("PUT"), at(other.id))).status).toBe(200);
+    expect((await listed()).defaultRulesetId).toBe(other.id);
+    expect((await DELETE(asked("DELETE"), at(first.id))).status).toBe(200);
+    expect((await listed()).defaultRulesetId).toBe(other.id);
+    expect((await DELETE(asked("DELETE"), at(other.id))).status).toBe(200);
+    expect((await listed()).defaultRulesetId).toBeNull();
+    expect((await PUT(asked("PUT"), at("NO-SUCH-RULESET"))).status).toBe(404);
+    expect((await listed()).defaultRulesetId).toBeNull();
+  });
+
+  it("goes with its ruleset when all data is deleted", async () => {
+    // Review round 15: the wipe took the rulesets and left the setting, which
+    // the settings read then reported.
+    const [only] = (await listed()).rulesets;
+    await save({ defaultRulesetId: only!.id });
+    const { DELETE } = await import("@/app/api/system/data/route");
+    expect((await DELETE()).status).toBe(200);
+    const { runtime } = await import("@/server/runtime");
+    const { readSetting, SETTING_KEYS } = await import("@/server/db/repositories/settings");
+    const { z } = await import("zod");
+    expect(
+      readSetting(runtime().db, SETTING_KEYS.defaultRulesetId, z.string().nullable()),
+    ).toBeNull();
+    expect((await settingsRead()).defaultRulesetId).toBeNull();
   });
 });

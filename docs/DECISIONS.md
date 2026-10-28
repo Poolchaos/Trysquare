@@ -5703,3 +5703,18 @@ verified evidence, in writing, here.
   seen; after a failed read it is seen a moment late, and a dialog opened
   again in that moment lost its own. Each dialog now stops the reads it
   opened with. That window is milliseconds and no test reaches it.
+- 2026-10-26 Review round 15, on f9c5ce0 (D-225): Stop using by default
+  sent a plain clear, so from a page read before another ruleset was made
+  the default it cleared that one; a ruleset is now made and stopped being
+  the default through its own route, /api/rulesets/:id/default, whose
+  DELETE clears the default only while it names that ruleset. Deleting all
+  data took the rulesets and left the setting, which /api/settings then
+  reported; deleting a ruleset now clears a default that named it, and the
+  settings read reports the default as the rulesets screen does, none for
+  one gone. A draft's Start beginning on the default had no test; the
+  browser test now makes a draft and finds its picker on the default, and
+  stops the default from the ruleset's page. f9c5ce0's message called
+  02-DATA-MODEL's catalogue three keys behind, where it listed three keys
+  and was one behind, and said its browser test found a new review started
+  on the default, where it found only the new review's picker on it.
+  PROJECT-STATE counted 40 route handlers where there were 41, now 42.
