@@ -5654,3 +5654,15 @@ verified evidence, in writing, here.
   started at 06:30:10Z. The suite now serves on 3417, which that runner
   does not claim (its others are 14400 to 19499). Rejected: changing the
   other project's runner, which is not this repository's to change.
+- 2026-10-26 Review round 15: the dark theme's detail-screens test failed
+  once, the new review screen's model picker still empty when its
+  five-second wait ran out. The test photographed the project page as soon
+  as its Branches heading showed, while the page still read "Fetching the
+  latest refs..." (the saved photo shows it), and pressed New review during
+  that fetch. The server fetches one clone at a time
+  (`src/server/gitops/repo.ts`), so the new screen's fetch began only once
+  the first ended, and the screen, which draws nothing until its reads
+  land, drew 4.6 s after the press (the trace's frames). The test now waits
+  for the fetched branch table before the photo, and gives the picker the
+  minute the branch list is given. The screens are right as built: a fetch
+  takes what it takes, and fetches of one clone are queued on purpose.

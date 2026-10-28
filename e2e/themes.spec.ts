@@ -102,11 +102,16 @@ test("the detail screens photograph on real content", async ({ page }, testInfo)
   await page.goto("/projects");
   await page.getByRole("main").getByRole("link", { name: "app", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Branches" })).toBeVisible({ timeout: 60_000 });
+  // The branches as fetched: photographed while "Fetching the latest refs...",
+  // and New review pressed during that fetch waited behind it, the server
+  // fetching one clone at a time (review round 15).
+  await expect(page.getByRole("main").getByRole("table")).toBeVisible({ timeout: 60_000 });
   await photograph(page, shot("project-detail"));
 
   await page.getByRole("link", { name: "New review" }).click();
   await expect(page.getByRole("heading", { name: "New review", level: 1 })).toBeVisible();
-  await expect(page.getByTestId("model-picker")).toBeVisible();
+  // Drawn once its own fetch from the remote lands, as the branches above are.
+  await expect(page.getByTestId("model-picker")).toBeVisible({ timeout: 60_000 });
   await photograph(page, shot("new-review"));
 
   await page.goto("/rulesets");
