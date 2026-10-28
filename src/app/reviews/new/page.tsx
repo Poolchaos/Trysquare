@@ -10,7 +10,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   SELECTABLE_REVIEW_EFFORTS,
   reviewProfileSchema,
@@ -532,6 +532,19 @@ function NewReview() {
   const preflight = answered?.body ?? null;
   const preflightError = answered?.error ?? "";
   const preflightPending = readyToPreflight && answered === null;
+  // The answer's height, held while the pre-flight is asked again: emptied,
+  // the page shrank under the pointer as the intent box gave up the focus,
+  // and a click meant for Advanced landed on what slid into its place (seen
+  // in the journey, review round 15).
+  const examineRef = useRef<HTMLDivElement>(null);
+  const [examineHeight, setExamineHeight] = useState(0);
+  useEffect(() => {
+    const region = examineRef.current;
+    if (!region || preflight === null) return;
+    const watching = new ResizeObserver(() => setExamineHeight(region.offsetHeight));
+    watching.observe(region);
+    return () => watching.disconnect();
+  }, [preflight]);
 
   useEffect(() => {
     if (!readyToPreflight) return;
@@ -1222,147 +1235,159 @@ function NewReview() {
             </Card>
           ) : null}
 
-          {preflightPending ? (
-            <p className="text-sm text-[var(--color-ink-muted)]">
-              Working out what this review will examine...
-            </p>
-          ) : null}
-          {readyToPreflight && preflightError ? <Problem>{preflightError}</Problem> : null}
-
-          {readyToPreflight && preflight ? (
-            <Card className="p-4">
-              <h2 className="mb-3 text-heading font-medium">What this review will examine</h2>
-              <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
-                <Row
-                  label="Files changed"
-                  value={
-                    preflight.pins.linked
-                      ? `${preflight.pins.primary.files} here, ${preflight.pins.linked.files} in the dependency`
-                      : String(preflight.files)
-                  }
-                />
-                <Row label="Hunks" value={String(preflight.hunks)} />
-                <Row label="Sweep hits" value={String(preflight.sweepHits)} />
-                {preflight.changedSymbols > 0 ? (
-                  <Row label="Changed exports" value={String(preflight.changedSymbols)} />
-                ) : null}
-                <Row label="Model requests" value={String(preflight.requests)} />
-                <Row label="Second verifier" value={paired?.displayName ?? pairedId} />
-                <Row
-                  label="Estimated tokens"
-                  value={preflight.estimatedTokens.toLocaleString("en-US")}
-                />
-                <Row
-                  label="Reviewing"
-                  value={`${preflight.pins.primary.fromCommit.slice(0, 8)} ${preflight.pins.primary.subject}`}
-                />
-                <Row
-                  label="Merge base"
-                  value={preflight.pins.primary.mergeBaseCommit.slice(0, 8)}
-                />
-                {preflight.pins.linked ? (
-                  <Row
-                    label="With dependency"
-                    value={`${preflight.pins.linked.fromCommit.slice(0, 8)} ${preflight.pins.linked.subject}`}
-                  />
-                ) : null}
-              </dl>
-
-              <div data-testid="requests-by-stage" className="mt-3 text-xs">
-                <p className="font-medium">Requests by stage</p>
-                <p className="text-[var(--color-ink-muted)]">
-                  {REQUEST_STAGES.map(
-                    ([stage, label]) => `${label} ${preflight.requestsByStage[stage] ?? 0}`,
-                  ).join(", ")}
-                  . The second verifier is asked only if verification proves a finding, and any
-                  request can need one more if its answer comes back in the wrong shape.
-                </p>
-              </div>
-
-              {preflight.checks ? (
-                // Before Start, since they run the branch's own code on this
-                // machine, and grading adds requests nobody can count until
-                // the e2e has saved its screenshots (WP-I step 5).
-                <div data-testid="project-checks" className="mt-3 text-xs">
-                  <p className="font-medium">The project&apos;s own checks run first</p>
-                  <p className="text-[var(--color-ink-muted)]">
-                    On a throwaway copy of the branch, as you:{" "}
-                    {preflight.checks.commands.map((entry, index) => (
-                      <span key={entry.step}>
-                        {index > 0 ? ", then " : ""}
-                        <Mono className="break-all">{entry.command}</Mono>
-                      </span>
-                    ))}
-                    .
-                    {preflight.checks.grades
-                      ? " The screenshots its e2e saves are then graded, a request for each eight or fewer, and those graded C or D graded again the same way: how many requests is known only once the e2e has saved them."
-                      : ""}
+          {readyToPreflight ? (
+            // A grid, so the card read again fills the height held for it.
+            <div
+              ref={examineRef}
+              className="grid"
+              style={
+                preflightPending && examineHeight > 0 ? { minHeight: examineHeight } : undefined
+              }
+            >
+              {preflightPending ? (
+                <Card className="p-4">
+                  <p className="text-sm text-[var(--color-ink-muted)]">
+                    Working out what this review will examine...
                   </p>
-                </div>
+                </Card>
               ) : null}
+              {preflightError ? <Problem>{preflightError}</Problem> : null}
+              {preflight ? (
+                <Card className="p-4">
+                  <h2 className="mb-3 text-heading font-medium">What this review will examine</h2>
+                  <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
+                    <Row
+                      label="Files changed"
+                      value={
+                        preflight.pins.linked
+                          ? `${preflight.pins.primary.files} here, ${preflight.pins.linked.files} in the dependency`
+                          : String(preflight.files)
+                      }
+                    />
+                    <Row label="Hunks" value={String(preflight.hunks)} />
+                    <Row label="Sweep hits" value={String(preflight.sweepHits)} />
+                    {preflight.changedSymbols > 0 ? (
+                      <Row label="Changed exports" value={String(preflight.changedSymbols)} />
+                    ) : null}
+                    <Row label="Model requests" value={String(preflight.requests)} />
+                    <Row label="Second verifier" value={paired?.displayName ?? pairedId} />
+                    <Row
+                      label="Estimated tokens"
+                      value={preflight.estimatedTokens.toLocaleString("en-US")}
+                    />
+                    <Row
+                      label="Reviewing"
+                      value={`${preflight.pins.primary.fromCommit.slice(0, 8)} ${preflight.pins.primary.subject}`}
+                    />
+                    <Row
+                      label="Merge base"
+                      value={preflight.pins.primary.mergeBaseCommit.slice(0, 8)}
+                    />
+                    {preflight.pins.linked ? (
+                      <Row
+                        label="With dependency"
+                        value={`${preflight.pins.linked.fromCommit.slice(0, 8)} ${preflight.pins.linked.subject}`}
+                      />
+                    ) : null}
+                  </dl>
 
-              {emptyHalves.length > 0 ? (
-                <div className="mt-3">
-                  <Problem>
-                    {emptyHalves.join(". ")}, so a review of it would find nothing and read as
-                    clean. Choose a branch with a change.
-                  </Problem>
-                </div>
-              ) : null}
+                  <div data-testid="requests-by-stage" className="mt-3 text-xs">
+                    <p className="font-medium">Requests by stage</p>
+                    <p className="text-[var(--color-ink-muted)]">
+                      {REQUEST_STAGES.map(
+                        ([stage, label]) => `${label} ${preflight.requestsByStage[stage] ?? 0}`,
+                      ).join(", ")}
+                      . The second verifier is asked only if verification proves a finding, and any
+                      request can need one more if its answer comes back in the wrong shape.
+                    </p>
+                  </div>
 
-              {preflight.contextWindow === null ? (
-                <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
-                  This model has not been probed, so its context window is unknown and the review
-                  will send each batch as one request without splitting.
-                </p>
-              ) : preflight.requestsSplit ? (
-                <p className="mt-3 text-xs text-[var(--color-warning)]">
-                  The adversarial work is {preflight.passes}{" "}
-                  {preflight.passes === 1 ? "pass" : "passes"}, split into{" "}
-                  {preflight.requestsByStage.s3_adversarial} requests to fit this model&apos;s
-                  window. The split is estimated, so the run may make a few more or fewer.
-                </p>
-              ) : null}
-              {preflight.requestsOversized ? (
-                <p className="mt-3 text-xs text-[var(--color-warning)]">
-                  A file is larger than this model&apos;s usable window on its own. It is sent
-                  anyway, and the model may not read all of it.
-                </p>
-              ) : null}
+                  {preflight.checks ? (
+                    // Before Start, since they run the branch's own code on this
+                    // machine, and grading adds requests nobody can count until
+                    // the e2e has saved its screenshots (WP-I step 5).
+                    <div data-testid="project-checks" className="mt-3 text-xs">
+                      <p className="font-medium">The project&apos;s own checks run first</p>
+                      <p className="text-[var(--color-ink-muted)]">
+                        On a throwaway copy of the branch, as you:{" "}
+                        {preflight.checks.commands.map((entry, index) => (
+                          <span key={entry.step}>
+                            {index > 0 ? ", then " : ""}
+                            <Mono className="break-all">{entry.command}</Mono>
+                          </span>
+                        ))}
+                        .
+                        {preflight.checks.grades
+                          ? " The screenshots its e2e saves are then graded, a request for each eight or fewer, and those graded C or D graded again the same way: how many requests is known only once the e2e has saved them."
+                          : ""}
+                      </p>
+                    </div>
+                  ) : null}
 
-              {preflight.sweepProblems.length > 0 ? (
-                <div className="mt-3">
-                  <Problem>
-                    {preflight.sweepProblems.length} sweep pattern(s) could not run, so the review
-                    would refuse to start: {preflight.sweepProblems.join("; ")}
-                  </Problem>
-                </div>
-              ) : null}
+                  {emptyHalves.length > 0 ? (
+                    <div className="mt-3">
+                      <Problem>
+                        {emptyHalves.join(". ")}, so a review of it would find nothing and read as
+                        clean. Choose a branch with a change.
+                      </Problem>
+                    </div>
+                  ) : null}
 
-              {preflight.sweepLiterals.length > 0 ? (
-                // Not a warning: the pattern runs either way. But a pattern
-                // read as text matches different things from the same pattern
-                // read as a regex, and which one happened is worth knowing
-                // before the findings arrive rather than after.
-                <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
-                  {preflight.sweepLiterals.length} sweep pattern(s) are not valid regular
-                  expressions and will be searched for as literal text:{" "}
-                  {preflight.sweepLiterals.join("; ")}
-                </p>
-              ) : null}
+                  {preflight.contextWindow === null ? (
+                    <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+                      This model has not been probed, so its context window is unknown and the
+                      review will send each batch as one request without splitting.
+                    </p>
+                  ) : preflight.requestsSplit ? (
+                    <p className="mt-3 text-xs text-[var(--color-warning)]">
+                      The adversarial work is {preflight.passes}{" "}
+                      {preflight.passes === 1 ? "pass" : "passes"}, split into{" "}
+                      {preflight.requestsByStage.s3_adversarial} requests to fit this model&apos;s
+                      window. The split is estimated, so the run may make a few more or fewer.
+                    </p>
+                  ) : null}
+                  {preflight.requestsOversized ? (
+                    <p className="mt-3 text-xs text-[var(--color-warning)]">
+                      A file is larger than this model&apos;s usable window on its own. It is sent
+                      anyway, and the model may not read all of it.
+                    </p>
+                  ) : null}
 
-              {preflight.excludedPairs > 0 ? (
-                <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
-                  {preflight.excludedPairs} rule and file pair(s) are outside this profile and will
-                  be recorded as deliberately not checked.
-                </p>
-              ) : null}
+                  {preflight.sweepProblems.length > 0 ? (
+                    <div className="mt-3">
+                      <Problem>
+                        {preflight.sweepProblems.length} sweep pattern(s) could not run, so the
+                        review would refuse to start: {preflight.sweepProblems.join("; ")}
+                      </Problem>
+                    </div>
+                  ) : null}
 
-              <p className="mt-3 text-xs text-[var(--color-ink-faint)]">
-                The commits are pinned again when the review starts, so these counts are a preview
-                rather than a promise.
-              </p>
-            </Card>
+                  {preflight.sweepLiterals.length > 0 ? (
+                    // Not a warning: the pattern runs either way. But a pattern
+                    // read as text matches different things from the same pattern
+                    // read as a regex, and which one happened is worth knowing
+                    // before the findings arrive rather than after.
+                    <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+                      {preflight.sweepLiterals.length} sweep pattern(s) are not valid regular
+                      expressions and will be searched for as literal text:{" "}
+                      {preflight.sweepLiterals.join("; ")}
+                    </p>
+                  ) : null}
+
+                  {preflight.excludedPairs > 0 ? (
+                    <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+                      {preflight.excludedPairs} rule and file pair(s) are outside this profile and
+                      will be recorded as deliberately not checked.
+                    </p>
+                  ) : null}
+
+                  <p className="mt-3 text-xs text-[var(--color-ink-faint)]">
+                    The commits are pinned again when the review starts, so these counts are a
+                    preview rather than a promise.
+                  </p>
+                </Card>
+              ) : null}
+            </div>
           ) : null}
 
           {error ? <Problem>{error}</Problem> : null}

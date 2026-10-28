@@ -5666,3 +5666,16 @@ verified evidence, in writing, here.
   for the fetched branch table before the photo, and gives the picker the
   minute the branch list is given. The screens are right as built: a fetch
   takes what it takes, and fetches of one clone are queued on purpose.
+- 2026-10-26 Review round 15: the journey failed once on the new review
+  screen, its Advanced fold left shut after a click on it. The click's
+  press took the focus from the intent box, which asks the pre-flight again,
+  and the pre-flight's card emptied to one line while it did; the page,
+  scrolled near its foot, shrank, the browser pulled the scroll back, and
+  everything moved down 88 px before the release, which landed elsewhere
+  (the trace's frames either side of the click). A person clicking
+  Advanced straight after writing the intent met the same. The card now
+  holds its height while it is read again. A browser test fills the intent,
+  scrolls to the foot, holds the pre-flight asked again and clicks
+  Advanced: the fold opens with the change and stays shut without it. The
+  run that failed held one other change, to the dashboard alone, which
+  this screen does not use.

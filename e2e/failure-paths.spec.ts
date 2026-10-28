@@ -2785,6 +2785,45 @@ test("a list whose data cannot be read says so, and reads again on Try again", a
   }
 });
 
+test("a click as the intent box gives up the focus lands where it was aimed", async ({ page }) => {
+  // Review round 15, seen in the journey: leaving the intent box asks the
+  // pre-flight again, and its card emptied while it did, so a page scrolled
+  // to its foot shrank under the pointer and a click on Advanced landed on
+  // what slid into its place. The pre-flight asked again is held here, so
+  // the page stays as it is while it waits.
+  await fillANewReview(page);
+  await page
+    .getByLabel(/What was this change meant to do/)
+    .fill("Rename the prefs field and migrate every consumer.");
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stopHolding = await answerOnce(page, "**/api/reviews/preflight", async (route) => {
+    await held;
+    await route.continue();
+  });
+  try {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.getByText("Advanced", { exact: true }).click();
+    await expect(page.getByText("Working out what this review will examine...")).toBeVisible();
+    const fold = page
+      .locator("details")
+      .filter({ has: page.getByText("Advanced", { exact: true }) });
+    await expect(fold).toHaveAttribute("open", "");
+    await shootAll(page, page.locator("form"), "preflight-asked-again");
+    // Landed before the route is taken away: unrouted while it was still
+    // held, the request was handled for it and the held one failed.
+    release();
+    await expect(page.getByText("What this review will examine", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+  } finally {
+    release();
+    await stopHolding();
+  }
+});
+
 test("the new review screen says why a read failed, not that a repository is empty", async ({
   page,
   request,
