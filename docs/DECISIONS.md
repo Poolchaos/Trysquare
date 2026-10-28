@@ -5802,3 +5802,20 @@ verified evidence, in writing, here.
   shows the review queued, as it is when one shows it running. A browser
   test reads a review as running, failed, then queued after Resume, and
   finds the region empty.
+- 2026-10-28 Review round 16 (over the round 15 fixes 4da9ea5, 142e698,
+  26ee655, b58edd4 and bd4846a, the fixes found proving them, e0970e0,
+  19a3f1d and 927dbf0, and U9 and U10, f4766b7 and b1b2fce), three
+  read-only reviewers, each finding read again in the code and each fix
+  shown failing on the code before it. Fixed: the review screen numbered a
+  stage it does not know "stage 0" and the theater called it Preparing,
+  and both fallbacks kept a lettered id's prefix (8b202dc); a failed
+  scoreboard re-read went unsaid while the old figures stood (f534474);
+  U9's test left the Activity log unproven, and a repeated stream could
+  show a row twice (b4aaa07); a review resumed into the line still said
+  how its last run ended (2fe084a); 02-DATA-MODEL dropped that a default
+  gone from an older database reads as none. Left as they stand, with the
+  reason: the settings PUT still takes defaultRulesetId null and clears
+  whatever default is set, a raw settings write nothing in the app sends;
+  no test reaches a Verify again dialog reopened within milliseconds,
+  said in 142e698; the e2e plan's D-1 line naming port 3100 is a dated
+  plan decision, its change recorded here and in 927dbf0.
