@@ -8,6 +8,16 @@ finding 3: the structure counts below recounted from the code).
 
 ## Status
 
+- 2026-10-28: every finding of both outside audits is now fixed or
+  answered: U3, U4 and U7 to U10 since 2026-10-25, with review round 15
+  over them and over D-225 (in DECISIONS). A ruleset can be the default a
+  new review starts on (D-225); the maintainer's own protocol is imported
+  from docs/private on this machine, never committed. The e2e server now
+  serves on 3417: another project's e2e runner on this machine ended the
+  node process on 3100, which is why local runs lost their server.
+  `./verify.sh --e2e` exits 0 at b1b2fce with 1432 unit tests passing, 11
+  skipped, and 131 browser tests. The maintainer's verdicts on WP-I, WP-J,
+  G1 and MVP 7.4 still wait on the maintainer's own testing.
 - 2026-10-25: two outside audits, each finding read again in the code and
   fixed or answered, D-203 to D-224 with review rounds 10 to 13 over the
   fixes (in DECISIONS); the maintainer decided D-215 (the local API stays
