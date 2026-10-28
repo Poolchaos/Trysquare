@@ -5718,3 +5718,17 @@ verified evidence, in writing, here.
   and was one behind, and said its browser test found a new review started
   on the default, where it found only the new review's picker on it.
   PROJECT-STATE counted 40 route handlers where there were 41, now 42.
+- 2026-10-26 Review round 15, on 345ccd4 (U7): with the theater open, a
+  run's ending was still not said. The page that takes the theater's place
+  mounted with the status badge already showing the ending, and what a
+  live region is mounted with is not read out; only the hidden case was
+  fixed. One region, first under both the theater and the page so it is
+  the same node across the change, now says how the run ended in its own
+  words, and the badge is no longer a live region. A browser test marks
+  the region while the theater is open, ends the run, and finds the
+  ending said in the marked node. The stand-in key for a run hidden before
+  its start was stamped goes, with the test that staged that state: the
+  status change that stamps the start runs before the job manager lists
+  the run as running, with no await between, so no reading shows a run
+  without its start. 345ccd4 took the audit's word for that state without
+  checking it.

@@ -1892,8 +1892,7 @@ test("a watched run that ends while hidden says so, and the focus stays on the p
     const reviewId = new URL(page.url()).pathname.split("/").pop();
     const cancelled = await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
     expect(cancelled.status()).toBe(200);
-    // Said by the status badge, a live region.
-    await expect(page.getByRole("status").filter({ hasText: /^cancelled$/ })).toHaveCount(1, {
+    await expect(page.getByTestId("run-ending")).toHaveText("The run is over: it was cancelled.", {
       timeout: 60_000,
     });
     await expect(page.getByTestId("review-heading")).toBeFocused();
@@ -1908,38 +1907,62 @@ test("a watched run that ends while hidden says so, and the focus stays on the p
   }
 });
 
-test("a run whose start is not stamped yet can still be hidden", async ({ page }) => {
-  // Audit finding U7: Hide stored the run's start, null for a moment after a
-  // run begins, so Hide did nothing then. A finished review is answered as
-  // one running with no start stamped.
-  await page.goto("/reviews");
-  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
-  await expect(row).toBeVisible({ timeout: 30_000 });
-  const reading = `**${await row.getByRole("link").getAttribute("href")}`.replace(
-    "/reviews/",
-    "/api/reviews/",
-  );
-  const stop = await routeUntilStopped(page, reading, async (route) => {
-    const response = await route.fetch();
-    const body = (await response.json()) as { review: { status: string } };
-    await route.fulfill({
-      response,
-      json: {
-        ...body,
-        running: true,
-        review: { ...body.review, status: "running", startedAt: null },
-      },
-    });
-  });
+test("a watched run that ends with its theater open says so", async ({ page }) => {
+  // Review round 15: the page that took the theater's place mounted with the
+  // status badge already showing the ending, and what a live region is
+  // mounted with is not read out. The region that says it is marked while
+  // the theater is open, and found marked after: the same node. Its words
+  // must come after the theater has gone, whose modal dialog keeps the page
+  // from a screen reader: each change to the page is recorded as whether
+  // the theater is open and whether the words are there. No screen reader
+  // is driven; this is the order one depends on. Held, then cancelled from
+  // outside, as above.
+  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+  writeFileSync(STALL_TRIGGER, JSON.stringify({ ms: 30_000 }), "utf8");
   try {
-    await row.getByRole("link").click();
+    await startAReview(page);
     const theater = page.getByRole("dialog", { name: /^Watching the review of/ });
-    await expect(theater).toBeVisible({ timeout: 30_000 });
-    await page.keyboard.press("Escape");
-    await expect(theater).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Scan view" })).toBeVisible();
+    await expect(theater).toBeVisible({ timeout: 60_000 });
+    await expect(theater.getByText("Risk started")).toBeVisible({ timeout: 60_000 });
+    const said = page.getByTestId("run-ending");
+    await expect(said).toHaveText("");
+    await said.evaluate((node) => node.setAttribute("data-marked", "with the theater"));
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      (window as unknown as { endingOrder: string[] }).endingOrder = seen;
+      new MutationObserver(() => {
+        const open = document.querySelector("dialog[open]") ? "theater" : "page";
+        const words = document.querySelector('[data-testid="run-ending"]')?.textContent;
+        const now = `${open} ${words ? "said" : "quiet"}`;
+        if (seen.at(-1) !== now) seen.push(now);
+      }).observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+      });
+    });
+
+    const reviewId = new URL(page.url()).pathname.split("/").pop();
+    const cancelled = await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
+    expect(cancelled.status()).toBe(200);
+    await expect(theater).toHaveCount(0, { timeout: 60_000 });
+    await expect(said).toHaveText("The run is over: it was cancelled.");
+    await expect(said).toHaveAttribute("data-marked", "with the theater");
+    const order = await page.evaluate(
+      () => (window as unknown as { endingOrder: string[] }).endingOrder,
+    );
+    expect(order).not.toContain("theater said");
+    expect(order.slice(-2)).toEqual(["page quiet", "page said"]);
+    await expect(page.getByTestId("review-heading")).toBeFocused();
+    await shootAll(
+      page,
+      page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) }),
+      "run-ended-watched",
+    );
   } finally {
-    await stop();
+    rmSync(STALL_TRIGGER, { force: true });
+    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
   }
 });
 

@@ -427,8 +427,26 @@ function CoveragePanel({
   );
 }
 
-/** The key of a run hidden before its start was stamped. */
-const UNSTAMPED = "unstamped";
+/**
+ * How a run's ending is said, in words of its own: the badge's, said twice,
+ * made every check for a status's words find two (345ccd4).
+ */
+function endingOf(status: ReviewStatus): string {
+  switch (status) {
+    case "awaiting_confirmation":
+      return "The run is over. Its findings are ready for you.";
+    case "cancelled":
+      return "The run is over: it was cancelled.";
+    case "failed":
+      return "The run is over: it failed.";
+    case "paused_limit":
+      return "The run has paused at the usage limit, and can be resumed.";
+    case "interrupted":
+      return "The run was interrupted, and can be resumed.";
+    default:
+      return "The run is over.";
+  }
+}
 
 export default function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -468,8 +486,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   }, [minimizedRun]);
   // A run that ends takes the theater, or Scan view, with it, and the focus
   // fell to the page with nothing said; the review's name takes the focus,
-  // only if nothing else holds it, and the status badge, a live region, says
-  // how it ended (audit finding U7).
+  // only if nothing else holds it, and the ending is said below (audit
+  // finding U7).
   const headingRef = useRef<HTMLSpanElement>(null);
   const wasRunning = useRef(false);
   useEffect(() => {
@@ -481,13 +499,28 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     }
     wasRunning.current = running;
   }, [snapshot?.running]);
-  // Hidden before its start was stamped, a run was keyed on a start of null
-  // and Hide did nothing; the key moves to the start with the reading that
-  // brings it, so the next run still opens on the theater (audit finding U7).
+  // How a watched run ended, said by a region mounted with the theater and
+  // kept by the page that takes its place: the status badge, mounted fresh
+  // with the page, already held the ending, and what a live region is
+  // mounted with is not read out (review round 15). Emptied as a run starts,
+  // so the next ending is a change too.
+  const [ending, setEnding] = useState("");
+  const shownRunning = useRef(false);
+  const endingTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(endingTimer.current), []);
   function show(fresh: Snapshot) {
+    if (fresh.running) {
+      clearTimeout(endingTimer.current);
+      setEnding("");
+    } else if (shownRunning.current) {
+      const words = endingOf(fresh.review.status as ReviewStatus);
+      // A moment after the theater has gone: its modal dialog keeps the rest
+      // of the page, this region too, from a screen reader, and words set as
+      // the region came back within reach were no change to hear.
+      endingTimer.current = setTimeout(() => setEnding(words), 150);
+    }
+    shownRunning.current = fresh.running;
     setSnapshot(fresh);
-    const started = fresh.review.startedAt;
-    if (started) setMinimizedRun((hidden) => (hidden === UNSTAMPED ? started : hidden));
   }
   // Ticks only while something is running, so a finished review is not
   // re-rendered once a second forever.
@@ -918,23 +951,33 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
   const { review, findings } = snapshot;
 
-  const scanMinimized =
-    minimizedRun !== null && (minimizedRun === UNSTAMPED || minimizedRun === review.startedAt);
+  // First in the theater and first on the page, so the one node outlives
+  // the change from one to the other.
+  const said = (
+    <p className="sr-only" role="status" data-testid="run-ending">
+      {ending}
+    </p>
+  );
+
+  const scanMinimized = minimizedRun !== null && minimizedRun === review.startedAt;
   if (snapshot.running && !scanMinimized) {
     return (
-      <ScanTheater
-        snapshot={snapshot}
-        live={live}
-        now={now}
-        batch={batch}
-        streaming={streaming}
-        onMinimize={() => setMinimizedRun(review.startedAt ?? UNSTAMPED)}
-        onCancel={async () => {
-          const problem = await cancelReview();
-          await reload();
-          return problem;
-        }}
-      />
+      <>
+        {said}
+        <ScanTheater
+          snapshot={snapshot}
+          live={live}
+          now={now}
+          batch={batch}
+          streaming={streaming}
+          onMinimize={() => setMinimizedRun(review.startedAt)}
+          onCancel={async () => {
+            const problem = await cancelReview();
+            await reload();
+            return problem;
+          }}
+        />
+      </>
     );
   }
 
@@ -1012,6 +1055,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <>
+      {said}
       <PageHeader
         title={
           <span className="flex flex-col gap-1">
@@ -1042,13 +1086,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         }
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
-            {/* Heard as it changes: a run that ended while its theater was
-                hidden went unsaid (audit finding U7). */}
-            <span role="status">
-              <Badge tone={statusTone(review.status)}>
-                {snapshot.queued ? "queued" : statusLabel(review.status)}
-              </Badge>
-            </span>
+            <Badge tone={statusTone(review.status)}>
+              {snapshot.queued ? "queued" : statusLabel(review.status)}
+            </Badge>
             {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}
             <Sha value={review.fromCommit} />
             <span>{review.model}</span>
