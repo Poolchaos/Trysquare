@@ -5819,3 +5819,10 @@ verified evidence, in writing, here.
   no test reaches a Verify again dialog reopened within milliseconds,
   said in 142e698; the e2e plan's D-1 line naming port 3100 is a dated
   plan decision, its change recorded here and in 927dbf0.
+- 2026-10-28 Review round 17, on f534474: the notice of a failed
+  scoreboard re-read said "the figures below", which over a board with
+  nothing reviewed yet are not there; and it arrives with no one having
+  asked, in a plain paragraph, so a screen reader was never told. It now
+  says what is shown is the last reading, in a status region mounted from
+  the start, since what a region is mounted with is not read out. The test
+  marks the region before the failure and finds the notice in it after.

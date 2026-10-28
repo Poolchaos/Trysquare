@@ -2008,6 +2008,11 @@ test("a quiet dashboard keeps its times and its waiting list current", async ({ 
 
     // A re-read that fails is asked again at the next poll (review round
     // 15), though what the bar polls has not changed since.
+    // The region that says it is there, empty, before anything fails, and
+    // is marked: the same node says it after (review round 17).
+    const region = page.getByTestId("scoreboard-status");
+    await expect(region).toHaveText("");
+    await region.evaluate((node) => node.setAttribute("data-marked", "before"));
     const again = boards;
     failNext = true;
     awaiting += 1;
@@ -2015,8 +2020,10 @@ test("a quiet dashboard keeps its times and its waiting list current", async ({ 
     await expect.poll(() => boards).toBeGreaterThan(again);
     // Said while the old figures stand (review round 16), and gone once a
     // read lands.
-    const stale = page.getByText(/The figures below are the last ones read/);
+    const stale = region.getByText(/What is shown is the last reading/);
     await expect(stale).toBeVisible();
+    await expect(region).toHaveAttribute("role", "status");
+    await expect(region).toHaveAttribute("data-marked", "before");
     await shootAll(page, stale, "scoreboard-reread-failed");
     await page.clock.fastForward("00:05");
     await expect.poll(() => boards).toBeGreaterThan(again + 1);

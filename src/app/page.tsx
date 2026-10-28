@@ -302,17 +302,21 @@ export default function HomePage() {
         subtitle="Everything here is counted from reviews this machine has run."
       />
       <PageBody>
-        {/* Said above the figures it could not refresh: retried at the next
-            poll, a failed re-read still left the board looking current
-            (review round 16). */}
-        {board !== null && error !== "" ? (
-          <div className="mb-4">
-            <Problem>
-              {asSentence(error)} The figures below are the last ones read, and are read again
-              shortly.
-            </Problem>
-          </div>
-        ) : null}
+        {/* Said above what it could not refresh: retried at the next poll, a
+            failed re-read still left the board looking current (review round
+            16). In a region there from the start, so a screen reader hears
+            it come: it arrives with no one having asked (review round 17).
+            Not "the figures": over a board with nothing reviewed yet, there
+            are none. */}
+        <div role="status" data-testid="scoreboard-status">
+          {board !== null && error !== "" ? (
+            <div className="mb-4">
+              <Problem>
+                {asSentence(error)} What is shown is the last reading, and it is read again shortly.
+              </Problem>
+            </div>
+          ) : null}
+        </div>
         {board === null ? (
           <Loading
             {...(error === "" ? {} : { error })}
