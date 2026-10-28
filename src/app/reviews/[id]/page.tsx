@@ -518,7 +518,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const endingTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(endingTimer.current), []);
   function show(fresh: Snapshot) {
-    if (fresh.running) {
+    // Queued again too: resumed into the line, it still said how the last
+    // run ended beside a badge saying queued (review round 16).
+    if (fresh.running || fresh.queued) {
       clearTimeout(endingTimer.current);
       setEnding("");
     } else if (shownRunning.current) {

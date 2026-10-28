@@ -2378,6 +2378,59 @@ test("the dashboard names a stage it does not know by its id", async ({ page }) 
   }
 });
 
+test("a review resumed into the line no longer says how its last run ended", async ({ page }) => {
+  // Review round 16: after a watched run ended, a Resume that put the review
+  // in the line left the ending said beside a badge saying queued. A
+  // finished review is read as running, then as failed, then, once Resume
+  // is pressed, as waiting in the line; the start itself is answered here.
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  const href = (await row.getByRole("link").getAttribute("href"))!;
+  const reading = `**${href.replace("/reviews/", "/api/reviews/")}`;
+  let phase: "running" | "failed" | "queued" = "running";
+  const stopReading = await routeUntilStopped(page, reading, async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const response = await route.fetch();
+    const body = (await response.json()) as { review: object };
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        running: phase === "running",
+        queued: phase === "queued",
+        review: { ...body.review, status: phase === "running" ? "running" : "failed" },
+      },
+    });
+  });
+  const stopStarting = await routeUntilStopped(page, `${reading}/start`, (route) =>
+    route.fulfill({ status: 200, json: { status: "queued" } }),
+  );
+  // Its stream refused, so the page reads it on its two-second poll: the
+  // real stream of a review not running stays open and says nothing, and
+  // nothing would read the staged changes.
+  const stopStreaming = await routeUntilStopped(page, `${reading}/events`, (route) =>
+    route.abort(),
+  );
+  try {
+    await row.getByRole("link").click();
+    const theater = page.getByRole("dialog", { name: /^Watching the review of/ });
+    await expect(theater).toBeVisible({ timeout: 30_000 });
+    phase = "failed";
+    const said = page.getByTestId("run-ending");
+    await expect(said).toHaveText("The run is over: it failed.", { timeout: 30_000 });
+    phase = "queued";
+    await page.getByRole("button", { name: "Resume" }).click();
+    const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+    await expect(header.getByText("queued", { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(said).toHaveText("");
+  } finally {
+    await stopStreaming();
+    await stopStarting();
+    await stopReading();
+  }
+});
+
 test("a stage the review screen does not know is named, and given no number", async ({ page }) => {
   // Review round 16: the review's header read "threat model, stage 0 of up
   // to 10" for a stage a newer server ran, and a lettered id such as s7b_

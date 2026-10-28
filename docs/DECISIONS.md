@@ -5795,3 +5795,10 @@ verified evidence, in writing, here.
   after the ones it stages is now held rather than answered, since each
   answered one repeated its line and a row could show twice before it was
   counted.
+- 2026-10-28 Review round 16, on b58edd4: after a watched run ended, a
+  Resume that put the review in the line left the ending said, "The run is
+  over: it failed.", beside a badge saying queued, a contradiction a screen
+  reader meets reading the page. The region is now emptied when a reading
+  shows the review queued, as it is when one shows it running. A browser
+  test reads a review as running, failed, then queued after Resume, and
+  finds the region empty.
