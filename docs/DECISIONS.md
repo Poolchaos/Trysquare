@@ -5773,3 +5773,11 @@ verified evidence, in writing, here.
   dashboard's Live scan that started under a minute ago read "just now
   elapsed", the time-ago words read as a span. It now reads "under a minute
   elapsed"; the U10 test asserts it.
+- 2026-10-28 Review round 16, on b1b2fce (U10): the review screen, which
+  U10's message said already named an unknown stage as the dashboard now
+  does, numbered it "stage 0 of up to 10" in its header, and the theater
+  read "Preparing" for it. Both now name it, with no number. Both
+  fallbacks also kept the prefix of a lettered id, as s4b_ and s5c_ are
+  ("s7b threat model"); they strip it now. A browser test reads a finished review as running on
+  s7b_threat_model and finds the name, without prefix or number, in the
+  theater and the header.

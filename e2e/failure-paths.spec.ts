@@ -2335,6 +2335,47 @@ test("the dashboard names a stage it does not know by its id", async ({ page }) 
   }
 });
 
+test("a stage the review screen does not know is named, and given no number", async ({ page }) => {
+  // Review round 16: the review's header read "threat model, stage 0 of up
+  // to 10" for a stage a newer server ran, and a lettered id such as s7b_
+  // kept its prefix. A finished review is read as running on such a stage.
+  await page.goto("/reviews");
+  const row = page.getByRole("main").locator("ul > li").filter({ hasText: "complete" }).first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  const reading = `**${await row.getByRole("link").getAttribute("href")}`.replace(
+    "/reviews/",
+    "/api/reviews/",
+  );
+  const stop = await routeUntilStopped(page, reading, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { review: { status: string } };
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        running: true,
+        review: { ...body.review, status: "running", currentStage: "s7b_threat_model" },
+      },
+    });
+  });
+  try {
+    await row.getByRole("link").click();
+    const theater = page.getByRole("dialog", { name: /^Watching the review of/ });
+    await expect(theater).toBeVisible({ timeout: 30_000 });
+    await expect(theater.getByText(/threat model/).first()).toBeVisible();
+    expect(await theater.getByText(/s7b/).count()).toBe(0);
+    await page.keyboard.press("Escape");
+    await expect(theater).toHaveCount(0);
+    const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+    await expect(header.getByText(/threat model/)).toBeVisible();
+    expect(await header.getByText(/stage \d+ of up to/).count()).toBe(0);
+    expect(await header.getByText(/s7b/).count()).toBe(0);
+    await shootAll(page, header, "unknown-stage-header");
+  } finally {
+    await stop();
+  }
+});
+
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
   // Only proven findings reach the report: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test

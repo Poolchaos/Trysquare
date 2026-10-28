@@ -98,7 +98,7 @@ const STAGE_ORDER = [
  * screen already does (audit finding U10).
  */
 function stageName(stage: string): string {
-  return STAGE_NAMES[stage] ?? stage.replace(/^s\d+_/, "").replace(/_/g, " ");
+  return STAGE_NAMES[stage] ?? stage.replace(/^s\d+[a-z]?_/, "").replace(/_/g, " ");
 }
 
 const STAGE_NAMES: Record<string, string> = {

@@ -122,7 +122,9 @@ const STAGE_LABELS = new Map<string, string>(STAGES.map(([stage, label]) => [sta
  * label two panels away.
  */
 function stageLabel(stage: string): string {
-  return STAGE_LABELS.get(stage) ?? stage.replace(/^s\d+_/, "").replace(/_/g, " ");
+  // A lettered id too, as s4b_ and s5c_ are: "s7b threat model" kept its
+  // prefix (review round 16).
+  return STAGE_LABELS.get(stage) ?? stage.replace(/^s\d+[a-z]?_/, "").replace(/_/g, " ");
 }
 
 /**
@@ -1109,8 +1111,12 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 stage from a stuck one. */}
             {snapshot.running && executing ? (
               <span className="text-[var(--color-ink)]">
-                {stageLabel(executing)}, stage {STAGES.findIndex(([s]) => s === executing) + 1} of
-                up to {STAGES.length}
+                {stageLabel(executing)}
+                {/* No number for a stage this page does not know: it read
+                    "stage 0 of up to 10" (review round 16). */}
+                {STAGES.some(([s]) => s === executing)
+                  ? `, stage ${STAGES.findIndex(([s]) => s === executing) + 1} of up to ${STAGES.length}`
+                  : ""}
               </span>
             ) : null}
             {review.startedAt && snapshot.running ? (
@@ -2457,8 +2463,10 @@ function ScanTheater({
 
         <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <span className="font-[family-name:var(--font-mono)] text-title font-semibold">
-            {executing !== null && stageIndex !== -1
-              ? `${stageLabel(executing)}`
+            {/* A stage it does not know is named too: it read "Preparing" for
+                a run well past that (review round 16). */}
+            {executing !== null
+              ? stageLabel(executing)
               : snapshot.queued
                 ? "Waiting for the running review"
                 : "Preparing"}
