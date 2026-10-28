@@ -5788,3 +5788,10 @@ verified evidence, in writing, here.
   figures, that they are the last ones read and are read again shortly,
   and the notice goes when a read lands. The quiet-dashboard test finds it
   after the failed re-read and finds it gone after the next.
+- 2026-10-28 Review round 16, on f4766b7 (U9): its test proved the
+  theater's feed alone; the page's Activity log, keyed the same way, was
+  not exercised. The test now hides the theater, marks a row of the log,
+  slides it by one and finds the row still holding its line. Every stream
+  after the ones it stages is now held rather than answered, since each
+  answered one repeated its line and a row could show twice before it was
+  counted.

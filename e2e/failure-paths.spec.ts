@@ -2267,6 +2267,18 @@ test("a sliding feed keeps each row with its own entry", async ({ page }) => {
   const marked = new Promise<void>((resolve) => {
     release = resolve;
   });
+  // The page's Activity log is the second feed (review round 16): it slides
+  // on the third stream, once one of its rows is marked.
+  let releaseLog = () => {};
+  const markedInLog = new Promise<void>((resolve) => {
+    releaseLog = resolve;
+  });
+  // Any stream after those is held until the test ends: answered, each
+  // repeated its line, and a row could appear twice before it was counted.
+  let finish = () => {};
+  const finished = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
   const stopStreaming = await routeUntilStopped(page, `${reading}/events`, async (route) => {
     streams += 1;
     if (streams === 1) {
@@ -2278,8 +2290,18 @@ test("a sliding feed keeps each row with its own entry", async ({ page }) => {
       });
       return;
     }
-    if (streams === 2) await marked;
-    await route.fulfill({ status: 200, contentType: "text/event-stream", body: line(126) });
+    if (streams === 2) {
+      await marked;
+      await route.fulfill({ status: 200, contentType: "text/event-stream", body: line(126) });
+      return;
+    }
+    if (streams === 3) {
+      await markedInLog;
+      await route.fulfill({ status: 200, contentType: "text/event-stream", body: line(127) });
+      return;
+    }
+    await finished;
+    await route.abort().catch(() => undefined);
   });
   try {
     await row.getByRole("link").click();
@@ -2291,8 +2313,23 @@ test("a sliding feed keeps each row with its own entry", async ({ page }) => {
     await expect(theater.locator("li").filter({ hasText: "row 126" })).toHaveCount(1);
     // The marked row still holds the line it was marked on.
     await expect(theater.locator('li[data-marked="yes"]')).toContainText("row 060");
+
+    // The page's own feed, its last forty, the same way.
+    await page.keyboard.press("Escape");
+    await expect(theater).toHaveCount(0);
+    const log = page.getByRole("list", { name: "Activity log" });
+    const hundred = log.locator("li").filter({ hasText: "row 100" });
+    await expect(hundred).toHaveCount(1);
+    await hundred.evaluate((element) => element.setAttribute("data-marked", "log"));
+    releaseLog();
+    await expect(log.locator("li").filter({ hasText: "row 127" })).toHaveCount(1, {
+      timeout: 30_000,
+    });
+    await expect(log.locator('li[data-marked="log"]')).toContainText("row 100");
   } finally {
     release();
+    releaseLog();
+    finish();
     await stopStreaming();
     await stopReading();
   }
