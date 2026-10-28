@@ -185,6 +185,7 @@ export default function HomePage() {
   const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState("");
   const [boardAttempt, setBoardAttempt] = useState(0);
+  const boardShown = useRef(false);
 
   // The same narrow endpoint the bar polls, so a running review appears here
   // without a second source of truth about what is running. What it says is
@@ -250,8 +251,17 @@ export default function HomePage() {
         "The scoreboard could not be read",
       );
       if (cancelled) return;
-      if (sent.ok) setBoard(sent.body);
-      else setError(sent.error);
+      if (sent.ok) {
+        boardShown.current = true;
+        setBoard(sent.body);
+      } else {
+        setError(sent.error);
+        // A re-read that failed is read again at the next poll: it was said
+        // nowhere while the board stood, and nothing asked again until what
+        // the bar polls next changed (review round 15). A first read that
+        // failed waits for Try again, as D-138 has it.
+        if (boardShown.current) lastAttention.current = "unread";
+      }
     })();
     return () => {
       cancelled = true;

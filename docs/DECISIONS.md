@@ -5679,3 +5679,14 @@ verified evidence, in writing, here.
   Advanced: the fold opens with the change and stays shut without it. The
   run that failed held one other change, to the dashboard alone, which
   this screen does not use.
+- 2026-10-26 Review round 15, on e30a659: a scoreboard re-read that failed
+  was said nowhere while the board stood, and nothing asked again until
+  what the bar polls next changed; it is now asked again at the next poll.
+  A first read that failed still waits for Try again (D-138): asked again
+  on its own too, it took the message and Try again away before anyone
+  pressed it, which the Try again test caught. The test moves the page's
+  clock two hours rather than five minutes, so the waiting time's words
+  change however long the suite has run, and fails one re-read to see it
+  asked again. U4's test now waits for the
+  scoreboard before looking for the phantom run, and reads the page well
+  before the next poll could correct it.

@@ -1961,19 +1961,39 @@ test("a quiet dashboard keeps its times and its waiting list current", async ({ 
     awaiting ??= body.awaiting;
     await route.fulfill({ response, json: { ...body, active: null, awaiting } });
   });
+  // One re-read of the scoreboard is answered as a failure when asked to.
+  let failNext = false;
+  const failOnce = async (route: import("@playwright/test").Route) => {
+    if (!failNext) return route.fallback();
+    failNext = false;
+    await route.fulfill({ status: 500, json: { error: "The scoreboard could not be read." } });
+  };
+  await page.route("**/api/scoreboard", failOnce);
   try {
     await page.goto("/");
     const waiting = page.getByText(/^waiting (just now|\d+[mhd] ago)$/).first();
     await expect(waiting).toBeVisible({ timeout: 30_000 });
     const before = await waiting.textContent();
-    await page.clock.fastForward("05:00");
+    // Hours, so the words change however long the review has waited.
+    await page.clock.fastForward("02:00:00");
     await expect(waiting).not.toHaveText(before!);
 
     const read = boards;
     awaiting = (awaiting ?? 0) + 1;
     await page.clock.fastForward("00:05");
     await expect.poll(() => boards).toBeGreaterThan(read);
+
+    // A re-read that fails is asked again at the next poll (review round
+    // 15), though what the bar polls has not changed since.
+    const again = boards;
+    failNext = true;
+    awaiting += 1;
+    await page.clock.fastForward("00:05");
+    await expect.poll(() => boards).toBeGreaterThan(again);
+    await page.clock.fastForward("00:05");
+    await expect.poll(() => boards).toBeGreaterThan(again + 1);
   } finally {
+    await page.unroute("**/api/scoreboard", failOnce);
     await stop();
   }
 });
@@ -2026,12 +2046,16 @@ test("an older reading of what is running does not put back what it said", async
   try {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Review scoreboard", level: 1 })).toBeVisible();
+    // The scoreboard drawn, so a phantom run would have somewhere to show.
+    await expect(page.getByText("Total spend")).toBeVisible({ timeout: 30_000 });
     // Both pollers' first readings are out, held; their next are answered.
-    await expect.poll(() => held, { timeout: 15_000 }).toBe(2);
-    await expect.poll(() => current, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+    await expect.poll(() => held, { timeout: 15_000, intervals: [100] }).toBe(2);
+    await expect
+      .poll(() => current, { timeout: 15_000, intervals: [100] })
+      .toBeGreaterThanOrEqual(2);
     releaseStale();
-    // Before the next poll could put things right, four seconds on.
-    await page.waitForTimeout(1_000);
+    // Well before the next poll could put things right, four seconds on.
+    await page.waitForTimeout(400);
     // Read once, not waited on: a check that retries for its five seconds
     // reaches the next poll, which puts things right, and passed on the old
     // pages while the stale reading showed.
