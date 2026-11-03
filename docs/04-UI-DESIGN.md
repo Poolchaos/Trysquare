@@ -267,7 +267,9 @@ listed per project with merged badges; delete per 02 rules.
 
 - List by tier with rule counts and provenance.
 - Ruleset detail: ordered rules (code, title, severity, tags, enabled
-  toggle), process directives, edit in place with markdown preview;
+  toggle), each opening to its text as the document wrote it (rule,
+  examples, detection, why it matters; 2026-11-03), process directives,
+  edit in place with markdown preview;
   versioning bumps on edit (snapshots keep old reviews stable).
 - Import: from markdown (REVIEW_PROTOCOL.md shape); shows the fidelity
   report (mapped headings, unmapped lines = import blocked). A different

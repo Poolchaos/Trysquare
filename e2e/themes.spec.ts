@@ -120,6 +120,51 @@ test("the detail screens photograph on real content", async ({ page }, testInfo)
   await photograph(page, shot("ruleset-detail"));
 });
 
+test("a rule opens to what its document says, on a desk and on a phone", async ({
+  page,
+}, testInfo) => {
+  const shot = (name: string) => join(EVIDENCE, `${testInfo.project.name}-${name}.png`);
+  await page.goto("/rulesets");
+  await page.getByRole("main").getByRole("link", { name: "Example protocol", exact: true }).click();
+  const title = page.getByRole("button", { name: "Unawaited Promise", exact: true });
+  await expect(title).toHaveAttribute("aria-expanded", "false");
+  const written = page.locator("pre", { hasText: "Flag a call that returns a promise" });
+  await expect(written).toHaveCount(0);
+
+  await title.click();
+  await expect(title).toHaveAttribute("aria-expanded", "true");
+  await expect(written).toBeVisible();
+  // The example and the reason, not only the rule's first line.
+  await expect(written).toContainText("await persist(order);");
+  await expect(written).toContainText("Why This Matters");
+
+  await settled(page);
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(results.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
+  await photograph(page, shot("ruleset-rule-open"));
+
+  // At phone width the table scrolls inside its card; the rule must still be
+  // read without scrolling, so it sits inside the screen, whole.
+  // Not scrolled into view first: that could scroll the card sideways to the
+  // text, and hide the very thing measured here.
+  await page.setViewportSize({ width: 360, height: 780 });
+  const box = await written.boundingBox();
+  expect(box, "the rule's text has a box").not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(360);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, "the page scrolls sideways").toBeLessThanOrEqual(0);
+  await photograph(page, shot("ruleset-rule-open-phone"));
+
+  await title.click();
+  await expect(title).toHaveAttribute("aria-expanded", "false");
+  await expect(written).toHaveCount(0);
+});
+
 test("a completed review photographs with its report", async ({ page }, testInfo) => {
   await page.goto("/reviews");
   await openTheCompletedReview(page);

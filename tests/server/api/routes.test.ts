@@ -734,6 +734,37 @@ describe("importing a ruleset", () => {
     expect(again.status).toBe(409);
     expect(((await again.json()) as { code: string }).code).toBe("RulesetNameTakenError");
   });
+
+  it("sends each rule as the document wrote it, less the heading its row shows", async () => {
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "Read in full",
+        tier: "global",
+        markdown,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+
+    const detail = await routes.ruleset.GET(new Request("http://localhost"), {
+      params: Promise.resolve({ id: rulesetId }),
+    });
+    const { rules } = (await detail.json()) as {
+      rules: { code: string; title: string; text: string }[];
+    };
+    const first = rules.find((rule) => rule.code === "1")!;
+
+    expect(first.title).toBe("Unawaited Promise");
+    expect(first.text.startsWith("**Rule:** Flag a call that returns a promise")).toBe(true);
+    expect(first.text).toContain("**Correct Pattern:**");
+    expect(first.text).toContain("await persist(order);");
+    expect(first.text).toContain("**Why This Matters:**");
+    expect(first.text).not.toContain("### 1. Unawaited Promise");
+    // Every rule carries its text, not only the first.
+    expect(rules.filter((rule) => rule.text.trim() === "")).toEqual([]);
+  });
 });
 
 describe("a project's dependency links", () => {

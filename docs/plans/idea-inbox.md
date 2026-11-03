@@ -175,3 +175,13 @@ the line entirely would lose the trail.
   limit bounds them now; one large project's e2e, measured at 20.7 GB on the
   maintainer's machine, could exhaust a colleague's laptop. Needs a free-memory reading
   measured on macOS and Windows before a floor is set on it.
+- 2026-11-03: a project's ruleset from its own repository (maintainer's
+  choice): a path such as docs/review-protocol.md, like the design standard,
+  imported on each fetch, so a colleague who adds the project gets its
+  rules. The file reaches that project's repository through its own PR.
+- 2026-11-03: each rule's context on the ruleset page. BUILT the same day:
+  a rule's title opens to its text as the document wrote it. Left: render
+  its markdown rather than show it raw, as directive bodies are shown too.
+- 2026-11-03: suspected, not measured: an open process directive on a
+  ruleset page is a scroll box (max-h-64 overflow-auto) a keyboard cannot
+  reach, the axe failure the rule text hit the same day; no test opens one.

@@ -47,6 +47,9 @@ export async function GET(
         tags: rule.tags,
         sweepPatterns: rule.sweepPatterns,
         enabled: enabled.has(rule.code),
+        // The rule as the document has it, less the heading the row already
+        // shows: its text, examples, detection and why it matters.
+        text: rule.raw.slice(rule.raw.indexOf("\n") + 1).trim(),
       })),
     });
   });

@@ -8,7 +8,7 @@
  * it was judged against and two different rule sets must never share one.
  */
 
-import { use, useCallback, useEffect, useState } from "react";
+import { Fragment, use, useCallback, useEffect, useState } from "react";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import { Badge, Button, Card, Input, Mono, Problem, Select, severityTone } from "@/components/ui";
 import { send } from "@/components/request";
@@ -32,6 +32,7 @@ interface Detail {
     tags: string[];
     sweepPatterns: string[];
     enabled: boolean;
+    text: string;
   }[];
 }
 
@@ -51,6 +52,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   const [showDirectives, setShowDirectives] = useState(false);
   const [openDirective, setOpenDirective] = useState("");
   const [openSweeps, setOpenSweeps] = useState("");
+  const [openRule, setOpenRule] = useState("");
   const [duplicating, setDuplicating] = useState(false);
   const [duplicateTier, setDuplicateTier] = useState("global");
   const [duplicateName, setDuplicateName] = useState("");
@@ -282,80 +284,103 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
             </thead>
             <tbody>
               {detail.rules.map((rule) => (
-                <tr
-                  key={rule.code}
-                  className={`border-b border-[var(--color-border)] last:border-0 ${
-                    rule.enabled ? "" : "opacity-55"
-                  }`}
-                >
-                  <td className="px-3 py-2">
-                    <Mono className="text-xs text-[var(--color-ink-muted)]">{rule.code}</Mono>
-                    <span className="ml-2">{rule.title}</span>
-                  </td>
-                  <td className="px-3 py-2">
-                    <label className="inline-flex items-center gap-2">
-                      <span className="sr-only">Severity of rule {rule.code}</span>
-                      <Badge tone={severityTone(rule.severity)}>{rule.severity}</Badge>
-                      <Select
-                        value={rule.severity}
-                        disabled={busy !== ""}
-                        onChange={(event) =>
-                          void amend(rule.code, { severity: event.target.value })
-                        }
-                        className="w-auto px-2 py-1 text-xs"
-                      >
-                        {SEVERITIES.map((severity) => (
-                          <option key={severity} value={severity}>
-                            {severity}
-                          </option>
-                        ))}
-                      </Select>
-                    </label>
-                  </td>
-                  <td className="px-3 py-2 text-xs text-[var(--color-ink-muted)]">
-                    {rule.tags.join(", ") || "any"}
-                  </td>
-                  <td className="px-3 py-2 text-[var(--color-ink-muted)]">
-                    {rule.sweepPatterns.length === 0 ? (
-                      "0"
-                    ) : (
+                <Fragment key={rule.code}>
+                  <tr
+                    className={`border-b border-[var(--color-border)] last:border-0 ${
+                      rule.enabled ? "" : "opacity-55"
+                    }`}
+                  >
+                    <td className="px-3 py-2">
+                      <Mono className="text-xs text-[var(--color-ink-muted)]">{rule.code}</Mono>
                       <button
                         type="button"
-                        className="underline underline-offset-2 hover:text-[var(--color-ink)]"
-                        aria-expanded={openSweeps === rule.code}
-                        onClick={() =>
-                          setOpenSweeps((open) => (open === rule.code ? "" : rule.code))
-                        }
+                        className="ml-2 text-left underline-offset-2 hover:underline"
+                        aria-expanded={openRule === rule.code}
+                        onClick={() => setOpenRule((open) => (open === rule.code ? "" : rule.code))}
                       >
-                        {rule.sweepPatterns.length}
+                        {rule.title}
                       </button>
-                    )}
-                    {openSweeps === rule.code ? (
-                      <ul className="mt-1 grid gap-0.5">
-                        {rule.sweepPatterns.map((pattern) => (
-                          <li key={pattern}>
-                            <Mono className="text-xs">{pattern}</Mono>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <label className="inline-flex items-center gap-2">
-                      <span className="text-xs text-[var(--color-ink-muted)]">
-                        {rule.enabled ? "on" : "off"}
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={rule.enabled}
-                        disabled={busy !== ""}
-                        onChange={(event) =>
-                          void amend(rule.code, { enabled: event.target.checked })
-                        }
-                      />
-                    </label>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-3 py-2">
+                      <label className="inline-flex items-center gap-2">
+                        <span className="sr-only">Severity of rule {rule.code}</span>
+                        <Badge tone={severityTone(rule.severity)}>{rule.severity}</Badge>
+                        <Select
+                          value={rule.severity}
+                          disabled={busy !== ""}
+                          onChange={(event) =>
+                            void amend(rule.code, { severity: event.target.value })
+                          }
+                          className="w-auto px-2 py-1 text-xs"
+                        >
+                          {SEVERITIES.map((severity) => (
+                            <option key={severity} value={severity}>
+                              {severity}
+                            </option>
+                          ))}
+                        </Select>
+                      </label>
+                    </td>
+                    <td className="px-3 py-2 text-xs text-[var(--color-ink-muted)]">
+                      {rule.tags.join(", ") || "any"}
+                    </td>
+                    <td className="px-3 py-2 text-[var(--color-ink-muted)]">
+                      {rule.sweepPatterns.length === 0 ? (
+                        "0"
+                      ) : (
+                        <button
+                          type="button"
+                          className="underline underline-offset-2 hover:text-[var(--color-ink)]"
+                          aria-expanded={openSweeps === rule.code}
+                          onClick={() =>
+                            setOpenSweeps((open) => (open === rule.code ? "" : rule.code))
+                          }
+                        >
+                          {rule.sweepPatterns.length}
+                        </button>
+                      )}
+                      {openSweeps === rule.code ? (
+                        <ul className="mt-1 grid gap-0.5">
+                          {rule.sweepPatterns.map((pattern) => (
+                            <li key={pattern}>
+                              <Mono className="text-xs">{pattern}</Mono>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <label className="inline-flex items-center gap-2">
+                        <span className="text-xs text-[var(--color-ink-muted)]">
+                          {rule.enabled ? "on" : "off"}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={rule.enabled}
+                          disabled={busy !== ""}
+                          onChange={(event) =>
+                            void amend(rule.code, { enabled: event.target.checked })
+                          }
+                        />
+                      </label>
+                    </td>
+                  </tr>
+                  {openRule === rule.code ? (
+                    <tr className="border-b border-[var(--color-border)] last:border-0">
+                      <td colSpan={5} className="px-3 pb-3">
+                        {/* Pinned to the card's visible edge and no wider than the
+                          screen: at phone width the table scrolls sideways
+                          inside the card, and the rule must be readable
+                          without scrolling with it. Shown whole, with no scroll
+                          box of its own: one a keyboard cannot reach is an axe
+                          failure (scrollable-region-focusable). */}
+                        <pre className="sticky left-3 max-w-[min(48rem,calc(100vw-5.5rem))] rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs whitespace-pre-wrap wrap-anywhere">
+                          <code className="font-[family-name:var(--font-mono)]">{rule.text}</code>
+                        </pre>
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -384,7 +409,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                   </button>
                   {openDirective === key ? (
                     // Verbatim, because this is what the model is given.
-                    <pre className="mt-1 mb-2 max-h-64 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs whitespace-pre-wrap">
+                    <pre className="mt-1 mb-2 max-h-64 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs whitespace-pre-wrap wrap-anywhere">
                       <code className="font-[family-name:var(--font-mono)]">
                         {directive.contentMd}
                       </code>
