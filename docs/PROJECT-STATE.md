@@ -269,6 +269,11 @@ own now (D-75, D-81).
   the next `--e2e` then fails saying the port is in use. Reusing an existing
   server is deliberately not allowed, because it would run the journey
   against a server started without the fake engine.
+- A ruleset's page at phone width (360px, `review/2026-11-03-e2e/`): each
+  rule's title wraps to two to four lines, the tags column is cut at the
+  right edge, and the sweeps and on/off columns sit past it, reached only by
+  scrolling the card sideways. Left as a bug on 2026-11-03: the maintainer expects the app to
+  be used on a desktop for now.
 
 ## Not built
 

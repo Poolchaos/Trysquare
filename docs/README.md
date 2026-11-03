@@ -21,6 +21,7 @@ then `GATES.md`, then only what the active gate needs.
 | Doc                        | What it is                                                                          |
 | -------------------------- | ----------------------------------------------------------------------------------- |
 | [RUNBOOK.md](RUNBOOK.md)   | Install, start, and run a first review. Says which actions spend model usage. |
+| [AI-GUIDE.md](AI-GUIDE.md) | For an AI session: how the app fits together, where each feature lives, how common changes are made, traps. |
 
 ## Standards
 

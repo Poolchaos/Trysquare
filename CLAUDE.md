@@ -215,7 +215,9 @@ boundary. Versions in `docs/PROJECT-STATE.md`.
 2. Read `docs/PROJECT-STATE.md` (the cache).
 3. Read `docs/GATES.md` for the active gate.
 4. Read only the docs that gate needs, using `docs/README.md` as the map.
-5. When a design question arises, the answer lives in `docs/`; cite the
+5. To find where a feature lives, or how a common change is made, read
+   `docs/AI-GUIDE.md`.
+6. When a design question arises, the answer lives in `docs/`; cite the
    specific file. If it is not there, it is an open question (section 1).
-6. When anything is decided, append it to `docs/DECISIONS.md` with a date, in
+7. When anything is decided, append it to `docs/DECISIONS.md` with a date, in
    the same session.
