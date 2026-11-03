@@ -315,6 +315,13 @@ fire. A gate that has never failed is assumed broken until proven otherwise,
 and the first version of this one did in fact pass a violation it should have
 caught.
 
+The test runs are sized so they cannot take a laptop down. The unit tests use
+at most 4 workers, however many cores the machine has, and each worker stops
+at a 1 GB heap. Measured on 2026-11-03 on Linux with 3 workers: 0.8 GB at the
+peak for the whole run, and 64 seconds. The browser tests run one at a time
+against one server. Run one gate at a time: two at once share the machine and
+the browser tests' port.
+
 ## Documentation
 
 The design is written down before it is built, and the documents are kept

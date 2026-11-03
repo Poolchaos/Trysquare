@@ -5837,3 +5837,22 @@ verified evidence, in writing, here.
   a tab left open across an upgrade, which a reload puts right. The
   queued-before-the-ending race 2fe084a guards has no test: it needs a
   Resume within 150 ms of the run's end.
+- 2026-11-03 D-226 So that a colleague can clone, run and test the app
+  without help, three setup commands, each a thin script over a function
+  in `scripts/lib/` that `tests/scripts/` drives: `npm run doctor`, run as
+  the `predev` of `npm run dev`, checks Node, git, the SQLite driver, the
+  CLI and its sign-in (through readCliStatus, as Settings does), the data
+  directory and whether a ruleset is stored; a missing CLI, git or driver
+  stops the start, a sign-in or ruleset gap is a warning, because the app
+  runs without them. `npm run claude:auth` signs in only when signed out.
+  `npm run rules:seed` imports a protocol file with the import route's
+  refusals, under the data-directory lock so it never writes beside a
+  running server; it reads the file where it is, as D-225 keeps company
+  protocols out of the public repository. The unit suite is capped at 4
+  workers with a 1 GB heap each: Vitest's default is a worker per thread
+  less one, 15 on a 16-thread laptop, at up to 332 MB a process measured.
+  Rejected: shipping the protocol (D-225), and a doctor that signs in
+  itself (signing in opens a browser, which `npm run dev` must not do
+  unasked). Left for its own change: a memory guard on a project's own
+  commands (idea inbox), whose free-memory reading has been checked on
+  neither macOS nor Windows.

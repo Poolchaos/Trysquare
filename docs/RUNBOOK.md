@@ -25,7 +25,8 @@ review is the expensive action. Everything else, including the whole demo with
 - **A Claude subscription, signed in**, but only for a real review. Everything
   else in this runbook works without it. `npm install` installs the Claude
   Code CLI the reviews run through (D-92); sign it in with
-  `npm run claude -- auth login`. It shares the `~/.claude` sign-in of any
+  `npm run claude:auth`, which checks the CLI and signs in only when it is
+  signed out (or `npm run claude -- auth login` directly). It shares the `~/.claude` sign-in of any
   other Claude Code on the machine. Of the server's environment it gets only
   what it needs to run and the sign-in (D-174): an API key, a paid provider
   or any other Claude setting there never reaches it, so reviews draw on
@@ -62,6 +63,13 @@ dead-export check, and the unit tests. Add `--build --e2e` for the full gate, wh
 ```bash
 npm run dev
 ```
+
+It first runs `npm run doctor` (the `predev` script, D-226): Node, git, the
+SQLite driver, the CLI and its sign-in, the data directory, and whether a
+ruleset is stored. A FAIL stops the start; a WARN is said and the app starts.
+A fresh data directory has no ruleset: import one on the Rulesets screen, or
+seed it from a file with `npm run rules:seed` (README, Seeding your company's
+rules).
 
 Serves on <http://localhost:3000> and opens on the dashboard. `dev` and
 `start` both bind to 127.0.0.1, so the app is unreachable from any other

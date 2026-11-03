@@ -142,6 +142,15 @@ default leaves build and e2e off so it stays fast.
 `npm run demo:fixture -- --fake` reviews the seeded fixture end to end with no
 model and no money, scoring the result against the fixture's manifest.
 
+Setup commands, added 2026-11-03 (D-226), each driven by tests in
+`tests/scripts/` and proven on Linux the same day: `npm run doctor` (also
+the `predev` of `npm run dev`; a FAIL stops it), `npm run claude:auth`
+(checks the CLI and signs in only when signed out) and `npm run rules:seed
+-- <file> --name <name>` (imports a protocol file with the import route's
+refusals, under the data-directory lock). The unit suite runs at most 4
+workers with a 1 GB heap each (`vitest.config.ts`): 0.8 GB at the peak and
+63.5s with 3 workers, measured 2026-11-03.
+
 ## Environment
 
 - `TRYSQUARE_DATA` - the data root, default `~/.local/share/trysquare`. Holds

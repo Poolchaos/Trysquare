@@ -13,15 +13,9 @@ import { homedir } from "node:os";
 import { basename } from "node:path";
 import { parseArgs } from "node:util";
 import { rulesetTierSchema } from "@/lib/domain/enums";
-import { dbPath, resolveDataDir } from "@/lib/paths";
-import { importProtocol } from "@/lib/rulesets/import";
-import { acquireDataDirLock, DataDirLockError } from "@/server/data-dir-lock";
-import { createDb } from "@/server/db/client";
-import { runMigrations } from "@/server/db/migrate";
-import {
-  rulesetAnImportWouldReplace,
-  saveImportedRuleset,
-} from "@/server/db/repositories/rulesets";
+import { resolveDataDir } from "@/lib/paths";
+import { DataDirLockError } from "@/server/data-dir-lock";
+import { SeedRefusedError, seedRuleset } from "./lib/seed-rules";
 
 const USAGE =
   'Usage: npm run rules:seed -- <protocol.md> --name "<name>" [--tier global|tech|project] [--replace]';
@@ -55,56 +49,23 @@ try {
   fail(`Could not read ${file}: ${(error as Error).message}`);
 }
 
-// The same refusals as the import route (src/app/api/rulesets/import/route.ts):
-// a document that yields no rules, or whose lines would be dropped, is not stored.
-const { ruleset: imported, coverage } = importProtocol(markdown);
-if (imported.rules.length === 0) {
-  fail(
-    "That document produced no rules, so a review using it would check nothing. Check the rule headings.",
-  );
-}
-const lost = coverage.unmapped.filter((entry) => entry.text.trim() !== "");
-if (lost.length > 0) {
-  fail(
-    `${lost.length} line(s) of that document do not belong to any rule or directive, so importing ` +
-      "it would silently drop them. First unmapped line: " +
-      JSON.stringify(lost[0]?.text),
-  );
-}
-
 const dataDir = resolveDataDir(process.env, homedir());
-let release: () => void;
 try {
-  release = acquireDataDirLock(dataDir);
+  const result = seedRuleset({
+    dataDir,
+    markdown,
+    name: values.name,
+    tier: tier.data,
+    replace: values.replace,
+    sourceDoc: basename(file),
+  });
+  const verb = result.changed ? "Stored" : "Unchanged";
+  console.log(
+    `${verb}: "${values.name}" (${tier.data}), version ${result.version}, ${result.ruleCount} rules, in ${dataDir}`,
+  );
 } catch (error) {
-  if (error instanceof DataDirLockError) {
+  if (error instanceof SeedRefusedError || error instanceof DataDirLockError) {
     fail(error.message);
   }
   throw error;
-}
-
-const db = createDb(dbPath(dataDir));
-try {
-  runMigrations(db);
-  const existing = rulesetAnImportWouldReplace(db, values.name, imported);
-  if (existing && !values.replace) {
-    fail(
-      `A ruleset called "${existing.name}" already exists at version ${existing.version}, and this ` +
-        "document differs from it. Re-run with --replace to replace its rules.",
-    );
-  }
-  const saved = saveImportedRuleset(db, {
-    name: values.name,
-    tier: tier.data,
-    imported,
-    sourceDoc: basename(file),
-  });
-  const verb = saved.changed ? "Stored" : "Unchanged";
-  console.log(
-    `${verb}: "${values.name}" (${tier.data}), version ${saved.version}, ${imported.rules.length} rules, ` +
-      `in ${dataDir}`,
-  );
-} finally {
-  db.$client.close();
-  release();
 }

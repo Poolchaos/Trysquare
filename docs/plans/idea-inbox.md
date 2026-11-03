@@ -167,3 +167,11 @@ the line entirely would lose the trail.
   plugin only with the maintainer's OK. DECIDED in D-169: /security-review
   after 7.2 and /code-review read-only, as proposed; neither /simplify nor
   grill.
+- 2026-11-03: rules in the app: add one rule, remove one rule, edit a rule's
+  text, and delete a single ruleset. Today only on/off and severity change in
+  the app, the rest by re-importing the document with replace, and a
+  ruleset is deleted only by Settings' delete-everything (maintainer asked).
+- 2026-11-03: a memory guard for a project's own commands. Only a 20-minute
+  limit bounds them now; one large project's e2e, measured at 20.7 GB on the
+  maintainer's machine, could exhaust a colleague's laptop. Needs a free-memory reading
+  measured on macOS and Windows before a floor is set on it.

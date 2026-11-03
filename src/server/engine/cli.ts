@@ -117,38 +117,6 @@ export function runCliAttached(args: readonly string[], configured: string | und
   return result.status ?? 1;
 }
 
-/** What `claude auth status` reports. Only the fields the setup checks show. */
-export interface AuthStatus {
-  loggedIn: boolean;
-  authMethod?: string;
-  email?: string;
-  subscriptionType?: string;
-}
-
-/** Throws when the CLI does not answer with JSON, which says it is not usable. */
-export function readAuthStatus(cli: CliCommand): AuthStatus {
-  const result = spawnSync(cli.command, [...cli.prefixArgs, "auth", "status"], {
-    encoding: "utf8",
-    env: buildChildEnv(process.env) as NodeJS.ProcessEnv,
-    windowsHide: true,
-  });
-  if (result.error) throw result.error;
-  try {
-    return JSON.parse(result.stdout) as AuthStatus;
-  } catch {
-    throw new Error(
-      `"auth status" did not print JSON (exit ${result.status}): ${result.stderr.trim() || result.stdout.trim()}`,
-    );
-  }
-}
-
-/** The account a status names, in words a person recognises. */
-export function describeAuthStatus(status: AuthStatus): string {
-  const who = status.email ?? "unknown account";
-  const plan = status.subscriptionType ? `, ${status.subscriptionType} plan` : "";
-  return `${who} (${status.authMethod ?? "unknown method"}${plan})`;
-}
-
 /**
  * One line saying which CLI a run will use and what version it reported, or
  * why there is none. For the run's own record: a fake answering where the
