@@ -5879,3 +5879,13 @@ verified evidence, in writing, here.
   minimatch below 11.0.1, which npm fixes only with a breaking eslint
   change; none of it ships. Re-check when eslint-config-next moves to a
   release that takes minimatch 11.
+- 2026-11-03 D-229 Before the push, two idea-inbox lines written the same day
+  named the private product and the owner of its private repository, which
+  the leak gate did not know. Unlike deb96f3 (D-154), nothing had been
+  pushed: the local commits were rebuilt with the lines reworded (the
+  maintainer's choice), so neither name reached the public history. And
+  check-no-private refuses two more coined one-word names, by hash: the
+  repository's owner and the organisation the CLI's sign-in names. It
+  failed on the line before the rewording and passes after. On a
+  machine with docs/private/hashed-names-probe.txt, the probe needs both
+  names added, or the gate says their hashes no longer find them.

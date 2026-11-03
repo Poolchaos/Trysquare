@@ -70,6 +70,10 @@ const FORBIDDEN_HASHED_WORDS = new Map([
   ["76b7cbb1111bab53d9ea036c919d07be3d5c46950f57b0bd19b6fed0661e43a9", "private product name"],
   ["bd2c6db0b77d64004f36235cabda8a3d096d6167348db705c7c68ca5991bb27a", "private project name"],
   ["f64061477969dfbec4b81434e96736116fe89fc3208d6825bfc30bbee7cb0571", "private project name"],
+  // The owner of the private repository the protocol lives beside, and the
+  // organisation its sign-in names (D-229).
+  ["ae0439fbe1fbe10f27ae0e343d10cbf8585bb676de9a29a805466b766d84b576", "private repository owner"],
+  ["736cd53ebdfd006114dadfa56df474a6fe13c19097a02a314a1a03f430ec7fa3", "private company name"],
 ]);
 
 const ALL_HASHED = new Map([...FORBIDDEN_HASHED, ...FORBIDDEN_HASHED_WORDS]);
