@@ -212,10 +212,30 @@ database and files under your own home directory.
 
 ## Running it
 
-```bash
-npm install
-npm run dev
-```
+On a new machine, from a clone of this repository:
+
+1. Check Node is 22 or newer (`node --version`). `.nvmrc` names the version
+   this is built on.
+2. Install the dependencies. This also installs the Claude Code CLI:
+   ```bash
+   npm install
+   ```
+3. Sign the CLI in with your own Claude subscription. Run it once per
+   machine, and again only if the check says you are signed out:
+   ```bash
+   npm run claude:auth
+   ```
+4. Start the app and open <http://localhost:3000>:
+   ```bash
+   npm run dev
+   ```
+5. Check the project still passes its own gate, which needs no sign-in:
+   ```bash
+   ./verify.sh
+   ```
+
+Each step is repeatable. Step 5 is the test run: it ends with exit 0 when
+everything passes, and that exit code is the only result to rely on.
 
 That serves the app on <http://localhost:3000>, on this machine only: both
 scripts bind to 127.0.0.1, so nothing else on the network can reach it. It
