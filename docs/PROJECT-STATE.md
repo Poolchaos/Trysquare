@@ -117,7 +117,8 @@ below 2.1.301 (D-91), so the Linux line's CLI would be refused today.
 next ^16.3.8 (2026-10-16), react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
 drizzle-kit ^0.31.10, better-sqlite3 ^12.11.1 (D-87, 2026-10-16), zod ^4.4.3, tailwindcss ^4.3.3,
 vitest ^4.1.12, @playwright/test ^1.62.0 (chromium installed), eslint ^9.39.5,
-prettier ^3.9.6, ulid ^3.0.2, @anthropic-ai/claude-code 2.1.301 (exact).
+prettier ^3.9.6, ulid ^3.0.2, @anthropic-ai/claude-code 2.1.301 (exact),
+react-markdown ^10.1.0 and remark-gfm ^4.0.1 (D-227, 2026-11-03).
 
 TypeScript runs strict plus `noUncheckedIndexedAccess`,
 `noImplicitOverride`, `noFallthroughCasesInSwitch`.

@@ -9,6 +9,7 @@
  */
 
 import { Fragment, use, useCallback, useEffect, useState } from "react";
+import { MarkdownText } from "@/components/markdown";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import { Badge, Button, Card, Input, Mono, Problem, Select, severityTone } from "@/components/ui";
 import { send } from "@/components/request";
@@ -374,9 +375,12 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                           without scrolling with it. Shown whole, with no scroll
                           box of its own: one a keyboard cannot reach is an axe
                           failure (scrollable-region-focusable). */}
-                        <pre className="sticky left-3 max-w-[min(48rem,calc(100vw-5.5rem))] rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs whitespace-pre-wrap wrap-anywhere">
-                          <code className="font-[family-name:var(--font-mono)]">{rule.text}</code>
-                        </pre>
+                        <div
+                          data-testid="rule-text"
+                          className="sticky left-3 max-w-[min(48rem,calc(100vw-5.5rem))] rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3"
+                        >
+                          <MarkdownText text={rule.text} />
+                        </div>
                       </td>
                     </tr>
                   ) : null}

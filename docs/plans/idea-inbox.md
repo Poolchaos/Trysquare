@@ -180,8 +180,8 @@ the line entirely would lose the trail.
   imported on each fetch, so a colleague who adds the project gets its
   rules. The file reaches that project's repository through its own PR.
 - 2026-11-03: each rule's context on the ruleset page. BUILT the same day:
-  a rule's title opens to its text as the document wrote it. Left: render
-  its markdown rather than show it raw, as directive bodies are shown too.
+  a rule's title opens to its text from the document, formatted (D-227).
+  Left: directive bodies still show their markdown raw.
 - 2026-11-03: suspected, not measured: an open process directive on a
   ruleset page is a scroll box (max-h-64 overflow-auto) a keyboard cannot
   reach, the axe failure the rule text hit the same day; no test opens one.

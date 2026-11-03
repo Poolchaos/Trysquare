@@ -5856,3 +5856,13 @@ verified evidence, in writing, here.
   unasked). Left for its own change: a memory guard on a project's own
   commands (idea inbox), whose free-memory reading has been checked on
   neither macOS nor Windows.
+- 2026-11-03 D-227 The maintainer asked that a rule opened on its ruleset
+  page read formatted rather than as raw markdown. Formatted with
+  react-markdown ^10.1.0 and remark-gfm ^4.0.1 (`src/components/markdown.tsx`),
+  both MIT: 97 packages, 96 MIT and one ISC, all production. The protocol
+  this is for uses code fences (206 lines), tables (76 rows), about 600 list
+  items, bold, inline code (346 lines), headings and quotes, measured on the
+  maintainer's file; tables and nested code are where a hand-written
+  renderer goes wrong. react-markdown builds React elements and leaves a
+  document's HTML as text, which a test asserts. Rejected: marked or
+  markdown-it, which return an HTML string the page would inject.

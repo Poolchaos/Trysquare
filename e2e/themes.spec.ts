@@ -128,15 +128,19 @@ test("a rule opens to what its document says, on a desk and on a phone", async (
   await page.getByRole("main").getByRole("link", { name: "Example protocol", exact: true }).click();
   const title = page.getByRole("button", { name: "Unawaited Promise", exact: true });
   await expect(title).toHaveAttribute("aria-expanded", "false");
-  const written = page.locator("pre", { hasText: "Flag a call that returns a promise" });
+  const written = page.getByTestId("rule-text");
   await expect(written).toHaveCount(0);
 
   await title.click();
   await expect(title).toHaveAttribute("aria-expanded", "true");
   await expect(written).toBeVisible();
-  // The example and the reason, not only the rule's first line.
-  await expect(written).toContainText("await persist(order);");
-  await expect(written).toContainText("Why This Matters");
+  await expect(written).toContainText("Flag a call that returns a promise");
+  // The example and the reason, not only the rule's first line, formatted:
+  // labels in bold, the examples as code, and no markdown markers left over.
+  await expect(written.locator("strong", { hasText: "Why This Matters:" })).toBeVisible();
+  await expect(written.locator("pre", { hasText: "await persist(order);" })).toBeVisible();
+  await expect(written).not.toContainText("**");
+  await expect(written).not.toContainText("```");
 
   await settled(page);
   const results = await new AxeBuilder({ page })
