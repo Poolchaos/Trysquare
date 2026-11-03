@@ -322,6 +322,19 @@ peak for the whole run, and 64 seconds. The browser tests run one at a time
 against one server. Run one gate at a time: two at once share the machine and
 the browser tests' port.
 
+## Options under discussion
+
+Not built, and not decided: these are open for the team to weigh.
+
+- **Reviews in a GitHub pipeline.** A pull request would start a workflow
+  that installs Trysquare, reviews the branch against its base, and posts
+  what it found. A whole review already runs from a script with no screens
+  (`npm run demo:fixture`), and the CLI already takes a sign-in token from
+  `CLAUDE_CODE_OAUTH_TOKEN`. Still open: a review command for any
+  repository, what a pipeline may send when only a person can confirm a
+  finding, a token with write access to post results, what each run costs,
+  and whether a subscription token may be used unattended.
+
 ## Documentation
 
 The design is written down before it is built, and the documents are kept
