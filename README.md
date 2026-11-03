@@ -46,7 +46,11 @@ review of a real branch (7.4); a fresh real run of the fixture on Windows
 design acceptance are theirs.
 [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md) is the current-facts cache.
 
-Treat this as usable by its author and not yet finished for anyone else.
+From 2026-11-03 others use it too, and help improve it. Start with
+[Running it](#running-it) below, and read [CONTRIBUTING.md](CONTRIBUTING.md)
+before changing anything. Whether the findings are worth a person's time is
+still the open question above, and every review run by someone new helps
+answer it.
 
 ## The idea
 
