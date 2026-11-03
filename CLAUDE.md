@@ -154,6 +154,13 @@ Rules:
 - **A red test is stop-the-line, no matter who wrote it.** The whole suite must
   be green, not just the tests touching your change. "Not my code" is not a
   reason to leave the suite broken.
+- **Never ignore an error.** Fix it at its cause: no swallowing, suppressing
+  or empty catch, no loosening an assertion, no retrying until green. A test
+  that meets an error asserts it exactly. If the cause cannot be fixed now,
+  say so, log it, and get a decision.
+- **Anything a person sees is proven in the browser and graded A to D**,
+  light and dark, desktop and phone: `docs/05-TESTING.md` section 3b. Only A
+  and B pass.
 
 ## 7. Standards and Git
 

@@ -87,6 +87,37 @@ outputs), on a generated fixture project:
    snapshot unchanged.
 5. Both themes screenshotted per screen; axe accessibility checks pass.
 
+## 3b. Proof for anything a person sees
+
+Binding on every change to a screen, whoever makes it (the maintainer's rule,
+set 2026-10-23, recorded here 2026-11-03 so it travels with the repository).
+
+1. **Driven in the browser.** An e2e test drives each screen and each state
+   the change touches (open, closed, empty, failed, and so on) and saves a
+   screenshot of each, in the light and dark projects, at desktop width and
+   at 360px for phone. `e2e/themes.spec.ts` runs in both theme projects and
+   shows the pattern: `photograph()`, `settled()` before axe, and
+   `setViewportSize` for phone. Screenshots land in `review/<date>-e2e/`.
+2. **Measured, not only pictured.** What a picture hides is asserted: axe
+   finds nothing at WCAG 2.1 AA, the page does not scroll sideways, and text
+   meant to be read sits inside the screen.
+3. **Graded by looking.** Each screenshot is opened and graded against
+   `04-UI-DESIGN.md`:
+   - A: ready to ship, nothing to change.
+   - B: ready to ship, minor polish noted that no user would trip on.
+   - C: works but visibly off: alignment, spacing, overflow, contrast,
+     hierarchy or copy.
+   - D: broken or misleading: clipped, overlapping, unreadable, the wrong
+     state or the wrong data.
+4. **Only A and B pass.** A C or D is fixed and photographed again before
+   the work counts as done.
+5. **Recorded with the change.** Each grade, with one line of why, goes in
+   the commit message or the PR body, with the folder the screenshots are in.
+
+A width or state the maintainer has deferred as a logged bug (Known issues in
+`PROJECT-STATE.md`) is still photographed and graded, and its grade names the
+bug. It does not block the change; only the maintainer defers one.
+
 ## 4. The seeded-bug fixture (engine quality gate)
 
 `tests/fixtures/seeded-repo/`: a small realistic TypeScript/React app with

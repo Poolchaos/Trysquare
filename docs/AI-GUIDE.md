@@ -88,8 +88,9 @@ list is in `PROJECT-STATE.md`, Structure.
 - **A screen or anything a person sees.** Pages are client components that
   load through `send()`. Prove it in `e2e/themes.spec.ts`: it runs in the
   light and dark projects, checks axe, and can set a 360 px viewport for
-  phone width. Screenshots land in `review/<date>-e2e/`, which git ignores;
-  grade each one A to D before calling the work done.
+  phone width. Screenshots land in `review/<date>-e2e/`, which git ignores.
+  The full rule, with the A to D scale and what goes in the commit, is
+  `05-TESTING.md` section 3b; only A and B pass.
 - **A review stage or its prompt.** The stage is in
   `src/server/review/pipeline.ts`, its answer schema in
   `src/lib/review/stage-schemas.ts`, its prompt in
