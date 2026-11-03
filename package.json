@@ -18,6 +18,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "predev": "tsx scripts/doctor.ts",
     "dev": "next dev -H 127.0.0.1",
     "build": "next build",
     "start": "next start -H 127.0.0.1",
@@ -32,7 +33,9 @@
     "demo:fixture": "tsx scripts/demo-fixture.ts",
     "demo:design": "tsx scripts/demo-design.ts",
     "claude": "tsx scripts/claude.ts",
-    "claude:auth": "tsx scripts/claude-auth.ts"
+    "claude:auth": "tsx scripts/claude-auth.ts",
+    "rules:seed": "tsx scripts/seed-rules.ts",
+    "doctor": "tsx scripts/doctor.ts"
   },
   "overrides": {
     "postcss": "^8.5.25",

@@ -229,6 +229,11 @@ On a new machine, from a clone of this repository:
    ```bash
    npm run dev
    ```
+   Before the app starts, `npm run dev` runs `npm run doctor`, which checks
+   Node, git, the SQLite driver, the CLI and its sign-in, the data directory
+   and whether any ruleset is stored. A failed check stops the start and says
+   what to fix. A WARN line lets the app start, but reviews need it: most
+   often the sign-in (step 3) or a ruleset (below).
 5. Check the project still passes its own gate, which needs no sign-in:
    ```bash
    ./verify.sh
@@ -236,6 +241,31 @@ On a new machine, from a clone of this repository:
 
 Each step is repeatable. Step 5 is the test run: it ends with exit 0 when
 everything passes, and that exit code is the only result to rely on.
+
+There is no database to install. The app keeps its data in a SQLite file under
+the data directory, which it creates and upgrades itself on first start. The
+one native part is the SQLite driver, which `npm install` fetches for your
+platform. Run `npm run doctor` on its own if that step fails.
+
+### Seeding your company's rules
+
+A fresh install has no rulesets, and a review is judged against one. Import
+the protocol on the Rulesets screen by pasting it, or seed it from a file:
+
+```bash
+npm run rules:seed -- /path/to/REVIEW_PROTOCOL.md --name "Company base rules"
+```
+
+`--tier` is `global` by default, for rules that apply to any code; `tech` and
+`project` are the other two. Add `--replace` to replace a ruleset of that name
+whose rules differ. A file that has no rules, or has lines the importer cannot
+place, is refused, and the reason is printed. Running it again with the same
+file changes nothing. Stop the app first: the seed takes the same lock the app
+holds, and refuses while it is running.
+
+The seed reads the file where it is and does not copy it into this repository.
+Keep company rules outside the repository, or in `docs/private/`, which is
+ignored by git.
 
 That serves the app on <http://localhost:3000>, on this machine only: both
 scripts bind to 127.0.0.1, so nothing else on the network can reach it. It
