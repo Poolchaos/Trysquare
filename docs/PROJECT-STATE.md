@@ -114,8 +114,8 @@ Windows 11, 2026-10-22: Node 22.17.0, npm 10.9.2, git 2.50.0.windows.1,
 Claude Code 2.1.301 (the bundled CLI, D-92). Review stages now refuse a CLI
 below 2.1.301 (D-91), so the Linux line's CLI would be refused today.
 
-next ^16.3.8 (2026-10-16), react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
-drizzle-kit ^0.31.10, better-sqlite3 ^12.11.1 (D-87, 2026-10-16), zod ^4.4.3, tailwindcss ^4.3.3,
+next ^16.4.4 (2026-11-03, D-228), react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
+drizzle-kit ^0.31.10, better-sqlite3 ^12.11.1 (D-87, 2026-10-16), zod ^4.6.7 (D-228), tailwindcss ^4.3.3,
 vitest ^4.1.12, @playwright/test ^1.62.0 (chromium installed), eslint ^9.39.5,
 prettier ^3.9.6, ulid ^3.0.2, @anthropic-ai/claude-code 2.1.301 (exact),
 react-markdown ^10.1.0 and remark-gfm ^4.0.1 (D-227, 2026-11-03).
@@ -257,12 +257,13 @@ own now (D-75, D-81).
   paths, which cannot be static. It affects only the standalone output
   manifest, which this app does not use. Adopting `output: "standalone"`
   voids that acceptance; the re-check trigger is in `DECISIONS.md`.
-- `npm audit --omit=dev` reports 0 vulnerabilities (2026-10-16, after MVP
-  WP 2.1 moved next from 16.2.12 to 16.3.8, which carried a critical
-  "Unauthenticated Remote Code Execution on windows-hosted servers"). The
-  full audit reports 5 high, all one dev-only chain through
-  eslint-config-next to `braces`, which has no fixed release; accepted in
-  D-89 with its re-check trigger.
+- `npm audit --omit=dev` reports 0 vulnerabilities (2026-11-03, after
+  next moved from 16.3.8 to 16.4.4 and zod from 4.4.3 to 4.6.7, D-228: next
+  carried a critical remote code execution in Image Optimization with SVG
+  files). The full audit reports 16 moderate, all one dev-only chain through
+  the eslint plugins to `minimatch` below 11.0.1, whose fix npm offers only
+  as a breaking eslint change; accepted in D-228. The `braces` chain D-89
+  accepted is no longer reported.
 - Next's build rewrites `tsconfig.json` (sets `jsx: react-jsx`, adds
   `.next/dev/types`). Run prettier on it after a build or the format gate
   fails on the next run.

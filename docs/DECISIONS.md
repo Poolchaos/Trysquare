@@ -5866,3 +5866,16 @@ verified evidence, in writing, here.
   renderer goes wrong. react-markdown builds React elements and leaves a
   document's HTML as text, which a test asserts. Rejected: marked or
   markdown-it, which return an HTML string the page would inject.
+- 2026-11-03 D-228 Security, found while adding D-227's packages:
+  `npm audit --omit=dev` reported next 16.3.8 critical (remote code
+  execution in Image Optimization with SVG files, and in `use cache`
+  functions returning typed arrays; a Server Actions denial of service) and
+  zod 4.4.3 high (memory exhaustion on oversized constrained collections),
+  advisories published since the 2026-10-16 audit. next is now ^16.4.4 and
+  zod ^4.6.7, the floors raised in package.json so a fresh install cannot
+  resolve a vulnerable release; the production audit reports 0. A plain
+  `npm audit fix` moved vite, a dev dependency, from 8.1.5 (high) to 8.3.5.
+  Accepted: 16 moderate in one dev-only chain through the eslint plugins to
+  minimatch below 11.0.1, which npm fixes only with a breaking eslint
+  change; none of it ships. Re-check when eslint-config-next moves to a
+  release that takes minimatch 11.
