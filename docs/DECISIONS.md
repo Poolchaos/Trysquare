@@ -5889,3 +5889,14 @@ verified evidence, in writing, here.
   failed on the line before the rewording and passes after. On a
   machine with docs/private/hashed-names-probe.txt, the probe needs both
   names added, or the gate says their hashes no longer find them.
+- 2026-11-03 A D-105 occurrence: CI run 41632745832 at 7febdce, a README-only
+  commit, failed on Windows alone in failure-paths, "a decision that moves
+  onto an open question leaves the focus on its title": the review page it
+  had just opened was left on "Loading..." because its script chunks were
+  refused with net::ERR_NO_BUFFER_SPACE. Chromium's network log names the
+  call: one TCP_CONNECT_ATTEMPT, os_error 10055 (WSAENOBUFS), 36 ms after
+  the page was opened. The saved TCP table held 330 TIME_WAIT, 9
+  established and 24 listening, so not port exhaustion. Re-run once under
+  D-105; the second attempt passed on Windows. Recorded with it, at the
+  maintainer's word: the people using the app from today are on Linux and
+  macOS, so the README now says CI is Windows' only regular check.
