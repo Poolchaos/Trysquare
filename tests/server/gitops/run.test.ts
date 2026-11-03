@@ -239,7 +239,9 @@ describe("the system config git is given", () => {
           ...actual,
           rename: async (from: string, to: string) => {
             // The partial is left where it was, for writeStandIn to clear.
-            await actual.writeFile(to, text, "utf8");
+            // The other writer is writeStandIn, so 0o644 as it writes: a default
+            // mode follows the umask, and under 0002 trusted() refuses the file.
+            await actual.writeFile(to, text, { encoding: "utf8", mode: 0o644 });
             throw Object.assign(new Error(`EPERM: operation not permitted, rename`), {
               code: "EPERM",
             });
