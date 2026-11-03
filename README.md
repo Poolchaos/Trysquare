@@ -182,6 +182,14 @@ on the machine: signed in there, Trysquare is signed in too. To sign in, or
 to check, run the CLI the reviews use:
 
 ```bash
+npm run claude:auth
+```
+
+That checks the CLI is version 2.1.301 or newer, and signs you in only if
+there is no sign-in yet. It exits 0 when reviews can run. The commands it
+wraps are still there if you want one step at a time:
+
+```bash
 npm run claude -- auth login
 npm run claude -- auth status
 ```

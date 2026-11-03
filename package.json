@@ -31,7 +31,8 @@
     "db:generate": "drizzle-kit generate",
     "demo:fixture": "tsx scripts/demo-fixture.ts",
     "demo:design": "tsx scripts/demo-design.ts",
-    "claude": "tsx scripts/claude.ts"
+    "claude": "tsx scripts/claude.ts",
+    "claude:auth": "tsx scripts/claude-auth.ts"
   },
   "overrides": {
     "postcss": "^8.5.25",
