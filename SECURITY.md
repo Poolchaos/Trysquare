@@ -18,8 +18,7 @@ time for a response.
 
 Trysquare runs entirely on your own machine. Its only server listens on
 127.0.0.1, there is no account system, and the app sends no telemetry (the
-README names the two requests Next.js, its framework, makes, and one open
-defect by which an imported protocol's image is fetched). That rules out
+README names the two requests Next.js, its framework, makes). That rules out
 whole categories of vulnerability, but it leaves some that matter:
 
 - **Code execution from a reviewed repository.** Trysquare clones and reads

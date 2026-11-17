@@ -2,7 +2,8 @@
  * A protocol's markdown, formatted for reading: lists, tables, code and
  * emphasis, with the app's own colours, since no typography plugin is
  * installed. Raw HTML in the document is not rendered (react-markdown's
- * default), so an imported document cannot put markup on the page.
+ * default), so an imported document cannot put markup on the page, and an
+ * image is shown as text, so it cannot make the page ask another host.
  *
  * Nothing in it scrolls on its own: a scroll box a keyboard cannot reach is an
  * axe failure (scrollable-region-focusable), so long code and table cells wrap.
@@ -39,6 +40,21 @@ const COMPONENTS: Components = {
   ),
   code: ({ className, children }) => (
     <code className={`font-[family-name:var(--font-mono)] ${className ?? ""}`}>{children}</code>
+  ),
+  // Never an <img>: the browser would ask whatever host the document names
+  // for it, and a ruleset is a document someone else may have written. Its
+  // words and address stay, so the reader knows what stood there and can
+  // open it on purpose.
+  img: ({ alt, src }) => (
+    <span data-testid="document-image">
+      Image, not loaded{alt ? `: ${alt}` : ""}
+      {typeof src === "string" && src !== "" ? (
+        <>
+          {" "}
+          <code className="font-[family-name:var(--font-mono)]">{src}</code>
+        </>
+      ) : null}
+    </span>
   ),
   table: ({ children }) => (
     <table className="my-2 w-full table-fixed border-collapse text-xs">{children}</table>

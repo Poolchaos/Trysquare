@@ -6030,3 +6030,25 @@ verified evidence, in writing, here.
   judgment is made from the meter's readings of earlier changes, not from a
   guess at the new one. Rejected: lowering the 450,000 mark, which would
   end every session early to cover the few that meet a large change late.
+- 2026-11-17 D-236 The maintainer, leaving for the night with a handover
+  due under D-235: "continue on in this session for the next 15 hours.
+  follow your best recommendations while I'm away". Earlier the same day:
+  "you can merge in this app". Read as follows, and no wider. The session
+  goes on past the point where it would have asked for /clear: at 450,000
+  it still brings the records up to date, commits, pushes and writes the
+  handover, and then continues from that file instead of stopping, since
+  nobody is there to clear it. Pull request 5 was merged (87450b4). The
+  decision gates of `plans/COMPLETION-PLAN.md` section 3 are taken at the
+  recommendation written beside each before he spoke, where the
+  recommendation can be carried out without him: CG-1, one real-model run
+  of each fixture on Opus 5.5 with Fable 5.1 second, and no more than one;
+  CG-3, the merged local branches deleted, the D-229 backup kept; CG-5,
+  rules edited in the app, a project's ruleset read from its repository
+  and a memory guard on a project's commands are in scope, each to be
+  planned in its own file and built after CP-9 as the plan orders, the
+  pipeline a plan of its own, the rest out of v1; CG-6, Next's advisory
+  lookup left on. Not taken, because the recommendation itself needs him:
+  CG-2 names his private storage, which a session cannot choose, so fresh
+  evidence stays under `review/` with its scored result in this log; CG-4
+  asks for him present. Nothing in this entry passes a gate: G1, G2 and G3
+  remain his verdicts.

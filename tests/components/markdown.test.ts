@@ -47,6 +47,28 @@ describe("a protocol's markdown on the page", () => {
     expect(html).toMatch(/<p[^>]*font-semibold[^>]*>Exceptions<\/p>/);
   });
 
+  it("shows a document's image as its words and address, and never as an image to fetch", () => {
+    const html = render("Before ![the order flow](https://images.invalid/flow.png) after");
+
+    // React hoists a preload for every <img> it renders, so both are checked.
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain('rel="preload"');
+    expect(html).toContain("Image, not loaded: the order flow");
+    expect(html).toMatch(/<code[^>]*>https:\/\/images\.invalid\/flow\.png<\/code>/);
+  });
+
+  it("says so for an image with no words, and for one a reference names", () => {
+    const bare = render("![](https://images.invalid/a.png)");
+    expect(bare).not.toContain("<img");
+    expect(bare).toContain("Image, not loaded");
+    expect(bare).not.toContain("Image, not loaded:");
+
+    const referenced = render("![chart][ref]\n\n[ref]: https://images.invalid/chart.png");
+    expect(referenced).not.toContain("<img");
+    expect(referenced).toContain("Image, not loaded: chart");
+    expect(referenced).toContain("https://images.invalid/chart.png");
+  });
+
   it("shows HTML the document wrote as text, never as markup", () => {
     const html = render('Before <img src="x" onerror="alert(1)"> after <script>alert(2)</script>');
 

@@ -413,3 +413,70 @@ test("the shell works at phone width", async ({ page }) => {
     expect(overflow, `${path} scrolls horizontally by ${overflow}px at 360`).toBeLessThanOrEqual(0);
   }
 });
+
+// Last in this file: the ruleset it imports stays, and no test before it
+// should meet a list one row longer in one theme than in the other.
+test("a document's image is shown as words, and its host is never asked", async ({
+  page,
+}, testInfo) => {
+  const shot = (name: string) => join(EVIDENCE, `${testInfo.project.name}-${name}.png`);
+  const markdown = [
+    "# Protocol with an image",
+    "",
+    "## Correctness Anti-Patterns",
+    "",
+    "### 1. Diagram Left Behind",
+    "",
+    "**Rule:** Flag a change to the order flow that leaves its diagram showing the old one.",
+    "",
+    "![The order flow before the change](https://images.invalid/order-flow.png)",
+    "",
+    "**Severity:** WARNING",
+    "",
+  ].join("\n");
+  // Through the route, not the screen: the journey owns the import flow. The
+  // second theme sends the same document, which the route stores unchanged.
+  const imported = await page.request.post("/api/rulesets/import", {
+    data: { name: "Protocol with an image", tier: "global", markdown },
+  });
+  expect(imported.status(), await imported.text()).toBe(201);
+
+  const asked: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).hostname !== "127.0.0.1") asked.push(request.url());
+  });
+
+  await page.goto("/rulesets");
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Protocol with an image", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Diagram Left Behind", exact: true }).click();
+  const written = page.getByTestId("rule-text");
+  await expect(written).toBeVisible();
+  await expect(page.getByTestId("document-image")).toHaveText(
+    "Image, not loaded: The order flow before the change https://images.invalid/order-flow.png",
+  );
+  await expect(written.locator("img")).toHaveCount(0);
+
+  await settled(page);
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(results.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
+  await photograph(page, shot("ruleset-image-as-words"));
+
+  await page.setViewportSize({ width: 360, height: 780 });
+  const box = await written.boundingBox();
+  expect(box, "the rule's text has a box").not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(360);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, "the page scrolls sideways").toBeLessThanOrEqual(0);
+  await photograph(page, shot("ruleset-image-as-words-phone"));
+
+  // Asked last, after every paint above had its chance to fetch.
+  expect(asked, "requests to another host").toEqual([]);
+});

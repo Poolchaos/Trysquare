@@ -244,11 +244,8 @@ its design standard are sent to Anthropic by the Claude Code CLI, under
 whatever terms and plan you already have with them. That is inherent to the
 tool doing its job, not an extra. What Trysquare adds is that nothing goes
 anywhere else from Trysquare's own code: no Trysquare service, no analytics,
-no third party. One defect stands against that until it is fixed: a protocol
-document that holds a markdown image has it drawn on the ruleset's page, so
-opening a rule of an imported document makes your browser ask the host the
-image names
-([docs/plans/COMPLETION-PLAN.md](docs/plans/COMPLETION-PLAN.md), CP-5). Your
+no third party. A protocol document you import cannot change that either:
+an image in it is shown as its words and its address, never fetched. Your
 projects, review history, and findings are stored only in a local SQLite
 database and files under your own home directory.
 

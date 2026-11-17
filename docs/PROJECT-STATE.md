@@ -291,11 +291,6 @@ own now (D-75, D-81).
 
 ## Known issues
 
-- A protocol's markdown image is drawn as an `<img>` to whatever host it
-  names (`src/components/markdown.tsx` has no `img` among its components),
-  so opening a rule of an imported ruleset can make the browser ask another
-  host. Found 2026-11-17 and not yet fixed: `plans/COMPLETION-PLAN.md` CP-5,
-  S1.
 - One Turbopack build warning remains, traced to the engine's per-review log
   paths, which cannot be static. It affects only the standalone output
   manifest, which this app does not use. Adopting `output: "standalone"`
@@ -353,8 +348,9 @@ outside CI, and on `npm run build` from a terminal or an AI agent, it posts
 its installed version to the advisory endpoint (`plans/COMPLETION-PLAN.md`
 CG-6); and when a browser first connects to `npm run dev` it reads the
 latest Next version, which no setting turns off. `npm run start` made
-none, and the pages asked no other host, in D-234's runs; a ruleset whose
-document holds an image is the exception (Known issues).
+none, and the pages asked no other host, in D-234's runs. A protocol's
+image is shown as text and not fetched (`src/components/markdown.tsx`,
+CP-5), which a browser test holds.
 The CLI is Anthropic's, "All rights reserved. Use is subject to the Legal
 Agreements" at
 <https://code.claude.com/docs/en/legal-and-compliance>, and each user
