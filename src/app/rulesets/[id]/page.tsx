@@ -13,6 +13,8 @@ import { MarkdownText } from "@/components/markdown";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import { Badge, Button, Card, Input, Mono, Problem, Select, severityTone } from "@/components/ui";
 import { send } from "@/components/request";
+import type { DirectiveSection } from "@/lib/domain/enums";
+import { directiveSectionLabel } from "@/lib/rulesets/sections";
 
 interface Detail {
   ruleset: {
@@ -25,7 +27,7 @@ interface Detail {
     updatedAt: string;
     isDefault: boolean;
   };
-  directives: { section: string; title: string; contentMd: string }[];
+  directives: { section: DirectiveSection; title: string; contentMd: string }[];
   rules: {
     code: string;
     title: string;
@@ -437,7 +439,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                     aria-expanded={openDirective === key}
                     onClick={() => setOpenDirective((open) => (open === key ? "" : key))}
                   >
-                    {directive.section}: {directive.title}
+                    {directiveSectionLabel(directive.section)}: {directive.title}
                   </button>
                   {openDirective === key ? (
                     // Verbatim, because this is what the model is given. Whole,

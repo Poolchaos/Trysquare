@@ -308,9 +308,8 @@ own now (D-75, D-81).
   is the design; whether a phone needs better is
   `plans/COMPLETION-PLAN.md` CP-10, WP-K.
 - A ruleset's process directives show their markdown as written, where a
-  rule's text is formatted (D-227), and each one's label shows its section
-  key as stored ("prime_directive: The Prime Directive"); both in
-  `plans/idea-inbox.md`, the label under `plans/COMPLETION-PLAN.md` CP-10.
+  rule's text is formatted (D-227; `plans/idea-inbox.md`). It is what the
+  model is given, word for word.
 - One Turbopack build warning remains, traced to the engine's per-review log
   paths, which cannot be static. It affects only the standalone output
   manifest, which this app does not use. Adopting `output: "standalone"`

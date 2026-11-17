@@ -130,6 +130,8 @@ pulled deliberately.
 - 2026-11-17: a directive's label on a ruleset page shows its section key
   as stored ("prime_directive: The Prime Directive", "philosophy: ..."),
   seen in `review/2026-11-17-e2e/*-ruleset-directive-open.png`. CP-10.
+  FIXED the same day: the label says the section in words
+  (`src/lib/rulesets/sections.ts`).
 - 2026-11-17: four of the entries above (rules in the app, the memory
   guard, a project's own ruleset, the process directive) stood under Retired
   until the audit of this day found them there, and the directive-bodies

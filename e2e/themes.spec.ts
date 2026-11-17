@@ -524,6 +524,10 @@ test("a long process directive opens whole, with no scroll box a keyboard cannot
     .click();
   await page.getByRole("button", { name: /^Show the \d+ process directive/ }).click();
   const title = page.getByRole("button", { name: /The Prime Directive/ });
+  // Its section in words, not as the key it is stored under.
+  await expect(title).toHaveText("Prime directive: The Prime Directive");
+  await expect(page.getByRole("button", { name: /^Philosophy: / }).first()).toBeVisible();
+  await expect(page.getByText(/prime_directive|domain_knowledge|output_format/)).toHaveCount(0);
   await expect(title).toHaveAttribute("aria-expanded", "false");
   await title.click();
   await expect(title).toHaveAttribute("aria-expanded", "true");
