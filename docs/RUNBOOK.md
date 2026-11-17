@@ -13,7 +13,8 @@ review is the expensive action. Everything else, including the whole demo with
 
 - **Linux or macOS.** Every push runs `./verify.sh --build --e2e` on both
   in CI (`ubuntu-latest`, `macos-latest`), against a stand-in for the CLI,
-  and both must pass. Real reviews have run on Linux; none on macOS.
+  and both must pass before a pull request merges (the maintainer's own
+  pushes are exempt, D-232). Real reviews have run on Linux; none on macOS.
   Windows is not looked after for now (D-232): `windows-latest` still runs
   and gates nothing, and real reviews ran there on 2026-10-22 (MVP 7.3).
 - **Node 22 or newer.** `package.json` declares `>=22`, `.nvmrc` pins `22`.
@@ -278,14 +279,17 @@ against a fake CLI committed to the repository.
   existed. `rm -rf .next` fixes it permanently. Note what this is not: a
   production build followed by `npm run dev` was tried afterwards and starts
   cleanly, so sharing `.next` between the two is not the cause.
-- **`npm run dev` started by an AI coding agent appends a block to
-  `CLAUDE.md`.** Next 16.3 does this whenever its bundled
-  `@vercel/detect-agent` finds an agent in the environment
-  (`node_modules/next/dist/server/lib/app-info-log.js`), and there is no
-  setting to turn it off. Revert it with `git checkout -- CLAUDE.md`; it is
-  not committed (D-90), and the house-style gate refuses it anyway, because
-  the block carries an em dash. A person running `npm run dev` in their own
-  terminal is not detected and nothing is written.
+- **`npm run dev` started by an AI coding agent once appended a block to
+  `CLAUDE.md`.** Next 16.3 did this whenever its bundled
+  `@vercel/detect-agent` found an agent in the environment (D-90).
+  `next.config.ts` turns it off with `agentRules: false` (D-178), so
+  nothing is written now. If such a block appears again, that option has
+  been lost: put it back, and revert the file with `git checkout`. The
+  house-style gate refuses the block anyway, because it carries an em dash.
+- **`next build` run by an AI agent stops once, with exit 1, while an
+  advisory stands against the installed next**, and prints instructions to
+  the agent. Upgrade next by `npm install` with a decision entry (D-231);
+  do not run the `next upgrade` command it names.
 - **A review that stops naming a path with a backslash or a drive letter**
   refused it on purpose (D-95). A file named like `a\b.ts` is legal on Linux
   and macOS, but joined onto a directory on Windows it reaches outside it,

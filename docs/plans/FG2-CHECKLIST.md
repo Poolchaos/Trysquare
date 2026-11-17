@@ -1,5 +1,12 @@
 # Founder gate FG-2 (gate G1): does the pipeline work, and is a finding worth reading?
 
+Re-scoped to Linux on 2026-11-17 (D-232): the run to judge is the fresh one
+`COMPLETION-PLAN.md` CP-7 makes on the maintainer's Linux machine. Until it
+exists there is no run to open: every `review/` folder named below was made
+on a machine the maintainer no longer has, and none was found since
+(`AUDIT-2026-11-17.md`, F5). What follows describes those earlier runs, and
+what to judge and what each verdict means still hold.
+
 Status: READY FOR THE MAINTAINER, prepared 2026-07-31. The smoke runs below
 were executed 2026-08-04 with the maintainer's go; what is left is the
 verdict itself. Evidence in `review/2026-08-04-fg2/`: `haiku/` (refused at
@@ -13,7 +20,7 @@ Since those runs, U12 grew the fixture from eight planted defects to eleven
 planted" and "8/8" transcripts below and in the run directories predate the
 additions; a fresh run reports 11.
 
-Re-scoped to Windows (D-86), the run to judge now is MVP 7.3's, 2026-10-22,
+Re-scoped to Windows (D-86), the run to judge was then MVP 7.3's, 2026-10-22,
 on the maintainer's Windows 11 machine: `review/2026-10-22-fg2/151004-claude-fable-5-1m/`.
 It scored 9/11 with 11 candidates, all verified, no quote-check kills and
 clean files clean. Both misses were found and verified, cited where the

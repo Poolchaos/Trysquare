@@ -46,10 +46,11 @@ All twelve work packages are built: the review engine, the data and git
 layers, every screen, the design pass, the accessibility checks, and the
 interactive engine mode that runs a review from files in your own terminal
 instead of a subprocess. What remains of the MVP in
-[docs/plans/MVP-PLAN.md](docs/plans/MVP-PLAN.md) is the maintainer's own
-review of a real branch (7.4); a fresh real run of the fixture on Windows
-(7.3) waits on their finding-quality verdict, and the verdicts and the
-design acceptance are theirs.
+[docs/plans/MVP-PLAN.md](docs/plans/MVP-PLAN.md) is the maintainer's
+verdict on finding quality, to be given on a fresh real run of the fixture
+on Linux, and their own review of a real branch (7.4); the verdicts and the
+design acceptance are theirs. The work from here to completion is
+[docs/plans/COMPLETION-PLAN.md](docs/plans/COMPLETION-PLAN.md).
 [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md) is the current-facts cache.
 
 From 2026-11-03 others use it too, and help improve it. Start with
@@ -113,8 +114,9 @@ screenshots, copied here by hand rather than staged for the README, last on
 2026-10-25; the suite takes them again on every CI run, so a copy here can fall
 behind the screens. What they show is the fake engine's scripted review. The
 real-model smoke runs described in Status happened locally and their evidence,
-including every finding's text, lives under `review/`, which is deliberately
-not committed. No real model has reviewed a real project through this app yet:
+including every finding's text, was kept under `review/`, which is
+deliberately not committed, on machines the maintainer no longer has. What
+remains of each run is its summary in [docs/GATES.md](docs/GATES.md). No real model has reviewed a real project through this app yet:
 that is the next gate, and it is the maintainer's to drive.
 
 A finished review leads with how its findings were proven and the five steps
@@ -177,7 +179,8 @@ it opened each image stands alone. A project with no e2e is reported as
 
 - Linux or macOS. Every push runs the whole test suite on both in CI
   (GitHub's `ubuntu-latest` and `macos-latest`) against a stand-in for the
-  CLI, and a change reaches `main` only with both green. Real reviews have
+  CLI, and a pull request merges into `main` only with both green (the
+  maintainer's own pushes are exempt, D-232). Real reviews have
   run on Linux; macOS has had none.
 - Windows is not looked after for now (D-232, 2026-11-17): nobody who works
   on Trysquare uses it. The app was built to run there and ran real reviews
@@ -371,7 +374,7 @@ current rather than written once.
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | Install, start, and run a first review |
 | [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md) | What is actually built right now |
 | [docs/plans/BUILD-PLAN.md](docs/plans/BUILD-PLAN.md) | Work packages and milestones |
-| [docs/plans/M4-FINISH-PLAN.md](docs/plans/M4-FINISH-PLAN.md) | The remaining work to v1, item by item |
+| [docs/plans/COMPLETION-PLAN.md](docs/plans/COMPLETION-PLAN.md) | The remaining work, item by item, with the decisions that are the maintainer's |
 
 That is the short list. [docs/README.md](docs/README.md) indexes every
 document, including the decision log and the gate ledger, and is the map to

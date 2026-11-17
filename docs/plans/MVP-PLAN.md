@@ -69,8 +69,8 @@ working on the app uses Windows. Criterion 1 was met on Windows on
 `ubuntu-latest` and `macos-latest`; `windows-latest` still runs and gates
 nothing. Criterion 4's run was made on Windows on 2026-10-22 (7.3) and its
 evidence went with that machine, so the G1 verdict is given on a fresh run
-on Linux (`COMPLETION-PLAN.md` CP-7). Criterion 5 and row 7.4 are met on
-Linux.
+on Linux (`COMPLETION-PLAN.md` CP-7). Criterion 5 and row 7.4, both still
+open, are to be met on Linux.
 
 **Non-goals for the MVP** (public release is a later milestone, D-85):
 WP-G completion moment, WP-K queue phone layout, WP-L my branches,

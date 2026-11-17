@@ -30,9 +30,10 @@ npm install
 ./verify.sh
 ```
 
-You need Node 22 or newer and git. You only need Claude Code installed if you
-are working on the review engine itself; the test suite uses a fake engine so
-that tests run without consuming anyone's model usage.
+You need Node 22 or newer and git. `npm ci` installs the Claude Code CLI that
+reviews run through, and you need to be signed in to it only to run a real
+review; the test suite uses a fake engine so that tests run without
+consuming anyone's model usage.
 
 ## The gate
 

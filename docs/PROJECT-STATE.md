@@ -123,8 +123,10 @@ from 2026-11-03.
   `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; three rows are
   open (WP-G completion moment, WP-K queue phone layout, WP-L my branches),
   outside the MVP (its non-goals). The FG-4 design acceptance is now part of
-  G3, the public release after the MVP (D-86); its argument is
-  `review/2026-08-18-fg4/DESIGN-NOTES.md`.
+  G3, the public release after the MVP (D-86); its argument was
+  `review/2026-08-18-fg4/DESIGN-NOTES.md`, on a machine since given up, and
+  is written again against today's screens in `plans/COMPLETION-PLAN.md`
+  CP-11.
 - The two external AI plans never arrived. They fold in as spec amendments if
   they do; they did not block the build.
 
@@ -163,8 +165,9 @@ Linux and macOS only). `--e2e` implies `--build` since 2026-08-18, because
 Playwright serves the last build and without it the browser gate can pass
 against output that predates the change under test (D-70). CI runs
 `./verify.sh --build --e2e` and then the fake demo on Ubuntu, Windows and
-macOS (MVP WP 3.6); Ubuntu and macOS must pass for a change to reach `main`
-(D-232). The local default leaves build and e2e off so it stays fast.
+macOS (MVP WP 3.6); Ubuntu and macOS must pass before a pull request merges
+into `main`, and the maintainer's own pushes are exempt (D-232). The local
+default leaves build and e2e off so it stays fast.
 
 `npm run demo:fixture -- --fake` reviews the seeded fixture end to end with no
 model and no money, scoring the result against the fixture's manifest.
@@ -204,6 +207,8 @@ are accepted; anything else is refused by name.
   removes the ceiling.
 - `claudePath` (default empty). The CLI reviews run through, which
   `TRYSQUARE_CLAUDE_PATH` wins over (D-152).
+- `defaultRulesetId` (default empty). The ruleset a new review starts on
+  (D-225).
 
 ## Structure
 
