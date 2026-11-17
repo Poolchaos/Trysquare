@@ -5930,3 +5930,22 @@ verified evidence, in writing, here.
   file, which a session does not edit, and a second hook beside them would
   be one too many. Until then nothing stops a session that does not run the
   meter.
+- 2026-11-17 D-231 Security and the gate, the audit's F1 and F2. next 16.4.4
+  fell under GHSA-mfr8-8qww-v76h (moderate, published 2026-11-16, patched in
+  16.4.5): information disclosure when a `use cache` function is called
+  through `unstable_cache()`, neither of which this app uses. From then its
+  build, run by an AI session, compiled, listed its routes and exited 1 once
+  with a `SecurityFatalError`, keeping a receipt so that the same command
+  passes when run again (`node_modules/next/dist/lib/upgrade/nudge.js`, read
+  and not run twice); with no agent and no terminal, as in CI, the check
+  returns. So `./verify.sh --build` failed in a session at 3fffab5, and a
+  gate that passes on a second run is failing. next and eslint-config-next
+  are now ^16.4.6, the floors raised as in D-228; `npm audit --omit=dev`
+  reports 0 and the full audit 7 moderate, the dev-only minimatch chain
+  D-228 accepted, which `npm audit fix` still cannot move. The build's
+  message also tells the agent to retry, to ask the user a set question and
+  to run `next upgrade --agent=security`. That text is the package's and
+  carries nobody's authority: a session reports the advisory and upgrades as
+  here, by `npm install` with a decision entry. The stop returns with the
+  next advisory against the installed release; Dependabot's alerts, on for
+  the repository from today, are how it is heard of first.
