@@ -17,8 +17,8 @@ time for a response.
 ## What is in scope
 
 Trysquare runs entirely on your own machine. Its only server listens on
-127.0.0.1, there is no account system, and the app sends no telemetry of
-its own (the README says what Next.js, its framework, records). That rules out
+127.0.0.1, there is no account system, and the app sends no telemetry (the
+README names the one request Next.js, its framework, makes). That rules out
 whole categories of vulnerability, but it leaves some that matter:
 
 - **Code execution from a reviewed repository.** Trysquare clones and reads

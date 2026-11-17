@@ -5971,3 +5971,36 @@ verified evidence, in writing, here.
   parked with this entry. Rejected: dropping the Windows job, which would
   lose the only sign that the app still starts there; keeping it required,
   which makes a platform nobody uses able to stop every push.
+- 2026-11-17 D-233 Next's telemetry is off, the third grade's N2 and
+  `COMPLETION-PLAN.md` CP-5b. `next.config.ts` sets
+  `NEXT_TELEMETRY_DISABLED` as it is read. Next makes its telemetry object
+  after it has read the config, in the build (`build/index.js:497`, then
+  `:540`), in the dev server (`server/lib/router-server.js:133`, then
+  `:159`) and in the process that sends what a dev session queued
+  (`telemetry/detached-flush.js`), and hands the value to the command that
+  started it (`telemetryDisabled`, `router-server.js:193`); `next start`
+  makes none. Measured on Linux at next 16.4.6, with a preload that wraps
+  `fetch` in every node process of the run, logs each request to another
+  host and refuses the one to telemetry.nextjs.org, the variable taken out
+  of the shell: before the change `npm run build` made 16 attempts to post
+  there and `npm run dev`, started, asked for `/` and stopped, made 8, two
+  of them from the detached process; refused attempts are tried again, so
+  these count attempts, not events. `npm run start`, which the browser
+  suite serves from, made none. After the change all three made none.
+  `tests/architecture/next-telemetry.test.ts` holds the line in the config,
+  and failed before it was added. The plan's proof, `NEXT_TELEMETRY_DEBUG=1`
+  printing no event, cannot tell the two apart: Next prints events in that
+  mode before it looks at whether telemetry is off
+  (`telemetry/storage.js:221`, then `:240`). Rejected: `VAR=1 next` in
+  package.json's scripts, which does not run on Windows, whose CI job still
+  runs (D-232), and which a bare `npx next` goes around; a committed `.env`,
+  which `.gitignore` refuses by rule; a wrapper script around next, a second
+  thing to keep for what one line does. Found by the same runs and left as
+  it is: with `experimental.agentUpgrade` at its default, `security`, Next
+  posts its own installed version to the npm registry's advisory endpoint on
+  `npm run dev` outside CI, and on `npm run build` when a terminal or an AI
+  agent runs it (`lib/upgrade/prepare-upgrade.js:309`, reached through
+  `lib/upgrade/nudge.js:457-500`). It is the check behind D-231's
+  stop, it is not telemetry, and the README now names it. Turning it off is
+  `agentUpgrade: false`, and is the maintainer's call (CG-6): it would also
+  end the reminder a person gets in the terminal.

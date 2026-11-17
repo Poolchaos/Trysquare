@@ -222,12 +222,14 @@ Or press Check the CLI on Settings, which names the CLI reviews run
 through, its version, and whether a review draws on the subscription or
 bills per token.
 
-Trysquare drives that CLI using whatever credentials it already holds. It ships no model of its own and has no
-account system, no server of its own, and sends no telemetry of its own.
-One thing it does not yet stop: Next.js, the framework it is built on,
-records anonymous usage from `next dev` and `next build` unless
-`NEXT_TELEMETRY_DISABLED=1` is set in your environment
-([docs/plans/COMPLETION-PLAN.md](docs/plans/COMPLETION-PLAN.md), CP-5b).
+Trysquare drives that CLI using whatever credentials it already holds. It
+ships no model of its own and has no account system, no server of its own,
+and sends no telemetry. Next.js, the framework it is built on, would record
+anonymous usage from `next dev` and `next build`; `next.config.ts` turns
+that off. One request the framework still makes: when the app starts with
+`npm run dev`, or is built from a terminal, Next.js asks the npm registry
+whether its own installed version has a security advisory, and sends that
+version number to do so.
 
 Be clear about what that does and does not mean. Reviewing code with a model
 means sending code to that model: when a review runs, the diff, the contents of
@@ -235,7 +237,7 @@ the files involved, and your rulesets are sent to Anthropic by the Claude Code
 CLI, under whatever terms and plan you already have with them. That is inherent
 to the tool doing its job, not an extra. What Trysquare adds is that nothing
 goes anywhere else from Trysquare's own code: no Trysquare service, no
-analytics, no third party, the framework's usage record above aside. Your
+analytics, no third party. Your
 projects, review history, and findings are stored only in a local SQLite
 database and files under your own home directory.
 

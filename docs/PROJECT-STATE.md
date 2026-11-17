@@ -332,6 +332,10 @@ its page has said so (D-161, D-162). The CLI gets only what it needs to
 run and the sign-in (D-174); a managed Claude Code policy, which no flag
 keeps out, is said where one is found (D-175); see
 `06-MODELS-AND-PROFILES.md`.
+Next's usage telemetry is off (`next.config.ts`, D-233). The one request the
+framework still makes: on `npm run dev` outside CI, and on `npm run build`
+from a terminal or an AI agent, it posts its installed version to the npm registry's advisory endpoint
+(D-233, `plans/COMPLETION-PLAN.md` CG-6).
 The CLI is Anthropic's, "All rights reserved. Use is subject to the Legal
 Agreements" at
 <https://code.claude.com/docs/en/legal-and-compliance>, and each user
