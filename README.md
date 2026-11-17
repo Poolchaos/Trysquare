@@ -245,7 +245,9 @@ whatever terms and plan you already have with them. That is inherent to the
 tool doing its job, not an extra. What Trysquare adds is that nothing goes
 anywhere else from Trysquare's own code: no Trysquare service, no analytics,
 no third party. A protocol document you import cannot change that either:
-an image in it is shown as its words and its address, never fetched. Your
+an image in it is shown as its words and its address, never fetched. The one
+other host the app itself talks to is each project's own git remote, which
+it clones and fetches from and never pushes to. Your
 projects, review history, and findings are stored only in a local SQLite
 database and files under your own home directory.
 
