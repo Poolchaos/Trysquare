@@ -31,7 +31,13 @@ refused by the coverage law, the first full-strength run exposed a real
 product bug that was fixed the same day, and the two runs after the fix each
 found 8 of the 8 defects the fixture then planted, at the exact lines, with
 nothing invented and nothing discarded, for about a dollar and five minutes
-each. What no run settles is the judgment itself: whether those findings
+each. The fixture has since grown to eleven defects, and the later paid runs
+scored lower by its key: on 2026-10-22 all eleven were found and verified
+and nine were cited where the key cites them (9/11); on 2026-10-23, with
+the proof each finding must now carry and a second verifier, all eleven
+were raised, eight were proven by both verifiers and three were left as
+open questions (7/11). Their summaries are in
+[docs/GATES.md](docs/GATES.md). What no run settles is the judgment itself: whether those findings
 read as worth a person's time is the maintainer's call, described in
 [docs/plans/FG2-CHECKLIST.md](docs/plans/FG2-CHECKLIST.md), and it has not
 been made.

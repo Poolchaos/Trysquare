@@ -78,6 +78,8 @@ describe("the doctor on a machine that can run Trysquare", () => {
     const checks = await runFresh();
 
     expect(checks.filter((check) => check.level !== "ok")).toEqual([]);
+    // A passing line says what it found and no remedy (audit 2026-11-17, F14).
+    expect(row(checks, "Node").detail).toBe(`found v${process.versions.node}`);
     expect(row(checks, "Signed in to Claude")).toMatchObject({
       level: "ok",
       detail: "subscription (team plan)",
@@ -153,7 +155,7 @@ describe("the doctor's data checks", () => {
     const checks = await runFresh("20.11.0");
 
     expect(row(checks, "Node")).toMatchObject({ level: "fail" });
-    expect(row(checks, "Node").detail).toMatch(/found v20\.11\.0/);
+    expect(row(checks, "Node").detail).toBe("found v20.11.0; install Node 22 or newer");
   });
 
   it("warns that no database exists yet, since the app creates it on first start", async () => {

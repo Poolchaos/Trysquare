@@ -101,6 +101,33 @@ pulled deliberately.
   kept in a cookie after the first visit, so another account on a shared
   machine cannot call the API as the person (D-215). Every e2e test would
   have to open the app through it.
+- 2026-11-03: rules in the app: add one rule, remove one rule, edit a rule's
+  text, and delete a single ruleset. Today only on/off and severity change in
+  the app, the rest by re-importing the document with replace, and a
+  ruleset is deleted only by Settings' delete-everything (maintainer asked).
+  `COMPLETION-PLAN.md` CG-5.
+- 2026-11-03: a memory guard for a project's own commands. Only a 20-minute
+  limit bounds them now; one large project's e2e, measured at 20.7 GB on the
+  maintainer's machine, could exhaust a colleague's laptop. Needs a free-memory reading
+  measured on macOS before a floor is set on it (and on Windows, if it is
+  looked after again: D-232). `COMPLETION-PLAN.md` CG-5.
+- 2026-11-03: a project's ruleset from its own repository (maintainer's
+  choice): a path such as docs/review-protocol.md, like the design standard,
+  imported on each fetch, so a colleague who adds the project gets its
+  rules. The file reaches that project's repository through its own PR.
+  `COMPLETION-PLAN.md` CG-5.
+- 2026-11-03: directive bodies on a ruleset page still show their markdown
+  raw, where a rule's text is formatted (D-227).
+- 2026-11-03: suspected, not measured: an open process directive on a
+  ruleset page is a scroll box (max-h-64 overflow-auto) a keyboard cannot
+  reach, the axe failure the rule text hit the same day; no test opens one.
+  `COMPLETION-PLAN.md` CP-6.
+- 2026-11-17: four of the entries above (rules in the app, the memory
+  guard, a project's own ruleset, the process directive) stood under Retired
+  until the audit of this day found them there, and the directive-bodies
+  line was the tail of a built entry. The Windows-only entries in this
+  list (the CI stall of 2026-10-23, the e2e server's death) are parked: no
+  work goes into them while Windows is not looked after (D-232).
 
 ## Retired
 
@@ -167,21 +194,7 @@ the line entirely would lose the trail.
   plugin only with the maintainer's OK. DECIDED in D-169: /security-review
   after 7.2 and /code-review read-only, as proposed; neither /simplify nor
   grill.
-- 2026-11-03: rules in the app: add one rule, remove one rule, edit a rule's
-  text, and delete a single ruleset. Today only on/off and severity change in
-  the app, the rest by re-importing the document with replace, and a
-  ruleset is deleted only by Settings' delete-everything (maintainer asked).
-- 2026-11-03: a memory guard for a project's own commands. Only a 20-minute
-  limit bounds them now; one large project's e2e, measured at 20.7 GB on the
-  maintainer's machine, could exhaust a colleague's laptop. Needs a free-memory reading
-  measured on macOS and Windows before a floor is set on it.
-- 2026-11-03: a project's ruleset from its own repository (maintainer's
-  choice): a path such as docs/review-protocol.md, like the design standard,
-  imported on each fetch, so a colleague who adds the project gets its
-  rules. The file reaches that project's repository through its own PR.
 - 2026-11-03: each rule's context on the ruleset page. BUILT the same day:
   a rule's title opens to its text from the document, formatted (D-227).
-  Left: directive bodies still show their markdown raw.
-- 2026-11-03: suspected, not measured: an open process directive on a
-  ruleset page is a scroll box (max-h-64 overflow-auto) a keyboard cannot
-  reach, the axe failure the rule text hit the same day; no test opens one.
+  Left open, and listed above: directive bodies still show their markdown
+  raw.

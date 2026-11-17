@@ -26,11 +26,11 @@ export async function runDoctor(nodeVersion = process.versions.node): Promise<Do
   const record = (label: string, level: Level, detail: string) =>
     checks.push({ label, level, detail });
 
-  const nodeMajor = Number(nodeVersion.split(".")[0]);
+  const nodeOk = Number(nodeVersion.split(".")[0]) >= 22;
   record(
     "Node 22 or newer",
-    nodeMajor >= 22 ? "ok" : "fail",
-    `found v${nodeVersion}; install Node 22 or newer`,
+    nodeOk ? "ok" : "fail",
+    nodeOk ? `found v${nodeVersion}` : `found v${nodeVersion}; install Node 22 or newer`,
   );
 
   const git = spawnSync("git", ["--version"], { encoding: "utf8" });

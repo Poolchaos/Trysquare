@@ -100,7 +100,7 @@ This builds two throwaway git repositories with eleven defects planted in
 them (measured 2026-08-04: "Built the fixture: 11 planted defect(s)") and two
 files that are deliberately correct, runs the complete pipeline over them
 with no model at all, and scores the result against the answer key. It
-costs nothing and takes 1.5 seconds (measured 2026-08-04 on this machine:
+costs nothing and takes 1.5 seconds (measured 2026-08-04 on the maintainer's Linux machine of that date:
 three runs, 1.45s, 1.46s and 1.54s wall clock, of which the pipeline itself
 reports 0.6s; the rest is npm and tsx starting up). It is the fastest way to
 confirm an install is sound, and it is the evidence behind gate G1.
@@ -126,7 +126,7 @@ carry three planted design defects beside clean ones, turns its own checks
 on, lets its e2e photograph twelve screenshots in the review's throwaway
 copy, grades them, and scores each against the key. On the fake engine
 the grades follow the key, so it proves the plumbing only (measured
-2026-10-24 on this machine: three runs, each "5/5 planted screenshots
+2026-10-24 on the maintainer's Windows machine: three runs, each "5/5 planted screenshots
 found" and 2.9s as the demo reports it). With `-- --real` it grades with
 a real model, as `demo:fixture` does, and spends usage. Each run's evidence
 goes to its own folder, `review/<date>-design/<time>-<model>/`, the time in

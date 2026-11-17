@@ -3,21 +3,30 @@
 The live cache. Current facts only; if a change makes a line here wrong,
 fixing it is part of that change. Dates are absolute (YYYY-MM-DD).
 
-Last verified: 2026-10-25, against the code at 97e18fa (an outside audit's
-finding 3: the structure counts below recounted from the code).
+Last verified: 2026-11-17, against the code at fe22a19, on the maintainer's
+Linux machine: the structure counts below recounted for the audit of that
+day, the stack read from the machine, and the gate run with `--e2e`. Dated
+entries under Status say what was true on their date, and "this machine"
+in one is the machine of that date: Linux for the entries of 2026-07 and
+2026-08, Windows 11 for those from 2026-10-16 to 2026-10-28, Linux again
+from 2026-11-03.
 
 ## Status
 
-- 2026-11-17: an audit of what remains (`plans/AUDIT-2026-11-17.md`), a
-  read-only report graded C by an independent grader: fourteen findings and
-  five the grader added, none fixed, so the lines of this file
-  it found stale (F2, F6) stand as it found them. `./verify.sh --e2e` exits
-  1 at 3fffab5 when an AI session runs it: next 16.4.4's build stops once
-  over an advisory `npm audit` did not report on 2026-11-03
-  (GHSA-mfr8-8qww-v76h, moderate), with 1468 unit tests passing, 8 skipped,
-  and 137 browser tests. A session now stops at 500,000 tokens of context,
-  measured by `scripts/session-context.mjs`, and hands over through
-  `.claude/handover/` (D-230, `SESSION-HANDOVER.md`).
+- 2026-11-17: an audit of what remains (`plans/AUDIT-2026-11-17.md`),
+  graded C by an independent grader: fourteen findings and five the grader
+  added. Its remaining work is `plans/COMPLETION-PLAN.md`, CP-1 to CP-15.
+  Done the same day: next to 16.4.6, whose predecessor stopped an AI
+  session's build once over an advisory (D-231); Windows no longer looked
+  after, the open gates moved to Linux, and `main` protected with the Ubuntu
+  and macOS checks required (D-232); the CI actions pinned to commits; the
+  records the audit found stale brought up to date; and a session stopped
+  at 500,000 tokens of context, measured by `scripts/session-context.mjs`,
+  handing over through `.claude/handover/` (D-230, `SESSION-HANDOVER.md`).
+  `./verify.sh --e2e` exits 0 at fe22a19, twice from an empty `.next`, with
+  1477 unit tests passing, 8 skipped, and 137 browser tests. Still waiting
+  on the maintainer: the verdicts on G1, WP-I and WP-J, MVP 7.4, and the
+  plan's five decision gates.
 - 2026-10-28: every finding of both outside audits is now fixed or
   answered: U3, U4 and U7 to U10 since 2026-10-25, with review round 15
   over them and over D-225 (in DECISIONS). A ruleset can be the default a
@@ -91,8 +100,10 @@ finding 3: the structure counts below recounted from the code).
   ACTIVE. Its Linux evidence is the 2026-08-04 real-engine smoke runs (haiku
   refusal D-57, the symbol-path fix D-58, two clean fable runs at 8/8): see
   `plans/FG2-CHECKLIST.md` and `review/2026-08-04-fg2/`, a directory git
-  ignores and which this Windows machine does not hold. Re-scoped on 2026-10-16
-  (D-86), it also needs the fresh Windows run of MVP 7.3. The verdict is
+  ignores and which no machine the maintainer now has holds. Re-scoped on
+  2026-10-16 (D-86), it also needed the fresh Windows run of MVP 7.3, made
+  on 2026-10-22; re-scoped again on 2026-11-17 (D-232), its verdict is given
+  on a fresh run on Linux (`plans/COMPLETION-PLAN.md` CP-7). The verdict is
   the maintainer's, and nothing in this repository marks it passed.
 - The app is usable end to end. A person can add a project from a git URL, see
   its branches, set up a review with a pre-flight estimate, watch it run,
@@ -119,10 +130,13 @@ finding 3: the structure counts below recounted from the code).
 
 ## Stack (installed and proven on each machine on the date given)
 
-Linux, 2026-07-31: Node 22.22.1, npm 11.17.0, git 2.43.0, Claude Code 2.1.71.
-Windows 11, 2026-10-22: Node 22.17.0, npm 10.9.2, git 2.50.0.windows.1,
-Claude Code 2.1.301 (the bundled CLI, D-92). Review stages now refuse a CLI
-below 2.1.301 (D-91), so the Linux line's CLI would be refused today.
+Linux, 2026-11-17, the maintainer's machine now: Node 22.17.0, npm 10.9.2,
+git 2.43.0, Claude Code 2.1.301 (the bundled CLI, D-92), signed in on a
+subscription (`npm run doctor`).
+Windows 11, 2026-10-22, a machine since given up: Node 22.17.0, npm 10.9.2,
+git 2.50.0.windows.1, Claude Code 2.1.301.
+Linux, 2026-07-31, an earlier machine: Node 22.22.1, npm 11.17.0, git
+2.43.0, Claude Code 2.1.71, which review stages now refuse (D-91).
 
 next ^16.4.6 (2026-11-17, D-231), react ^19.2.8, typescript ^6.0.3, drizzle-orm ^0.45.2,
 drizzle-kit ^0.31.10, better-sqlite3 ^12.11.1 (D-87, 2026-10-16), zod ^4.6.7 (D-228), tailwindcss ^4.3.3,
@@ -135,20 +149,22 @@ TypeScript runs strict plus `noUncheckedIndexedAccess`,
 
 ## Commands
 
-See `CLAUDE.md` section 3, whose commands were each last re-proven on this
-Windows 11 machine on 2026-10-22, `./verify.sh` itself on every change
-since: `./verify.sh`, with `--build` and
-`--e2e`, `npm run dev`, `npm run start`, `npm test`, `npm run typecheck`,
-`npm run lint`, `npm run format`, `npm run e2e` and `npm run
-db:generate`. `./verify.sh` is the single gate. At 97e18fa it passes
-with `--e2e` on Windows 11, 1390 unit tests passing and 11 skipped, plus
-108 browser tests (the journey, the failure paths, the theme and
-screenshot pass, the phone-width pass, and axe over every screen in both
-themes; the shutdown pass runs on Linux and macOS only). `--e2e` implies `--build` since 2026-08-18, because Playwright serves
-the last build and without it the browser gate can pass against output that
-predates the change under test (D-70). CI runs `./verify.sh --build --e2e`
-and then the fake demo on Ubuntu, Windows and macOS (MVP WP 3.6); the local
-default leaves build and e2e off so it stays fast.
+See `CLAUDE.md` section 3, whose commands were each last re-proven one by
+one on the Windows 11 machine on 2026-10-22: `./verify.sh`, with `--build`
+and `--e2e`, `npm run dev`, `npm run start`, `npm test`, `npm run
+typecheck`, `npm run lint`, `npm run format`, `npm run e2e` and `npm run
+db:generate`. On Linux, `./verify.sh` has run on every change since
+2026-11-03; the others have not each been re-proven there. `./verify.sh` is
+the single gate. At fe22a19 it passes with `--e2e` on Linux, 1477 unit
+tests passing and 8 skipped, plus 137 browser tests (the journey, the
+failure paths, the theme and screenshot pass, the phone-width pass, axe
+over every screen in both themes, and the shutdown pass, which runs on
+Linux and macOS only). `--e2e` implies `--build` since 2026-08-18, because
+Playwright serves the last build and without it the browser gate can pass
+against output that predates the change under test (D-70). CI runs
+`./verify.sh --build --e2e` and then the fake demo on Ubuntu, Windows and
+macOS (MVP WP 3.6); Ubuntu and macOS must pass for a change to reach `main`
+(D-232). The local default leaves build and e2e off so it stays fast.
 
 `npm run demo:fixture -- --fake` reviews the seeded fixture end to end with no
 model and no money, scoring the result against the fixture's manifest.

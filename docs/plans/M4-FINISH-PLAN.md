@@ -634,7 +634,7 @@ verdict on finding quality stays with the maintainer per FG2-CHECKLIST.
 | U10 | design pass, states, tokens, settings/list completion, FG-4 notes | U6-U9      | DONE   |
 | U11 | Mode B engine, engine-mode setting                               | U8         | DONE   |
 | U12 | axe, failure e2e, fixed-variant fixture, CI artifacts, T19 docs  | U10, U11   | DONE 2026-08-04 |
-| U13 | real-engine proof and G1/G3 evidence                             | maintainer | RUNS DONE 2026-08-04, VERDICT PENDING |
+| U13 | real-engine proof and G1/G3 evidence                             | maintainer | RUNS DONE 2026-08-04, VERDICT PENDING; carried from 2026-11-17 by `COMPLETION-PLAN.md` CP-7 and CP-8 |
 
 Review round after U4, after U9, and after U12, per the charter.
 

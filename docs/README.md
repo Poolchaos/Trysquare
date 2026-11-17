@@ -41,16 +41,16 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/FG2-CHECKLIST.md](plans/FG2-CHECKLIST.md) | What the maintainer judges at founder gate FG-2, where the evidence lives, and what each verdict means. |
 | [plans/M3-FINISH-PLAN.md](plans/M3-FINISH-PLAN.md) | Implementation plan for the usable app (T10-T17 remainder plus W8 leftovers): commit map V1-V9, spend-safety and confirmation-loop design, decisions D-30..D-44. |
 | [plans/M4-FINISH-PLAN.md](plans/M4-FINISH-PLAN.md) | The v1 close-out plan from the 2026-08-03 full audit: verified gap inventory, commit map U1-U13, decisions D-45..D-56. |
-| [plans/U12-FIXTURE-GAPS.md](plans/U12-FIXTURE-GAPS.md) | The four seeded-fixture defects still owed, planned against the live tree and adversarially verified. The driver's working order for the rest of U12. |
+| [plans/U12-FIXTURE-GAPS.md](plans/U12-FIXTURE-GAPS.md) | The four seeded-fixture defects that U12 still owed, planned against the live tree and adversarially verified. EXECUTED 2026-08-04, all phases. |
 | [plans/POST-M4-PLAN.md](plans/POST-M4-PLAN.md)   | The driver's plan after M4: land the in-flight sweep fix, close gates G1-G3 with evidence, D-59 dedup, inbox spend-down. |
-| [plans/UX-UPLIFT-PLAN.md](plans/UX-UPLIFT-PLAN.md) | The 2026-08-17 UX audit (14 findings, screenshots + code inventory), the gamification research and its honest-version design, six maintainer gates, and work packages WP-A..J. |
+| [plans/UX-UPLIFT-PLAN.md](plans/UX-UPLIFT-PLAN.md) | The 2026-08-17 UX audit (14 findings, screenshots + code inventory), the gamification research and its honest-version design, six maintainer gates, and work packages WP-A..N. Three rows open: WP-G, WP-K, WP-L. |
 | [plans/DASHBOARD-SHELL-PLAN.md](plans/DASHBOARD-SHELL-PLAN.md) | D-81 executed in detail: the widget dashboard, the top bar, the rail's retirement; work packages M0-M6 with the verified e2e blast radius. |
 | [plans/PLAN-TEMPLATE.md](plans/PLAN-TEMPLATE.md) | Template for multi-step plan docs (work packages, decision gates, done tracking).            |
 | [plans/idea-inbox.md](plans/idea-inbox.md)       | One-line dated idea capture. Ideas are not expanded until the active gate passes.            |
 | [plans/AUDIT-2026-10-16-GLM.md](plans/AUDIT-2026-10-16-GLM.md) | The 2026-10-16 audit: gate results on Windows, the unit-failure taxonomy, security findings, open work, and a cross-check against the parallel audit. Read-only report; nothing in it was fixed. |
 | [plans/AUDIT-2026-10-16.md](plans/AUDIT-2026-10-16.md) | The parallel 2026-10-16 audit: finding IDs W, S, E, A, U, T, R, D with proof per finding, and the evidence behind each disagreement with the GLM report. Read-only report. |
 | [plans/MVP-PLAN.md](plans/MVP-PLAN.md) | The MVP: three-OS support, security, engine fixes, spend safety, Claude connect, then the G1 and G2 verdicts. Seven phases, decision gates MG-1..MG-10. RATIFIED 2026-10-16 (D-86). |
-| [plans/PROOF-AND-STEPS-PLAN.md](plans/PROOF-AND-STEPS-PLAN.md) | After the MVP: the 5.5 models, proof a finding must carry and a second verifier, and the run shown as five steps. DRAFT 2026-10-22 (D-184), built after the G1 verdict. |
+| [plans/PROOF-AND-STEPS-PLAN.md](plans/PROOF-AND-STEPS-PLAN.md) | After the MVP: the 5.5 models, proof a finding must carry and a second verifier, and the run shown as five steps, then the design of what a branch builds. BUILT 2026-10-24 (D-184, D-186); the verdicts on WP-I and WP-J are the maintainer's. |
 | [plans/COMPLETION-PLAN.md](plans/COMPLETION-PLAN.md) | The standing plan from the 2026-11-17 audit to completion: work packages CP-1..15 and decision gates CG-1..5. DRAFT 2026-11-17. |
 | [plans/AUDIT-2026-11-17.md](plans/AUDIT-2026-11-17.md) | The 2026-11-17 audit of what remains: the evidence, fourteen findings and five the grader added, an independent grade of C, and the remaining work in order. Nothing in it was fixed. |
 
@@ -108,6 +108,12 @@ reality disagree, reality wins and both get fixed in the same session.
   `plans/MVP-PLAN.md` added: the MVP planned against both audits (D-85).
 - 2026-10-22: `plans/PROOF-AND-STEPS-PLAN.md` added: the maintainer's
   D-184 asks planned against what exists, built after the G1 verdict.
+- 2026-11-03: `AI-GUIDE.md` added (f20db18): where features live and how
+  common changes are made, for an AI session. Backfilled here on 2026-11-17,
+  having been added to the table above without a changelog line.
+- 2026-11-17: three rows above corrected to what their plans say (audit F7,
+  and the grader's G1 and G2): U12-FIXTURE-GAPS is executed, the UX plan
+  runs to WP-N, and the proof-and-steps plan is built.
 - 2026-11-17: `SESSION-HANDOVER.md` added: the session limit and the
   handover procedure (D-230). `plans/AUDIT-2026-11-17.md` added: the audit
   of what remains, a read-only report. `plans/COMPLETION-PLAN.md` added:

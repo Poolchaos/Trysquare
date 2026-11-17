@@ -80,12 +80,12 @@ behaviour is WP-A's work, not a nuisance to suppress.
 | WP   | Scope | Blocked on | Status |
 | ---- | ----- | ---------- | ------ |
 | WP-A | Finish and land the sweep literal fallback | - | DONE 2026-08-04 |
-| WP-B | Resume the maintainer's first real review; capture G2 evidence | WP-A | TODO |
+| WP-B | Resume the maintainer's first real review; capture G2 evidence | WP-A | TODO here; carried since 2026-10-16 by `MVP-PLAN.md` 7.4, and from 2026-11-17 by `COMPLETION-PLAN.md` CP-9 |
 | WP-C | Stop S4 re-raising what S3 already found (D-59) | WP-A | DONE 2026-08-04 (mechanical half; the prompt half waits on a real run's fold count) |
 | WP-D | Normalise prose rule codes at the stage boundary | - | DONE 2026-08-04 |
 | WP-E | Give the fixture a sweep hit, so the sweep-disposition path stops being vacuous | WP-C | DONE 2026-08-04 |
 | WP-F | Small inbox items: demo scorer app/ prefix; clearHunk vs sweep-clear reason mismatch; cache-creation token line | - | DONE 2026-08-04 |
-| WP-G | Records on gate verdicts (G1, G2, G3 rows; BUILD-PLAN milestones) | maintainer | GATE |
+| WP-G | Records on gate verdicts (G1, G2, G3 rows; BUILD-PLAN milestones) | maintainer | GATE; carried from 2026-11-17 by `COMPLETION-PLAN.md` CP-8 and CP-9 |
 
 ### WP-A. Finish and land the sweep literal fallback
 
