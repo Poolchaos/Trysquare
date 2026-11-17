@@ -51,6 +51,7 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/AUDIT-2026-10-16.md](plans/AUDIT-2026-10-16.md) | The parallel 2026-10-16 audit: finding IDs W, S, E, A, U, T, R, D with proof per finding, and the evidence behind each disagreement with the GLM report. Read-only report. |
 | [plans/MVP-PLAN.md](plans/MVP-PLAN.md) | The MVP: three-OS support, security, engine fixes, spend safety, Claude connect, then the G1 and G2 verdicts. Seven phases, decision gates MG-1..MG-10. RATIFIED 2026-10-16 (D-86). |
 | [plans/PROOF-AND-STEPS-PLAN.md](plans/PROOF-AND-STEPS-PLAN.md) | After the MVP: the 5.5 models, proof a finding must carry and a second verifier, and the run shown as five steps. DRAFT 2026-10-22 (D-184), built after the G1 verdict. |
+| [plans/COMPLETION-PLAN.md](plans/COMPLETION-PLAN.md) | The standing plan from the 2026-11-17 audit to completion: work packages CP-1..15 and decision gates CG-1..5. DRAFT 2026-11-17. |
 | [plans/AUDIT-2026-11-17.md](plans/AUDIT-2026-11-17.md) | The 2026-11-17 audit of what remains: the evidence, fourteen findings and five the grader added, an independent grade of C, and the remaining work in order. Nothing in it was fixed. |
 
 ## Specs
@@ -109,4 +110,6 @@ reality disagree, reality wins and both get fixed in the same session.
   D-184 asks planned against what exists, built after the G1 verdict.
 - 2026-11-17: `SESSION-HANDOVER.md` added: the session limit and the
   handover procedure (D-230). `plans/AUDIT-2026-11-17.md` added: the audit
-  of what remains, a read-only report.
+  of what remains, a read-only report. `plans/COMPLETION-PLAN.md` added:
+  the audit's remaining work as work packages, with the maintainer's
+  decision gates.
