@@ -223,6 +223,13 @@ export function buildChildEnv(
   // (D-92), and it should stay that version until the lockfile moves. The
   // 2.1.301 binary lists this variable among those it reads.
   child.DISABLE_AUTOUPDATER = "1";
+  // Only the requests a review needs. The CLI sends usage telemetry and
+  // error reports of its own by default, and this list is closed, so a
+  // person's own opt-out in their shell never reached it (D-240). The
+  // 2.1.301 binary reads all three; the first is the widest.
+  child.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+  child.DISABLE_TELEMETRY = "1";
+  child.DISABLE_ERROR_REPORTING = "1";
   return child;
 }
 

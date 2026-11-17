@@ -218,6 +218,17 @@ describe("the child environment", () => {
     expect(buildChildEnv({}).DISABLE_AUTOUPDATER).toBe("1");
   });
 
+  it("tells the CLI to make only the requests a review needs, whatever the shell said", () => {
+    // The CLI's own usage telemetry and error reports are on by default, and
+    // this list is closed: a person's opt-out never reached it (D-240).
+    for (const shell of [{}, { DISABLE_TELEMETRY: "0", DO_NOT_TRACK: "1" }]) {
+      const child = buildChildEnv(shell);
+      expect(child.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC).toBe("1");
+      expect(child.DISABLE_TELEMETRY).toBe("1");
+      expect(child.DISABLE_ERROR_REPORTING).toBe("1");
+    }
+  });
+
   it("drops undefined values rather than passing them as empty strings", () => {
     const child = buildChildEnv({ PATH: "/bin", HOME: undefined });
     expect(child.PATH).toBe("/bin");
@@ -263,7 +274,14 @@ describe("the sign-in run's environment", () => {
       LC_ALL: "fr_FR.UTF-8",
       DISPLAY: undefined,
     });
-    expect(child).toEqual({ LC_ALL: "C", LANG: "C", DISABLE_AUTOUPDATER: "1" });
+    expect(child).toEqual({
+      LC_ALL: "C",
+      LANG: "C",
+      DISABLE_AUTOUPDATER: "1",
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
+      DISABLE_TELEMETRY: "1",
+      DISABLE_ERROR_REPORTING: "1",
+    });
   });
 });
 

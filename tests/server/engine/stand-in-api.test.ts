@@ -20,6 +20,35 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildChildEnv, buildStageArgs } from "@/lib/engine/command";
 import { realCliEnvironment, resolveCli } from "@/server/engine/cli";
 
+/**
+ * A proxy that lets nothing through and writes down what it was asked for.
+ * The CLI is told to reach every host but this machine through it, so each
+ * host it wants, other than the stand-in API, is named here and none is
+ * reached.
+ */
+async function askedOfAProxy(run: (proxyUrl: string) => Promise<void>): Promise<string[]> {
+  const asked: string[] = [];
+  const proxy = createServer((request, response) => {
+    asked.push(request.url ?? "");
+    response.writeHead(502);
+    response.end();
+  });
+  proxy.on("connect", (request, socket) => {
+    asked.push(request.url ?? "");
+    // A client refused its tunnel hangs up, which resets this socket: that
+    // is the refusal working, and what was asked for is already written down.
+    socket.on("error", () => undefined);
+    socket.end("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+  });
+  await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+  try {
+    await run(`http://127.0.0.1:${(proxy.address() as AddressInfo).port}`);
+  } finally {
+    await new Promise((resolve) => proxy.close(resolve));
+  }
+  return asked;
+}
+
 let server: Server;
 let baseUrl: string;
 let requests: { model?: string; output_config?: { effort?: string }; text: string }[] = [];
@@ -143,13 +172,12 @@ function plantedRun(effort: string): Promise<void> {
   });
   // The app's environment for the CLI, which passes only what the CLI needs
   // and the sign-in (D-161, D-174), with the stand-in's own put back: its
-  // address and key, which the API calls go to, and the telemetry kept off,
-  // so nothing leaves the machine and nothing here is real.
+  // address and key, which the API calls go to. The app's environment keeps
+  // the CLI's telemetry off by itself (D-240), so nothing leaves the machine
+  // and nothing here is real.
   const env: Record<string, string> = buildChildEnv(shell);
   env.ANTHROPIC_API_KEY = shell.ANTHROPIC_API_KEY;
   env.ANTHROPIC_BASE_URL = shell.ANTHROPIC_BASE_URL;
-  env.DISABLE_TELEMETRY = shell.DISABLE_TELEMETRY;
-  env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = shell.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
   env.CLAUDE_CODE_MAX_RETRIES = shell.CLAUDE_CODE_MAX_RETRIES;
   return new Promise((resolve, reject) => {
     const child = spawn(cli.command, [...cli.prefixArgs, ...args], {
@@ -193,7 +221,13 @@ describe("what a stage's CLI sends (D-124)", () => {
  * One stage's call against the stand-in, in a home of its own, resumed when
  * given a session: the session id it answers with.
  */
-function stageRun(home: string, systemPrompt: string, resumeSessionId?: string): Promise<string> {
+function stageRun(
+  home: string,
+  systemPrompt: string,
+  resumeSessionId?: string,
+  // Every host but this machine is asked for through this proxy when given.
+  proxyUrl?: string,
+): Promise<string> {
   const cli = resolveCli(undefined, realCliEnvironment());
   const args = buildStageArgs({
     prompt: "",
@@ -210,11 +244,12 @@ function stageRun(home: string, systemPrompt: string, resumeSessionId?: string):
     HOME: home,
     USERPROFILE: home,
     CLAUDE_CONFIG_DIR: home,
+    ...(proxyUrl === undefined
+      ? {}
+      : { HTTPS_PROXY: proxyUrl, HTTP_PROXY: proxyUrl, NO_PROXY: "127.0.0.1,localhost" }),
   });
   env.ANTHROPIC_API_KEY = "sk-ant-api03-stand-in-not-a-real-key-0000000000000000000000000000000";
   env.ANTHROPIC_BASE_URL = baseUrl;
-  env.DISABLE_TELEMETRY = "1";
-  env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
   env.CLAUDE_CODE_MAX_RETRIES = "0";
   return new Promise((resolve, reject) => {
     const child = spawn(cli.command, [...cli.prefixArgs, ...args], {
@@ -234,6 +269,20 @@ function stageRun(home: string, systemPrompt: string, resumeSessionId?: string):
     });
   });
 }
+
+describe("what else a stage's CLI asks for (D-240)", () => {
+  it("asks no host but the API: no telemetry, no error reports, no feature flags", async () => {
+    const home = mkdtempSync(join(root, "quiet-"));
+    requests = [];
+    const asked = await askedOfAProxy(async (proxyUrl) => {
+      await stageRun(home, "QUIET-STAGE: reply ok.", undefined, proxyUrl);
+    });
+
+    // The call a review is for was made, to the stand-in.
+    expect(requests.length).toBeGreaterThan(0);
+    expect(asked).toEqual([]);
+  }, 120_000);
+});
 
 describe("a chained stage's system prompt (MVP 4.2)", () => {
   it("is the stage's own on a resumed call, not the first stage's", async () => {
