@@ -149,8 +149,14 @@ export function rulesetRow(dataDir: string): [Level, string] {
     return count > 0
       ? ["ok", `${count} stored`]
       : ["warn", "none yet; import your protocol on the Rulesets screen, or npm run rules:seed"];
-  } catch {
-    return ["warn", "the database has no rulesets table yet; start the app once to set it up"];
+  } catch (error) {
+    const message = (error as Error).message;
+    // Only a database the app has not set up yet is a warning. Any other
+    // error is the file's own trouble, and the app would meet it too.
+    if (message === "no such table: rulesets") {
+      return ["warn", "the database has no rulesets table yet; start the app once to set it up"];
+    }
+    return ["fail", `${database} could not be read: ${message}`];
   } finally {
     sqlite.close();
   }

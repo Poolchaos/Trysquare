@@ -178,6 +178,31 @@ describe("the doctor's data checks", () => {
     expect(row(checks, "Rulesets").detail).toMatch(/none yet/);
   });
 
+  it("warns when the database has no rulesets table yet", async () => {
+    const empty = createDb(join(dataDir, "db.sqlite"));
+    empty.$client.exec("create table other (id integer)");
+    empty.$client.close();
+
+    const checks = await runFresh();
+
+    expect(row(checks, "Rulesets")).toMatchObject({
+      level: "warn",
+      detail: "the database has no rulesets table yet; start the app once to set it up",
+    });
+  });
+
+  it("fails, in SQLite's own words, when the database file cannot be read as one", async () => {
+    const file = join(dataDir, "db.sqlite");
+    writeFileSync(file, "This is a text file, and no SQLite database at all.\n".repeat(40));
+
+    const checks = await runFresh();
+
+    expect(row(checks, "Rulesets")).toMatchObject({
+      level: "fail",
+      detail: `${file} could not be read: file is not a database`,
+    });
+  });
+
   it("fails when the data directory cannot be written", async () => {
     // A file where the directory should be: creating the directory beneath it fails.
     const blocker = join(dataDir, "not-a-directory");
