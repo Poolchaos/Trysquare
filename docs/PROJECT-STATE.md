@@ -128,9 +128,10 @@ from 2026-11-03.
   D-79, D-81) reshaped the surface: a top bar in place of the left rail, a
   widget dashboard at `/`, a full-screen scan theater, a queue-first review
   screen and a rendered report. `plans/UX-UPLIFT-PLAN.md` and
-  `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; three rows are
-  open (WP-G completion moment, WP-K queue phone layout, WP-L my branches),
-  outside the MVP (its non-goals). The FG-4 design acceptance is now part of
+  `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; two rows are
+  open (WP-K queue phone layout, WP-L my branches), outside the MVP (its
+  non-goals), WP-G having been closed on 2026-11-17 as built by later work
+  (D-238). The FG-4 design acceptance is now part of
   G3, the public release after the MVP (D-86); its argument was
   `review/2026-08-18-fg4/DESIGN-NOTES.md`, on a machine since given up, and
   is written again against today's screens in `plans/COMPLETION-PLAN.md`
@@ -305,8 +306,8 @@ own now (D-75, D-81).
   on the nav), so its edge cuts the Rulesets label to "Ru" and Settings is
   reached only by scrolling it, with nothing to say so (seen 2026-11-17 in
   `review/2026-11-17-e2e/*-ruleset-image-as-words-phone.png`). The scroll
-  is the design; whether a phone needs better is
-  `plans/COMPLETION-PLAN.md` CP-10, WP-K.
+  is the design and stays (D-239): a phone is for watching a run and
+  deciding findings, and the two cut off are setup screens.
 - A ruleset's process directives show their markdown as written, where a
   rule's text is formatted (D-227; `plans/idea-inbox.md`). It is what the
   model is given, word for word.

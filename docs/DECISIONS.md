@@ -6079,3 +6079,30 @@ verified evidence, in writing, here.
   what git is and what is switched off. Rejected: `GIT_LFS_SKIP_SMUDGE=1`
   in git's environment, which only git-lfs itself reads and no test here
   could prove; clearing every filter the person has, which are theirs.
+- 2026-11-17 D-238 WP-G of the UX plan, the completion moment, is closed as
+  built by later work, bar one part left out on purpose (under D-236). Read
+  on the completed review's screen (`review/2026-11-17-e2e/light-review.png`):
+  what was decided and how it was proven (the funnel and five steps of the
+  proof-and-steps plan), cost and duration as the two figures at the weight
+  the mock gave them, the time a run took in the header (`startedAt` to
+  `completedAt`, F5's unread fields), the report with Copy and Export beside
+  it, and in the queue what is left by severity and "All n decided". Left
+  out: "against this machine's median". A review's duration runs from its
+  start to the person's Complete, so it holds their own time deciding, and a
+  median of that says how long people took to come back, not how the run
+  went; a stage in flight already says what it usually takes
+  (`stageDurationMedians`), which is the measured half. Rejected: a median
+  of cost alone, one number no decision turns on.
+- 2026-11-17 D-239 The top bar's navigation at 360px stays as designed
+  (under D-236; Known issues since the same day). Five labels, the mark and
+  the awaiting badge do not fit that width, so the navigation scrolls
+  sideways and its edge cuts the fourth label. What a phone is for, by
+  D-69, is watching a run and deciding findings: Dashboard, Projects and
+  Reviews are in view, and Rulesets and Settings, setup screens that stay
+  desktop-first, are a sideways scroll away. Read in the code: nothing else
+  depends on the bar's height, so a second row is possible. Rejected for
+  now: a second row for the navigation, which takes 36px from every screen
+  of a phone for two setup screens; icons in place of labels, which the
+  shell's own rule refuses ("an icon without a label guesses"); hiding
+  Dashboard behind the mark, which moves the current-page marker off the
+  navigation. It stays a known issue, said where a reader meets it.

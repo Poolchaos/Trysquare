@@ -30,10 +30,11 @@ chosen per review in the advanced fold.
   directive bodies are shown, and duplicate-to-tier is built; free-text
   rule editing is not.
 - Settings: opening the data directory in a file manager (it is displayed).
-- Of the 2026-08-17 UX audit, three items are still owed: the completion
-  moment and queue momentum (WP-G), the queue's own phone layout with
-  bracketed thumb-height actions (WP-K), and the my-branches filter with the
-  identities behind it (WP-L). The rest of that audit is built, including the
+- Of the 2026-08-17 UX audit, two items are still owed: the queue's own
+  phone layout with bracketed thumb-height actions (WP-K), and the
+  my-branches filter with the identities behind it (WP-L). The completion
+  moment and queue momentum (WP-G) came with later work, bar a comparison
+  with this machine's median that is left out on purpose (D-238). The rest of that audit is built, including the
   home dashboard, the awaiting-decision badge, the rendered report and its
   HTML export, and the shell at phone width, where at 360px the navigation
   scrolls sideways and cuts a label (`PROJECT-STATE.md`, Known issues);
