@@ -12,6 +12,9 @@ on 2026-08-03 are built: a project's name and default branch are edited from
 its page through PATCH /api/projects/:id (D-51, MVP 7.1), and a refused
 project delete offers to delete the reviews that block it (U9).
 
+Brought level with `src/server/db/schema.ts` on 2026-11-17: twenty-five
+columns added since this was written were missing from the tables below.
+
 ## Tables
 
 ### projects
@@ -44,6 +47,7 @@ reviewed together with it (e.g. an app consumes a shared-core package).
 | dependencyProjectId | text FK   | the dependency (e.g. shared-core)                                                             |
 | packageName         | text      | import specifier, e.g. @acme/shared-core, used to map imports to the dependency worktree |
 | note                | text null |                                                                                            |
+| createdAt           | text      |                                                                                            |
 
 Links are directional (consumer -> dependency) and configured once on the
 project. A dependency is itself a normal project (own clone, own reviews).
@@ -108,6 +112,7 @@ review prepares, as code findings are from the stages' answers.
 | tier                 | text      | global, tech, project                      |
 | description          | text      |                                            |
 | sourceDoc            | text null | provenance, e.g. REVIEW_PROTOCOL.md import |
+| version              | int       | moves when a rule's severity or switch changes, or an import replaces the rules |
 | createdAt, updatedAt | text      |                                            |
 
 ### rules
@@ -126,6 +131,9 @@ review prepares, as code findings are from the stages' answers.
 | detection        | text null | verbatim detection hints                            |
 | notes            | text null | why-it-matters, real examples, exceptions           |
 | sweepPatterns    | text JSON | regexes derived from the protocol sweep table       |
+| groupHeading     | text      | the section heading the rule sat under, which tags it |
+| rawMarkdown      | text      | the rule as the author wrote it: what proves an import dropped nothing, and what an export writes |
+| sourceStartLine, sourceEndLine | int | where in the document it came from |
 | enabled          | int bool  | per-rule toggle                                     |
 | sortOrder        | int       | source order preserved                              |
 
@@ -139,6 +147,8 @@ Ruleset-scoped non-rule content composed into every review prompt.
 | section       | text | prime_directive, procedure, scope, philosophy, severity_model, output_format, domain_knowledge |
 | title         | text |                                                                                                |
 | contentMd     | text | verbatim                                                                                       |
+| rawMarkdown   | text | verbatim source, kept for the reason a rule's is                                               |
+| sourceStartLine, sourceEndLine | int | where in the document it came from                                            |
 | sortOrder     | int  |                                                                                                |
 
 ### reviews
@@ -154,15 +164,21 @@ Ruleset-scoped non-rule content composed into every review prompt.
 | linkedFromBranch, linkedFromCommit  | text null    | pinned like the primary pair               |
 | linkedIntoBranch, linkedIntoCommit  | text null    |                                            |
 | linkedMergeBaseCommit               | text null    |                                            |
-| model                               | text         | full model id, FK to models.id             |
+| intent                              | text null    | what the author says the change was meant to do |
+| model                               | text         | full model id; a name in models.id, not a foreign key |
 | profileId                           | text         | review profile actually used (see 06)      |
+| effort                              | text         | reasoning effort, fixed at creation        |
+| contextWindow                       | int null     | the window the review batches against, frozen with its ruleset |
 | verifierModel                       | text null    | the second verifier, frozen at first run   |
 | engineMode                          | text         | headless, interactive                      |
 | status                              | text         | see state machine                          |
 | currentStage                        | text null    |                                            |
 | pausedReason                        | text null    | limit message etc.                         |
+| pausedResetsAt                      | int null     | Unix seconds, when the limit resets, as the CLI reports it |
 | usageInputTokens, usageOutputTokens | int          | summed across stages                       |
+| usageCacheCreationTokens, usageCacheReadTokens | int | summed across stages                     |
 | costEquivalentUsd                   | real         | informational, from CLI results            |
+| runNotes                            | text JSON    | dated notes on how the run was carried out, append-only |
 | mergedDetectedAt                    | text null    | set when into-branch contains fromCommit   |
 | createdAt, startedAt, completedAt   | text         |                                            |
 
@@ -175,9 +191,11 @@ are enforced in one repository function, unit-tested; no ad hoc writes.
 
 ### review_rulesets
 
-(reviewId, rulesetId, snapshotJson). snapshotJson freezes the composed
-ruleset content at start time so later ruleset edits never change what a
-past review was judged against.
+(reviewId, rulesetId, rulesetName, rulesetVersion, snapshotJson).
+snapshotJson freezes the composed ruleset content at start time so later
+ruleset edits never change what a past review was judged against; the name
+and version are kept beside it, so a report says which ruleset and version
+that was.
 
 ### stage_executions
 
@@ -186,7 +204,10 @@ past review was judged against.
 | id, reviewId                                 |           |                                                                                    |
 | stage                                        | text      | one of the nine in `src/lib/domain/enums.ts`, s1_risk to s6_audit                   |
 | attempt                                      | int       |                                                                                    |
+| promptHash                                   | text      | identifies the request, so a resumed run finds the stored answer and replays it    |
 | sessionId                                    | text null | CLI session id for resume                                                          |
+| outputJson                                   | text null | the stage's validated answer, kept so a resume can replay it                       |
+| cacheCreationTokens, cacheReadTokens         | int       | from result event                                                                  |
 | status                                       | text      | succeeded or failed. The enum also carries running and cancelled; nothing writes them, because a row is written only once a stage settles |
 | inputTokens, outputTokens, costEquivalentUsd |           | from result event                                                                  |
 | errorClass, errorText, logPath               |           |                                                                                    |
@@ -199,7 +220,7 @@ past review was judged against.
 | -------------- | --------- | ------------------------------------------------------------------------ |
 | id, reviewId   |           |                                                                          |
 | repo           | text      | primary or linked                                                        |
-| path           | text      | repo-relative within that repo                                           |
+| path           | text      | qualified by repository as the model sees it: `<slug>/<path>`            |
 | changeType     | text      | added, modified, deleted, renamed                                        |
 | oldPath        | text null | renames                                                                  |
 | riskTags       | text JSON | from S1: money, auth, data_shape, destructive, concurrency, time, shared |
@@ -217,7 +238,7 @@ invariant is checked in code (S6) and by unit test, not by prompt trust.
 
 ### sweep_hits
 
-(id, reviewId, ruleCode, pattern, path, line, excerpt, disposition:
+(id, reviewId, ruleCode, pattern, repo, path, line, excerpt, disposition:
 pending, cleared, finding; clearReason, findingId null). Same invariant:
 no pending sweep hits past S6.
 
@@ -262,7 +283,8 @@ Candidate registry, probed not assumed (see 06).
 resolvedId text null = id reported back by the probe; family text;
 displayName; available int bool null = unknown; contextWindow int null;
 profileId text = full-context, chunked, decomposed, mechanical-only;
-recommended int bool; lastProbedAt text null; lastError text null)
+recommended int bool; sortOrder int; lastProbedAt text null; lastError text
+null)
 
 Short aliases (`opus`, `sonnet`) are never stored or passed: they resolve to
 the previous model generation. A unit test asserts no registry row and no
@@ -270,7 +292,7 @@ composed command uses an alias form.
 
 ### settings
 
-(key PK, value JSON): maxConcurrentReviews, stageTimeoutMinutes,
+(key PK, value JSON, updatedAt): maxConcurrentReviews, stageTimeoutMinutes,
 stageMaxBudgetUsd, claudePath and defaultRulesetId (a ruleset's id or null;
 one that is not there is refused, deleting a ruleset clears a default
 that named it, and one gone from a database older than that reads as none,

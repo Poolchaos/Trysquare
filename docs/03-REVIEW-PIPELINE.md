@@ -33,7 +33,8 @@ S1 work its risk-tagged files first (U12).
    review** (a dependency project included, e.g. shared-core alongside the app that consumes it),
    do the same for the linked pair and pin the linked commits.
 2. Create the worktree(s). Single review: detached checkout of fromCommit
-   at `runs/<id>/worktree/`. Linked review: a parent directory with one
+   at `runs/<id>/worktree/<slug>/`, under the same parent a linked review
+   uses. Linked review: that parent directory with one
    subdirectory per repo, named by project slug:
    `runs/<id>/worktree/<primary>/` and `runs/<id>/worktree/<linked>/`;
    AI stages get cwd = `runs/<id>/worktree/` so both trees are readable,

@@ -62,9 +62,9 @@ export function runDir(dataDir: string, reviewId: string): string {
 }
 
 /**
- * Parent of the review's checkout(s). A single-repo review checks out into
- * this directory; a linked review creates one subdirectory per repo slug so
- * both trees are readable from one working directory.
+ * Parent of the review's checkout(s): one subdirectory per repo slug, for a
+ * single-repo review as for a linked one, so a linked review's two trees are
+ * readable from one working directory.
  */
 export function worktreeRootDir(dataDir: string, reviewId: string): string {
   return join(runDir(dataDir, reviewId), "worktree");

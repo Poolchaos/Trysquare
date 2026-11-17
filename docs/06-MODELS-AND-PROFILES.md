@@ -129,7 +129,8 @@ $0.0007 cost-equivalent (121 input, 4 output tokens) versus $0.0748 for a
 naive `claude -p` probe that loads the full default system prompt and tool
 definitions. Probing the whole registry is therefore free in practice. The
 same lesson applies to review stages: the app always passes an explicit
-`--system-prompt` and a minimal `--tools` list, never inheriting defaults.
+system prompt (a stage's by `--system-prompt-file`) and a minimal `--tools`
+list, never inheriting defaults.
 
 ## 2. Model registry
 

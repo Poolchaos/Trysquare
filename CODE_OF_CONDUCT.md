@@ -37,9 +37,9 @@ commits, and any other channel where you are participating in the project.
 
 ## Enforcement
 
-Report a problem to the maintainer privately via a GitHub direct message or by
-opening a [security advisory](https://github.com/Poolchaos/Trysquare/security/advisories/new)
-if the matter is sensitive.
+Report a problem to the maintainer privately by opening a
+[security advisory](https://github.com/Poolchaos/Trysquare/security/advisories/new),
+the private channel this repository has.
 
 Reports will be handled discreetly. Depending on severity, the response may be
 a private word, a public correction, removal of the offending content, or a

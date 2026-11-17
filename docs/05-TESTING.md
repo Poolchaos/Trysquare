@@ -145,7 +145,7 @@ all-consumers-verified clears instead.
 Gate assertions (fake engine in CI; real engine manually pre-release):
 
 - every manifest defect is reported or explicitly an open question;
-- zero surviving findings whose quoted code fails the byte-match check;
+- zero surviving findings whose quoted code fails the quotation check;
 - the two clean hunks produce no confirmed findings;
 - coverage invariants hold (no pending hunks/sweeps).
 

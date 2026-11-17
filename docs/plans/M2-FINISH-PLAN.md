@@ -402,7 +402,7 @@ maintainer at the top of the demo output directory:
 | W5 | pause/resume/cancel determinism tests                       | W4         | DONE   |
 | W6 | bus, manager, instrumentation, SSE route, tests             | W4         | DONE   |
 | W7 | demo script, tsx alias proof, npm script                    | W2, W6     | DONE   |
-| W8 | docs, gate evidence, FG-2 checklist                         | W7         |        |
+| W8 | docs, gate evidence, FG-2 checklist                         | W7         | DONE, as M3's V9 |
 
 ## 3. Decisions fixed by this plan (append to DECISIONS.md as work lands)
 

@@ -85,8 +85,9 @@ findings go to a second pass in a fresh session with no access to the reasoning
 that produced them. Its job is to open the file, quote the actual lines, and
 try to kill the finding: is the code really there, does the mechanism really
 hold, is there a guard upstream that already handles it. Then the program
-checks the verifier's own work, byte-comparing the quoted code against the file
-at the cited lines. A finding with a line number that does not match dies
+checks the verifier's own work, comparing the quoted code against the file
+at the cited lines and forgiving only what carries no meaning, such as line
+endings and the indentation a quote may have lost. A finding with a line number that does not match dies
 regardless of how confident anything was about it.
 
 **A human decides what counts.** Surviving findings are presented for you to
@@ -229,9 +230,12 @@ bills per token.
 
 Trysquare drives that CLI using whatever credentials it already holds. It
 ships no model of its own and has no account system, no server of its own,
-and sends no telemetry. Next.js, the framework it is built on, would record
-anonymous usage from `next dev` and `next build`; `next.config.ts` turns
-that off. Two requests the framework still makes, both to the npm registry:
+and sends no telemetry. Two things it is built on would send their own, and
+both are switched off. Next.js, the framework, would record anonymous usage
+from `next dev` and `next build`; `next.config.ts` turns that off. The
+Claude Code CLI sends usage telemetry and error reports by default; every
+CLI the app starts is told to make only the requests a review needs,
+whatever your shell says. Two requests the framework still makes, both to the npm registry:
 when the app starts with `npm run dev`, or is built from a terminal or by an
 AI agent, Next.js asks whether its own installed version has a security
 advisory, sends that version number to do so, and reads the list of Next.js

@@ -317,11 +317,14 @@ own now (D-75, D-81).
   voids that acceptance; the re-check trigger is in `DECISIONS.md`.
 - `npm audit --omit=dev` reports 0 vulnerabilities (2026-11-17, after next
   moved from 16.4.4 to 16.4.6, D-231; D-228 had moved it from 16.3.8 and zod
-  from 4.4.3 to 4.6.7). The full audit reports 7 moderate, all one dev-only
-  chain through the typescript-eslint packages to `minimatch` below 11.0.1.
-  `npm audit` says a fix is available; `npm audit fix --dry-run` still
-  reports all 7 after it (2026-11-17). Accepted in D-228. The `braces` chain
-  D-89 accepted is no longer reported.
+  from 4.4.3 to 4.6.7). The full audit reports 18 on the evening of
+  2026-11-17, all dev-only, in two chains: 6 moderate through the
+  typescript-eslint packages to `minimatch` below 11.0.1, accepted in D-228
+  (`npm audit` says a fix is available; `npm audit fix --dry-run` left that
+  chain as it was the same morning, when it counted 7); and 12 high to
+  `picomatch`, an advisory published that day against every version,
+  accepted in D-241. The `braces` chain D-89 accepted is no longer
+  reported.
 - An advisory against the installed next stops `next build` once, with exit
   1, when an AI session runs it, and prints text telling the agent what to
   do (D-231). The answer is the upgrade, by `npm install`.
@@ -361,6 +364,11 @@ its page has said so (D-161, D-162). The CLI gets only what it needs to
 run and the sign-in (D-174); a managed Claude Code policy, which no flag
 keeps out, is said where one is found (D-175); see
 `06-MODELS-AND-PROFILES.md`.
+The Claude Code CLI's own telemetry and error reports are off for every CLI
+the app starts (`src/lib/engine/command.ts`, D-240): a test runs the
+installed CLI against a stand-in API behind a proxy that refuses and
+records, and the CLI asks for no other host. Not yet run against the real
+API; `plans/COMPLETION-PLAN.md` CP-7 is that run.
 Next's usage telemetry is off (`next.config.ts`, D-233). Two requests the
 framework still makes, both to registry.npmjs.org (D-234): on `npm run dev`
 outside CI, and on `npm run build` from a terminal or an AI agent, it posts

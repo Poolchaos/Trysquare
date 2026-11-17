@@ -6106,3 +6106,39 @@ verified evidence, in writing, here.
   shell's own rule refuses ("an icon without a label guesses"); hiding
   Dashboard behind the mark, which moves the current-page marker off the
   navigation. It stays a known issue, said where a reader meets it.
+- 2026-11-17 D-240 Every CLI the app starts makes only the requests a
+  review needs, the eighth grade of the records, its first finding. The
+  README said the app sends no telemetry. The Claude Code CLI sends usage
+  telemetry and error reports of its own by default, and the environment
+  the app builds for it is a closed list (`lib/engine/command.ts`, D-161,
+  D-174) with no opt-out on it, so a person who had set one in their shell
+  had it dropped. `buildChildEnv` now sets
+  `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, `DISABLE_TELEMETRY` and
+  `DISABLE_ERROR_REPORTING`, all three named in the 2.1.301 binary, the
+  first the widest. Measured with the installed CLI against the stand-in
+  API, every other host reached through a proxy that refuses and writes
+  down what it was asked for
+  (`tests/server/engine/stand-in-api.test.ts`): before, one stage call
+  asked for `api.anthropic.com:443` four times beside its call to the
+  stand-in; after, for nothing. The same test had been putting two of the
+  variables back by hand "so nothing leaves the machine"; it no longer
+  does. The sign-in still reads as a subscription through the app's own
+  commands (`npm run claude -- auth status`, `npm run doctor`). Not yet
+  run: a review against the real API under the wider variable, which CP-7
+  is; should a real call need something that variable withholds, the
+  narrower two stay and the first goes, with a new entry. Rejected:
+  passing the person's own variables through, which leaves the claim true
+  only for those who knew to set them; saying so in the README and
+  changing nothing, where one line makes it true.
+- 2026-11-17 D-241 A second dev-only advisory chain is accepted, as D-228
+  accepted the first. GHSA-fc5q-39xc-vjpf, a regular expression that can
+  be made slow in `picomatch`, reported against every version, reaches
+  this repository through vite, vitest, tinyglobby, fdir, micromatch,
+  fast-glob and eslint-config-next: twelve high in the full audit, which
+  now reads 18 (6 moderate, 12 high). `npm audit --omit=dev` still reports
+  0: nothing of it is in what a person runs. The patterns those tools
+  match come from this repository's own configuration, not from a reviewed
+  repository or a request. No fixed release exists; the one remedy npm
+  offers is `npm audit fix --force`, which installs vitest 3.1.4, an older
+  major. Left, to be read again when a fixed picomatch ships, which
+  Dependabot's alert will say.

@@ -381,6 +381,30 @@ test("the confirmation queue has no accessibility violations", async ({ page }) 
   ).toEqual([]);
 });
 
+test("a review waiting on decisions photographs on a desk and on a phone", async ({
+  page,
+}, testInfo) => {
+  // Deciding findings is what a phone is for here (D-69), so the queue is
+  // looked at there too, not only where it was designed.
+  const shot = (name: string) => join(EVIDENCE, `${testInfo.project.name}-${name}.png`);
+  await page.goto("/reviews?status=awaiting");
+  const row = page.getByRole("main").locator("ul > li").first();
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  await row.getByRole("link").click();
+  await expect(page.getByRole("button", { name: "Complete review" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await settled(page);
+  await photograph(page, shot("queue"));
+
+  await page.setViewportSize({ width: 360, height: 780 });
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, "the page scrolls sideways").toBeLessThanOrEqual(0);
+  await photograph(page, shot("queue-phone"));
+});
+
 test("the first thing tabbed to is reachable and visibly focused", async ({ page }) => {
   // Focus has to be visible, not merely present: a keyboard user who cannot
   // see where they are is not being served by an outline that was removed.

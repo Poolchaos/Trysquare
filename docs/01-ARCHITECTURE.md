@@ -19,7 +19,8 @@ unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 Local, single-user web app. One Node process serves the UI and runs review
 jobs; review jobs spawn `claude` CLI subprocesses (subscription login) inside
 read-only git worktrees. All state lives in SQLite plus a managed data
-directory. No auth, no hosting, no telemetry.
+directory. No auth, no hosting, no telemetry: the framework's and the CLI's
+own are switched off for what the app starts (D-233, D-240).
 
 ## 2. Stack (RATIFIED 2026-07-30)
 
@@ -168,7 +169,7 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
 - **HeadlessEngine (Mode A, default):** spawns
   `claude -p --output-format stream-json --model <full model id>`, the
   prompt on its standard input, with cwd =
-  worktree, a composed `--system-prompt` (replacing the default rather than
+  worktree, a composed `--system-prompt-file` (replacing the default rather than
   appending, because the review instructions are the whole contract and the
   default prompt costs thousands of tokens a call), and a read-only tool
   allowlist (Read, Grep, Glob only). Parses stream-json lines into events;
@@ -200,9 +201,9 @@ registry to show the models this account can actually use, passes full model
 ids only (short aliases resolve to the previous generation), and selects a
 review profile from the model's capability tier. Two engine requirements
 established there are load-bearing here: every spawn scrubs `CLAUDECODE`
-from the child environment, and every spawn passes an explicit
-`--system-prompt` and minimal `--tools` list rather than inheriting the
-CLI's defaults.
+from the child environment, and every spawn passes an explicit system
+prompt (`--system-prompt-file` for a stage, `--system-prompt` for a probe)
+and minimal `--tools` list rather than inheriting the CLI's defaults.
 
 ## 7a. Threat model: reviewed code is untrusted input
 
