@@ -49,8 +49,8 @@ Notes:
   pattern once hid the whole review engine from the repository, and the
   anchored replacement is what keeps that from recurring.
 
-- The two external AI plans have not been received. When they arrive they are
-  reviewed against the specs and folded in as spec amendments; they do not
-  block the build (the maintainer's 2026-07-30 go-ahead).
+- The two external AI plans never arrived. They fold in as spec amendments
+  if they do, and did not block the build (the maintainer's 2026-07-30
+  go-ahead).
 - Later gates were defined 2026-07-30 with the build plan, not invented
   mid-flow.

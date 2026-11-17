@@ -183,7 +183,7 @@ past review was judged against.
 | Column                                       | Type      | Notes                                                                              |
 | -------------------------------------------- | --------- | ---------------------------------------------------------------------------------- |
 | id, reviewId                                 |           |                                                                                    |
-| stage                                        | text      | s1_risk to s5_verification, s5b_second_verification, s6_audit                      |
+| stage                                        | text      | one of the nine in `src/lib/domain/enums.ts`, s1_risk to s6_audit                   |
 | attempt                                      | int       |                                                                                    |
 | sessionId                                    | text null | CLI session id for resume                                                          |
 | status                                       | text      | succeeded or failed. The enum also carries running and cancelled; nothing writes them, because a row is written only once a stage settles |
@@ -274,8 +274,10 @@ stageMaxBudgetUsd, claudePath and defaultRulesetId (a ruleset's id or null;
 one that is not there is refused, deleting a ruleset clears a default
 that named it, and one gone from a database older than that reads as none,
 D-225).
-Those five are the whole catalogue; any other key is refused by name. A data-directory display, a default model and a default
-engine mode are designed but not built (U10, U11).
+Those five are the whole catalogue; any other key is refused by name. A
+default model is designed but not built. The data directory is shown on
+Settings without being a setting, and a default engine mode is no longer
+owed (`04-UI-DESIGN.md`, Not built yet).
 
 ## Deletion rules
 

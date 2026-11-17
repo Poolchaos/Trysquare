@@ -122,7 +122,10 @@ bug. It does not block the change; only the maintainer defers one.
 
 ## 4. The seeded-bug fixture (engine quality gate)
 
-`tests/fixtures/seeded-repo/`: a small realistic TypeScript/React app with
+Neither repository below is kept in this one: `tests/fixtures/build-seeded-repos.mjs`
+builds both, with `seed-manifest.json`, into a directory its caller names.
+
+`seeded-repo/`: a small realistic TypeScript/React app with
 a `main` and a `feature` branch. The feature branch seeds defects mapped to
 protocol rules, at minimum: an id-vs-_id lookup mismatch behind an index
 signature (the canonical bug), a deleted await, a swallowed error, a
@@ -131,7 +134,7 @@ helper, a weakened test assertion, a deleted guard clause, plus two clean
 hunks that must NOT produce findings. `seed-manifest.json` records each
 defect: file, lines, rule code, expected severity.
 
-`tests/fixtures/seeded-core/`: a companion package repo consumed by
+`seeded-core/`: a companion package repo consumed by
 seeded-repo (the app/shared-core shape). Its feature branch seeds cross-repo
 contract bugs: a renamed field on an exported interface with one consumer
 in seeded-repo left unmigrated, and a changed default value no consumer

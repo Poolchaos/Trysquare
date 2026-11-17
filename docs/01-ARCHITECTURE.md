@@ -163,7 +163,7 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
 ```
 
 - **HeadlessEngine (Mode A, default):** spawns
-  `claude -p <prompt> --output-format stream-json --model <alias>` with cwd =
+  `claude -p <prompt> --output-format stream-json --model <full model id>` with cwd =
   worktree, a composed `--system-prompt` (replacing the default rather than
   appending, because the review instructions are the whole contract and the
   default prompt costs thousands of tokens a call), and a read-only tool

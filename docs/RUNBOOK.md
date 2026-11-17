@@ -76,8 +76,11 @@ rules).
 
 Serves on <http://localhost:3000> and opens on the dashboard. `dev` and
 `start` both bind to 127.0.0.1, so the app is unreachable from any other
-machine; that is deliberate (MVP-PLAN WP 2.2), and there is no flag to undo
-it short of editing `package.json`. For a
+machine; that is deliberate (MVP-PLAN WP 2.2). A second `-H` given after
+`--` does override it (`npm run start -- -H 127.0.0.2` bound there and left
+127.0.0.1 refusing, 2026-11-17), so never pass one; the request guard still
+answers 403 to a request addressed to anything but 127.0.0.1, localhost or
+[::1]. For a
 production server, `npm run build` first, then
 `npm run start -- --port <n>`. Starting without building serves stale output
 or fails, so build first.
@@ -235,8 +238,8 @@ Every step below is free until you press Start review.
 
 ## What spends model usage
 
-Only four things, by deliberate design after an incident where a manual test
-silently used the real CLI:
+Only four things in the app and its commands, by deliberate design after an
+incident where a manual test silently used the real CLI:
 
 - Starting a review, or resuming one: Resume pays for the stages that had
   not finished, and replays the finished ones for free.
@@ -252,8 +255,12 @@ silently used the real CLI:
   passed.
 
 Checking sign-in on Settings runs the CLI's own auth status and spends
-nothing. Pre-flight is git and arithmetic only. The entire test suite runs
-against a fake CLI committed to the repository.
+nothing. Pre-flight is git and arithmetic only. The test suite spends
+nothing: it runs against a fake CLI committed to the repository, bar one
+file that starts the installed CLI against a local stand-in for the API
+(`tests/server/engine/stand-in-api.test.ts`, D-124). A fifth thing spends,
+and only when asked for by name: `tests/server/engine/real-cli.test.ts`,
+skipped unless `TRYSQUARE_REAL_CLI=1` is set.
 
 ## Traps worth knowing
 

@@ -229,19 +229,26 @@ ships no model of its own and has no account system, no server of its own,
 and sends no telemetry. Next.js, the framework it is built on, would record
 anonymous usage from `next dev` and `next build`; `next.config.ts` turns
 that off. Two requests the framework still makes, both to the npm registry:
-when the app starts with `npm run dev`, or is built from a terminal, Next.js
-asks whether its own installed version has a security advisory, and sends
-that version number to do so; and when a browser first opens the app under
+when the app starts with `npm run dev`, or is built from a terminal or by an
+AI agent, Next.js asks whether its own installed version has a security
+advisory, sends that version number to do so, and reads the list of Next.js
+releases if one does; and when a browser first opens the app under
 `npm run dev`, it asks which Next.js version is the latest. `npm run start`,
 on a build already made, makes neither.
 
 Be clear about what that does and does not mean. Reviewing code with a model
 means sending code to that model: when a review runs, the diff, the contents of
-the files involved, and your rulesets are sent to Anthropic by the Claude Code
-CLI, under whatever terms and plan you already have with them. That is inherent
-to the tool doing its job, not an extra. What Trysquare adds is that nothing
-goes anywhere else from Trysquare's own code: no Trysquare service, no
-analytics, no third party. Your
+the files involved, your rulesets, what you wrote the change was meant to do
+and, where a project's own checks are on, the screenshots its e2e saved and
+its design standard are sent to Anthropic by the Claude Code CLI, under
+whatever terms and plan you already have with them. That is inherent to the
+tool doing its job, not an extra. What Trysquare adds is that nothing goes
+anywhere else from Trysquare's own code: no Trysquare service, no analytics,
+no third party. One defect stands against that until it is fixed: a protocol
+document that holds a markdown image has it drawn on the ruleset's page, so
+opening a rule of an imported document makes your browser ask the host the
+image names
+([docs/plans/COMPLETION-PLAN.md](docs/plans/COMPLETION-PLAN.md), CP-5). Your
 projects, review history, and findings are stored only in a local SQLite
 database and files under your own home directory.
 
@@ -302,8 +309,9 @@ The seed reads the file where it is and does not copy it into this repository.
 Keep company rules outside the repository, or in `docs/private/`, which is
 ignored by git.
 
-That serves the app on <http://localhost:3000>, on this machine only: both
-scripts bind to 127.0.0.1, so nothing else on the network can reach it. It
+`npm run dev` serves the app on <http://localhost:3000>, on this machine
+only: it and `npm run start` bind to 127.0.0.1, so nothing else on the
+network can reach it. It
 opens on the dashboard. [docs/RUNBOOK.md](docs/RUNBOOK.md) walks through a first review from
 there, including which actions spend model usage and which do not.
 

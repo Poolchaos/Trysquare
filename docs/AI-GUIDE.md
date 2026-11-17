@@ -16,10 +16,13 @@ change.
 3. "Verified" means `./verify.sh` exited 0. Add `--build` for the production
    build and `--e2e` for the browser suite (which implies the build). Never
    pipe it into anything that hides its exit code.
-4. Tests never reach the real Claude CLI: `tests/helpers/no-real-cli.ts`
-   refuses any CLI that is not a fake (`tests/fixtures/fake-claude.mjs`, or
-   a Node script under the temp directory, as a test's own copy is). The
-   fake is driven by `FAKE_CLAUDE_*` variables; read its header.
+4. Tests never spend usage unasked: `tests/helpers/no-real-cli.ts` refuses
+   any CLI that is not a fake (`tests/fixtures/fake-claude.mjs`, or a Node
+   script under the temp directory, as a test's own copy is). The fake is
+   driven by `FAKE_CLAUDE_*` variables; read its header. Two files start the
+   real CLI: `stand-in-api.test.ts`, on every run, against a local stand-in
+   for the API, and `real-cli.test.ts`, only with `TRYSQUARE_REAL_CLI=1`,
+   which does spend.
 5. Measure the session before each change: `node scripts/session-context.mjs`.
    At 450,000 tokens it says `HANDOVER DUE`, and the session writes its
    handover instead of starting anything; it does the same sooner when the
