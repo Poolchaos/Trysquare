@@ -17,6 +17,10 @@ test-results/
 next-env.d.ts
 *.tsbuildinfo
 
+# A session's handover (CLAUDE.md section 10): one person's work in flight on
+# one machine, never a record of the project. Anchored, as /review/ is.
+/.claude/handover/
+
 # Private working material that must never reach the public repo:
 # customer or employer protocols, real rulesets, anything proprietary.
 docs/private/

@@ -8,8 +8,9 @@ change.
 
 ## Before any change
 
-1. Read `CLAUDE.md`, then `PROJECT-STATE.md`, then `GATES.md`. Work beyond
-   the active gate is said, not started.
+1. Read `CLAUDE.md`, then `.claude/handover/HANDOVER.md` if the last session
+   left one, then `PROJECT-STATE.md`, then `GATES.md`. Work beyond the active
+   gate is said, not started.
 2. Find the feature in the index below, and read its spec section before its
    code.
 3. "Verified" means `./verify.sh` exited 0. Add `--build` for the production
@@ -19,6 +20,9 @@ change.
    refuses any CLI that is not a fake (`tests/fixtures/fake-claude.mjs`, or
    a Node script under the temp directory, as a test's own copy is). The
    fake is driven by `FAKE_CLAUDE_*` variables; read its header.
+5. Measure the session before each change: `node scripts/session-context.mjs`.
+   At 450,000 tokens it says `HANDOVER DUE`, and the session writes its
+   handover instead of starting anything (`SESSION-HANDOVER.md`).
 
 ## How it fits together
 

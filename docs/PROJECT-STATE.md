@@ -8,6 +8,16 @@ finding 3: the structure counts below recounted from the code).
 
 ## Status
 
+- 2026-11-17: an audit of what remains (`plans/AUDIT-2026-11-17.md`), a
+  read-only report graded C by an independent grader: fourteen findings and
+  five the grader added, none fixed, so the lines of this file
+  it found stale (F2, F6) stand as it found them. `./verify.sh --e2e` exits
+  1 at 3fffab5 when an AI session runs it: next 16.4.4's build stops once
+  over an advisory `npm audit` did not report on 2026-11-03
+  (GHSA-mfr8-8qww-v76h, moderate), with 1468 unit tests passing, 8 skipped,
+  and 137 browser tests. A session now stops at 500,000 tokens of context,
+  measured by `scripts/session-context.mjs`, and hands over through
+  `.claude/handover/` (D-230, `SESSION-HANDOVER.md`).
 - 2026-10-28: every finding of both outside audits is now fixed or
   answered: U3, U4 and U7 to U10 since 2026-10-25, with review round 15
   over them and over D-225 (in DECISIONS). A ruleset can be the default a
@@ -227,7 +237,9 @@ are accepted; anything else is refused by name.
   confirmation queue.
 - `scripts/` - the house-style gate, the leak gate, the nothing-hidden gate,
   the dead-export gate, the fixture demo, the design demo, and `claude.ts`, which `npm run
-  claude` runs to sign in the CLI reviews use (MVP 6.3).
+  claude` runs to sign in the CLI reviews use (MVP 6.3); and
+  `session-context.mjs`, which says how full an AI session's context is
+  against its limit (D-230).
 - `tests/fixtures/example-protocol.md` - the public sample protocol the
   fidelity gate runs against.
 - `tests/fixtures/fake-claude.mjs` - stand-in CLI, so tests are hermetic and

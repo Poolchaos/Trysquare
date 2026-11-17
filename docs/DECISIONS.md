@@ -5900,3 +5900,33 @@ verified evidence, in writing, here.
   D-105; the second attempt passed on Windows. Recorded with it, at the
   maintainer's word: the people using the app from today are on Linux and
   macOS, so the README now says CI is Windows' only regular check.
+- 2026-11-17 D-230 The maintainer asked for a limit of 500,000 tokens a
+  session, a handover written at it, and to be told in plain words to run
+  /clear and start a new session. The limit is on a session's context, the
+  tokens its newest request was sent with, read from the transcript Claude
+  Code keeps (`scripts/session-context.mjs`, driven by
+  `tests/scripts/session-context.test.ts`; the session that built it read
+  208,561 by it). The handover starts at 450,000 so that writing it ends
+  inside the limit; a session that ends below it, finished or blocked,
+  writes one too. Handovers live in `.claude/handover/`, ignored by git: a
+  handover is one person's work in flight on one machine, and two people's
+  sessions would overwrite a tracked one; what must outlive the machine goes
+  into the ledgers first (`SESSION-HANDOVER.md`), and the work is committed
+  and pushed before the handover is written (the maintainer, the same day:
+  "always commit and push before a session handover"). The handover's shape
+  is the one the maintainer's own tooling checks and loads (their private
+  configuration repository, read 2026-11-17), so one file serves both.
+  `CLAUDE.md` section 10 holds the rule, and its ritual reads the handover
+  second. Read as a limit
+  on context and not on spend: each request sends the whole context again,
+  so a count of everything spent passes 500,000 within a few requests of a
+  long session. Rejected: estimating the context, which no session can
+  check; a handover committed to the repository; the machine's global
+  handover skill alone, whose script and procedure are not on this machine
+  and which a colleague's machine will never have. Not built: the meter as
+  a Claude Code hook, so that the reading arrives unasked. The maintainer's
+  configuration repository already holds such hooks, at half of a
+  1,000,000-token window; installing them here changes their own settings
+  file, which a session does not edit, and a second hook beside them would
+  be one too many. Until then nothing stops a session that does not run the
+  meter.

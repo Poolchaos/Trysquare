@@ -219,12 +219,32 @@ boundary. Versions in `docs/PROJECT-STATE.md`.
 ## 9. Fresh session ritual
 
 1. Read this file.
-2. Read `docs/PROJECT-STATE.md` (the cache).
-3. Read `docs/GATES.md` for the active gate.
-4. Read only the docs that gate needs, using `docs/README.md` as the map.
-5. To find where a feature lives, or how a common change is made, read
+2. Read `.claude/handover/HANDOVER.md` if it exists: what the last session
+   left in flight (section 10).
+3. Read `docs/PROJECT-STATE.md` (the cache).
+4. Read `docs/GATES.md` for the active gate.
+5. Read only the docs that gate needs, using `docs/README.md` as the map.
+6. To find where a feature lives, or how a common change is made, read
    `docs/AI-GUIDE.md`.
-6. When a design question arises, the answer lives in `docs/`; cite the
+7. When a design question arises, the answer lives in `docs/`; cite the
    specific file. If it is not there, it is an open question (section 1).
-7. When anything is decided, append it to `docs/DECISIONS.md` with a date, in
+8. When anything is decided, append it to `docs/DECISIONS.md` with a date, in
    the same session.
+
+## 10. Session limit and handover
+
+A session's context stops at 500,000 tokens. The procedure and the handover's
+template: `docs/SESSION-HANDOVER.md`.
+
+- **Measure, never estimate.** `node scripts/session-context.mjs` prints the
+  context this session's newest request was sent with. Run it before starting
+  each change, and after any step that read or wrote a lot.
+- **At 450,000 the handover starts**, so that it ends inside the limit. Start
+  nothing new. Leave the change in hand in a safe state, bring the records up
+  to date, commit and push (the maintainer's standing word, 2026-11-17: no
+  handover over uncommitted work), and write `.claude/handover/HANDOVER.md`.
+- **Then say so, as the last lines of the reply, in these words:** "Handover
+  needed. Run /clear, then start the new session with: Read
+  .claude/handover/HANDOVER.md and continue." Nothing is started after them.
+- **A session that ends below the limit writes the handover too**, when its
+  work is finished or it is blocked, and says that no /clear is needed yet.
