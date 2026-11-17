@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# The gate reads the repository and nothing else. Stated here so that a
+# change to the repository's default cannot widen it.
+permissions:
+  contents: read
+
 jobs:
   verify:
     # Ubuntu and macOS are required on main. Windows runs as information
@@ -27,9 +32,12 @@ jobs:
         # verify.sh is bash; on Windows this is Git Bash, as it is locally.
         shell: bash
     steps:
-      - uses: actions/checkout@v5
+      # Actions are named by commit, with the release beside it: a tag can be
+      # moved to other code, a commit cannot. Dependabot proposes the moves
+      # (.github/dependabot.yml).
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -66,7 +74,7 @@ jobs:
       # run's screenshots are the record of what the app actually looked like
       # at that commit, which is the point of photographing it.
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: evidence-${{ matrix.os }}
           path: |

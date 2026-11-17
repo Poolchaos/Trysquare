@@ -1,0 +1,13 @@
+# Keeps the commits the CI workflow names its actions by current: a pinned
+# commit never moves by itself, so without this the pins would only age.
+#
+# npm is left out on purpose. An advisory against a dependency arrives as a
+# Dependabot alert (on for this repository since 2026-11-17) and is answered
+# by hand with a decision entry, as D-228 and D-231 were; routine version
+# bumps are not wanted as pull requests.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
