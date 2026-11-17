@@ -402,6 +402,36 @@ test("a review waiting on decisions photographs on a desk and on a phone", async
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow, "the page scrolls sideways").toBeLessThanOrEqual(0);
+
+  // The two decisions are a thumb high and the width of the card (WP-K).
+  // Measured once settled: a button's size is a transition, and one caught
+  // midway read 40.1px on its way to 44.
+  await settled(page);
+  const confirm = page.getByRole("button", { name: "Confirm", exact: true });
+  const dismiss = page.getByRole("button", { name: "Dismiss", exact: true });
+  for (const [name, button] of [
+    ["Confirm", confirm],
+    ["Dismiss", dismiss],
+  ] as const) {
+    const box = await button.boundingBox();
+    expect(box, `${name} has a box`).not.toBeNull();
+    expect(box!.height, `${name}'s height`).toBeGreaterThanOrEqual(44);
+    expect(box!.width, `${name}'s width`).toBeGreaterThanOrEqual(240);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(360);
+  }
+  // The finding to decide comes before the account of the run.
+  const proven = page.getByRole("heading", { name: "How the findings were proven" });
+  const confirmAt = (await confirm.boundingBox())!.y;
+  const provenAt = (await proven.boundingBox())!.y;
+  expect(confirmAt, "Confirm sits above the run's summary").toBeLessThan(provenAt);
+  // Keys are for a keyboard.
+  await expect(page.getByText("next / previous")).toBeHidden();
+
+  await settled(page);
+  const phone = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(phone.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
   await photograph(page, shot("queue-phone"));
 });
 

@@ -128,10 +128,10 @@ from 2026-11-03.
   D-79, D-81) reshaped the surface: a top bar in place of the left rail, a
   widget dashboard at `/`, a full-screen scan theater, a queue-first review
   screen and a rendered report. `plans/UX-UPLIFT-PLAN.md` and
-  `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; two rows are
-  open (WP-K queue phone layout, WP-L my branches), outside the MVP (its
-  non-goals), WP-G having been closed on 2026-11-17 as built by later work
-  (D-238). The FG-4 design acceptance is now part of
+  `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; one row is
+  open (WP-L my branches), outside the MVP (its non-goals): on 2026-11-17
+  WP-G was closed as built by later work (D-238) and WP-K's queue layout
+  for a phone was built. The FG-4 design acceptance is now part of
   G3, the public release after the MVP (D-86); its argument was
   `review/2026-08-18-fg4/DESIGN-NOTES.md`, on a machine since given up, and
   is written again against today's screens in `plans/COMPLETION-PLAN.md`

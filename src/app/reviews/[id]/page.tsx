@@ -1344,7 +1344,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         ) : null}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-          <div className="min-w-0">
+          <div className="min-w-0 max-sm:flex max-sm:flex-col">
             {/*
              * The screen composes itself around what the person is here to do,
              * and that changes completely with the review's state while the
@@ -1353,7 +1353,17 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
              * finished run folds behind a summary. Complete: the report is.
              */}
             {["awaiting_confirmation", "complete"].includes(review.status) ? (
-              <FinishedSummary snapshot={snapshot} />
+              // On a phone, with findings waiting, the findings come first:
+              // the summary stood a screen and a half above the one thing
+              // the person had opened the page to do (WP-K). It holds
+              // nothing to tab to, so the order read aloud is unchanged.
+              <div
+                className={
+                  review.status === "awaiting_confirmation" ? "max-sm:order-last" : undefined
+                }
+              >
+                <FinishedSummary snapshot={snapshot} />
+              </div>
             ) : null}
             {/* Mounted with nothing to decide too: it offers Complete review,
                 and a run that found nothing had no way to finish (review

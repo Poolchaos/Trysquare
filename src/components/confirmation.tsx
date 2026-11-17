@@ -1101,16 +1101,23 @@ export function ConfirmationQueue({
                     <div className="flex flex-wrap items-center gap-2">
                       {CONFIRMABLE.has(current.status) ? (
                         <>
+                          {/* On a phone the two decisions are the width of the
+                              card and a thumb high: deciding findings is what
+                              a phone is for here (D-69, WP-K). In px, not the
+                              spacing scale: the root size is under 16px, and
+                              eleven steps of it came to 41.8px. */}
                           <Button
                             variant="primary"
                             disabled={busy}
                             onClick={() => void act(current, "confirm", drafts[current.id])}
+                            className="max-sm:min-h-[44px] max-sm:basis-full max-sm:justify-center"
                           >
                             Confirm
                           </Button>
                           <Button
                             variant="quiet"
                             onClick={() => setEditingFor(editing ? null : current.id)}
+                            className="max-sm:min-h-[44px]"
                           >
                             {editing ? "Stop editing" : "Edit comment"}
                           </Button>
@@ -1119,6 +1126,7 @@ export function ConfirmationQueue({
                       <Button
                         variant="quiet"
                         onClick={() => setContextFor(showContext ? null : current.id)}
+                        className="max-sm:min-h-[44px]"
                       >
                         {showContext ? "Hide code" : "Show code"}
                       </Button>
@@ -1213,11 +1221,12 @@ export function ConfirmationQueue({
                             setReasons((all) => ({ ...all, [current.id]: event.target.value }))
                           }
                           placeholder={reasonQuestion}
-                          className="min-w-40 flex-1"
+                          className="min-w-40 flex-1 max-sm:min-h-[44px] max-sm:basis-full"
                         />
                         <Button
                           type="submit"
                           disabled={busy || reason.trim() === "" || current.id === verifyingId}
+                          className="max-sm:min-h-[44px] max-sm:basis-full max-sm:justify-center"
                         >
                           Dismiss
                         </Button>
@@ -1229,7 +1238,8 @@ export function ConfirmationQueue({
             ) : null}
           </div>
 
-          <footer className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-aside text-[var(--color-ink-faint)]">
+          {/* Keys, so not below sm, where there is no keyboard to press. */}
+          <footer className="mt-4 hidden flex-wrap items-center sm:flex gap-x-4 gap-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-aside text-[var(--color-ink-faint)]">
             <Key label="j / k" action="next / previous" />
             {/* Only what works on the finding in front: an open question has no
             confirm and no comment to edit (PG-2 (a), D-185). */}
