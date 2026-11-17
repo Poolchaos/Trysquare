@@ -114,7 +114,8 @@ from 2026-11-03.
 - A full audit on 2026-08-03 found the gate red on this machine, two pipeline
   promises that were decorative rather than enforced, and a records set two
   milestones behind the code. The verified gap inventory and the remaining
-  work to v1 are in `plans/M4-FINISH-PLAN.md` (items U1 to U13). As of
+  work of that date were in `plans/M4-FINISH-PLAN.md` (items U1 to U13, each
+  since done or carried to `plans/COMPLETION-PLAN.md`). As of
   2026-08-04 all twelve build-plan work packages are DONE.
 - The 2026-08-17 UX audit and the 2026-08-18 dashboard shell (D-68, D-69,
   D-79, D-81) reshaped the surface: a top bar in place of the left rail, a

@@ -177,15 +177,16 @@ it opened each image stands alone. A project with no e2e is reported as
 
 ## Requirements
 
-- Linux or macOS. Every push runs the whole test suite on both in CI
+- Linux or macOS. Every push to `main` and every pull request runs the
+  whole test suite on both in CI
   (GitHub's `ubuntu-latest` and `macos-latest`) against a stand-in for the
   CLI, and a pull request merges into `main` only with both green (the
   maintainer's own pushes are exempt, D-232). Real reviews have
   run on Linux; macOS has had none.
 - Windows is not looked after for now (D-232, 2026-11-17): nobody who works
   on Trysquare uses it. The app was built to run there and ran real reviews
-  there on 2026-10-22, and CI still runs the suite on `windows-latest` on
-  every push, but that job gates nothing, and a failure only it shows is
+  there on 2026-10-22, and CI still runs the suite on `windows-latest`
+  beside them, but that job gates nothing, and a failure only it shows is
   recorded, not fixed. Its runner sometimes refuses a browser test's
   connection with `net::ERR_NO_BUFFER_SPACE` before the app answers
   (D-105). If you need Windows, open an issue. Set `TRYSQUARE_CLAUDE_PATH`
@@ -197,7 +198,8 @@ it opened each image stands alone. A project with no e2e is reported as
 - Claude Code 2.1.301 or newer; reviews refuse an older CLI and say so.
 
 `npm install` installs the Claude Code CLI with the app (version 2.1.301,
-about 270MB for your platform), so there is nothing else to install. Reviews
+about 500MB on Linux as measured on 2026-11-17, where npm brings two builds
+of it), so there is nothing else to install. Reviews
 run through that local CLI, never the API, using the sign-in kept in your
 home directory's `.claude` folder, the same one Claude Code uses elsewhere
 on the machine: signed in there, Trysquare is signed in too. To sign in, or
@@ -221,14 +223,19 @@ through, its version, and whether a review draws on the subscription or
 bills per token.
 
 Trysquare drives that CLI using whatever credentials it already holds. It ships no model of its own and has no
-account system, no server of its own, and no telemetry.
+account system, no server of its own, and sends no telemetry of its own.
+One thing it does not yet stop: Next.js, the framework it is built on,
+records anonymous usage from `next dev` and `next build` unless
+`NEXT_TELEMETRY_DISABLED=1` is set in your environment
+([docs/plans/COMPLETION-PLAN.md](docs/plans/COMPLETION-PLAN.md), CP-5b).
 
 Be clear about what that does and does not mean. Reviewing code with a model
 means sending code to that model: when a review runs, the diff, the contents of
 the files involved, and your rulesets are sent to Anthropic by the Claude Code
 CLI, under whatever terms and plan you already have with them. That is inherent
 to the tool doing its job, not an extra. What Trysquare adds is that nothing
-goes anywhere else: no Trysquare service, no analytics, no third party. Your
+goes anywhere else from Trysquare's own code: no Trysquare service, no
+analytics, no third party, the framework's usage record above aside. Your
 projects, review history, and findings are stored only in a local SQLite
 database and files under your own home directory.
 

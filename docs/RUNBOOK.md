@@ -11,7 +11,8 @@ review is the expensive action. Everything else, including the whole demo with
 
 ## Prerequisites
 
-- **Linux or macOS.** Every push runs `./verify.sh --build --e2e` on both
+- **Linux or macOS.** Every push to `main` and every pull request runs
+  `./verify.sh --build --e2e` on both
   in CI (`ubuntu-latest`, `macos-latest`), against a stand-in for the CLI,
   and both must pass before a pull request merges (the maintainer's own
   pushes are exempt, D-232). Real reviews have run on Linux; none on macOS.
@@ -234,10 +235,12 @@ Every step below is free until you press Start review.
 
 ## What spends model usage
 
-Only three things, by deliberate design after an incident where a manual test
+Only four things, by deliberate design after an incident where a manual test
 silently used the real CLI:
 
 - Starting a review.
+- Verify again on an open question: a paid request to each verifier, which
+  the dialog says before it is sent (D-190).
 - Pressing Probe on the Settings screen, or a probe control in the model
   picker. Each probe is a real call, which is why nothing probes on a timer or
   at startup.

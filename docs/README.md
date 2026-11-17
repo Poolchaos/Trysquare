@@ -5,7 +5,8 @@ before writing a new doc, check this index for an existing home; when adding,
 moving, or retiring a doc, update this index in the same change. Repo-level
 operating rules live in `CLAUDE.md` (repo root).
 
-Read order for a fresh session: `CLAUDE.md` (root), then `PROJECT-STATE.md`,
+Read order for a fresh session: `CLAUDE.md` (root), then the last session's
+handover if there is one (`SESSION-HANDOVER.md`), then `PROJECT-STATE.md`,
 then `GATES.md`, then only what the active gate needs.
 
 ## Ledgers and state
@@ -36,7 +37,7 @@ then `GATES.md`, then only what the active gate needs.
 | ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
 | [plans/APP-PLAN.md](plans/APP-PLAN.md)           | The app plan: feasibility verdict, architecture proposal, resolved questions. DRAFT.         |
 | [plans/BUILD-PLAN.md](plans/BUILD-PLAN.md)       | Work packages WP-A..L, milestones, founder gates, standing rails. |
-| [plans/EXECUTION-ORDER.md](plans/EXECUTION-ORDER.md) | STANDING EXECUTION ORDER: remaining work T1-T19, dependencies, founder gates, pre-resolved decisions D-1..D-20. |
+| [plans/EXECUTION-ORDER.md](plans/EXECUTION-ORDER.md) | The execution order of 2026-07-30: work T1-T19, dependencies, founder gates, pre-resolved decisions D-1..D-20. Superseded for anything not DONE by `MVP-PLAN.md` (its own closing note), and now by `COMPLETION-PLAN.md`. |
 | [plans/M2-FINISH-PLAN.md](plans/M2-FINISH-PLAN.md) | Implementation plan for T8, T9 and the FG-2 demo: commit map W1-W8, the resume design, decisions D-21..D-26. |
 | [plans/FG2-CHECKLIST.md](plans/FG2-CHECKLIST.md) | What the maintainer judges at founder gate FG-2, where the evidence lives, and what each verdict means. |
 | [plans/M3-FINISH-PLAN.md](plans/M3-FINISH-PLAN.md) | Implementation plan for the usable app (T10-T17 remainder plus W8 leftovers): commit map V1-V9, spend-safety and confirmation-loop design, decisions D-30..D-44. |

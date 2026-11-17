@@ -6,7 +6,10 @@ audit, research, and a plan, with gamification considered. This document is
 all three, and since ratification it also pins the visual direction: the
 maintainer generated mocks from prompts across three rounds and picked from
 pictures. The picked set is designated evidence at
-`review/2026-08-17-ux-direction/` (local, like all review evidence).
+`review/2026-08-17-ux-direction/` (local, like all review evidence, and on
+no machine the maintainer has since 2026-11: `COMPLETION-PLAN.md` CP-10
+builds the open rows from this plan's text, and asks where it is not
+enough).
 
 **The ratified direction (build to this, not to adjectives).** Dark leads,
 light derived, both photographed. Near-black blue-gray matte surfaces, thin

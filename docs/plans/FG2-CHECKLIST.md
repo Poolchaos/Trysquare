@@ -7,13 +7,14 @@ on a machine the maintainer no longer has, and none was found since
 (`AUDIT-2026-11-17.md`, F5). What follows describes those earlier runs, and
 what to judge and what each verdict means still hold.
 
-Status: READY FOR THE MAINTAINER, prepared 2026-07-31. The smoke runs below
-were executed 2026-08-04 with the maintainer's go; what is left is the
+Status: WAITING ON A FRESH RUN, as the paragraph above says; prepared
+2026-07-31 and then READY FOR THE MAINTAINER. The smoke runs below were
+executed 2026-08-04 with the maintainer's go; what was left then was the
 verdict itself. Evidence in `review/2026-08-04-fg2/`: `haiku/` (refused at
 S3, D-57), `fable-1/` (refused at S3 on a product bug fixed the same day,
 D-58), `fable-2/` (clean 8/8, no finding texts, predates the capture fix),
 `122319-claude-fable-5-1m/` (clean 8/8 with `findings.json`, the run to
-judge). Known duplication to read past: S4 re-raises the deleted side of
+judge at the time). Known duplication to read past: S4 re-raises the deleted side of
 modifications, so the nine distinct findings appear as eighteen rows (D-59).
 Since those runs, U12 grew the fixture from eight planted defects to eleven
 (rules 12, 13, 14 and their plants, D-60 to D-62), so the captured "8
@@ -64,7 +65,8 @@ That establishes the pipeline carries a correct review intact, and no more.
 
 Alongside it, and also free:
 
-- 572 unit and integration tests, including a browser journey that walks the
+- The unit and integration tests (572 when this was written, 1477 on
+  2026-11-17), and a browser journey that walks the
   whole app from an empty state to an exported report in both themes.
 - The engine quality gate, which also runs the opposite case: a reviewer that
   invents a finding has it discarded by the quotation check rather than
@@ -112,7 +114,8 @@ Judge these, in this order:
 ## What a verdict looks like
 
 - **Pass:** the pipeline is sound and the findings are worth a person's time.
-  Record it in `GATES.md` with the evidence directory, and M3 continues.
+  Record it in `GATES.md` with the evidence directory, and the next gate opens (G2, the maintainer's
+  own review).
 - **Pass with prompt work:** the machinery is right and the findings are weak.
   Name what was weak; prompt changes go through T18's rule, which is that the
   fake quality gate runs first and the real model runs after.

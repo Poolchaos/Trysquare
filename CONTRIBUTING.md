@@ -11,9 +11,10 @@ has to be held to the same bar.
 
 ## Before you start
 
-The project is in early development and is built in a fixed order. Work
-packages, their dependencies, and what is done so far are in
-[docs/plans/BUILD-PLAN.md](docs/plans/BUILD-PLAN.md), and the current state of
+The project is built in a fixed order. Its first twelve work packages are
+done ([docs/plans/BUILD-PLAN.md](docs/plans/BUILD-PLAN.md)); what remains,
+and what waits on the maintainer, is in
+[docs/plans/COMPLETION-PLAN.md](docs/plans/COMPLETION-PLAN.md), and the current state of
 the code is in [docs/PROJECT-STATE.md](docs/PROJECT-STATE.md).
 
 If you are planning anything beyond a small fix, please open an issue first so

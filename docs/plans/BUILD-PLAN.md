@@ -2,8 +2,9 @@
 
 Status: RATIFIED 2026-07-30 at G0. Written for an AI driver (Opus in Claude
 Code) to execute work package by work package, from scaffold to ship. Status
-column re-verified against the live tree 2026-08-03; the detailed remaining
-work is in [M4-FINISH-PLAN.md](M4-FINISH-PLAN.md).
+column re-verified against the live tree 2026-08-03; the remaining work of
+that date was in [M4-FINISH-PLAN.md](M4-FINISH-PLAN.md), and today's is in
+[COMPLETION-PLAN.md](COMPLETION-PLAN.md).
 
 ## 0. How to work this plan (non-negotiable)
 

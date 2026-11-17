@@ -2,8 +2,9 @@
 
 Status: RATIFIED 2026-07-30 at G0, captured that day from the maintainer's briefing.
 Feasibility gate: the app is only built if reviews can run on the maintainer's Claude
-Code subscription (Max tier) instead of pay-per-token API billing. Research in
-progress; verdict goes to `DECISIONS.md`.
+Code subscription (Max tier) instead of pay-per-token API billing. Confirmed on
+the live account on 2026-07-30 (`GATES.md`, G0); the verdict is in
+`DECISIONS.md`.
 
 ## Not built yet
 
