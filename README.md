@@ -203,9 +203,10 @@ it opened each image stands alone. A project with no e2e is reported as
 `npm install` installs the Claude Code CLI with the app (version 2.1.301,
 about 500MB on Linux as measured on 2026-11-17, where npm brings two builds
 of it), so there is nothing else to install. Reviews
-run through that local CLI, never the API, using the sign-in kept in your
-home directory's `.claude` folder, the same one Claude Code uses elsewhere
-on the machine: signed in there, Trysquare is signed in too. To sign in, or
+run through that local CLI: the app holds no API key and calls no API of
+its own. The CLI uses the sign-in kept in your home directory's `.claude`
+folder, the same one Claude Code uses elsewhere on the machine: signed in
+there, Trysquare is signed in too. To sign in, or
 to check, run the CLI the reviews use:
 
 ```bash
@@ -235,7 +236,10 @@ both are switched off. Next.js, the framework, would record anonymous usage
 from `next dev` and `next build`; `next.config.ts` turns that off. The
 Claude Code CLI sends usage telemetry and error reports by default; every
 CLI the app starts is told to make only the requests a review needs,
-whatever your shell says. Two requests the framework still makes, both to the npm registry:
+whatever your shell says. The one CLI it does not start is yours: in the
+interactive mode you run each stage yourself, from a command the app
+prints, in your own terminal and with your own environment, your choice
+about the CLI's telemetry included. Two requests the framework still makes, both to the npm registry:
 when the app starts with `npm run dev`, or is built from a terminal or by an
 AI agent, Next.js asks whether its own installed version has a security
 advisory, sends that version number to do so, and reads the list of Next.js

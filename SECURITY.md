@@ -18,8 +18,10 @@ time for a response.
 
 Trysquare runs entirely on your own machine. Its only server listens on
 127.0.0.1, there is no account system, and the app sends no telemetry (the
-README says how Next.js's and the Claude Code CLI's own are switched off,
-and names the two requests Next.js still makes). That rules out
+README says how Next.js's and the Claude Code CLI's own are switched off
+for what the app starts, that a CLI you start yourself in the interactive
+mode keeps your own setting, and which two requests Next.js still makes).
+That rules out
 whole categories of vulnerability, but it leaves some that matter:
 
 - **Code execution from a reviewed repository.** Trysquare clones and reads

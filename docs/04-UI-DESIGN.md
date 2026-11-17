@@ -24,7 +24,9 @@ chosen per review in the advanced fold.
   is shown verbatim; the running tail is not.
 - New review: choosing more than one ruleset at once. Deferred by decision
   (2026-08-04 DEFERRED in DECISIONS.md); needs a rule-code collision
-  refusal designed with it.
+  refusal designed with it. The preview drawer per ruleset that section 3
+  describes is not built either: the screen has one select and a link to
+  the chosen ruleset's page.
 - Rulesets: editing a rule's text in place with markdown preview. A rule's
   severity and its on/off switch can be changed, sweep patterns and
   directive bodies are shown, and duplicate-to-tier is built; free-text

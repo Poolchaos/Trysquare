@@ -6142,3 +6142,19 @@ verified evidence, in writing, here.
   offers is `npm audit fix --force`, which installs vitest 3.1.4, an older
   major. Left, to be read again when a fixed picomatch ships, which
   Dependabot's alert will say.
+- 2026-11-17 D-242 The command the interactive mode prints carries no
+  telemetry opt-out, and the README says whose CLI that is, the ninth grade
+  of the records, its first finding. D-240 covers every CLI the app
+  starts. In Mode B it starts none: a person pastes a command into their
+  own terminal (`server/engine/interactive.ts`, `launchCommandsFor`), and
+  the CLI there runs with that terminal's environment, as the screen's own
+  note already says of every Claude Code variable set there. The posix form could carry the three
+  variables as a prefix that lasts for the one command. PowerShell has no
+  such prefix: setting them there leaves them set in the person's session
+  afterwards, turning off their own Claude Code's telemetry in that
+  terminal without their asking. So neither form sets them, and the README
+  and `SECURITY.md` say that a CLI a person starts keeps their own setting.
+  Rejected: the prefix for posix alone, two shells doing two things under
+  one sentence of the README; setting and restoring the variables around
+  the PowerShell command, a line of script a person is asked to trust and
+  paste for a setting that is theirs to make.

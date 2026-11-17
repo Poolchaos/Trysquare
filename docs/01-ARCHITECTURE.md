@@ -125,6 +125,7 @@ runs/<reviewId>/worktree/           parent, and the cwd AI stages are given
 runs/<reviewId>/worktree-baseline/  what each checkout reported changed (D-107)
 runs/<reviewId>/bundle/             precomputed review inputs (see 03)
 runs/<reviewId>/logs/               subprocess transcripts per stage
+runs/<reviewId>/checks/             a project's own checks: the throwaway copy, logs, screenshots, result
 exports/                            saved reports
 ```
 
@@ -201,9 +202,11 @@ registry to show the models this account can actually use, passes full model
 ids only (short aliases resolve to the previous generation), and selects a
 review profile from the model's capability tier. Two engine requirements
 established there are load-bearing here: every spawn scrubs `CLAUDECODE`
-from the child environment, and every spawn passes an explicit system
-prompt (`--system-prompt-file` for a stage, `--system-prompt` for a probe)
-and minimal `--tools` list rather than inheriting the CLI's defaults.
+from the child environment, and every spawn that calls a model passes an
+explicit system prompt (`--system-prompt-file` for a stage,
+`--system-prompt` for a probe) and minimal `--tools` list rather than
+inheriting the CLI's defaults. The three that call none, `--version`,
+`auth status` and the attached sign-in, pass neither.
 
 ## 7a. Threat model: reviewed code is untrusted input
 

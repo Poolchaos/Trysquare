@@ -233,8 +233,10 @@ are accepted; anything else is refused by name.
   the environment their commands get); `review` (budget arithmetic,
   coverage, evidence, profiles, the quotation check, the report renderer,
   request planning, risk order, rule codes, the run summary, stage schemas,
-  the five steps, mechanical sweeps, grading screens A to D); `rulesets`
-  (import with a fidelity gate, prompt composition and batch planning);
+  the five steps, mechanical sweeps, grading screens A to D, what a
+  findings list says while it is empty, when a run's ending is said); `rulesets`
+  (the ruleset's shape, import with a fidelity gate, prompt composition and
+  batch planning, a directive section's name in words);
   `settings` (the CLI path); and paths, ids and matching an error by the
   name its class sets.
 - `src/server/db/` - schema (16 tables), client, migrations 0000 to 0017, and

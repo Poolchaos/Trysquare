@@ -67,7 +67,8 @@ Alongside it, and also free:
 
 - The unit and integration tests (572 when this was written, 1478 at
   1a43243 on 2026-11-17), and a browser journey that walks the
-  whole app from an empty state to an exported report in both themes.
+  whole app from an empty state to an exported report, after which every
+  screen is checked and photographed in both themes.
 - The engine quality gate, which also runs the opposite case: a reviewer that
   invents a finding has it discarded by the quotation check rather than
   reported.

@@ -239,8 +239,9 @@ invariant is checked in code (S6) and by unit test, not by prompt trust.
 ### sweep_hits
 
 (id, reviewId, ruleCode, pattern, repo, path, line, excerpt, disposition:
-pending, cleared, finding; clearReason, findingId null). Same invariant:
-no pending sweep hits past S6.
+pending, cleared, finding; clearReason, findingId null). The path is
+qualified by repository, `<slug>/<path>`, as a ledger file's is. Same
+invariant: no pending sweep hits past S6.
 
 ### findings
 
@@ -248,7 +249,7 @@ no pending sweep hits past S6.
 | -------------------------------- | --------- | ---------------------------------------------------------------- |
 | id, reviewId                     |           |                                                                  |
 | repo                             | text      | primary or linked                                                |
-| filePath                         | text      | repo-relative within that repo, from the checked-out branch      |
+| filePath                         | text      | qualified by repository, `<slug>/<path>`, from the checked-out branch |
 | lineStart, lineEnd               | int       | verified against worktree file in S5                             |
 | raisedLineStart, raisedLineEnd   | int null  | as raised, before S5 corrected them; coverage counts these (D-102) |
 | severity                         | text      | the verifier's once verified (PG-3, D-185)                       |

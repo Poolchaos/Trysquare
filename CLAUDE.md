@@ -205,9 +205,10 @@ boundary. Versions in `docs/PROJECT-STATE.md`.
 - AI review stages get read-only tools only (Read, Grep, Glob). Widening
   that allowlist is a decision-log entry, never a convenience.
 - Every spawned `claude` process has `CLAUDECODE` scrubbed from its
-  environment (it would otherwise run as that session's child, D-120) and
-  passes an explicit system prompt (`--system-prompt-file` for a stage,
-  `--system-prompt` for a probe) plus minimal `--tools`.
+  environment (it would otherwise run as that session's child, D-120), and
+  one that calls a model passes an explicit system prompt
+  (`--system-prompt-file` for a stage, `--system-prompt` for a probe) plus
+  minimal `--tools`.
 - Full model ids only, never short aliases: `opus` and `sonnet` resolve to
   the previous generation.
 - `lib/` is pure and I/O-free; only `server/gitops` spawns git; only
