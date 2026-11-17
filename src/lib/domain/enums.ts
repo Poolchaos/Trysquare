@@ -75,7 +75,7 @@ export type ReviewEffort = z.infer<typeof reviewEffortSchema>;
  *
  * Not `max`, on cost (2026-08-04, the reason restated in D-125): the CLI's
  * own index prices it at up to 5.59 times high per call (sonnet-5), and a
- * review makes calls across five stages and as many batches as its profile
+ * review makes calls across up to eight stages and as many batches as its profile
  * asks for, unattended, on a subscription this app is a guest on. It was
  * withheld first as the tier that spawns workflows; in 2.1.301 that is
  * ultracode, a separate setting no review reads (D-124). It stays in the enum

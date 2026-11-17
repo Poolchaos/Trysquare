@@ -212,7 +212,10 @@ npm run claude:auth
 ```
 
 That checks the CLI is version 2.1.301 or newer, and signs you in only if
-there is no sign-in yet. It exits 0 when reviews can run. The commands it
+there is no sign-in yet. It exits 0 when reviews can run. It acts on the CLI
+installed with the app, or the one `TRYSQUARE_CLAUDE_PATH` names; a CLI path
+you keep on Settings is not read by these commands, and Settings names the
+command that signs that one in. The commands it
 wraps are still there if you want one step at a time:
 
 ```bash

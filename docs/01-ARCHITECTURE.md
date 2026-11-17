@@ -28,7 +28,8 @@ directory. No auth, no hosting, no telemetry.
 - Tailwind CSS
 - Vitest (unit/integration), Playwright (e2e)
 - zod for every runtime boundary (CLI output, stage outputs, API payloads)
-- Node child_process for git and claude; no other process spawning
+- Node child_process for git, for claude, and for a project's own commands
+  when its checks are on (D-196); no other process spawning
 
 Versions are pinned at WP-A and recorded in `PROJECT-STATE.md` once installed.
 
@@ -169,9 +170,9 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
   default prompt costs thousands of tokens a call), and a read-only tool
   allowlist (Read, Grep, Glob only). Parses stream-json lines into events;
   the final result event carries session id, usage tokens, and
-  cost-equivalent USD, all persisted per stage. Exact flag names are
-  verified against `claude --help` on this machine at WP-E and recorded in
-  `CLAUDE.md` commands, never guessed (workspace law).
+  cost-equivalent USD, all persisted per stage. Exact flag names were
+  verified against `claude --help` at WP-E, never guessed (workspace law);
+  they are built in `src/lib/engine/command.ts` and held by its tests.
 - **InteractiveEngine (Mode B, fallback):** materialises the same prompt to
   `runs/<id>/bundle/<stage>[-b<n>]-<call id>-prompt.md`, with the system
   prompt beside it as `-system.md`, prints a launch command for PowerShell

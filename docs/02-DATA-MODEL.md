@@ -169,7 +169,8 @@ Ruleset-scoped non-rule content composed into every review prompt.
 Review status machine:
 `draft -> running -> verifying -> awaiting_confirmation -> complete`,
 with `paused_limit`, `interrupted`, `failed`, `cancelled` reachable from any
-running state; `paused_limit/interrupted -> running` on resume. Transitions
+running state; `paused_limit/interrupted/failed -> running` on resume, a
+failed review being resumed like a paused one (D-50). Transitions
 are enforced in one repository function, unit-tested; no ad hoc writes.
 
 ### review_rulesets
@@ -274,8 +275,10 @@ stageMaxBudgetUsd, claudePath and defaultRulesetId (a ruleset's id or null;
 one that is not there is refused, deleting a ruleset clears a default
 that named it, and one gone from a database older than that reads as none,
 D-225).
-Those five are the whole catalogue; any other key is refused by name. A
-default model is designed but not built. The data directory is shown on
+Those five are the whole catalogue; any other key is refused by name. A new
+review starts on the model last used, with no setting for it
+(`src/lib/models/availability.ts`); the `defaultModel` key was deleted on
+purpose (`plans/M4-FINISH-PLAN.md`). The data directory is shown on
 Settings without being a setting, and a default engine mode is no longer
 owed (`04-UI-DESIGN.md`, Not built yet).
 

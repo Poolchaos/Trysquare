@@ -34,7 +34,8 @@ chosen per review in the advanced fold.
   bracketed thumb-height actions (WP-K), and the my-branches filter with the
   identities behind it (WP-L). The rest of that audit is built, including the
   home dashboard, the awaiting-decision badge, the rendered report and its
-  HTML export, and the shell at phone width;
+  HTML export, and the shell at phone width, bar one fault there at 360px
+  (`PROJECT-STATE.md`, Known issues: the badge over the Rulesets label);
   `plans/UX-UPLIFT-PLAN.md` carries the row-by-row state (D-68, D-69, D-81).
 
 ## 1. Design language
@@ -192,9 +193,11 @@ refuses one too.
 
 ### Review run (live)
 
-- Five steps across the scan theater, over the eight stages (WP-G):
-  Understand the rules (S0), Understand the change (S1, S2), Find issues
-  (S3, S4), Prove each finding (S5, S5b), Report (S6 and the person). Each
+- Five steps across the scan theater, over the ten stages a run names
+  (WP-G, `src/lib/review/steps.ts`): Understand the rules (S0), Understand
+  the change (S1, S2), Find issues (S3, S4, and S4b when the project's
+  screens are graded), Prove each finding (S5, S5b, and S5c for a screen
+  graded C or D), Report (S6 and the person). Each
   is done, now or next with one count the run has measured; a step not
   begun says Waiting. While proving, the findings so far: proven by the
   first verifier, refuted, discarded for quoting code that was not there,
@@ -205,8 +208,9 @@ refuses one too.
 - Activity feed: current stage's tool activity (file being read), errors.
 - Usage meter: cumulative tokens and cost-equivalent.
 - Controls: cancel, which asks first and says when it failed (5.1); start,
-  for a draft, with its ruleset chosen there (5.11); resume
-  (paused/interrupted); retry failed stage.
+  for a draft, with its ruleset chosen there (5.11); resume (paused,
+  interrupted or failed: one resume stands in for a retry of the failed
+  stage, D-50).
 
 ### Confirmation (S7)
 

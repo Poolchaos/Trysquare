@@ -348,8 +348,10 @@ splits the work instead and records the split in the run log.
   the failed one runs live, which is the same mechanism as a limit pause.
 - CLI limit/429: review `paused_limit`, CLI message shown verbatim, manual
   resume re-invokes the stage with `--resume <sessionId>`.
-- Cancel: kills the subprocess, marks stage cancelled; worktree and
-  completed-stage results are kept so restart is cheap.
+- Cancel: kills the subprocess and marks the review cancelled; the stage
+  that was running leaves no row, since a row is written only once a stage
+  settles (`02-DATA-MODEL.md`). The worktree and completed-stage results
+  are kept.
 - Server restart: running reviews become `interrupted`; resume re-runs the
   interrupted stage only.
 - A resume reuses the ledger seeded on the first run only when it is the
@@ -361,8 +363,9 @@ splits the work instead and records the split in the run log.
 
 ## 6. Engine quality gate (the app's own proof)
 
-A fixture repository with a seeded feature branch ships in `tests/fixtures`
-(built by script, committed as a bundle). Seeded defects map to expected
+A fixture repository with a seeded feature branch is built by
+`tests/fixtures/build-seeded-repos.mjs` into a directory its caller names;
+only the builder is committed. Seeded defects map to expected
 findings (the seed manifest). The pipeline gate (run in e2e with the fake
 engine, and manually pre-release with the real engine):
 

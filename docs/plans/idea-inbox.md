@@ -21,7 +21,9 @@ pulled deliberately.
   fable-5-1, opus-5-5, sonnet-5-5 and haiku-5-5 (found during 4.7, D-122).
   Read again in D-177 from the bundled binary. Whether to add them, and
   which become the recommended defaults, is the maintainer's call: each
-  needs a probe to show this account can use it, and a probe spends.
+  needs a probe to show this account can use it, and a probe spends. BUILT
+  2026-10-23 (D-184): the 5.5 models and Fable 5.1 are in the probe's list,
+  Opus 5.5 and Fable 5.1 recommended, Haiku retired.
 - 2026-10-17: the CLI 2.1.301 swapped claude-opus-4-1-20250805 for
   claude-opus-5-5 without a word (D-123), so a review on a retired model id
   would record a model it did not run.
