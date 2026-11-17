@@ -22,7 +22,8 @@ change.
    fake is driven by `FAKE_CLAUDE_*` variables; read its header.
 5. Measure the session before each change: `node scripts/session-context.mjs`.
    At 450,000 tokens it says `HANDOVER DUE`, and the session writes its
-   handover instead of starting anything (`SESSION-HANDOVER.md`).
+   handover instead of starting anything; it does the same sooner when the
+   next change will not fit before that (`SESSION-HANDOVER.md`).
 
 ## How it fits together
 

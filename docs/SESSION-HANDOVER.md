@@ -40,9 +40,15 @@ is not built (D-230).
 
 1. **The meter says `HANDOVER DUE`.** Start nothing new, write the handover,
    and tell the maintainer to run /clear.
-2. **The work asked for is finished, or the session is blocked.** Write the
+2. **The next change will not fit before 450,000.** Before starting a
+   change, set what is left against what changes of its kind have taken by
+   the meter. A change the meter says cannot be finished is not begun: the
+   handover is written in its place, and the maintainer is told to run
+   /clear. On 2026-11-17 a session stopped at 423,523 on this ground; the
+   change it left read 89,343 before and 188,187 after in the next.
+3. **The work asked for is finished, or the session is blocked.** Write the
    handover, and say that no /clear is needed yet.
-3. **The maintainer asks for one.**
+4. **The maintainer asks for one.**
 
 ## The procedure
 
@@ -68,10 +74,11 @@ In order, and before the reply that ends the session:
    said as not checked.
 6. **Measure again** and put the reading in the handover.
 7. **Say it**, as the last lines of the reply:
-   - at the limit: "Handover needed. Run /clear, then start the new session
-     with: Read .claude/handover/HANDOVER.md and continue."
-   - below it: the reading, that the handover is written, and that no /clear
-     is needed yet.
+   - at the limit, or with a next change that will not fit: "Handover
+     needed. Run /clear, then start the new session with: Read
+     .claude/handover/HANDOVER.md and continue."
+   - otherwise: the reading, that the handover is written, and that no
+     /clear is needed yet.
 
 Nothing is started after those lines.
 

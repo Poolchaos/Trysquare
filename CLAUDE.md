@@ -239,10 +239,11 @@ template: `docs/SESSION-HANDOVER.md`.
 - **Measure, never estimate.** `node scripts/session-context.mjs` prints the
   context this session's newest request was sent with. Run it before starting
   each change, and after any step that read or wrote a lot.
-- **At 450,000 the handover starts**, so that it ends inside the limit. Start
-  nothing new. Leave the change in hand in a safe state, bring the records up
-  to date, commit and push (the maintainer's standing word, 2026-11-17: no
-  handover over uncommitted work), and write `.claude/handover/HANDOVER.md`.
+- **At 450,000 the handover starts**, so that it ends inside the limit, and
+  sooner when the next change will not fit before it. Start nothing new.
+  Leave the change in hand in a safe state, bring the records up to date,
+  commit and push (the maintainer's standing word, 2026-11-17: no handover
+  over uncommitted work), and write `.claude/handover/HANDOVER.md`.
 - **Then say so, as the last lines of the reply, in these words:** "Handover
   needed. Run /clear, then start the new session with: Read
   .claude/handover/HANDOVER.md and continue." Nothing is started after them.

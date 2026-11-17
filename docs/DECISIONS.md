@@ -6022,3 +6022,11 @@ verified evidence, in writing, here.
   `SECURITY.md` and `PROJECT-STATE.md` now name both requests. The lesson
   for a proof of what leaves the machine: drive the app as a person does,
   with a browser on it, before counting.
+- 2026-11-17 D-235 A handover is also due when the next change will not fit
+  before 450,000, added to D-230's rule (`CLAUDE.md` section 10,
+  `SESSION-HANDOVER.md`). The session of that morning stopped at 423,523
+  rather than begin CP-5b, which the rule as written did not allow for; the
+  change then read 89,343 before and 188,187 after in the next session. The
+  judgment is made from the meter's readings of earlier changes, not from a
+  guess at the new one. Rejected: lowering the 450,000 mark, which would
+  end every session early to cover the few that meet a large change late.
