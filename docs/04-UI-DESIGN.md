@@ -34,8 +34,8 @@ chosen per review in the advanced fold.
   bracketed thumb-height actions (WP-K), and the my-branches filter with the
   identities behind it (WP-L). The rest of that audit is built, including the
   home dashboard, the awaiting-decision badge, the rendered report and its
-  HTML export, and the shell at phone width, bar one fault there at 360px
-  (`PROJECT-STATE.md`, Known issues: the badge over the Rulesets label);
+  HTML export, and the shell at phone width, where at 360px the navigation
+  scrolls sideways and cuts a label (`PROJECT-STATE.md`, Known issues);
   `plans/UX-UPLIFT-PLAN.md` carries the row-by-row state (D-68, D-69, D-81).
 
 ## 1. Design language

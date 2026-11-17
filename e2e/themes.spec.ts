@@ -149,9 +149,11 @@ test("a rule opens to what its document says, on a desk and on a phone", async (
   expect(results.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
   await photograph(page, shot("ruleset-rule-open"));
 
-  // At phone width the table scrolls inside its card; the rule must still be
-  // read without scrolling, so it sits inside the screen, whole.
-  // Not scrolled into view first: that could scroll the card sideways to the
+  // At phone width a rule is a stack, so the card has nothing to scroll
+  // sideways to: the tags, the sweeps and the on/off switch sat past its
+  // edge (PROJECT-STATE, Known issues, 2026-11-03). The rule's text must
+  // still be read whole, inside the screen.
+  // Not scrolled into view first: that could scroll a card sideways to the
   // text, and hide the very thing measured here.
   await page.setViewportSize({ width: 360, height: 780 });
   const box = await written.boundingBox();
@@ -162,6 +164,24 @@ test("a rule opens to what its document says, on a desk and on a phone", async (
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(overflow, "the page scrolls sideways").toBeLessThanOrEqual(0);
+  const table = page.getByRole("table");
+  const cardScroll = await table.evaluate((element) => {
+    const card = element.parentElement;
+    return card === null ? Number.NaN : card.scrollWidth - card.clientWidth;
+  });
+  expect(cardScroll, "pixels of the rules past the card's edge").toBeLessThanOrEqual(0);
+  for (const control of [page.getByRole("checkbox").first(), page.getByRole("combobox").first()]) {
+    const place = await control.boundingBox();
+    expect(place, "a rule's control has a box").not.toBeNull();
+    expect(place!.x).toBeGreaterThanOrEqual(0);
+    expect(place!.x + place!.width).toBeLessThanOrEqual(360);
+  }
+  await expect(table.getByText("Tags:").first()).toBeVisible();
+  await expect(table.getByText("Sweeps:").first()).toBeVisible();
+  const phone = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(phone.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
   await photograph(page, shot("ruleset-rule-open-phone"));
 
   await title.click();

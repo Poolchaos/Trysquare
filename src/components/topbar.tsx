@@ -91,7 +91,9 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-40 flex h-12 items-center gap-1 border-b border-[var(--color-border)] bg-[var(--color-surface-sunken)] px-4">
-      <Link href="/" className="mr-3 flex shrink-0 items-center gap-2 py-1">
+      {/* Named here and not by the wordmark alone: that is hidden at phone
+          width, which left a link with no name (axe, link-name). */}
+      <Link href="/" aria-label="Trysquare" className="mr-3 flex shrink-0 items-center gap-2 py-1">
         {/* The try square: two arms meeting at a right angle, the tool the
             app is named for. Drawn rather than imported so it takes the
             accent and needs no asset. */}

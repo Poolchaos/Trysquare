@@ -300,10 +300,13 @@ own now (D-75, D-81).
   (`src/server/gitops/copy.ts`) after its remote is removed. With git-lfs
   configured, an LFS file there is either fetched from the host the
   repository's `.lfsconfig` names or fails the checkout (D-237).
-- At 360px the top bar's "awaiting you" badge sits over the Rulesets label,
-  which reads "Ru" (seen 2026-11-17 in
-  `review/2026-11-17-e2e/*-ruleset-image-as-words-phone.png`; not yet
-  root-caused, `plans/COMPLETION-PLAN.md` CP-10, WP-K).
+- At 360px the top bar's navigation does not fit beside the "awaiting"
+  badge: it scrolls sideways (`src/components/topbar.tsx`, `overflow-x-auto`
+  on the nav), so its edge cuts the Rulesets label to "Ru" and Settings is
+  reached only by scrolling it, with nothing to say so (seen 2026-11-17 in
+  `review/2026-11-17-e2e/*-ruleset-image-as-words-phone.png`). The scroll
+  is the design; whether a phone needs better is
+  `plans/COMPLETION-PLAN.md` CP-10, WP-K.
 - A ruleset's process directives show their markdown as written, where a
   rule's text is formatted (D-227), and each one's label shows its section
   key as stored ("prime_directive: The Prime Directive"); both in
@@ -329,11 +332,10 @@ own now (D-75, D-81).
   the next `--e2e` then fails saying the port is in use. Reusing an existing
   server is deliberately not allowed, because it would run the journey
   against a server started without the fake engine.
-- A ruleset's page at phone width (360px, `review/2026-11-03-e2e/`): each
-  rule's title wraps to two to four lines, the tags column is cut at the
-  right edge, and the sweeps and on/off columns sit past it, reached only by
-  scrolling the card sideways. Left as a bug on 2026-11-03: the maintainer expects the app to
-  be used on a desktop for now.
+- A ruleset's page at phone width keeps its controls at desk size: the
+  on/off switch and the severity picker are smaller than a thumb. Its
+  layout was put right on 2026-11-17 (each rule a stack, nothing past the
+  card's edge); setup screens stay desktop-first (D-69).
 
 ## Not built
 

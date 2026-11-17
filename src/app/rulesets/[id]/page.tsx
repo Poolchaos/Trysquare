@@ -273,25 +273,43 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
         </p>
 
         <Card className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-ink-muted)]">
-                <th className="px-3 py-2 font-medium">Rule</th>
-                <th className="px-3 py-2 font-medium">Severity</th>
-                <th className="px-3 py-2 font-medium">Tags</th>
-                <th className="px-3 py-2 font-medium">Sweeps</th>
-                <th className="px-3 py-2 text-right font-medium">Applies</th>
+          {/* Below sm a rule is a stack, not a row: five columns do not fit a
+              phone, and the last three sat past the card's edge. The header
+              row goes, and Tags and Sweeps say their own names. The roles are
+              written out because a table drawn as blocks loses them. */}
+          <table role="table" className="block w-full text-sm sm:table">
+            <thead role="rowgroup" className="hidden sm:table-header-group">
+              <tr
+                role="row"
+                className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-ink-muted)]"
+              >
+                <th role="columnheader" className="px-3 py-2 font-medium">
+                  Rule
+                </th>
+                <th role="columnheader" className="px-3 py-2 font-medium">
+                  Severity
+                </th>
+                <th role="columnheader" className="px-3 py-2 font-medium">
+                  Tags
+                </th>
+                <th role="columnheader" className="px-3 py-2 font-medium">
+                  Sweeps
+                </th>
+                <th role="columnheader" className="px-3 py-2 text-right font-medium">
+                  Applies
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup" className="block sm:table-row-group">
               {detail.rules.map((rule) => (
                 <Fragment key={rule.code}>
                   <tr
-                    className={`border-b border-[var(--color-border)] last:border-0 ${
+                    role="row"
+                    className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 border-b border-[var(--color-border)] px-3 py-2 last:border-0 sm:table-row sm:p-0 ${
                       rule.enabled ? "" : "opacity-55"
                     }`}
                   >
-                    <td className="px-3 py-2">
+                    <td role="cell" className="sm:px-3 sm:py-2">
                       <Mono className="text-xs text-[var(--color-ink-muted)]">{rule.code}</Mono>
                       <button
                         type="button"
@@ -302,7 +320,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                         {rule.title}
                       </button>
                     </td>
-                    <td className="px-3 py-2">
+                    <td role="cell" className="col-span-2 sm:px-3 sm:py-2">
                       <label className="inline-flex items-center gap-2">
                         <span className="sr-only">Severity of rule {rule.code}</span>
                         <Badge tone={severityTone(rule.severity)}>{rule.severity}</Badge>
@@ -322,10 +340,18 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                         </Select>
                       </label>
                     </td>
-                    <td className="px-3 py-2 text-xs text-[var(--color-ink-muted)]">
+                    <td
+                      role="cell"
+                      className="col-span-2 text-xs text-[var(--color-ink-muted)] sm:px-3 sm:py-2"
+                    >
+                      <span className="sm:hidden">Tags: </span>
                       {rule.tags.join(", ") || "any"}
                     </td>
-                    <td className="px-3 py-2 text-[var(--color-ink-muted)]">
+                    <td
+                      role="cell"
+                      className="col-span-2 text-xs text-[var(--color-ink-muted)] sm:px-3 sm:py-2 sm:text-sm"
+                    >
+                      <span className="sm:hidden">Sweeps: </span>
                       {rule.sweepPatterns.length === 0 ? (
                         "0"
                       ) : (
@@ -350,7 +376,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                         </ul>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td role="cell" className="col-start-2 row-start-1 text-right sm:px-3 sm:py-2">
                       <label className="inline-flex items-center gap-2">
                         <span className="text-xs text-[var(--color-ink-muted)]">
                           {rule.enabled ? "on" : "off"}
@@ -367,14 +393,16 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                     </td>
                   </tr>
                   {openRule === rule.code ? (
-                    <tr className="border-b border-[var(--color-border)] last:border-0">
-                      <td colSpan={5} className="px-3 pb-3">
-                        {/* Pinned to the card's visible edge and no wider than the
-                          screen: at phone width the table scrolls sideways
-                          inside the card, and the rule must be readable
-                          without scrolling with it. Shown whole, with no scroll
-                          box of its own: one a keyboard cannot reach is an axe
-                          failure (scrollable-region-focusable). */}
+                    <tr
+                      role="row"
+                      className="block border-b border-[var(--color-border)] last:border-0 sm:table-row"
+                    >
+                      <td role="cell" colSpan={5} className="block px-3 pb-3 sm:table-cell">
+                        {/* No wider than the screen, and pinned to the card's
+                          visible edge should the card ever scroll sideways.
+                          Shown whole, with no scroll box of its own: one a
+                          keyboard cannot reach is an axe failure
+                          (scrollable-region-focusable). */}
                         <div
                           data-testid="rule-text"
                           className="sticky left-3 max-w-[min(48rem,calc(100vw-5.5rem))] rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3"
