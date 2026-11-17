@@ -412,8 +412,10 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                     {directive.section}: {directive.title}
                   </button>
                   {openDirective === key ? (
-                    // Verbatim, because this is what the model is given.
-                    <pre className="mt-1 mb-2 max-h-64 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs whitespace-pre-wrap wrap-anywhere">
+                    // Verbatim, because this is what the model is given. Whole,
+                    // with no scroll of its own: a box a keyboard cannot
+                    // reach is an axe failure, as it was for a rule's text.
+                    <pre className="mt-1 mb-2 rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs whitespace-pre-wrap wrap-anywhere">
                       <code className="font-[family-name:var(--font-mono)]">
                         {directive.contentMd}
                       </code>

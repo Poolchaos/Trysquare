@@ -299,10 +299,10 @@ own now (D-75, D-81).
   which reads "Ru" (seen 2026-11-17 in
   `review/2026-11-17-e2e/*-ruleset-image-as-words-phone.png`; not yet
   root-caused, `plans/COMPLETION-PLAN.md` CP-10, WP-K).
-- A ruleset's process directives show their markdown raw, where a rule's
-  text is formatted (D-227). Suspected and not measured: an open directive
-  is a scroll box a keyboard cannot reach, and no test opens one
-  (`plans/COMPLETION-PLAN.md` CP-6).
+- A ruleset's process directives show their markdown as written, where a
+  rule's text is formatted (D-227), and each one's label shows its section
+  key as stored ("prime_directive: The Prime Directive"); both in
+  `plans/idea-inbox.md`, the label under `plans/COMPLETION-PLAN.md` CP-10.
 - One Turbopack build warning remains, traced to the engine's per-review log
   paths, which cannot be static. It affects only the standalone output
   manifest, which this app does not use. Adopting `output: "standalone"`

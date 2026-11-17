@@ -423,6 +423,17 @@ test("a document's image is shown as words, and its host is never asked", async 
   const markdown = [
     "# Protocol with an image",
     "",
+    // Long enough to pass any height a box might cap it at: the test after
+    // this one opens it.
+    "## The Prime Directive",
+    "",
+    "Understand the change before judging it.",
+    "",
+    ...Array.from(
+      { length: 30 },
+      (_, index) => `- Step ${index + 1}: read the next file in the chain before judging.`,
+    ),
+    "",
     "## Correctness Anti-Patterns",
     "",
     "### 1. Diagram Left Behind",
@@ -479,4 +490,46 @@ test("a document's image is shown as words, and its host is never asked", async 
 
   // Asked last, after every paint above had its chance to fetch.
   expect(asked, "requests to another host").toEqual([]);
+});
+
+// After the test above, whose ruleset it opens.
+test("a long process directive opens whole, with no scroll box a keyboard cannot reach", async ({
+  page,
+}, testInfo) => {
+  const shot = (name: string) => join(EVIDENCE, `${testInfo.project.name}-${name}.png`);
+  await page.goto("/rulesets");
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Protocol with an image", exact: true })
+    .click();
+  await page.getByRole("button", { name: /^Show the \d+ process directive/ }).click();
+  const title = page.getByRole("button", { name: /The Prime Directive/ });
+  await expect(title).toHaveAttribute("aria-expanded", "false");
+  await title.click();
+  await expect(title).toHaveAttribute("aria-expanded", "true");
+
+  const body = page.locator("pre", { hasText: "Step 30: read the next file" });
+  await expect(body).toBeVisible();
+  // All thirty steps are on the page, none behind a scroll of the box's own.
+  const hidden = await body.evaluate((box) => box.scrollHeight - box.clientHeight);
+  // Soft, so that a box with a scroll of its own is also put to axe below.
+  expect.soft(hidden, "pixels of the directive behind its own scroll").toBeLessThanOrEqual(0);
+
+  await settled(page);
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(results.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
+  await photograph(page, shot("ruleset-directive-open"));
+
+  await page.setViewportSize({ width: 360, height: 780 });
+  const box = await body.boundingBox();
+  expect(box, "the directive has a box").not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(360);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, "the page scrolls sideways").toBeLessThanOrEqual(0);
+  await photograph(page, shot("ruleset-directive-open-phone"));
 });

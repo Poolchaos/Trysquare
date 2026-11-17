@@ -121,7 +121,13 @@ pulled deliberately.
 - 2026-11-03: suspected, not measured: an open process directive on a
   ruleset page is a scroll box (max-h-64 overflow-auto) a keyboard cannot
   reach, the axe failure the rule text hit the same day; no test opens one.
-  `COMPLETION-PLAN.md` CP-6.
+  `COMPLETION-PLAN.md` CP-6. MEASURED and FIXED 2026-11-17: a browser test
+  opened a thirty-step directive and found 282 px of it behind the box's
+  own scroll and axe's `scrollable-region-focusable`; the box now shows the
+  directive whole.
+- 2026-11-17: a directive's label on a ruleset page shows its section key
+  as stored ("prime_directive: The Prime Directive", "philosophy: ..."),
+  seen in `review/2026-11-17-e2e/*-ruleset-directive-open.png`. CP-10.
 - 2026-11-17: four of the entries above (rules in the app, the memory
   guard, a project's own ruleset, the process directive) stood under Retired
   until the audit of this day found them there, and the directive-bodies
