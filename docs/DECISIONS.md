@@ -6052,3 +6052,30 @@ verified evidence, in writing, here.
   evidence stays under `review/` with its scored result in this log; CG-4
   asks for him present. Nothing in this entry passes a gate: G1, G2 and G3
   remain his verdicts.
+- 2026-11-17 D-237 Git LFS is off for a review's checkout, the sixth grade
+  of the records, its first finding. The app's git runs with the person's
+  global configuration (`gitops/run.ts` replaces only the system file), and
+  a person with git-lfs set up has a filter there that downloads every LFS
+  file on checkout, from the remote's LFS host or one the reviewed
+  repository's `.lfsconfig` names. `addWorktree` overrode only the hooks
+  path. Proven without git-lfs, by a stand-in filter that leaves a mark
+  when git runs it (`tests/server/gitops/lfs-filter.test.ts`): before, the
+  review's worktree held the filter's output in place of the pointer and
+  the baseline's `git status` failed; after, the worktree holds the pointer
+  and the filter never runs, for the checkout and for the four readings of
+  it (`status` twice, `cat-file --filters`, `hash-object`). The override is
+  `filter.lfs.smudge`, `clean` and `process` set empty and `required`
+  false, at command scope; a required filter with no command stops a
+  checkout. Nothing is lost to a review: it already reads an LFS file as
+  its pointer (`lib/git/opaque.ts`). Not changed, and not run: the
+  throwaway copy a project's own checks run in (`gitops/copy.ts`), whose
+  commands may need the real files; it is checked out with the person's
+  filters after its remote is removed, so with git-lfs an LFS file there
+  is fetched from a host `.lfsconfig` names or fails the checkout. That
+  sits inside what the trust model already says of a project's own checks,
+  and is a known issue until someone with git-lfs runs it. The README had
+  said, from this session's own sweep and with nothing measured, that a
+  project's remote is the one other host the app talks to; it now says
+  what git is and what is switched off. Rejected: `GIT_LFS_SKIP_SMUDGE=1`
+  in git's environment, which only git-lfs itself reads and no test here
+  could prove; clearing every filter the person has, which are theirs.

@@ -295,6 +295,11 @@ own now (D-75, D-81).
 
 ## Known issues
 
+- Not run, git-lfs not being on this machine: the throwaway copy a
+  project's own checks run in is checked out with the person's git filters
+  (`src/server/gitops/copy.ts`) after its remote is removed. With git-lfs
+  configured, an LFS file there is either fetched from the host the
+  repository's `.lfsconfig` names or fails the checkout (D-237).
 - At 360px the top bar's "awaiting you" badge sits over the Rulesets label,
   which reads "Ru" (seen 2026-11-17 in
   `review/2026-11-17-e2e/*-ruleset-image-as-words-phone.png`; not yet
@@ -362,7 +367,13 @@ CG-6); and when a browser first connects to `npm run dev` it reads the
 latest Next version, which no setting turns off. `npm run start` made
 none, and the pages asked no other host, in D-234's runs. A protocol's
 image is shown as text and not fetched (`src/components/markdown.tsx`,
-CP-5), which a browser test holds.
+CP-5), which a browser test holds. Git is the person's own, with their
+global configuration, and contacts each project's remote to clone and
+fetch, never to push. Git LFS is off for a review's worktree and every
+reading of it (`src/server/gitops/worktree.ts`, D-237), by a test with a
+stand-in filter; the throwaway copy for a project's own checks is checked
+out with the person's filters as configured, and what git-lfs does there,
+with the copy's remote removed, has not been run (Known issues).
 The CLI is Anthropic's, "All rights reserved. Use is subject to the Legal
 Agreements" at
 <https://code.claude.com/docs/en/legal-and-compliance>, and each user

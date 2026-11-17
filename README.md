@@ -245,9 +245,13 @@ whatever terms and plan you already have with them. That is inherent to the
 tool doing its job, not an extra. What Trysquare adds is that nothing goes
 anywhere else from Trysquare's own code: no Trysquare service, no analytics,
 no third party. A protocol document you import cannot change that either:
-an image in it is shown as its words and its address, never fetched. The one
-other host the app itself talks to is each project's own git remote, which
-it clones and fetches from and never pushes to. Your
+an image in it is shown as its words and its address, never fetched. The app
+also runs git, to clone and fetch each project from its own remote, and
+never to push. It is your git, with your configuration: a credential helper
+you set up runs as it does for you. Git LFS is switched off for the checkout
+a review reads, so a file kept in LFS is read as its pointer and not
+downloaded; the separate copy made for a project's own checks, when you turn
+those on, is checked out by your git as you have it configured. Your
 projects, review history, and findings are stored only in a local SQLite
 database and files under your own home directory.
 

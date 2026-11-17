@@ -18,6 +18,27 @@ import { z } from "zod";
 import { insideRoot } from "@/lib/paths";
 import { git, gitBytes, toLines } from "./run";
 
+/**
+ * Git LFS switched off for a review's checkout and for every reading of it.
+ *
+ * A person with git-lfs set up has a filter in their own git config that
+ * downloads each LFS file on checkout, from a host the reviewed repository's
+ * .lfsconfig may name. A review reads such a file as its pointer
+ * (lib/git/opaque), so nothing is lost by leaving it one, and no host is
+ * asked. `required=false` goes with the empty commands: a required filter
+ * with no command stops the checkout (D-237).
+ */
+const NO_LFS = [
+  "-c",
+  "filter.lfs.smudge=",
+  "-c",
+  "filter.lfs.clean=",
+  "-c",
+  "filter.lfs.process=",
+  "-c",
+  "filter.lfs.required=false",
+];
+
 export class WorktreeModifiedError extends Error {
   constructor(
     readonly worktreeDir: string,
@@ -55,6 +76,7 @@ export async function addWorktree(
   try {
     await git(
       [
+        ...NO_LFS,
         "-c",
         `core.hooksPath=${noHooks}`,
         "worktree",
@@ -100,9 +122,10 @@ export async function removeWorktree(repoDir: string, worktreeDir: string): Prom
  * or to a .log file went unseen by the end-of-review check (4.26).
  */
 export async function worktreeChanges(worktreeDir: string): Promise<string[]> {
-  const output = await git(["status", "--porcelain=v1", "--untracked-files=all", "--ignored"], {
-    cwd: worktreeDir,
-  });
+  const output = await git(
+    [...NO_LFS, "status", "--porcelain=v1", "--untracked-files=all", "--ignored"],
+    { cwd: worktreeDir },
+  );
   return toLines(output);
 }
 
@@ -148,7 +171,7 @@ export async function worktreeBaseline(worktreeDir: string): Promise<WorktreeBas
   }
   const unexplained: string[] = [];
   for (const [path, hash] of Object.entries(checked)) {
-    const committed = await gitBytes(["cat-file", "--filters", `HEAD:${path}`], {
+    const committed = await gitBytes([...NO_LFS, "cat-file", "--filters", `HEAD:${path}`], {
       cwd: worktreeDir,
     }).catch(() => null);
     const expected =
@@ -165,7 +188,7 @@ export async function worktreeBaseline(worktreeDir: string): Promise<WorktreeBas
  */
 async function contentsOfChanged(worktreeDir: string): Promise<Record<string, string | null>> {
   const output = await git(
-    ["status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignored"],
+    [...NO_LFS, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--ignored"],
     {
       cwd: worktreeDir,
     },
@@ -239,7 +262,7 @@ async function trackedMismatches(worktreeDir: string): Promise<string[]> {
   }
   if (listable.length > 0) {
     const hashed = toLines(
-      await git(["hash-object", "--stdin-paths"], {
+      await git([...NO_LFS, "hash-object", "--stdin-paths"], {
         cwd: worktreeDir,
         input: listable.map((file) => `${file.path}\n`).join(""),
         timeoutMs: 600_000,
