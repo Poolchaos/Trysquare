@@ -7,8 +7,9 @@ Status: RATIFIED 2026-07-30 at G0. Authority: where this doc and
 
 This document specifies the target. Verified against the code on 2026-08-03,
 these parts of it do not exist yet. They stay here as requirements rather
-than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
-is named.
+than being edited away. An item of `plans/M4-FINISH-PLAN.md` named beside
+one owned it while that plan ran; the plan is closed, and what is still
+unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
 - The read-only log viewer (section 8). A failed stage now names its
   transcript path, but nothing renders the file. U10.

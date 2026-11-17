@@ -45,11 +45,11 @@ verdict is given by an AI: a gate passes on the maintainer's word alone.
 | --- | --- | --- | --- |
 | CP-1 | Audit F1, F2: next and eslint-config-next to 16.4.6 (D-231). `./verify.sh --e2e` exits 0 twice, each from a clean `.next`; CI green at the commit. | - | DONE 2026-11-17 (fe22a19, D-231): `./verify.sh --e2e` exited 0 twice, each from an empty `.next`, 1477 unit tests passing, 8 skipped, and 137 browser tests each time; `npm audit --omit=dev` reports 0. CI run 44078397131 at 9d15898, the push that carried it, passed on all three platforms. |
 | CP-2 | Audit F4: a decision entry that the MVP's exit criteria 1, 4 and 5, row 7.4 and G1's row are met on Linux, the maintainer's machine now; `MVP-PLAN.md`, `GATES.md` and the README's Windows note brought to it. The Windows CI leg stays, as information. | - | DONE 2026-11-17 (1c5e239, D-232): the criteria, row 7.4, `GATES.md` and the README's requirements say Linux; `main` requires the Ubuntu and macOS checks. |
-| CP-3 | The records: audit F6, F7, F8 and the grader's G1 to G4; the inbox entries filed under Retired while open; `npm run doctor` saying its remedy only on a failing line (F14, with a test). Then a fresh grader regrades Honest. | CP-1, CP-2 | PART 2026-11-17: the records and the doctor's line fixed (8f9cf07); a fresh grader regraded Honest C, the inherited findings closed bar part of F4, with ten new stale claims from its own sweep, fixed in 5bbe745. A third grader graded it C again: three material findings (private reporting switched off, now on; "no telemetry", now scoped, its cause CP-5b; a fourth thing that spends usage) and ten minor, fixed in the commit after. A fourth grade, and the gate at A, are still owed. |
+| CP-3 | The records: audit F6, F7, F8 and the grader's G1 to G4; the inbox entries filed under Retired while open; `npm run doctor` saying its remedy only on a failing line (F14, with a test). Then a fresh grader regrades Honest. | CP-1, CP-2 | PART 2026-11-17: the records and the doctor's line fixed (8f9cf07); a fresh grader regraded Honest C, the inherited findings closed bar part of F4, with ten new stale claims from its own sweep, fixed in 5bbe745. A third grader graded it C again: three material findings (private reporting switched off, now on; "no telemetry", now scoped, its cause CP-5b; a fourth thing that spends usage) and ten minor, fixed in the commit after. A fourth, at 1a43243, graded it C once more: one material finding in CP-5b's own wording (a second request Next makes, D-234), a paid command described as the wrong model, the latest paid run missing from the README and the gate ledger, and eleven minor, fixed in the commit after. A fifth grade, and the gate at A, are still owed. |
 | CP-4 | Audit F10: the three CI actions pinned to commits; `.github/dependabot.yml` for npm and for the actions. Alerts and protection on `main` were turned on 2026-11-17. | - | DONE 2026-11-17, in the commit after CP-2's: checkout v5.1.0, setup-node v5.0.0 and upload-artifact v4.6.2 by commit, the workflow's permissions stated as read, and Dependabot for the actions alone, monthly. npm is answered from alerts by hand (D-231), so no npm entry. Pushed as 6f44125; CI run 44081122822 at 8f9cf07, the first to use the pins, passed on all three platforms. Dependabot opened three pull requests within minutes (checkout 7.0.1, setup-node 7.1.0, upload-artifact 7.0.2), so its updates are now grouped into one; the bumps themselves are open, CP-4b. |
 | CP-4b | The actions' major bumps Dependabot proposed (pull requests 2 to 4, or the grouped one that replaces them): read each release's breaking changes against how `verify.yml` uses the action, merge only with Ubuntu and macOS green. | - | TODO |
 | CP-5 | The five security checklist lines the audit did not re-walk, read over b1b2fce to HEAD, D-227's markdown renderer among them; findings fixed or recorded. | CP-1 | TODO |
-| CP-5b | The README says the app sends no telemetry; Next.js records anonymous usage from `next dev` and `next build` unless `NEXT_TELEMETRY_DISABLED` is set (third grade of Honest, N2). Turn it off for every way the app starts and builds, on Linux and macOS, proven with `NEXT_TELEMETRY_DEBUG=1` printing no event; then the README and `SECURITY.md` say so without the exception. | - | DONE 2026-11-17 (D-233): `next.config.ts` sets the variable as it is read. Proven by a preload that logs every `fetch` to another host, not by `NEXT_TELEMETRY_DEBUG`, which prints events whether telemetry is off or on: 16 attempts to post from `npm run build` and 8 from `npm run dev` before, none from either after, none from `npm run start` before or after. The same runs found Next's advisory lookup to the npm registry, now named in the README; turning it off is CG-6. |
+| CP-5b | The README says the app sends no telemetry; Next.js records anonymous usage from `next dev` and `next build` unless `NEXT_TELEMETRY_DISABLED` is set (third grade of Honest, N2). Turn it off for every way the app starts and builds, on Linux and macOS, proven with `NEXT_TELEMETRY_DEBUG=1` printing no event; then the README and `SECURITY.md` say so without the exception. | - | DONE 2026-11-17 (1a43243, D-233): `next.config.ts` sets the variable as it is read. Proven by a preload that logs every `fetch` to another host, not by `NEXT_TELEMETRY_DEBUG`, which prints events whether telemetry is off or on: 16 attempts to post from `npm run build` and 8 from `npm run dev` before, none from either after, none from `npm run start` before or after. The same runs found Next's advisory lookup to the npm registry, now named in the README; turning it off is CG-6. Those runs had no browser on the page, and so missed a second lookup the fourth grade found; measured again with one, and both named (D-234). |
 | CP-6 | Named test gaps: a test for the queued-before-the-ending race (`DECISIONS.md`, review round 16); a browser test that opens a process directive, with axe (the suspected defect in the inbox); the macOS shutdown anomaly read again when it recurs. The Windows CI stall is parked under CP-2's decision. | - | TODO |
 | CP-7 | Fresh evidence for the verdicts, on Linux and the current engine: `npm run demo:fixture` and `npm run demo:design` with real models, scored against their keys, every proof read. The earlier runs' folders are on no machine the maintainer has. | CP-1, CG-1, CG-2 | TODO |
 | CP-8 | The maintainer's verdicts: G1 on finding quality (`FG2-CHECKLIST.md`), WP-I and WP-J. Recorded in `GATES.md` and the plan rows the same day. | CP-7 | TODO (maintainer) |
@@ -67,8 +67,8 @@ Each gate lists the options with a recommendation. None is assumed; a gate is
 resolved only by an entry in `docs/DECISIONS.md`.
 
 - **CG-1: spend for CP-7.** One run of each fixture on Opus 5.5 with Fable
-  5.1 second. The last such runs cost $3.1545 and $2.4593 cost-equivalent on
-  the subscription (D-193, D-200). Go, or judge on the decision log's
+  5.1 second. The last such runs cost $2.7884 and $2.4593 cost-equivalent on
+  the subscription (D-202, D-200). Go, or judge on the decision log's
   summaries of the lost runs. Recommended: go; a verdict on evidence nobody
   can open is weaker than one run costs.
 - **CG-2: where evidence lives.** `review/` is ignored by git and went with
@@ -87,17 +87,20 @@ resolved only by an entry in `docs/DECISIONS.md`.
   ruleset read from its own repository (chosen 2026-11-03); a memory guard on
   a project's own commands; more than one ruleset or dependency per review;
   emailing a report; reviews in a GitHub pipeline (`README.md`, Options under
-  discussion). Which are in? Recommended: the first three, then the pipeline
+  discussion); a viewer for a failed stage's transcript and the live output
+  of a clone, both left over from `M4-FINISH-PLAN.md` U10. Which are in? Recommended: the first three, then the pipeline
   as its own plan; the rest stay out of v1.
 - **CG-6: Next's advisory lookup.** On `npm run dev` outside CI, and on
   `npm run build` from a terminal or an AI agent, Next posts its own installed version to the npm
   registry to ask whether an advisory covers it (D-233). (a) Leave it on,
   named in the README: a person is told in the terminal when the installed
   Next has an advisory, and an AI session's build stops once (D-231). (b)
-  `experimental.agentUpgrade: false`: nothing leaves on start or build, and
+  `experimental.agentUpgrade: false`: that request is not made, and
   advisories are heard of from Dependabot's alerts alone. Recommended: (a);
   the request carries a version number and goes where `npm install`
-  already goes.
+  already goes. Either way `npm run dev` still reads the latest Next
+  version from the registry when a browser connects, which no setting
+  turns off (D-234).
 
 ## 4. Review cadence
 

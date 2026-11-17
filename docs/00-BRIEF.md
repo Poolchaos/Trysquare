@@ -10,8 +10,9 @@ the live account on 2026-07-30 (`GATES.md`, G0); the verdict is in
 
 This document specifies the target. Verified against the code on 2026-08-03,
 these parts of it do not exist yet. They stay here as requirements rather
-than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
-is named.
+than being edited away. An item of `plans/M4-FINISH-PLAN.md` named beside
+one owned it while that plan ran; the plan is closed, and what is still
+unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
 - Tiers composing per review. A ruleset carries a tier, but a review uses
   exactly one ruleset: the start route takes a single id and the screen is a
@@ -71,8 +72,9 @@ Think "local PR reviewer": no hosting, no login, single user.
 - Reviews must run on the Claude Code subscription (no API billing) or the
   app is not worth building; the fallback is continuing reviews in Claude
   Code chat in VSCode.
-- Two other AIs are independently planning this app; their plans will be
-  given to us for review before ratification.
+- Two other AIs were independently planning this app, and their plans were
+  to be reviewed before ratification. They never arrived; G0 was ratified
+  without them on 2026-07-30 (`GATES.md`).
 
 ## Open questions
 

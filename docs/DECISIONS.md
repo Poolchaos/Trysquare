@@ -6004,3 +6004,21 @@ verified evidence, in writing, here.
   stop, it is not telemetry, and the README now names it. Turning it off is
   `agentUpgrade: false`, and is the maintainer's call (CG-6): it would also
   end the reminder a person gets in the terminal.
+- 2026-11-17 D-234 D-233 counted one request left and there are two, found
+  by the fourth grade of the records. D-233's dev run asked for `/` with no
+  browser; `next dev` reads `registry.npmjs.org/-/package/next/dist-tags`
+  only once a browser's page connects to it
+  (`server/dev/hot-reloader-shared-utils.js:33`, called from
+  `hot-reloader-turbopack.js:1421`), to say in its dev overlay whether the
+  installed Next is behind. It sends no version and no setting turns it
+  off. Measured again at 1a43243 with Chromium on `/`, `/rulesets` and
+  `/settings`, and the preload widened to log every socket node opens to
+  another host as well as every `fetch`: `npm run dev` made the advisory
+  post and the dist-tags read, over one connection to registry.npmjs.org,
+  and nothing to telemetry.nextjs.org; `npm run build` made the advisory
+  post alone; `npm run start` made none; the pages asked nothing of any
+  other host in either. Not covered: a connection opened by native code
+  inside a node process, which the preload cannot see. The README,
+  `SECURITY.md` and `PROJECT-STATE.md` now name both requests. The lesson
+  for a proof of what leaves the machine: drive the app as a person does,
+  with a browser on it, before counting.

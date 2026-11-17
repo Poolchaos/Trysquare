@@ -8,8 +8,9 @@ the bug, never the test.
 
 This document specifies the target. Verified against the code on 2026-08-03,
 these parts of it do not exist yet. They stay here as requirements rather
-than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
-is named.
+than being edited away. An item of `plans/M4-FINISH-PLAN.md` named beside
+one owned it while that plan ran; the plan is closed, and what is still
+unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
 - Flow 3 of section 3 is now in a browser for the limit pause with resume
   and for cancel mid-stage; stage failure stays at the integration layer,
@@ -18,7 +19,8 @@ is named.
 ## 1. verify.sh (lands with the first code commit, WP-A)
 
 Gates in order: lint (eslint), format check (prettier), typecheck
-(tsc --noEmit), unit+integration (vitest). Flags: `--build` adds
+(tsc --noEmit), house style, no private material, nothing hidden from git,
+no dead exports, unit+integration (vitest). Flags: `--build` adds
 `next build`; `--e2e` adds Playwright against a production build. Mechanics
 copied from the family pattern: `set -uo pipefail`, output captured, exit
 status checked separately from the pipe, output grepped for a narrow error

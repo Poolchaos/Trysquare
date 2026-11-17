@@ -482,10 +482,12 @@ opened on the same branch, which diffs nothing and reads like a clean review.
 The branch under review is now excluded from the comparison list, asserted in
 the journey.
 
-Not done, and still owned by this item: the live git output tail during a
-clone, project name and default-branch editing (D-51), the log viewer for a
-failed stage's transcript, and batch n of m in the activity feed (which needs
-an event the manager does not emit).
+Not done when this plan closed: the live git output tail during a clone,
+project name and default-branch editing (D-51), the log viewer for a failed
+stage's transcript, and batch n of m in the activity feed. Read again on
+2026-11-17: the editing and the batch count have been built since
+(`src/app/projects/[id]/page.tsx`, `src/app/reviews/[id]/page.tsx`); the
+tail and the log viewer have not, and are in `PROJECT-STATE.md`, Not built.
 
 Original scope:
 

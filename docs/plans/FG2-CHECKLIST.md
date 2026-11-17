@@ -65,8 +65,8 @@ That establishes the pipeline carries a correct review intact, and no more.
 
 Alongside it, and also free:
 
-- The unit and integration tests (572 when this was written, 1477 on
-  2026-11-17), and a browser journey that walks the
+- The unit and integration tests (572 when this was written, 1478 at
+  1a43243 on 2026-11-17), and a browser journey that walks the
   whole app from an empty state to an exported report in both themes.
 - The engine quality gate, which also runs the opposite case: a reviewer that
   invents a finding has it discarded by the quotation check rather than
@@ -82,9 +82,10 @@ npm run demo:fixture -- --model "claude-fable-5[1m]"
 ```
 
 The first reviews it with the recommended model, Opus 5.5 (D-184); the
-second with Fable 5.1, the real question. The id is quoted because zsh reads
-its brackets as a pattern. Told neither `--real` nor `--model`, the demo
-spends nothing (D-203).
+second with a model you name, here Fable 5 with the 1M context, which the
+run of 2026-10-22 used (D-183). Fable 5.1 is `claude-fable-5-1`. The id is
+quoted because zsh reads its brackets as a pattern. Told neither `--real`
+nor `--model`, the demo spends nothing (D-203).
 
 Each run writes its own directory under `review/<date>-fg2/`, named by time
 and model, holding the score, the full event log, and every finding's text

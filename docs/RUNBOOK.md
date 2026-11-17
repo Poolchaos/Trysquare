@@ -238,9 +238,11 @@ Every step below is free until you press Start review.
 Only four things, by deliberate design after an incident where a manual test
 silently used the real CLI:
 
-- Starting a review.
-- Verify again on an open question: a paid request to each verifier, which
-  the dialog says before it is sent (D-190).
+- Starting a review, or resuming one: Resume pays for the stages that had
+  not finished, and replays the finished ones for free.
+- Verify again on an open question: a paid request to the first verifier
+  and, if it proves the finding, one to the second, which the dialog says
+  before either is sent (D-190).
 - Pressing Probe on the Settings screen, or a probe control in the model
   picker. Each probe is a real call, which is why nothing probes on a timer or
   at startup.

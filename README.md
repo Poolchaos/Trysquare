@@ -31,12 +31,14 @@ refused by the coverage law, the first full-strength run exposed a real
 product bug that was fixed the same day, and the two runs after the fix each
 found 8 of the 8 defects the fixture then planted, at the exact lines, with
 nothing invented and nothing discarded, for about a dollar and five minutes
-each. The fixture has since grown to eleven defects, and the later paid runs
-scored lower by its key: on 2026-10-22 all eleven were found and verified
-and nine were cited where the key cites them (9/11); on 2026-10-23, with
-the proof each finding must now carry and a second verifier, all eleven
-were raised, eight were proven by both verifiers and three were left as
-open questions (7/11). Their summaries are in
+each. The fixture has since grown to eleven defects, and three paid runs
+followed: on 2026-10-22 all eleven were found and verified and nine were
+cited where the key cites them (9/11); on 2026-10-23, with the proof each
+finding must now carry and a second verifier, all eleven were raised, eight
+were proven by both verifiers and three were left as open questions (7/11);
+on 2026-10-24, after the rule for where a proof must pass and the fixture's
+key had both been changed, all eleven were proven by both verifiers (11/11).
+Their summaries are in
 [docs/GATES.md](docs/GATES.md). What no run settles is the judgment itself: whether those findings
 read as worth a person's time is the maintainer's call, described in
 [docs/plans/FG2-CHECKLIST.md](docs/plans/FG2-CHECKLIST.md), and it has not
@@ -226,10 +228,12 @@ Trysquare drives that CLI using whatever credentials it already holds. It
 ships no model of its own and has no account system, no server of its own,
 and sends no telemetry. Next.js, the framework it is built on, would record
 anonymous usage from `next dev` and `next build`; `next.config.ts` turns
-that off. One request the framework still makes: when the app starts with
-`npm run dev`, or is built from a terminal, Next.js asks the npm registry
-whether its own installed version has a security advisory, and sends that
-version number to do so.
+that off. Two requests the framework still makes, both to the npm registry:
+when the app starts with `npm run dev`, or is built from a terminal, Next.js
+asks whether its own installed version has a security advisory, and sends
+that version number to do so; and when a browser first opens the app under
+`npm run dev`, it asks which Next.js version is the latest. `npm run start`,
+on a build already made, makes neither.
 
 Be clear about what that does and does not mean. Reviewing code with a model
 means sending code to that model: when a review runs, the diff, the contents of

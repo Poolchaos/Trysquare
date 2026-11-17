@@ -31,10 +31,10 @@ Work top to bottom through unblocked items; skip blocked, never wait.
 
 ## 1. Work packages
 
-The remaining packages (WP-F through WP-L) are broken down into a detailed
-standing execution order with pre-resolved decisions in
-[EXECUTION-ORDER.md](EXECUTION-ORDER.md). The driver works that document top
-to bottom; this table stays the summary of record.
+Every package below is DONE. WP-F through WP-L were broken down, with their
+decisions resolved ahead, in [EXECUTION-ORDER.md](EXECUTION-ORDER.md), which
+the driver worked top to bottom and which `MVP-PLAN.md` has since
+superseded; this table stays the summary of record.
 
 | WP   | Scope                                                                                                                                                                                                                                                                                  | Blocked on | Status |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ |

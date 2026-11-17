@@ -1,7 +1,9 @@
 # Trysquare app plan
 
-Status: DRAFT, written 2026-07-30. Not ratified. Two external AI plans are
-incoming and will be reviewed against this before G0 passes. This document
+Status: DRAFT, written 2026-07-30 and never ratified as such. It was to be
+reviewed against two external AI plans, which never arrived
+(`PROJECT-STATE.md`); G0 passed the same day on the brief, the specs and
+`BUILD-PLAN.md` (`GATES.md`), which carry what was built. This document
 plans; it does not code. All `CLAUDE.md` rules apply on top.
 
 ## 0. Feasibility: subscription instead of API (the build/no-build question)

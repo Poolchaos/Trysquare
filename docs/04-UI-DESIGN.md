@@ -9,8 +9,9 @@ AI-built.
 
 This document specifies the target. Verified against the code on 2026-08-03,
 these parts of it do not exist yet. They stay here as requirements rather
-than being edited away; the item in `plans/M4-FINISH-PLAN.md` that owns each
-is named.
+than being edited away. An item of `plans/M4-FINISH-PLAN.md` named beside
+one owned it while that plan ran; the plan is closed, and what is still
+unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
 Trued up 2026-08-17: the U6 and U10 items previously listed here (run
 screen stage rows, per-stage duration and tokens, projects last-fetch and

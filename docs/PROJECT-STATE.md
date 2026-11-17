@@ -24,9 +24,11 @@ from 2026-11-03.
   at 500,000 tokens of context, measured by `scripts/session-context.mjs`,
   handing over through `.claude/handover/` (D-230, `SESSION-HANDOVER.md`).
   `./verify.sh --e2e` exits 0 at fe22a19, twice from an empty `.next`, with
-  1477 unit tests passing, 8 skipped, and 137 browser tests. Still waiting
-  on the maintainer: the verdicts on G1, WP-I and WP-J, MVP 7.4, and the
-  plan's five decision gates.
+  1477 unit tests passing, 8 skipped, and 137 browser tests. Since, the same
+  day: Next's telemetry turned off (D-233, D-234), `./verify.sh --e2e`
+  exiting 0 at 1a43243 with 1478 unit tests passing, 8 skipped, and 137
+  browser tests. Still waiting on the maintainer: the verdicts on G1, WP-I
+  and WP-J, MVP 7.4, and the plan's six decision gates.
 - 2026-10-28: every finding of both outside audits is now fixed or
   answered: U3, U4 and U7 to U10 since 2026-10-25, with review round 15
   over them and over D-225 (in DECISIONS). A ruleset can be the default a
@@ -83,8 +85,8 @@ from 2026-11-03.
   maintainer's (D-183). `./verify.sh --build --e2e` exits 0 on the
   maintainer's Windows 11 machine at b0deb2f, with 1188 unit tests
   passing, 10 skipped, and 99 browser tests, and CI passes it on
-  `ubuntu-latest`, `windows-latest` and `macos-latest` at every push
-  (run 39816602753 at b0deb2f). Real models have run on Linux and
+  `ubuntu-latest`, `windows-latest` and `macos-latest` at every push to
+  `main` and every pull request (run 39816602753 at b0deb2f). Real models have run on Linux and
   Windows.
 - 2026-10-16: two audits on the maintainer's Windows 11 machine found the
   app did not install, test or run there (`plans/AUDIT-2026-10-16.md`
@@ -115,7 +117,8 @@ from 2026-11-03.
   promises that were decorative rather than enforced, and a records set two
   milestones behind the code. The verified gap inventory and the remaining
   work of that date were in `plans/M4-FINISH-PLAN.md` (items U1 to U13, each
-  since done or carried to `plans/COMPLETION-PLAN.md`). As of
+  since done bar two parts of U10, the log viewer and the live output of a
+  clone, which are under Not built below). As of
   2026-08-04 all twelve build-plan work packages are DONE.
 - The 2026-08-17 UX audit and the 2026-08-18 dashboard shell (D-68, D-69,
   D-79, D-81) reshaped the surface: a top bar in place of the left rail, a
@@ -259,7 +262,8 @@ are accepted; anything else is refused by name.
   confirmation queue.
 - `scripts/` - the house-style gate, the leak gate, the nothing-hidden gate,
   the dead-export gate, the fixture demo, the design demo, and `claude.ts`, which `npm run
-  claude` runs to sign in the CLI reviews use (MVP 6.3); and
+  claude` runs to sign in the CLI reviews use (MVP 6.3); the setup commands
+  `doctor.ts`, `claude-auth.ts` and `seed-rules.ts` (D-226); and
   `session-context.mjs`, which says how full an AI session's context is
   against its limit (D-230).
 - `tests/fixtures/example-protocol.md` - the public sample protocol the
@@ -294,8 +298,9 @@ own now (D-75, D-81).
 - `npm audit --omit=dev` reports 0 vulnerabilities (2026-11-17, after next
   moved from 16.4.4 to 16.4.6, D-231; D-228 had moved it from 16.3.8 and zod
   from 4.4.3 to 4.6.7). The full audit reports 7 moderate, all one dev-only
-  chain through the typescript-eslint packages to `minimatch` below 11.0.1,
-  which `npm audit fix` cannot move; accepted in D-228. The `braces` chain
+  chain through the typescript-eslint packages to `minimatch` below 11.0.1.
+  `npm audit` says a fix is available; `npm audit fix --dry-run` still
+  reports all 7 after it (2026-11-17). Accepted in D-228. The `braces` chain
   D-89 accepted is no longer reported.
 - An advisory against the installed next stops `next build` once, with exit
   1, when an AI session runs it, and prints text telling the agent what to
@@ -319,6 +324,11 @@ own now (D-75, D-81).
   single linked project.
 - More than one ruleset per review, so tiers compose: designed, not built.
 - Emailing a report (`plans/idea-inbox.md`).
+- A viewer for a failed stage's transcript: the review page names the file
+  and renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
+- The live output of git while a project clones: a failure's stderr is
+  shown, the running output is not (`04-UI-DESIGN.md`, Not built yet, which
+  lists the screens' other unbuilt parts).
 - Any authentication. This is a local, single-user tool by design.
 
 ## External services
@@ -332,10 +342,13 @@ its page has said so (D-161, D-162). The CLI gets only what it needs to
 run and the sign-in (D-174); a managed Claude Code policy, which no flag
 keeps out, is said where one is found (D-175); see
 `06-MODELS-AND-PROFILES.md`.
-Next's usage telemetry is off (`next.config.ts`, D-233). The one request the
-framework still makes: on `npm run dev` outside CI, and on `npm run build`
-from a terminal or an AI agent, it posts its installed version to the npm registry's advisory endpoint
-(D-233, `plans/COMPLETION-PLAN.md` CG-6).
+Next's usage telemetry is off (`next.config.ts`, D-233). Two requests the
+framework still makes, both to registry.npmjs.org (D-234): on `npm run dev`
+outside CI, and on `npm run build` from a terminal or an AI agent, it posts
+its installed version to the advisory endpoint (`plans/COMPLETION-PLAN.md`
+CG-6); and when a browser first connects to `npm run dev` it reads the
+latest Next version, which no setting turns off. `npm run start` and the
+pages themselves make none.
 The CLI is Anthropic's, "All rights reserved. Use is subject to the Legal
 Agreements" at
 <https://code.claude.com/docs/en/legal-and-compliance>, and each user

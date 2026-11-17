@@ -1,6 +1,8 @@
 # Execution order: remaining work to v1
 
-Status: STANDING EXECUTION ORDER, written 2026-07-30 at the maintainer's
+Status: SUPERSEDED by [MVP-PLAN.md](MVP-PLAN.md) on 2026-10-16 (D-85) for
+anything not marked DONE here; kept as the record of how the build was
+ordered. It was the standing execution order, written 2026-07-30 at the maintainer's
 direction ("plan all the remaining work and best sequence so the driver does
 not keep asking"). Same contract as the reference projects' work queues: the
 driver works TOP TO BOTTOM through unblocked items without asking. Blocked

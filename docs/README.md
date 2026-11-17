@@ -6,7 +6,8 @@ moving, or retiring a doc, update this index in the same change. Repo-level
 operating rules live in `CLAUDE.md` (repo root).
 
 Read order for a fresh session: `CLAUDE.md` (root), then the last session's
-handover if there is one (`SESSION-HANDOVER.md`), then `PROJECT-STATE.md`,
+handover if there is one (`.claude/handover/HANDOVER.md`, whose procedure
+is `SESSION-HANDOVER.md`), then `PROJECT-STATE.md`,
 then `GATES.md`, then only what the active gate needs.
 
 ## Ledgers and state
@@ -52,7 +53,7 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/AUDIT-2026-10-16.md](plans/AUDIT-2026-10-16.md) | The parallel 2026-10-16 audit: finding IDs W, S, E, A, U, T, R, D with proof per finding, and the evidence behind each disagreement with the GLM report. Read-only report. |
 | [plans/MVP-PLAN.md](plans/MVP-PLAN.md) | The MVP: three-OS support, security, engine fixes, spend safety, Claude connect, then the G1 and G2 verdicts. Seven phases, decision gates MG-1..MG-10. RATIFIED 2026-10-16 (D-86). |
 | [plans/PROOF-AND-STEPS-PLAN.md](plans/PROOF-AND-STEPS-PLAN.md) | After the MVP: the 5.5 models, proof a finding must carry and a second verifier, and the run shown as five steps, then the design of what a branch builds. BUILT 2026-10-24 (D-184, D-186); the verdicts on WP-I and WP-J are the maintainer's. |
-| [plans/COMPLETION-PLAN.md](plans/COMPLETION-PLAN.md) | The standing plan from the 2026-11-17 audit to completion: work packages CP-1..15 and decision gates CG-1..5. DRAFT 2026-11-17. |
+| [plans/COMPLETION-PLAN.md](plans/COMPLETION-PLAN.md) | The standing plan from the 2026-11-17 audit to completion: work packages CP-1..15 and decision gates CG-1..6. DRAFT 2026-11-17. |
 | [plans/AUDIT-2026-11-17.md](plans/AUDIT-2026-11-17.md) | The 2026-11-17 audit of what remains: the evidence, fourteen findings and five the grader added, an independent grade of C, and the remaining work in order. Nothing in it was fixed. |
 
 ## Specs

@@ -1,7 +1,7 @@
 ## What this changes
 
 One or two sentences. If it relates to an issue or a work package in
-`docs/plans/BUILD-PLAN.md`, name it.
+`docs/plans/COMPLETION-PLAN.md`, name it.
 
 ## Why
 
