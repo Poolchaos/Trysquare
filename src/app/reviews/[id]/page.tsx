@@ -67,6 +67,7 @@ import {
   stepUsage,
 } from "@/lib/review/steps";
 import { emptyFindings } from "@/lib/review/empty-findings";
+import { createEndingNotice } from "@/lib/review/ending-notice";
 
 /**
  * The whole pipeline, not only the stages that call a model.
@@ -514,23 +515,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   // mounted with is not read out (review round 15). Emptied as a run starts,
   // so the next ending is a change too.
   const [ending, setEnding] = useState("");
-  const shownRunning = useRef(false);
-  const endingTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(endingTimer.current), []);
+  // When the words are set, and when withdrawn: lib/review/ending-notice.
+  const [notice] = useState(() => createEndingNotice(setEnding));
+  useEffect(() => () => notice.dispose(), [notice]);
   function show(fresh: Snapshot) {
-    // Queued again too: resumed into the line, it still said how the last
-    // run ended beside a badge saying queued (review round 16).
-    if (fresh.running || fresh.queued) {
-      clearTimeout(endingTimer.current);
-      setEnding("");
-    } else if (shownRunning.current) {
-      const words = endingOf(fresh.review.status as ReviewStatus);
-      // A moment after the theater has gone: its modal dialog keeps the rest
-      // of the page, this region too, from a screen reader, and words set as
-      // the region came back within reach were no change to hear.
-      endingTimer.current = setTimeout(() => setEnding(words), 150);
-    }
-    shownRunning.current = fresh.running;
+    notice.show(fresh, () => endingOf(fresh.review.status as ReviewStatus));
     setSnapshot(fresh);
   }
   // Ticks only while something is running, so a finished review is not
