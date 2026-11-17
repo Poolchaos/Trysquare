@@ -69,7 +69,7 @@ fails unless all five read correctly. The check took about 0.3s on Windows
   full pipeline run.
 - `server/engine`: stream-json parsing from captured transcripts; error
   classes (timeout, limit, invalid output, spawn failure); the **fake
-  claude binary** (a Node script on PATH in tests) that replays scripted
+  claude binary** (a Node script handed to the engine by its path) that replays scripted
   stage outputs, so pipeline tests run hermetically with zero tokens.
 - `server/db`: repository functions and state-machine transition
   enforcement against a throwaway SQLite file.
@@ -83,7 +83,7 @@ outputs), on a generated fixture project:
 2. Full review happy path: setup, run, watch stages, confirm one finding,
    dismiss one with reason, render and export report; assert report content
    matches confirmed findings exactly.
-3. Failure paths: stage failure surfaces real error and retry works; limit
+3. Failure paths: stage failure surfaces real error and a resume carries on (D-50); limit
    pause and resume; cancel; server-restart interruption resume.
 4. Ruleset import UI shows fidelity report; edit bumps version; old review
    snapshot unchanged.
@@ -150,7 +150,7 @@ Gate assertions (fake engine in CI; real engine manually pre-release):
 - coverage invariants hold (no pending hunks/sweeps).
 
 The real-engine run's report and usage numbers are captured into
-`review/<session>-engine/` as the proof artifact before any release claim.
+`review/<date>-fg2/<time>-<model>/` as the proof artifact before any release claim.
 
 ## 4b. The design fixture (WP-I step 6)
 

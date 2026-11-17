@@ -68,8 +68,9 @@ npm run dev
 ```
 
 It first runs `npm run doctor` (the `predev` script, D-226): Node, git, the
-SQLite driver, the CLI and its sign-in, the data directory, and whether a
-ruleset is stored. A FAIL stops the start; a WARN is said and the app starts.
+SQLite driver, the CLI and its sign-in (the installed CLI or the one
+`TRYSQUARE_CLAUDE_PATH` names, not a path kept on Settings), the data
+directory, and whether a ruleset is stored. A FAIL stops the start; a WARN is said and the app starts.
 A fresh data directory has no ruleset: import one on the Rulesets screen, or
 seed it from a file with `npm run rules:seed` (README, Seeding your company's
 rules).

@@ -90,7 +90,10 @@ export function isSelectableEffort(effort: ReviewEffort): boolean {
   return SELECTABLE_REVIEW_EFFORTS.includes(effort);
 }
 
-/** The AI stages, in execution order. S0 is deterministic and has no row. */
+/**
+ * The stages after S0, in execution order. All ask a model but the audit,
+ * `s6_audit`. S0 is deterministic too and has no row.
+ */
 export const REVIEW_STAGES = [
   "s1_risk",
   "s2_comprehension",

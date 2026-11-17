@@ -48,7 +48,8 @@ A review:
 3. `POST /api/reviews/[id]/start` hands it to the job manager
    (`src/server/jobs/manager.ts`), which runs `prepareAndRun` in
    `src/server/review/service.ts`: S0 prepare (worktree, diff, sweeps), then
-   the AI stages S1 to S6 in `src/server/review/pipeline.ts`. Only
+   the stages S1 to S6 in `src/server/review/pipeline.ts`, of which S6,
+   the audit, asks no model. Only
    `src/server/engine/` starts `claude`; stage prompts are composed in
    `src/lib/rulesets/compose.ts`.
 4. The review page follows `GET /api/reviews/[id]/events` (server-sent

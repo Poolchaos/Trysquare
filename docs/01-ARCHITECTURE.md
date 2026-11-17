@@ -29,7 +29,9 @@ directory. No auth, no hosting, no telemetry.
 - Vitest (unit/integration), Playwright (e2e)
 - zod for every runtime boundary (CLI output, stage outputs, API payloads)
 - Node child_process for git, for claude, and for a project's own commands
-  when its checks are on (D-196); no other process spawning
+  when its checks are on (D-196); on Windows also `reg.exe`, to read a
+  managed Claude Code policy, and `taskkill`, to end a project command's
+  process tree; no other process spawning
 
 Versions are pinned at WP-A and recorded in `PROJECT-STATE.md` once installed.
 
@@ -164,7 +166,8 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
 ```
 
 - **HeadlessEngine (Mode A, default):** spawns
-  `claude -p <prompt> --output-format stream-json --model <full model id>` with cwd =
+  `claude -p --output-format stream-json --model <full model id>`, the
+  prompt on its standard input, with cwd =
   worktree, a composed `--system-prompt` (replacing the default rather than
   appending, because the review instructions are the whole contract and the
   default prompt costs thousands of tokens a call), and a read-only tool
@@ -176,7 +179,7 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
 - **InteractiveEngine (Mode B, fallback):** materialises the same prompt to
   `runs/<id>/bundle/<stage>[-b<n>]-<call id>-prompt.md`, with the system
   prompt beside it as `-system.md`, prints a launch command for PowerShell
-  and for bash or zsh (read-only tools, user settings only, no MCP servers,
+  and for bash or zsh (read-only tools, no settings file at all, no MCP servers,
   `--system-prompt-file`, the prompt itself read from the file rather than
   passed in argv), and watches for that call's own `-output.json`. Each call
   names its own files, so a batch or a resumed attempt never reads another

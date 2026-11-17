@@ -25,9 +25,10 @@ chosen per review in the advanced fold.
 - New review: choosing more than one ruleset at once. Deferred by decision
   (2026-08-04 DEFERRED in DECISIONS.md); needs a rule-code collision
   refusal designed with it.
-- Rulesets: editing a rule's text in place with markdown preview. Severity,
-  toggles, sweep patterns, directive bodies and duplicate-to-tier are
-  built; free-text rule editing is not.
+- Rulesets: editing a rule's text in place with markdown preview. A rule's
+  severity and its on/off switch can be changed, sweep patterns and
+  directive bodies are shown, and duplicate-to-tier is built; free-text
+  rule editing is not.
 - Settings: opening the data directory in a file manager (it is displayed).
 - Of the 2026-08-17 UX audit, three items are still owed: the completion
   moment and queue momentum (WP-G), the queue's own phone layout with

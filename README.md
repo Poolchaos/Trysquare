@@ -250,8 +250,9 @@ anywhere else from Trysquare's own code: no Trysquare service, no analytics,
 no third party. A protocol document you import cannot change that either:
 an image in it is shown as its words and its address, never fetched. The app
 also runs git, to clone and fetch each project from its own remote, and
-never to push. It is your git, with your configuration: a credential helper
-you set up runs as it does for you. Git LFS is switched off for the checkout
+never to push. It is your git, with your own configuration (git's
+system-wide file is left out, bar the credential helpers it names): a
+credential helper you set up runs as it does for you. Git LFS is switched off for the checkout
 a review reads, so a file kept in LFS is read as its pointer and not
 downloaded; the separate copy made for a project's own checks, when you turn
 those on, is checked out by your git as you have it configured. Your
@@ -278,8 +279,10 @@ On a new machine, from a clone of this repository:
    npm run dev
    ```
    Before the app starts, `npm run dev` runs `npm run doctor`, which checks
-   Node, git, the SQLite driver, the CLI and its sign-in, the data directory
-   and whether any ruleset is stored. A failed check stops the start and says
+   Node, git, the SQLite driver, the CLI and its sign-in (the installed CLI
+   or the one `TRYSQUARE_CLAUDE_PATH` names, not a path kept on Settings),
+   the data directory and whether any ruleset is stored. A failed check
+   stops the start and says
    what to fix. A WARN line lets the app start, but reviews need it: most
    often the sign-in (step 3) or a ruleset (below).
 5. Check the project still passes its own gate, which needs no sign-in:

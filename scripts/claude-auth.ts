@@ -1,8 +1,9 @@
 /**
  * `npm run claude:auth` checks that the Claude Code CLI reviews run through is
  * new enough and signed in, and starts the sign-in only when it is not. It
- * uses the same CLI resolution as the app, so the sign-in is the one a review
- * uses. Exits 0 when reviews can run, 1 otherwise.
+ * resolves the CLI as the app does bar one step: a path kept on Settings
+ * lives in the database, which a running server holds, so it is not read
+ * here. Exits 0 when reviews can run, 1 otherwise.
  */
 
 import { runCliAttached } from "@/server/engine/cli";

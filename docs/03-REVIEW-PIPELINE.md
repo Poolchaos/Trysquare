@@ -267,7 +267,7 @@ noted ("Graded D again by the second grader, <model>: ..."). An A or B
 leaves it an open question naming the second grade, one grader not
 overriding the other (D-188). Not asked when nothing was graded C or D.
 
-### S6 Coverage self-audit (protocol step 7; deterministic + AI summary)
+### S6 Coverage self-audit (protocol step 7; deterministic, no model)
 
 App code asserts the invariants: all hunks dispositioned, all sweep hits
 dispositioned, all deletions reviewed, all candidates resolved. Any
@@ -349,9 +349,9 @@ splits the work instead and records the split in the run log.
 - CLI limit/429: review `paused_limit`, CLI message shown verbatim, manual
   resume re-invokes the stage with `--resume <sessionId>`.
 - Cancel: kills the subprocess and marks the review cancelled; the stage
-  that was running leaves no row, since a row is written only once a stage
-  settles (`02-DATA-MODEL.md`). The worktree and completed-stage results
-  are kept.
+  that was running is recorded as failed, with the error class
+  `cancelled` (`src/server/review/checkpointing-runner.ts`). The worktree
+  and completed-stage results are kept.
 - Server restart: running reviews become `interrupted`; resume re-runs the
   interrupted stage only.
 - A resume reuses the ledger seeded on the first run only when it is the

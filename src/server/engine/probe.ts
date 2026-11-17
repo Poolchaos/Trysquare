@@ -339,7 +339,7 @@ export interface ModelCandidate {
 }
 
 /**
- * The registry the app probes on first run.
+ * The candidates the app registers at start, each probed only on a press.
  *
  * These are candidates, not a promise: each is probed and shown only if the
  * account can actually use it. Full ids only, because a short alias resolves
