@@ -11,3 +11,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # One pull request for all of them: each one runs the whole gate on
+    # three platforms, and three at once was the first day's result.
+    groups:
+      actions:
+        patterns: ["*"]
