@@ -27,8 +27,12 @@ from 2026-11-03.
   1477 unit tests passing, 8 skipped, and 137 browser tests. Since, the same
   day: Next's telemetry turned off (D-233, D-234), `./verify.sh --e2e`
   exiting 0 at 1a43243 with 1478 unit tests passing, 8 skipped, and 137
-  browser tests. Still waiting on the maintainer: the verdicts on G1, WP-I
-  and WP-J, MVP 7.4, and the plan's six decision gates.
+  browser tests; an imported protocol's image shown as text, never fetched
+  (CP-5), at 16a3565 with 1482 unit tests and 139 browser tests; the CI
+  actions at their v7 releases (87450b4). Still waiting on the maintainer:
+  the verdicts on G1, WP-I and WP-J, MVP 7.4, and two of the plan's six
+  decision gates, CG-2 and CG-4; the other four are taken at their written
+  recommendation while he is away (D-236).
 - 2026-10-28: every finding of both outside audits is now fixed or
   answered: U3, U4 and U7 to U10 since 2026-10-25, with review round 15
   over them and over D-225 (in DECISIONS). A ruleset can be the default a
