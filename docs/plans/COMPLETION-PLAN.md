@@ -43,8 +43,8 @@ verdict is given by an AI: a gate passes on the maintainer's word alone.
 
 | WP | Scope | Blocked on | Status |
 | --- | --- | --- | --- |
-| CP-1 | Audit F1, F2: next and eslint-config-next to 16.4.6 (D-231). `./verify.sh --e2e` exits 0 twice, each from a clean `.next`; CI green at the commit. | - | IN PROGRESS 2026-11-17: installed, `npm audit --omit=dev` 0; the gate waits on the machine's swap. |
-| CP-2 | Audit F4: a decision entry that the MVP's exit criteria 1, 4 and 5, row 7.4 and G1's row are met on Linux, the maintainer's machine now; `MVP-PLAN.md`, `GATES.md` and the README's Windows note brought to it. The Windows CI leg stays, as information. | - | TODO |
+| CP-1 | Audit F1, F2: next and eslint-config-next to 16.4.6 (D-231). `./verify.sh --e2e` exits 0 twice, each from a clean `.next`; CI green at the commit. | - | DONE 2026-11-17 (fe22a19, D-231): `./verify.sh --e2e` exited 0 twice, each from an empty `.next`, 1477 unit tests passing, 8 skipped, and 137 browser tests each time; `npm audit --omit=dev` reports 0. CI for it is CP-2's push. |
+| CP-2 | Audit F4: a decision entry that the MVP's exit criteria 1, 4 and 5, row 7.4 and G1's row are met on Linux, the maintainer's machine now; `MVP-PLAN.md`, `GATES.md` and the README's Windows note brought to it. The Windows CI leg stays, as information. | - | DONE 2026-11-17 (D-232): the criteria, row 7.4, `GATES.md` and the README's requirements say Linux; `main` requires the Ubuntu and macOS checks. |
 | CP-3 | The records: audit F6, F7, F8 and the grader's G1 to G4; the inbox entries filed under Retired while open; `npm run doctor` saying its remedy only on a failing line (F14, with a test). Then a fresh grader regrades Honest. | CP-1, CP-2 | TODO |
 | CP-4 | Audit F10: the three CI actions pinned to commits; `.github/dependabot.yml` for npm and for the actions. Alerts and protection on `main` were turned on 2026-11-17. | - | TODO |
 | CP-5 | The five security checklist lines the audit did not re-walk, read over b1b2fce to HEAD, D-227's markdown renderer among them; findings fixed or recorded. | CP-1 | TODO |

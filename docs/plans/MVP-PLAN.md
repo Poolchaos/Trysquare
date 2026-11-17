@@ -63,6 +63,15 @@ local CLI.
 6. Every high-severity audit finding in scope is DONE; `npm audit` reports no
    critical or high advisory in production dependencies.
 
+Re-scoped 2026-11-17 (D-232): the maintainer's machine is Linux, and nobody
+working on the app uses Windows. Criterion 1 was met on Windows on
+2026-10-16 and holds now on the maintainer's Linux machine and on
+`ubuntu-latest` and `macos-latest`; `windows-latest` still runs and gates
+nothing. Criterion 4's run was made on Windows on 2026-10-22 (7.3) and its
+evidence went with that machine, so the G1 verdict is given on a fresh run
+on Linux (`COMPLETION-PLAN.md` CP-7). Criterion 5 and row 7.4 are met on
+Linux.
+
 **Non-goals for the MVP** (public release is a later milestone, D-85):
 WP-G completion moment, WP-K queue phone layout, WP-L my branches,
 multi-ruleset reviews, more than one dependency, emailing reports, an npm or
@@ -173,7 +182,7 @@ engine fixes in phase 4 have landed.
 | 7.1 | D1 per MG-8: build D-51 project editing, the last-used model default, and the T19 dead-export gate, one diff each. | - | DONE 2026-10-22. A project's name and default branch are edited from its page through PATCH /api/projects/:id, a default branch only one the clone has (ec9f6cb; 1159 and 97, CI run 39733821489, red on macOS in the themes axe test, fixed by 74a5c26); D-173 found the form's branch left to the select, which took the newest branch once the list arrived, so a rename moved the default, and the tests setting the default to itself: the form holds both, and the tests move it to main (c1c06d0; 1163 and 98, CI run 39739865009). A new review starts on the model of the review made last while a probe vouches for it (d8519dc; 1163 and 98, CI run 39736951145, pushed with 74a5c26). The dead-export gate, scripts/check-dead-exports.mjs, runs in `./verify.sh`, mutation-proved (fe36706; 1163, CI run 39737950514, D-172); D-173 found it skipping re-exports, which hid a dead one, and miscounting a destructured import (5a19308; 1163 and 98, CI run 39744051870). The themes axe tests wait for the page's transitions to end, the probe buttons measured mid-fade on macOS (74a5c26; 1163, CI run 39736951145), and only for those that end (9a4fd19; 1163, CI run 39741921027). Counts are unit then browser tests from `./verify.sh --e2e` on Windows, which exited 0 at each; fe36706's, 74a5c26's and 9a4fd19's are unit tests from `./verify.sh`. |
 | 7.2 | R1 records pass: PROJECT-STATE, RUNBOOK and README name the supported OSes, the minimum CLI version and how to check sign-in; 06-MODELS re-verified against the current CLI; the stale plan rows and inbox misfiles named in both audits; the volatile "proven on this machine" fact moves out of `CLAUDE.md` into docs. | Phases 1-6 | DONE 2026-10-22. PROJECT-STATE, RUNBOOK and README name Windows, macOS and Linux, CI proving each push on all three, real reviews so far on Linux only; Claude Code 2.1.301 or newer; and Check the CLI on Settings (ef25522, e16c5d5). 06 re-verified against the bundled 2.1.301 by reading it, nothing probed, D-177 (e665683). The stale rows and inbox misfiles both audits named, and the PROJECT-STATE facts they and a fresh read found, fixed (a8148e6, e16c5d5, d60a550). CLAUDE.md's dated proof of its commands moved to PROJECT-STATE after each was run again; running `npm run dev` found it writing into CLAUDE.md, stopped in D-178 (3826aab). What stands, and why, is D-179. Each passed CI on all three. |
 | 7.3 | Fresh real-engine run on the 11-defect fixture on Windows, evidence captured, for the G1 verdict. Spends usage. | Phases 3-4, maintainer go | DONE 2026-10-22, the verdict the maintainer's. claude-fable-5[1m] on the 11-defect fixture at b0deb2f on Windows 11: 9/11 by the key, the two misses each found and verified but cited where the change was made, 11 candidates all verified, no quote-check kills, clean files clean, $5.2976 in 280.0s. Evidence `review/2026-10-22-fg2/151004-claude-fable-5-1m/`, git-ignored; summary in D-183, GATES and FG2-CHECKLIST. |
-| 7.4 | The maintainer's own real review on Windows, for the G2 verdict, plus one stage run by hand in Mode B from the printed command (owed by 3.7). Spends usage. | 7.3 | TODO |
+| 7.4 | The maintainer's own real review, for the G2 verdict, plus one stage run by hand in Mode B from the printed command (owed by 3.7). Spends usage. Written for Windows; on Linux since D-232 (2026-11-17). | 7.3 | TODO |
 
 ## 3. Decision gates (maintainer)
 

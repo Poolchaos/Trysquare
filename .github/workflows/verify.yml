@@ -7,7 +7,10 @@ on:
 
 jobs:
   verify:
-    # The three platforms the MVP supports (D-85). macOS has no person
+    # Ubuntu and macOS are required on main. Windows runs as information
+    # only since D-232: nobody working on the app uses it, so a failure it
+    # alone shows is recorded, not fixed.
+    # The three platforms the MVP was built for (D-85). macOS has no person
     # driving it, so this job is its proof (D-86). fail-fast is off so one
     # platform's failure never hides another's result.
     strategy:

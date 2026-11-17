@@ -25,6 +25,15 @@ Notes:
   the clean files, $3.1545 in 344.4s; read in D-193, evidence in
   `review/2026-10-23-fg2/173944-claude-opus-5-5/`.
 
+- Re-scoped again on 2026-11-17 (D-232): the maintainer's machine is Linux
+  and Windows is not looked after for now, so G1's verdict is given on a
+  fresh real-engine run of the fixture on Linux, and G2's review is driven
+  there. Every `review/` folder this ledger cites was made on a machine the
+  maintainer no longer has, and none was found on this one or in their
+  backups (`plans/AUDIT-2026-11-17.md`, F5): the runs' summaries above and
+  in DECISIONS (D-183, D-193, D-200) are what remains of them, and
+  `plans/COMPLETION-PLAN.md` CP-7 makes the fresh ones.
+
 - Evidence under `review/` is gitignored and therefore exists only on the
   machine that produced it, currently the maintainer's. A reader cloning this
   repository will not find `review/2026-07-31-fg2/` and should reproduce it

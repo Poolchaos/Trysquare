@@ -5949,3 +5949,25 @@ verified evidence, in writing, here.
   here, by `npm install` with a decision entry. The stop returns with the
   next advisory against the installed release; Dependabot's alerts, on for
   the repository from today, are how it is heard of first.
+- 2026-11-17 D-232 Windows is not looked after for now, the audit's F4. The
+  maintainer, asked whether a Windows machine remains for MVP 7.4 and the G1
+  verdict: "no and none of my colleagues use windows either, so there's no
+  need to cater for it for now"; and of its CI job: "keep it for now. we
+  might cater for it in the future, but no need for it atm". So: the MVP's
+  exit criteria 1, 4 and 5, row 7.4 and the G1 and G2 verdicts are met on
+  Linux, the maintainer's machine (D-86 had put them on Windows); new work
+  owes no proof on Windows; `windows-latest` stays in CI's matrix as
+  information, and a failure it alone shows is recorded and not fixed, which
+  retires D-105's re-run. `main` is protected from today: `verify
+  (ubuntu-latest)` and `verify (macos-latest)` are required, force pushes
+  and deletion are refused, and the administrator is exempt, being the only
+  account with write access. No review is required, for the same reason.
+  The first run under this entry: 44072845914 at 7570bfb passed on Ubuntu
+  and macOS and failed on Windows alone, in failure-paths, on
+  `net::ERR_NO_BUFFER_SPACE` at `page.goto`, D-105's failure again. The same
+  run answers a question the audit left open: it built next 16.4.4 under
+  its advisory on all three, so CI's build does not stop as a session's
+  does (D-231). The Windows CI stall of 2026-10-23 in the idea inbox is
+  parked with this entry. Rejected: dropping the Windows job, which would
+  lose the only sign that the app still starts there; keeping it required,
+  which makes a platform nobody uses able to stop every push.

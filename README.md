@@ -169,18 +169,19 @@ it opened each image stands alone. A project with no e2e is reported as
 
 ## Requirements
 
-- Windows, macOS or Linux. Every push passes the whole test suite on all
-  three in CI (GitHub's `windows-latest`, `macos-latest` and
-  `ubuntu-latest`) against a stand-in for the CLI; real reviews have run on
-  Linux and, since 2026-10-22, on Windows; macOS has had none.
-- On Windows, note: since 2026-11-03 the people using Trysquare day to day
-  are on Linux and macOS, so CI is the only regular check that Windows
-  still works. If something breaks there, open an issue with the error.
-  Set `TRYSQUARE_CLAUDE_PATH` to `claude.exe` or an npm `claude.cmd` when
-  using a CLI other than the one installed with the app. CI's Windows
-  runner sometimes refuses a browser test's connection with
-  `net::ERR_NO_BUFFER_SPACE` before the app answers; that job is re-run
-  once and recorded (D-105), and any other failure stops the line.
+- Linux or macOS. Every push runs the whole test suite on both in CI
+  (GitHub's `ubuntu-latest` and `macos-latest`) against a stand-in for the
+  CLI, and a change reaches `main` only with both green. Real reviews have
+  run on Linux; macOS has had none.
+- Windows is not looked after for now (D-232, 2026-11-17): nobody who works
+  on Trysquare uses it. The app was built to run there and ran real reviews
+  there on 2026-10-22, and CI still runs the suite on `windows-latest` on
+  every push, but that job gates nothing, and a failure only it shows is
+  recorded, not fixed. Its runner sometimes refuses a browser test's
+  connection with `net::ERR_NO_BUFFER_SPACE` before the app answers
+  (D-105). If you need Windows, open an issue. Set `TRYSQUARE_CLAUDE_PATH`
+  to `claude.exe` or an npm `claude.cmd` when using a CLI other than the one
+  installed with the app.
 - Node 22 or newer
 - git
 - A Claude subscription, signed in to [Claude Code](https://claude.com/claude-code)

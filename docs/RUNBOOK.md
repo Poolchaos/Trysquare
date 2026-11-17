@@ -11,15 +11,16 @@ review is the expensive action. Everything else, including the whole demo with
 
 ## Prerequisites
 
-- **Windows, macOS or Linux.** Every push passes `./verify.sh --build
-  --e2e` on all three in CI (`windows-latest`, `macos-latest`,
-  `ubuntu-latest`), against a stand-in for the CLI. Real reviews have run
-  on Linux and, since 2026-10-22 (MVP 7.3), on Windows; none on macOS.
+- **Linux or macOS.** Every push runs `./verify.sh --build --e2e` on both
+  in CI (`ubuntu-latest`, `macos-latest`), against a stand-in for the CLI,
+  and both must pass. Real reviews have run on Linux; none on macOS.
+  Windows is not looked after for now (D-232): `windows-latest` still runs
+  and gates nothing, and real reviews ran there on 2026-10-22 (MVP 7.3).
 - **Node 22 or newer.** `package.json` declares `>=22`, `.nvmrc` pins `22`.
-  Proven on v22.22.1 (Linux, 2026-07-31) and v22.17.0 (Windows 11,
-  2026-10-22).
-- **npm.** No version is declared. Proven on 11.17.0 (Linux) and 10.9.2
-  (Windows 11).
+  Proven on v22.22.1 (Linux, 2026-07-31), v22.17.0 (Windows 11,
+  2026-10-22) and v22.17.0 (Linux, 2026-11-17).
+- **npm.** No version is declared. Proven on 11.17.0 and 10.9.2 (Linux)
+  and 10.9.2 (Windows 11).
 - **git on PATH.** The gate requires it, and the app shells out to it for
   every clone, fetch and worktree.
 - **A Claude subscription, signed in**, but only for a real review. Everything
