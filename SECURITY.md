@@ -39,7 +39,7 @@ whole categories of vulnerability, but it leaves some that matter:
   limit the blast radius by giving review stages a read-only tool allowlist and
   by not loading a reviewed repository's own agent configuration. Ways around
   those controls are in scope.
-- **Writes into a reviewed repository.** The app must never modify code under
+- **Writes to a reviewed project's code.** The app must never modify code under
   review. Any path that does is a bug of the highest severity.
 - **Leaking your code or review results off the machine.** Any unexpected
   outbound transmission by the app is in scope; what a project's own checks

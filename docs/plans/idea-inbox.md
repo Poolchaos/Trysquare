@@ -146,6 +146,10 @@ pulled deliberately.
   ("claudePath: holds a control character"), as the emails were until
   WP-L's grade. `refusedAs` in `api/settings/route.ts` is the way to name
   it as its card does.
+- 2026-11-18: a project's "fetched" time and the reviews list's time are
+  the stored UTC time cut to the minute, shown with no zone: 06:04 at 08:04
+  in the maintainer's (seen in WP-L's shots). Dates cut the same way can be
+  a day off near midnight.
 
 ## Retired
 

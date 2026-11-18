@@ -240,8 +240,9 @@ step 4, a real but tiny paid call.
 
 ## What spends model usage
 
-Only four things in the app and its commands, by deliberate design after an
-incident where a manual test silently used the real CLI:
+Four things in the app and its commands, and a fifth only if you ask it
+to, by deliberate design after an incident where a manual test silently
+used the real CLI:
 
 - Starting a review, or resuming one: Resume pays for the stages that had
   not finished, and replays the finished ones for free.
@@ -255,6 +256,10 @@ incident where a manual test silently used the real CLI:
   `--model`. Each says how the CLI is signed in first, and stops, having
   spent nothing, when that bills per token or may, unless `--per-token` is
   passed.
+- `npm run claude -- <arguments>` hands the CLI whatever you give it. The
+  two uses this runbook names, `auth login` and `auth status`, spend
+  nothing; a prompt given to it is a request to a model like any other you
+  make with that CLI.
 
 Checking sign-in on Settings runs the CLI's own auth status and spends
 nothing. Pre-flight is git and arithmetic only. The test suite spends

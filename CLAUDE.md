@@ -208,12 +208,13 @@ boundary. Versions in `docs/PROJECT-STATE.md`.
   that allowlist is a decision-log entry, never a convenience.
 - Every spawned `claude` process has `CLAUDECODE` scrubbed from its
   environment (it would otherwise run as that session's child, D-120), and
-  a stage or a probe, the two that call a model, passes an explicit system
-  prompt
+  a stage or a probe, the app's own two calls to a model, passes an
+  explicit system prompt
   (`--system-prompt-file` for a stage, `--system-prompt` for a probe) plus
   minimal `--tools`.
-- Full model ids only, never short aliases: `opus` and `sonnet` resolve to
-  the previous generation.
+- Full model ids only, never short aliases: an alias is whatever the CLI
+  calls current, and `opus` and `sonnet` were a generation behind when
+  measured (D-177).
 - `lib/` is pure and I/O-free; only `server/gitops` spawns git; only
   `server/engine` spawns claude; only `server/projectrun` spawns a
   project's own commands, and only in a throwaway copy of the branch; all

@@ -335,11 +335,14 @@ text rather than by snapshots.
 (`06-MODELS-AND-PROFILES.md`). `full-context` sends the whole ruleset and
 whole change set at once; `chunked` runs the adversarial pass once per rule
 theme over file groups; `decomposed` narrows further to per-file prompts
-carrying only the rules whose tags match that file's tech. The completeness
-invariant is identical on every profile: the app tracks which (rule, hunk)
-pairs each request covered and refuses to leave S3 until the union covers
-every enabled rule against every hunk. Rules are never summarised or dropped
-to fit a window, and truncation is never silent (workspace law); the app
+carrying only the rules whose themes that file's path suggests. The
+completeness invariant is the same on every profile: every pairing of an
+enabled rule and a changed file is checked or recorded as deliberately
+excluded, and the app proves that on the planned requests before the
+adversarial stage sends one (`assertBatchesCoverEverything`). Only
+`decomposed` excludes; its exclusions are counted in the pre-flight and
+named in a note on the run (06 section 3). Rules are never summarised to
+fit a window, and truncation is never silent (workspace law); the app
 splits the work instead and records the split in the run log.
 
 ## 5. Failure, pause, resume, cancel

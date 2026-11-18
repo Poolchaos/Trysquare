@@ -111,9 +111,10 @@ and you have to handle it.
 A few constraints are load-bearing and a pull request that breaks them will be
 asked to change, even if it works:
 
-- **Never write into a reviewed repository.** Clones are bare and review
-  worktrees are read-only. There must be no code path that modifies code under
-  review.
+- **Never write a reviewed project's code.** Clones are bare, and only git
+  writes in one: a fetch, and a review's worktree being registered. A
+  review's checkout is never written to. There must be no code path that
+  modifies code under review.
 - **The model's tool allowlist stays read-only.** Widening it is a design
   decision that belongs in `docs/DECISIONS.md`, not a convenience in a patch.
 - **Coverage is enforced by code.** Anything that decides whether a hunk,

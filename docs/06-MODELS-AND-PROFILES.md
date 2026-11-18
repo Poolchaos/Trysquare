@@ -8,9 +8,12 @@ the bundled 2.1.301 by reading its binary and running its free commands,
 not by probing: the probe table and the probe's cost in section 1 were not
 measured again, since a probe spends usage (MVP 7.2).
 
-Every part of this document is built: the one item this section listed on
-2026-08-03, choosing the profile on the new-review screen, shipped with U8
-on 2026-08-04 as the Profile control in its advanced fold.
+Every part of this document is built but one. The item this section
+listed on 2026-08-03, choosing the profile on the new-review screen,
+shipped with U8 on 2026-08-04 as the Profile control in its advanced fold.
+Not built: any helper that would give a `mechanical-only` model the
+non-judgment work its row in section 3 allows it. Such a model is refused
+for a review, and no other code asks for one.
 
 ## 1. Measured facts (evidence, 2026-07-30)
 
@@ -18,16 +21,20 @@ on 2026-08-04 as the Profile control in its advanced fold.
 `{"loggedIn":bool,"authMethod":string,"apiProvider":string,"subscriptionType":string}`.
 Signed out, 2.1.301 prints `{"loggedIn":false,"authMethod":"none",...}` and
 exits 1 (measured 2026-10-20 with an empty config directory), so the status
-is read from stdout before the exit code. The app reads this only when
+is read from stdout before the exit code. The app reads this when
 someone opens Settings, which says above Models that a sign-in billing per
 token makes a probe cost API usage, or presses Check the CLI there; opens
 the new-review screen, which says the same of a review before Start
-(D-161); or creates or starts a review that runs headless,
+(D-161); opens a review that can be started, whose page reads how it
+bills before Start; asks to verify a finding again, as the dialog opens
+and again on the server before the request is sent; or creates or starts
+a review that runs headless,
 which is refused with the reason when the CLI is not found, cannot run or
 is signed out (MVP 6.2), and, when it bills per token or may, until the
 page has said so: each page sends what it showed with Create and Start,
-and one refused shows the notice for the next (review of D-161). Never at
-startup or on a timer.
+and one refused shows the notice for the next (review of D-161). `npm run
+doctor` reads it too, once, and is the `predev` of `npm run dev`. The
+server itself never reads it at startup or on a timer.
 Both checks are free, so they run as those screens open; D-31 keeps every
 call that spends to an explicit action. The check asks `auth status` with
 `--setting-sources ""`, as every review and probe runs, an interactive
@@ -184,13 +191,19 @@ The maintainer's constraint, 2026-07-30: "Fable I can give this full document an
 will get great results, but I can't say the same about sonnet." The
 pipeline therefore adapts its delivery strategy to model capability.
 
-**The invariant that never adapts: completeness.** Every enabled rule is
-walked against every hunk, every sweep hit is dispositioned, every deletion
-reviewed, and every finding verified, on every profile. A profile changes
-_how the work is divided into requests_, never _how much of the protocol is
-applied_. Dropping or summarising rules to fit a weaker model is forbidden;
-the app splits the work instead. Coverage is enforced by app code (03), so a
-weaker model cannot quietly skip a rule.
+**The invariant that never adapts: completeness.** Every pairing of an
+enabled rule and a changed file is either checked or recorded as
+deliberately excluded (DECISIONS, 2026-07-30, WP-D, correcting this
+section's first wording, "every rule against every hunk"); every hunk and
+sweep hit is dispositioned, every deletion reviewed, and every finding
+verified, on every profile. Only `decomposed` excludes: a rule is not sent
+for a file whose path suggests none of the rule's themes, and each such
+pair is recorded with its reason, counted in the pre-flight, and named in
+a note on the run, the first twenty of them. `full-context` and `chunked`
+change only _how the work is divided into requests_. Summarising a rule to
+fit a weaker model is forbidden; the app splits the work instead. The
+planned requests are checked by app code before one is sent
+(`assertBatchesCoverEverything`, 03), so a pair is never left out unnamed.
 
 Each model carries a `profileId`. Profiles are declarative config:
 
@@ -198,8 +211,8 @@ Each model carries a `profileId`. Profiles are declarative config:
 | ----------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | `full-context`    | claude-opus-5-5, claude-fable-5-1, claude-fable-5[1m], claude-opus-5[1m]  | Entire ruleset verbatim in one prompt                                                                                                                                                                                      | Whole change set in one comprehension and one adversarial pass; split only if the estimate exceeds the window | All findings in one fresh session, then the proven ones in another (S5b) |
 | `chunked`         | claude-sonnet-5-5, claude-fable-5, claude-opus-5, claude-sonnet-5[1m]     | Full ruleset verbatim, but the adversarial pass runs once per rule theme (typescript, react, async, database, security, numeric, testing, organisation, general) with that theme's rules in the prompt                   | File groups sized to the window                                                                               | As full-context                   |
-| `decomposed`      | claude-sonnet-5, claude-opus-4-6, other mid-tier                          | Theme chunks as above, further narrowed: only rules whose tags match the file's detected tech reach that file's prompt, and the app tracks which (rule, hunk) pairs each request covered so the union is provably complete | Per file                                                                                                      | As full-context                   |
-| `mechanical-only` | anything untrusted for judgment; Haiku is retired (D-184)                 | Not offered for judgment stages                                                                                                                                                                                            | Usable only for non-judgment helpers (e.g. summarising a sweep hit list)                                      | Never                             |
+| `decomposed`      | claude-sonnet-5, claude-opus-4-6, other mid-tier                          | Theme chunks as above, further narrowed: only the themes a file's path suggests reach that file's prompt, and the app records each (rule, file) pair left out, with its reason, so every pair is checked or named | Per file                                                                                                      | As full-context                   |
+| `mechanical-only` | anything untrusted for judgment; Haiku is retired (D-184)                 | Not offered for judgment stages                                                                                                                                                                                            | Meant for non-judgment helpers (e.g. summarising a sweep hit list); none is built                                      | Never                             |
 
 Profile selection is automatic from the model, shown in the pre-flight, and
 overridable per review (a deliberate downgrade is allowed and recorded on
@@ -216,7 +229,7 @@ claim or it is not made.
 ## 4. Open item
 
 Rule-to-tech tagging quality decides how well `decomposed` narrows. The
-protocol import (WP-D) must tag every rule with the tech it applies to
-(react, firestore, typescript, node, tests, general). Untagged rules default
-to `general` and are therefore sent to every file, which is safe but
-expensive. Tag quality is reviewed at FG-2.
+protocol import (WP-D) tags every rule from the heading it sits under and
+its title (react, typescript, database, async, security, testing, numeric,
+organisation). A rule with none of those is `general` and is therefore
+sent to every file, which is safe but expensive. Tag quality is reviewed at FG-2.

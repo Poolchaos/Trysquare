@@ -124,7 +124,7 @@ review prepares, as code findings are from the stages' answers.
 | code             | text      | protocol numbering, e.g. "5b", unique per ruleset   |
 | title            | text      |                                                     |
 | severity         | text      | CRITICAL, WARNING, NITPICK (ERROR maps to CRITICAL) |
-| tags             | text JSON | tech tags, e.g. ["react","firestore"]               |
+| tags             | text JSON | tech tags, e.g. ["react","database"]                |
 | ruleText         | text      | verbatim markdown                                   |
 | violationExample | text null | verbatim fenced code                                |
 | correctPattern   | text null | verbatim fenced code                                |
@@ -287,8 +287,10 @@ profileId text = full-context, chunked, decomposed, mechanical-only;
 recommended int bool; sortOrder int; lastProbedAt text null; lastError text
 null)
 
-Short aliases (`opus`, `sonnet`) are never stored or passed: they resolve to
-the previous model generation. A unit test asserts no registry row and no
+Short aliases (`opus`, `sonnet`) are never stored or passed: an alias is
+whatever the CLI calls current for its family, which was the previous
+generation when measured on 2.1.71 and is unmeasured on 2.1.301 (06
+section 1, D-177). A unit test asserts no registry row and no
 composed command uses an alias form.
 
 ### settings

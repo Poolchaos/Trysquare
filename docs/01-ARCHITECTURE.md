@@ -199,16 +199,17 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
 
 See `06-MODELS-AND-PROFILES.md` (authoritative): the app probes a candidate
 registry to show the models this account can actually use, passes full model
-ids only (short aliases resolve to the previous generation), and selects a
+ids only (a short alias is whatever the CLI calls current for its family,
+the previous generation when measured on 2.1.71, D-177), and selects a
 review profile from the model's capability tier. Two engine requirements
 established there are load-bearing here: every spawn scrubs `CLAUDECODE`
-from the child environment, and every spawn that calls a model passes an
+from the child environment, and the app's own two calls to a model pass an
 explicit system prompt (`--system-prompt-file` for a stage,
 `--system-prompt` for a probe) and minimal `--tools` list rather than
 inheriting the CLI's defaults. The other three pass neither: `--version`
 and `auth status`, which call no model, and the attached run behind `npm
 run claude`, which hands the CLI a person's own arguments, `auth login` to
-sign in.
+sign in, and would reach a model only if those arguments asked it to.
 
 ## 7a. Threat model: reviewed code is untrusted input
 

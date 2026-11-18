@@ -95,7 +95,9 @@ confirm or dismiss with a reason. Only what you confirm reaches the report.
 
 **Reviewed code is never modified.** Projects are cloned bare, reviews run in
 detached worktrees pinned to a commit, and the model gets a read-only tool
-allowlist. There is no code path that writes into a repository under review.
+allowlist. No code path writes a project's code, in its clone or in a
+review's checkout. Git alone writes in a clone: a fetch brings its branches
+to the remote's, and a review registers its worktree there.
 
 ## What it looks like
 
@@ -163,8 +165,13 @@ common case where an app and a package it consumes are changed together and a
 type change in the package is only dangerous at the consumer. And the way work
 is divided between requests adapts to the model you pick, because a model with
 a large context window can hold an entire rule set at once and a smaller one
-cannot. What never adapts is coverage: weaker models get more, smaller
-requests, never a shortened rule set.
+cannot. What never adapts is that nothing goes unchecked without a record:
+every pairing of a rule and a changed file is either checked or recorded as
+deliberately left out, and the app proves that on the planned requests
+before it sends one. Only the `decomposed` profile, the one mid-tier models
+get, leaves any out: a rule is not sent for a file whose path suggests none
+of the rule's themes. The pre-flight says how many such pairs there are, and a
+note on the run names the first twenty. A rule's text is never shortened.
 
 A project can also have its own checks turned on. Its install, tests and e2e
 then run as you, on a throwaway copy of the branch, before any model is asked,
@@ -238,10 +245,13 @@ from `next dev` and `next build`; `next.config.ts` turns that off. The
 Claude Code CLI sends usage telemetry and error reports by default; every
 CLI the app starts is told to make only the requests a review needs,
 whatever your shell says. A CLI it does not start is yours: in the
-interactive mode you run each stage yourself, and a CLI whose path you keep
-on Settings or in `TRYSQUARE_CLAUDE_PATH` is signed in by you, each from a
-command the app prints, in your own terminal and with your own environment,
-your choice about the CLI's telemetry included. Two requests the framework still makes, both to the npm registry:
+interactive mode you run each stage yourself, and for a CLI whose path you
+keep on Settings or in `TRYSQUARE_CLAUDE_PATH` the app prints the sign-in
+command for you to run; each runs in your own terminal and with your own
+environment, your choice about the CLI's telemetry included. `npm run
+claude` and `npm run claude:auth` are the app's own: with
+`TRYSQUARE_CLAUDE_PATH` set in the terminal they start that CLI as the app
+starts any other, its telemetry off. Two requests the framework still makes, both to the npm registry:
 when the app starts with `npm run dev`, or is built from a terminal or by an
 AI agent, Next.js asks whether its own installed version has a security
 advisory, sends that version number to do so, and reads the list of Next.js
