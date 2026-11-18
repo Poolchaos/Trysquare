@@ -40,7 +40,10 @@ describe("the email git commits as", () => {
 
   it("is read through a file the global config includes", async () => {
     writeFileSync(join(dir, "identity"), "[user]\n\temail = included@example.invalid\n");
-    globalConfig("including", `[include]\n\tpath = ${join(dir, "identity")}\n`);
+    // Relative to the file that includes it: a Windows path written here
+    // whole is a bad config line, its backslashes being git's escapes
+    // (CI run 44248872821).
+    globalConfig("including", "[include]\n\tpath = identity\n");
     expect(await globalUserEmail()).toBe("included@example.invalid");
   });
 
