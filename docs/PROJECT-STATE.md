@@ -13,6 +13,17 @@ from 2026-11-03.
 
 ## Status
 
+- 2026-11-18: WP-L's first slice of three (D-243). Settings keeps the git
+  emails that count as the person's and, while none is kept, goes by the
+  `user.email` of their git config and names it; a project's branches have
+  a Mine toggle, and a Mine list that comes back empty says whose commits
+  it looked for and where that is changed. Its shots were graded by
+  looking, and four faults fixed before any passed: an email broken in the
+  middle of a word, "branch(es)", a refusal that began with the setting's
+  storage key, and a sticky top bar photographed where the page had been
+  scrolled to. `./verify.sh --e2e` exits 0 with 1522 unit tests passing, 8
+  skipped, and 145 browser tests. Still to build: the same filter in the
+  new-review picker, and the scoreboard's author column.
 - 2026-11-17: an audit of what remains (`plans/AUDIT-2026-11-17.md`),
   graded C by an independent grader: fourteen findings and five the grader
   added. Its remaining work is `plans/COMPLETION-PLAN.md`, CP-1 to CP-15.

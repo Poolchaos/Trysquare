@@ -26,7 +26,12 @@ const CATALOGUE = {
   [SETTING_KEYS.stageMaxBudgetUsd]: { schema: z.number().nonnegative(), fallback: 15 },
   [SETTING_KEYS.claudePath]: { schema: claudePathSchema, fallback: "" },
   [SETTING_KEYS.defaultRulesetId]: { schema: z.string().min(1).nullable(), fallback: null },
-  [SETTING_KEYS.identities]: { schema: identitiesSchema, fallback: [] },
+  [SETTING_KEYS.identities]: {
+    schema: identitiesSchema,
+    fallback: [],
+    // What a refusal calls it: its card says emails, and nobody typed the key.
+    refusedAs: "The list of emails",
+  },
 } as const;
 
 /**
@@ -100,9 +105,10 @@ export function PUT(request: Request): Promise<Response> {
       }
       const parsed = entry.schema.safeParse(value);
       if (!parsed.success) {
+        const subject = "refusedAs" in entry ? entry.refusedAs : `${key}:`;
         throw Response.json(
           {
-            error: `${key}: ${parsed.error.issues[0]?.message ?? "is not valid"}`,
+            error: `${subject} ${parsed.error.issues[0]?.message ?? "is not valid"}`,
             code: "Invalid",
           },
           { status: 400 },

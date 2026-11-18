@@ -138,6 +138,14 @@ pulled deliberately.
   line was the tail of a built entry. The Windows-only entries in this
   list (the CI stall of 2026-10-23, the e2e server's death) are parked: no
   work goes into them while Windows is not looked after (D-232).
+- 2026-11-18: counts are written "review(s)", "file(s)", "branch(es)" in
+  about seventy places, on screens, in run notes and in the report (seen
+  while grading WP-L's shots; the project page's branch lines now say the
+  real plural). One helper, and each line read again.
+- 2026-11-18: a refused CLI path on Settings is shown with its storage key
+  ("claudePath: holds a control character"), as the emails were until
+  WP-L's grade. `refusedAs` in `api/settings/route.ts` is the way to name
+  it as its card does.
 
 ## Retired
 

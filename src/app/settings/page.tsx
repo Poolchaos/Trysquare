@@ -572,8 +572,11 @@ export default function SettingsPage() {
                   <Problem>{environment.gitEmailProblem}</Problem>
                 ) : environment.gitEmail !== null ? (
                   <p className="text-xs text-[var(--color-ink-muted)]" data-testid="git-email">
-                    Going by <Mono className="break-all">{environment.gitEmail}</Mono>, from your
-                    git config.
+                    Going by{" "}
+                    <Mono className="inline-block max-w-full break-all">
+                      {environment.gitEmail}
+                    </Mono>
+                    , from your git config.
                   </p>
                 ) : (
                   <p className="text-xs text-[var(--color-warning)]" data-testid="git-email">

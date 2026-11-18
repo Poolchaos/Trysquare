@@ -159,7 +159,7 @@ describe("the emails that count as mine", () => {
     const refused = await save({ identities: ["Me <me@example.invalid>"] });
     expect(refused.status).toBe(400);
     expect(await refused.json()).toEqual({
-      error: "identities: holds < or >: enter the email alone, without a name",
+      error: "The list of emails holds < or >: enter the email alone, without a name",
       code: "Invalid",
     });
     expect((await settings()).settings.identities).toEqual([]);

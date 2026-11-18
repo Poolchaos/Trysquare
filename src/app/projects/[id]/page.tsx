@@ -362,10 +362,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                     .
                   </Empty>
                 ) : (
-                  <Empty title="None of these branches is yours">
-                    None of the {all.length} branch(es) here ends on a commit authored as{" "}
-                    <Mono className="break-all">{branches.body.identities.join(", ")}</Mono>. Which
-                    emails count as yours is kept in{" "}
+                  <Empty title="No branch here is yours">
+                    None ends on a commit authored as{" "}
+                    {/* Each email its own box: it moves to the next line whole,
+                        and is broken only when it is wider than the line. */}
+                    {branches.body.identities.map((email, index) => (
+                      <span key={email}>
+                        {index === 0 ? null : ", "}
+                        <Mono className="inline-block max-w-full break-all">{email}</Mono>
+                      </span>
+                    ))}
+                    . The emails that count as yours are kept in{" "}
                     <Link href="/settings" className="text-[var(--color-accent)] hover:underline">
                       Settings
                     </Link>
@@ -375,8 +382,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               ) : (
                 <Empty title="No branch matches that filter">
                   {mineOnly
-                    ? `${mine.length} of your branch(es) are here; the filter is hiding them.`
-                    : `${all.length} branch(es) are here; the filter is hiding them.`}
+                    ? mine.length === 1
+                      ? "1 of your branches is here; the filter is hiding it."
+                      : `${mine.length} of your branches are here; the filter is hiding them.`
+                    : all.length === 1
+                      ? "1 branch is here; the filter is hiding it."
+                      : `${all.length} branches are here; the filter is hiding them.`}
                 </Empty>
               )
             ) : (

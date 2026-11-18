@@ -28,8 +28,13 @@ const EVIDENCE = join(
  * seconds, so the page is never idle and a capture can land mid-repaint. An
  * element capture does not take that path, and animations are frozen so two
  * photographs of the same screen are the same photograph.
+ *
+ * From the top of the page: the capture draws the sticky top bar where the
+ * page is scrolled to, so a page left scrolled by a field filled further down
+ * was photographed with the bar across its middle, which nobody sees.
  */
 async function photograph(page: import("@playwright/test").Page, file: string): Promise<void> {
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.locator("body").screenshot({ path: file, animations: "disabled", caret: "hide" });
 }
 
@@ -548,7 +553,7 @@ test("Mine leaves the branches I last committed to, and an empty one says whose 
     await page.getByPlaceholder("Filter").fill("no branch is called this");
     await expect(page.getByText("No branch matches that filter")).toBeVisible();
     await expect(
-      page.getByText("3 of your branch(es) are here; the filter is hiding them."),
+      page.getByText("3 of your branches are here; the filter is hiding them."),
     ).toBeVisible();
     await page.getByPlaceholder("Filter").fill("");
     await expect(rows).toHaveCount(3);
@@ -572,24 +577,35 @@ test("Mine leaves the branches I last committed to, and an empty one says whose 
     await photograph(page, shot("settings-emails-kept"));
     await page.setViewportSize(phone);
     expect(await sideways(), "Settings scrolls sideways at 360").toBeLessThanOrEqual(0);
-    await emails.scrollIntoViewIfNeeded();
     await photograph(page, shot("settings-emails-kept-phone"));
     await page.setViewportSize(desk);
 
     await openBranches();
     await mine.click();
-    const none = page.getByText("None of these branches is yours");
+    const none = page.getByText("No branch here is yours");
     await expect(none).toBeVisible();
     await expect(
       page.getByText(
-        "None of the 4 branch(es) here ends on a commit authored as someone-else@example.invalid.",
+        "None ends on a commit authored as someone-else@example.invalid. The emails that count as yours are kept in Settings.",
       ),
     ).toBeVisible();
     await expect(page.getByRole("main").getByRole("table")).toHaveCount(0);
+    // The email is read whole: broken wherever the line ran out, it was
+    // "someo" on one line and the rest on the next, at both widths.
+    const linesOfEmail = () =>
+      page
+        .getByRole("main")
+        .getByText("someone-else@example.invalid", { exact: true })
+        .evaluate(
+          (email) =>
+            email.getBoundingClientRect().height / parseFloat(getComputedStyle(email).lineHeight),
+        );
+    expect(await linesOfEmail(), "the email sits on one line at desk width").toBeLessThan(1.5);
     expect(await violations()).toEqual([]);
     await photograph(page, shot("project-mine-none"));
     await page.setViewportSize(phone);
     expect(await sideways(), "the empty Mine list scrolls sideways at 360").toBeLessThanOrEqual(0);
+    expect(await linesOfEmail(), "the email sits on one line at 360").toBeLessThan(1.5);
     await photograph(page, shot("project-mine-none-phone"));
     await page.setViewportSize(desk);
     // The way out it names is a link, and it goes there.
@@ -601,7 +617,7 @@ test("Mine leaves the branches I last committed to, and an empty one says whose 
     await emails.fill("Fixture <fixture@example.invalid>");
     await emails.blur();
     await expect(
-      page.getByText("identities: holds < or >: enter the email alone, without a name"),
+      page.getByText("The list of emails holds < or >: enter the email alone, without a name"),
     ).toBeVisible();
     await expect(emails).toHaveValue("Fixture <fixture@example.invalid>");
     await photograph(page, shot("settings-emails-refused"));
