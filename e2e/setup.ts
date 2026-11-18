@@ -13,7 +13,15 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -86,6 +94,24 @@ export const STALL_TRIGGER = join(E2E_ROOT, "arm-stall.json");
  */
 export const APP_REPO = join(E2E_ROOT, "app.git");
 
+/**
+ * The server's global git config, in place of whoever runs the suite's own:
+ * the email git commits as counts as the person's (WP-L, D-243), so with the
+ * real one a branch list read differently on every machine, and in CI, where
+ * there is none. The fixture's author, so its branches are the person's.
+ * Written in global setup, before any test asks the server for anything.
+ */
+export const GIT_CONFIG = join(E2E_ROOT, "gitconfig");
+export const MY_EMAIL = "fixture@example.invalid";
+/**
+ * One branch that is somebody else's, so Mine has something to leave out.
+ * Committed a day before the fixture's own commits, so it sorts last and the
+ * new-review screen's fallbacks land where they did, and named to hold none
+ * of the text the specs pick a branch by ("main", "rename-prefs").
+ */
+export const COLLEAGUE_BRANCH = "colleague/order-notes";
+export const COLLEAGUE_EMAIL = "colleague@example.invalid";
+
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 export const FAKE_CLI = join(REPO_ROOT, "tests", "fixtures", "fake-claude.mjs");
 export const PROTOCOL_PATH = join(REPO_ROOT, "tests", "fixtures", "example-protocol.md");
@@ -103,6 +129,25 @@ export default async function globalSetup(): Promise<void> {
   )) as { buildSeededRepos: (root: string) => { manifest: { defects: { kind: string }[] } } };
   const manifest = buildSeededRepos(FIXTURE_DIR).manifest;
   execFileSync("git", ["clone", "--bare", "--quiet", join(FIXTURE_DIR, "seeded-repo"), APP_REPO]);
+
+  writeFileSync(GIT_CONFIG, `[user]\n\tname = Fixture\n\temail = ${MY_EMAIL}\n`);
+  // A commit of main's own tree on top of main: a bare clone has no checkout
+  // to commit from, and the branch needs an author, not a change.
+  const inApp = (args: string[], env: NodeJS.ProcessEnv = process.env) =>
+    execFileSync("git", ["-C", APP_REPO, ...args], { encoding: "utf8", env }).trim();
+  const theirs = inApp(
+    ["commit-tree", inApp(["rev-parse", "main^{tree}"]), "-p", "main", "-m", "note the order"],
+    {
+      ...process.env,
+      GIT_AUTHOR_NAME: "Colleague",
+      GIT_AUTHOR_EMAIL: COLLEAGUE_EMAIL,
+      GIT_AUTHOR_DATE: "2025-12-31T00:00:00Z",
+      GIT_COMMITTER_NAME: "Colleague",
+      GIT_COMMITTER_EMAIL: COLLEAGUE_EMAIL,
+      GIT_COMMITTER_DATE: "2025-12-31T00:00:00Z",
+    },
+  );
+  inApp(["update-ref", `refs/heads/${COLLEAGUE_BRANCH}`, theirs]);
 
   // A reference clone and checkout, only so the answers can quote real lines.
   const referenceClone = join(E2E_ROOT, "reference.git");

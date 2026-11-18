@@ -297,7 +297,9 @@ composed command uses an alias form.
 stageMaxBudgetUsd, claudePath and defaultRulesetId (a ruleset's id or null;
 one that is not there is refused, deleting a ruleset clears a default
 that named it, and one gone from a database older than that reads as none,
-D-225).
+D-225), and identities (a list of the git emails that count as the
+person's; empty, the default, means `user.email` of their global git
+config, read when needed and never stored, D-243).
 Those five are the whole catalogue; any other key is refused by name. A new
 review starts on the model last used, with no setting for it
 (`src/lib/models/availability.ts`); the `defaultModel` key was deleted on

@@ -60,7 +60,11 @@ interface Branches {
     committedAt: string;
     ahead: number;
     behind: number;
+    /** Its newest commit was authored with one of the emails below. */
+    mine: boolean;
   }[];
+  /** The emails that count as the person's, from Settings or git's config. */
+  identities: string[];
   defaultBranch: string;
   stale: string | null;
   lastFetchedAt: string | null;
@@ -115,6 +119,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   // list instead of a "Fetching" that never ends.
   const [branches, setBranches] = useState<Sent<Branches> | null>(null);
   const [filter, setFilter] = useState("");
+  const [mineOnly, setMineOnly] = useState(false);
   const [error, setError] = useState("");
   // A read of the project that failed while a clone was being followed.
   const [followProblem, setFollowProblem] = useState("");
@@ -234,7 +239,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const { project } = detail;
   const listed = branches?.ok ? branches.body : null;
-  const shown = (listed?.branches ?? []).filter((branch) => branch.name.includes(filter));
+  const all = listed?.branches ?? [];
+  const mine = all.filter((branch) => branch.mine);
+  const shown = (mineOnly ? mine : all).filter((branch) => branch.name.includes(filter));
 
   return (
     <>
@@ -312,12 +319,25 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-heading font-semibold">Branches</h2>
-              <Input
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-                placeholder="Filter"
-                className="max-w-56"
-              />
+              <div className="flex min-w-0 items-center gap-2">
+                {/* Offered once there are branches to narrow. A toggle, so it
+                    says whether it is on rather than leaving that to colour. */}
+                {all.length === 0 ? null : (
+                  <Button
+                    variant={mineOnly ? "primary" : "secondary"}
+                    aria-pressed={mineOnly}
+                    onClick={() => setMineOnly(!mineOnly)}
+                  >
+                    Mine
+                  </Button>
+                )}
+                <Input
+                  value={filter}
+                  onChange={(event) => setFilter(event.target.value)}
+                  placeholder="Filter"
+                  className="max-w-56"
+                />
+              </div>
             </div>
 
             {branches === null ? (
@@ -325,14 +345,38 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             ) : !branches.ok ? (
               <p className="text-sm text-[var(--color-ink-muted)]">{branches.error}</p>
             ) : shown.length === 0 ? (
-              (branches.body.branches ?? []).length === 0 ? (
+              all.length === 0 ? (
                 <Empty title="This repository has no branches">
                   Nothing has been pushed to it yet, or the clone could not read its refs.
                 </Empty>
+              ) : mineOnly && mine.length === 0 ? (
+                // Why Mine came back empty, and where that is changed: an
+                // empty list alone reads as a project with no branches.
+                branches.body.identities.length === 0 ? (
+                  <Empty title="No email counts as yours yet">
+                    A branch is yours when its newest commit was authored with one of your git
+                    emails. Enter yours in{" "}
+                    <Link href="/settings" className="text-[var(--color-accent)] hover:underline">
+                      Settings
+                    </Link>
+                    .
+                  </Empty>
+                ) : (
+                  <Empty title="None of these branches is yours">
+                    None of the {all.length} branch(es) here ends on a commit authored as{" "}
+                    <Mono className="break-all">{branches.body.identities.join(", ")}</Mono>. Which
+                    emails count as yours is kept in{" "}
+                    <Link href="/settings" className="text-[var(--color-accent)] hover:underline">
+                      Settings
+                    </Link>
+                    .
+                  </Empty>
+                )
               ) : (
                 <Empty title="No branch matches that filter">
-                  {(branches.body.branches ?? []).length} branch(es) are here; the filter is hiding
-                  them.
+                  {mineOnly
+                    ? `${mine.length} of your branch(es) are here; the filter is hiding them.`
+                    : `${all.length} branch(es) are here; the filter is hiding them.`}
                 </Empty>
               )
             ) : (

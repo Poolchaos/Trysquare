@@ -14,6 +14,8 @@ import {
   requireProject,
 } from "@/server/db/repositories/projects";
 import { handler, ok } from "@/server/api/respond";
+import { identitiesInEffect } from "@/server/identities";
+import { isMine } from "@/lib/settings/identities";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -37,12 +39,14 @@ export async function GET(
 
     const branches = await listBranches(project.clonePath);
     const into = project.defaultBranch || (await detectDefaultBranch(project.clonePath));
+    const identities = await identitiesInEffect(db);
 
     // Ahead and behind are what tell someone whether a branch is worth
     // reviewing yet, and they are cheap to compute while we are here.
     const withDivergence = await Promise.all(
       branches.map(async (branch) => ({
         ...branch,
+        mine: isMine(branch.authorEmail, identities),
         ...(branch.name === into
           ? { ahead: 0, behind: 0 }
           : await divergence(project.clonePath, branch.name, into)),
@@ -51,6 +55,9 @@ export async function GET(
 
     return ok({
       branches: withDivergence,
+      // The emails `mine` went by, so an empty Mine list can say whose it
+      // looked for.
+      identities,
       defaultBranch: into,
       lastFetchedAt: requireProject(db, id).lastFetchedAt,
       stale,

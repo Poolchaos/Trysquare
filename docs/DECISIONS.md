@@ -6158,3 +6158,29 @@ verified evidence, in writing, here.
   one sentence of the README; setting and restoring the variables around
   the PowerShell command, a line of script a person is asked to trust and
   paste for a setting that is theirs to make.
+- 2026-11-18 D-243 (WP-L, first slice) Whose branch is whose. D-69 set the
+  rule: a branch is the person's when its tip commit's author email matches
+  the identities in settings, seeded from git config. Built so: the setting
+  `identities` is a list of emails, and while it is empty the one email in
+  effect is `user.email` of the person's global git config, read through
+  the files it includes (`git config --global --includes --get
+  user.email`, `server/gitops/identity.ts`) each time it is needed. So the
+  seed is never copied into the database: a person who changes their git
+  email is followed without a visit to Settings, and Settings says which
+  email it is going by. A kept list replaces git's email rather than adding
+  to it; emptying the field goes back to git's. The author is compared, not
+  the committer (a colleague's commit a person rebased is still the
+  colleague's branch), on the whole email whatever its case, with no
+  `.mailmap`. An email is not held to a mail address's shape, since a
+  commit's email is whatever `user.email` said that day; `<`, `>` and
+  control characters are refused, which git itself takes out of one. The
+  branches route says `mine` for each branch and the emails it went by, so
+  the screens share one answer. A git config that cannot be read is said on
+  Settings in git's words, and the settings are served all the same. The
+  browser suite's server gets a global git config of its own, because with
+  the runner's a branch list would read differently on every machine.
+  Rejected: copying git's email into the setting at first start, which
+  goes stale silently; matching the committer; an author column on the
+  branch table, which the Mine filter does not need. Still to build under
+  WP-L: the same filter in the new-review picker, and the scoreboard's
+  author column.

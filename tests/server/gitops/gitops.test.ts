@@ -107,6 +107,14 @@ describe("cloning", () => {
     expect(feature?.committedAt).not.toBe("");
   });
 
+  it("reports whose commit each branch ends on, by the email alone", async () => {
+    const branches = await listBranches(cloneDir);
+    expect(branches.map((branch) => branch.authorEmail)).toEqual([
+      "test@example.invalid",
+      "test@example.invalid",
+    ]);
+  });
+
   it("detects the default branch from the repository itself", async () => {
     expect(await detectDefaultBranch(cloneDir)).toBe("main");
   });

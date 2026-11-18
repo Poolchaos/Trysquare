@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
-import { Badge, Button, Card, Empty, Field, Input, Mono, Problem } from "@/components/ui";
+import { Badge, Button, Card, Empty, Field, Input, Mono, Problem, Textarea } from "@/components/ui";
 import { send } from "@/components/request";
 import {
   BillingNotice,
@@ -95,6 +95,28 @@ const FIELDS = [
   },
 ] as const;
 
+interface Settings {
+  maxConcurrentReviews: number;
+  stageTimeoutMinutes: number;
+  stageMaxBudgetUsd: number;
+  claudePath: string;
+  identities: string[];
+}
+
+/** What the server's own surroundings say, which Settings shows and cannot change. */
+interface Environment {
+  claudePath: string | null;
+  gitEmail: string | null;
+  gitEmailProblem: string | null;
+}
+
+/** The lines of the emails field, as the server keeps them: one email each. */
+const emailLines = (text: string) =>
+  text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+
 interface SystemInfo {
   dataDir: string;
   exportsDir: string;
@@ -104,11 +126,15 @@ interface SystemInfo {
 
 export default function SettingsPage() {
   const [models, setModels] = useState<Model[] | null>(null);
-  const [settings, setSettings] = useState<Record<string, number | string> | null>(null);
-  // The path the server was started with, which wins over the one kept here.
-  const [environmentPath, setEnvironmentPath] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  // The path the server was started with, which wins over the one kept here,
+  // and git's own email, which counts as the person's while none is kept.
+  const [environment, setEnvironment] = useState<Environment | null>(null);
+  const environmentPath = environment?.claudePath ?? null;
   const [pathSaved, setPathSaved] = useState(false);
   const [pathProblem, setPathProblem] = useState("");
+  const [emailsSaved, setEmailsSaved] = useState(false);
+  const [emailsProblem, setEmailsProblem] = useState("");
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [cli, setCli] = useState<CliStatus | null>(null);
   const [cliProblem, setCliProblem] = useState("");
@@ -146,10 +172,11 @@ export default function SettingsPage() {
     void (async () => {
       const [modelList, settingList, systemInfo] = await Promise.all([
         send<{ models: Model[] }>("/api/models", {}, "The models could not be read"),
-        send<{
-          settings: Record<string, number | string>;
-          environment?: { claudePath: string | null };
-        }>("/api/settings", {}, "The settings could not be read"),
+        send<{ settings: Settings; environment: Environment }>(
+          "/api/settings",
+          {},
+          "The settings could not be read",
+        ),
         send<SystemInfo>("/api/system", {}, "Where everything is kept could not be read"),
       ]);
       if (cancelled) return;
@@ -158,7 +185,7 @@ export default function SettingsPage() {
       else failed.models = modelList.error;
       if (settingList.ok) {
         setSettings(settingList.body.settings);
-        setEnvironmentPath(settingList.body.environment?.claudePath ?? null);
+        setEnvironment(settingList.body.environment);
       } else failed.settings = settingList.error;
       if (systemInfo.ok) setSystem(systemInfo.body);
       else failed.system = systemInfo.error;
@@ -227,7 +254,7 @@ export default function SettingsPage() {
       );
       return;
     }
-    const sent = await send<{ settings?: Record<string, number | string> }>(
+    const sent = await send<{ settings?: Settings }>(
       "/api/settings",
       { method: "PUT", body: JSON.stringify({ [field.key]: Number(input.value) }) },
       "That setting could not be saved",
@@ -250,7 +277,7 @@ export default function SettingsPage() {
     setPathSaved(false);
     // Empty is a choice here, not a slip: it means the CLI npm install put in
     // node_modules, then PATH.
-    const sent = await send<{ settings?: Record<string, number | string> }>(
+    const sent = await send<{ settings?: Settings }>(
       "/api/settings",
       { method: "PUT", body: JSON.stringify({ claudePath: input.value }) },
       "The CLI path could not be saved",
@@ -266,6 +293,33 @@ export default function SettingsPage() {
     // Checked again, so the card and the probes' notice speak of the CLI a
     // probe now uses, the probes held meanwhile (review of the D-164 fixes).
     await checkCli();
+  }
+
+  async function saveEmails(field: HTMLTextAreaElement) {
+    const kept = settings?.identities ?? [];
+    const typed = emailLines(field.value);
+    setEmailsProblem("");
+    if (typed.join("\n") === kept.join("\n")) {
+      field.value = kept.join("\n");
+      return;
+    }
+    setEmailsSaved(false);
+    // Empty is a choice here, as it is for the CLI path: git's own email.
+    const sent = await send<{ settings?: Settings; environment?: Environment }>(
+      "/api/settings",
+      { method: "PUT", body: JSON.stringify({ identities: typed }) },
+      "The emails could not be saved",
+    );
+    // What was typed stays in the field when it is refused: several lines
+    // are more than anyone should type twice over one of them.
+    if (!sent.ok) {
+      setEmailsProblem(sent.error);
+      return;
+    }
+    setSettings(sent.body.settings ?? null);
+    setEnvironment(sent.body.environment ?? null);
+    field.value = (sent.body.settings?.identities ?? []).join("\n");
+    setEmailsSaved(true);
   }
 
   async function probe(id: string) {
@@ -489,29 +543,74 @@ export default function SettingsPage() {
           </Card>
         </div>
 
-        <Card className="mt-6 p-4">
-          <h2 className="mb-1 text-heading font-semibold">Where everything is kept</h2>
-          {system === null ? (
-            <Loading
-              {...(readErrors.system ? { error: readErrors.system } : {})}
-              onRetry={retryReads}
-            />
-          ) : (
-            <>
-              <p className="mb-2 text-xs text-[var(--color-ink-muted)]">
-                Clones, worktrees, bundles, logs and the database live here. Move it by setting
-                TRYSQUARE_DATA before starting the server.
-              </p>
-              <Mono className="block break-all text-sm">{system.dataDir}</Mono>
-              <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
-                Holding {system.counts.projects} project(s), {system.counts.reviews} review(s) and{" "}
-                {system.counts.rulesets} ruleset(s). Exported reports are written to{" "}
-                <Mono className="break-all">{system.exportsDir}</Mono> and survive deleting any of
-                it.
-              </p>
-            </>
-          )}
-        </Card>
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <Card className="p-4">
+            <h2 className="mb-1 text-heading font-semibold">Your git emails</h2>
+            <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
+              A branch is yours when its newest commit was authored with one of these. The Mine
+              filter on a project&apos;s branches goes by them.
+            </p>
+            {/* Nothing until the settings are read, as on the Claude Code card:
+                a read that failed is said once, with its Try again, on the
+                first card. */}
+            {settings === null ? null : (
+              <div className="grid gap-1">
+                <Field
+                  label="Emails, one per line"
+                  hint="Empty goes by the user.email in your git config. Saved when you leave the field."
+                >
+                  <Textarea
+                    rows={3}
+                    defaultValue={settings.identities.join("\n")}
+                    spellCheck={false}
+                    autoCapitalize="none"
+                    onBlur={(event) => void saveEmails(event.currentTarget)}
+                  />
+                </Field>
+                {settings.identities.length > 0 ||
+                environment === null ? null : environment.gitEmailProblem !== null ? (
+                  <Problem>{environment.gitEmailProblem}</Problem>
+                ) : environment.gitEmail !== null ? (
+                  <p className="text-xs text-[var(--color-ink-muted)]" data-testid="git-email">
+                    Going by <Mono className="break-all">{environment.gitEmail}</Mono>, from your
+                    git config.
+                  </p>
+                ) : (
+                  <p className="text-xs text-[var(--color-warning)]" data-testid="git-email">
+                    Your git config sets no user.email, so no branch counts as yours until you enter
+                    an email here.
+                  </p>
+                )}
+                {emailsSaved ? <p className="text-xs text-[var(--color-good)]">Saved.</p> : null}
+                {emailsProblem === "" ? null : <Problem>{emailsProblem}</Problem>}
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-4">
+            <h2 className="mb-1 text-heading font-semibold">Where everything is kept</h2>
+            {system === null ? (
+              <Loading
+                {...(readErrors.system ? { error: readErrors.system } : {})}
+                onRetry={retryReads}
+              />
+            ) : (
+              <>
+                <p className="mb-2 text-xs text-[var(--color-ink-muted)]">
+                  Clones, worktrees, bundles, logs and the database live here. Move it by setting
+                  TRYSQUARE_DATA before starting the server.
+                </p>
+                <Mono className="block break-all text-sm">{system.dataDir}</Mono>
+                <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
+                  Holding {system.counts.projects} project(s), {system.counts.reviews} review(s) and{" "}
+                  {system.counts.rulesets} ruleset(s). Exported reports are written to{" "}
+                  <Mono className="break-all">{system.exportsDir}</Mono> and survive deleting any of
+                  it.
+                </p>
+              </>
+            )}
+          </Card>
+        </div>
 
         {/* The sign-in command is on the Claude Code card above, not again here. */}
         {probeBilling === null ? null : (

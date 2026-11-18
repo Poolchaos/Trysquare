@@ -48,4 +48,6 @@ export const SETTING_KEYS = {
   claudePath: "claudePath",
   /** The ruleset a new review starts on, chosen on the ruleset's page (D-225). */
   defaultRulesetId: "defaultRulesetId",
+  /** The git emails that count as the person's; none kept means git's own (D-243). */
+  identities: "identities",
 } as const;

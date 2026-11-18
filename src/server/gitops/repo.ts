@@ -19,6 +19,8 @@ export interface BranchInfo {
   /** Commit subject, so a branch list is readable without a second call. */
   subject: string;
   committedAt: string;
+  /** Of the author of the commit the branch ends on: whose branch it is (D-69). */
+  authorEmail: string;
   isRemote: boolean;
 }
 
@@ -135,8 +137,25 @@ const BRANCH_FORMAT = [
   "%(refname:lstrip=2)",
   "%(objectname)",
   "%(committerdate:iso-strict)",
+  // In its angle brackets, which is how its end is found: git takes < and >
+  // out of an email as it writes a commit, and little else.
+  "%(authoremail)",
   "%(contents:subject)",
 ].join("\x1f");
+
+/**
+ * The author's email and the subject, from what follows the date. The email
+ * ends at the first ">" rather than at the separator, so one holding the
+ * separator does not push its tail into the subject.
+ */
+function emailAndSubject(rest: string): { authorEmail: string; subject: string } {
+  const close = rest.indexOf(">");
+  if (!rest.startsWith("<") || close === -1) return { authorEmail: "", subject: rest };
+  return {
+    authorEmail: rest.slice(1, close),
+    subject: rest.slice(close + 1).replace(/^\x1f/, ""),
+  };
+}
 
 export async function listBranches(repoDir: string): Promise<BranchInfo[]> {
   const output = await git(
@@ -145,12 +164,12 @@ export async function listBranches(repoDir: string): Promise<BranchInfo[]> {
   );
 
   return toLines(output).map((line) => {
-    const [name = "", commit = "", committedAt = "", ...subjectParts] = line.split("\x1f");
+    const [name = "", commit = "", committedAt = "", ...rest] = line.split("\x1f");
     return {
       name,
       commit,
       committedAt,
-      subject: subjectParts.join("\x1f"),
+      ...emailAndSubject(rest.join("\x1f")),
       isRemote: false,
     };
   });

@@ -12,7 +12,9 @@ import { SETTING_KEYS, readSettingOr, writeSettings } from "@/server/db/reposito
 import { handler, ok, readJson } from "@/server/api/respond";
 import { environmentClaudePath } from "@/server/cli-path";
 import { claudePathSchema } from "@/lib/settings/claude-path";
+import { identitiesSchema } from "@/lib/settings/identities";
 import { defaultRulesetId, requireRuleset } from "@/server/db/repositories/rulesets";
+import { globalUserEmail } from "@/server/gitops/identity";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +26,25 @@ const CATALOGUE = {
   [SETTING_KEYS.stageMaxBudgetUsd]: { schema: z.number().nonnegative(), fallback: 15 },
   [SETTING_KEYS.claudePath]: { schema: claudePathSchema, fallback: "" },
   [SETTING_KEYS.defaultRulesetId]: { schema: z.string().min(1).nullable(), fallback: null },
+  [SETTING_KEYS.identities]: { schema: identitiesSchema, fallback: [] },
 } as const;
+
+/**
+ * The email git commits as, which counts as the person's while no email is
+ * kept here (D-243). A config git cannot read is said in git's words beside
+ * it, and the settings are answered all the same: they hold the way out, the
+ * emails typed in by hand.
+ */
+async function gitEmail(): Promise<{ gitEmail: string | null; gitEmailProblem: string | null }> {
+  try {
+    return { gitEmail: await globalUserEmail(), gitEmailProblem: null };
+  } catch (error) {
+    return {
+      gitEmail: null,
+      gitEmailProblem: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
 
 type Key = keyof typeof CATALOGUE;
 
@@ -41,9 +61,13 @@ export function GET(): Promise<Response> {
     );
     // As the rulesets screen reads it: a default naming a ruleset gone is none.
     settings[SETTING_KEYS.defaultRulesetId] = defaultRulesetId(db);
-    // Not a setting, and not writable here: the path the server was started
-    // with, which wins over the one kept here, so the screen can say so.
-    return ok({ settings, environment: { claudePath: environmentClaudePath() ?? null } });
+    // Not settings, and not writable here: the path the server was started
+    // with, which wins over the one kept here, and git's own email, which
+    // stands in while none is kept, so the screen can say both.
+    return ok({
+      settings,
+      environment: { claudePath: environmentClaudePath() ?? null, ...(await gitEmail()) },
+    });
   });
 }
 

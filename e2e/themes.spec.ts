@@ -7,11 +7,12 @@
  * behaviour a picture would hide, and the pictures are for a person to judge.
  */
 
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { COLLEAGUE_BRANCH, GIT_CONFIG, MY_EMAIL } from "./setup";
 
 const EVIDENCE = join(
   fileURLToPath(new URL("..", import.meta.url)),
@@ -486,6 +487,146 @@ test("the shell works at phone width", async ({ page }) => {
     );
     expect(overflow, `${path} scrolls horizontally by ${overflow}px at 360`).toBeLessThanOrEqual(0);
   }
+});
+
+test("Mine leaves the branches I last committed to, and an empty one says whose it looked for", async ({
+  page,
+}, testInfo) => {
+  // WP-L, D-243. The suite's server commits as the fixture's author
+  // (playwright.config.ts), so the fixture's three branches are mine and the
+  // colleague's one is not.
+  const shot = (name: string) => join(EVIDENCE, `${testInfo.project.name}-${name}.png`);
+  const emails = page.getByLabel("Emails, one per line");
+  const inEffect = page.getByTestId("git-email");
+  const mine = page.getByRole("button", { name: "Mine", exact: true });
+  const rows = page.getByRole("main").getByRole("table").locator("tbody tr");
+  const colleagues = rows.filter({ hasText: COLLEAGUE_BRANCH });
+  const violations = async () => {
+    await settled(page);
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    return results.violations.map((violation) => `${violation.id}: ${violation.help}`);
+  };
+  const sideways = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+  const keep = async (text: string) => {
+    await page.goto("/settings");
+    await emails.fill(text);
+    await emails.blur();
+  };
+  const openBranches = async () => {
+    await page.goto("/projects");
+    await page.getByRole("main").getByRole("link", { name: "app", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Branches" })).toBeVisible({ timeout: 60_000 });
+    await expect(mine).toBeVisible({ timeout: 60_000 });
+  };
+  const desk = page.viewportSize() ?? { width: 1280, height: 720 };
+  const phone = { width: 360, height: 780 };
+
+  try {
+    // Nothing kept: git's own email is the one in effect, and Settings says so.
+    await page.goto("/settings");
+    await expect(emails).toHaveValue("");
+    await expect(inEffect).toHaveText(`Going by ${MY_EMAIL}, from your git config.`);
+
+    await openBranches();
+    await expect(mine).toHaveAttribute("aria-pressed", "false");
+    await expect(rows).toHaveCount(4);
+    await expect(colleagues).toHaveCount(1);
+    await mine.click();
+    await expect(mine).toHaveAttribute("aria-pressed", "true");
+    await expect(rows).toHaveCount(3);
+    await expect(colleagues).toHaveCount(0);
+    await expect(rows.filter({ hasText: "feature/rename-prefs" })).toHaveCount(1);
+    expect(await violations()).toEqual([]);
+    await photograph(page, shot("project-mine"));
+
+    // Both narrowings at once say which of them is hiding the branches.
+    await page.getByPlaceholder("Filter").fill("no branch is called this");
+    await expect(page.getByText("No branch matches that filter")).toBeVisible();
+    await expect(
+      page.getByText("3 of your branch(es) are here; the filter is hiding them."),
+    ).toBeVisible();
+    await page.getByPlaceholder("Filter").fill("");
+    await expect(rows).toHaveCount(3);
+
+    await page.setViewportSize(phone);
+    expect(await sideways(), "the project page scrolls sideways at 360").toBeLessThanOrEqual(0);
+    const toggle = await mine.boundingBox();
+    expect(toggle, "Mine has a box").not.toBeNull();
+    expect(toggle!.x).toBeGreaterThanOrEqual(0);
+    expect(toggle!.x + toggle!.width).toBeLessThanOrEqual(phone.width);
+    expect(toggle!.height).toBeGreaterThanOrEqual(40);
+    await photograph(page, shot("project-mine-phone"));
+    await page.setViewportSize(desk);
+
+    // Somebody else's email kept: it replaces git's, and no branch here is
+    // theirs, which the empty list says with the email it went by.
+    await keep("someone-else@example.invalid");
+    await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+    await expect(inEffect).toHaveCount(0);
+    expect(await violations()).toEqual([]);
+    await photograph(page, shot("settings-emails-kept"));
+    await page.setViewportSize(phone);
+    expect(await sideways(), "Settings scrolls sideways at 360").toBeLessThanOrEqual(0);
+    await emails.scrollIntoViewIfNeeded();
+    await photograph(page, shot("settings-emails-kept-phone"));
+    await page.setViewportSize(desk);
+
+    await openBranches();
+    await mine.click();
+    const none = page.getByText("None of these branches is yours");
+    await expect(none).toBeVisible();
+    await expect(
+      page.getByText(
+        "None of the 4 branch(es) here ends on a commit authored as someone-else@example.invalid.",
+      ),
+    ).toBeVisible();
+    await expect(page.getByRole("main").getByRole("table")).toHaveCount(0);
+    expect(await violations()).toEqual([]);
+    await photograph(page, shot("project-mine-none"));
+    await page.setViewportSize(phone);
+    expect(await sideways(), "the empty Mine list scrolls sideways at 360").toBeLessThanOrEqual(0);
+    await photograph(page, shot("project-mine-none-phone"));
+    await page.setViewportSize(desk);
+    // The way out it names is a link, and it goes there.
+    await page.getByRole("main").getByRole("link", { name: "Settings", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
+
+    // A name with its email is refused in the server's words, beside the
+    // field, and what was typed is still there to correct.
+    await emails.fill("Fixture <fixture@example.invalid>");
+    await emails.blur();
+    await expect(
+      page.getByText("identities: holds < or >: enter the email alone, without a name"),
+    ).toBeVisible();
+    await expect(emails).toHaveValue("Fixture <fixture@example.invalid>");
+    await photograph(page, shot("settings-emails-refused"));
+
+    // Emptied again, with a git config that sets no email: nobody's, said on
+    // Settings and by the empty list, each naming what to do.
+    writeFileSync(GIT_CONFIG, "[user]\n\tname = Fixture\n");
+    await emails.fill("");
+    await emails.blur();
+    await expect(inEffect).toHaveText(
+      "Your git config sets no user.email, so no branch counts as yours until you enter an email here.",
+    );
+    expect(await violations()).toEqual([]);
+    await photograph(page, shot("settings-no-git-email"));
+    await openBranches();
+    await mine.click();
+    await expect(page.getByText("No email counts as yours yet")).toBeVisible();
+    expect(await violations()).toEqual([]);
+    await photograph(page, shot("project-mine-no-email"));
+  } finally {
+    // As the next theme's run, and every test after this one, expects it.
+    writeFileSync(GIT_CONFIG, `[user]\n\tname = Fixture\n\temail = ${MY_EMAIL}\n`);
+    await keep("");
+  }
+  await expect(inEffect).toHaveText(`Going by ${MY_EMAIL}, from your git config.`);
 });
 
 // Last in this file: the ruleset it imports stays, and no test before it

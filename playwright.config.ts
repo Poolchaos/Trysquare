@@ -5,6 +5,7 @@ import {
   COUNTER_FILE,
   DATA_DIR,
   FAKE_CLI,
+  GIT_CONFIG,
   LIMIT_TRIGGER,
   STALL_TRIGGER,
 } from "./e2e/setup";
@@ -85,6 +86,8 @@ export default defineConfig({
     timeout: 180_000,
     env: {
       TRYSQUARE_DATA: DATA_DIR,
+      // Whose branches are whose is the same on every machine (WP-L).
+      GIT_CONFIG_GLOBAL: GIT_CONFIG,
       // The fake, so the whole journey spends nothing.
       TRYSQUARE_CLAUDE_PATH: FAKE_CLI,
       FAKE_CLAUDE_SCENARIO: "script",

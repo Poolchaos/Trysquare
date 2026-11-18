@@ -129,7 +129,8 @@ from 2026-11-03.
   widget dashboard at `/`, a full-screen scan theater, a queue-first review
   screen and a rendered report. `plans/UX-UPLIFT-PLAN.md` and
   `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; one row is
-  open (WP-L my branches), outside the MVP (its non-goals): on 2026-11-17
+  open (WP-L my branches, its first slice of three built on 2026-11-18,
+  D-243), outside the MVP (its non-goals): on 2026-11-17
   WP-G was closed as built by later work (D-238) and WP-K's queue layout
   for a phone was built. The FG-4 design acceptance is now part of
   G3, the public release after the MVP (D-86); its argument was
@@ -218,6 +219,9 @@ are accepted; anything else is refused by name.
   `TRYSQUARE_CLAUDE_PATH` wins over (D-152).
 - `defaultRulesetId` (default empty). The ruleset a new review starts on
   (D-225).
+- `identities` (default empty). The git emails that count as the person's,
+  for the Mine filter on a project's branches. Empty goes by `user.email`
+  of their global git config, read each time and never stored (D-243).
 
 ## Structure
 
@@ -237,7 +241,8 @@ are accepted; anything else is refused by name.
   findings list says while it is empty, when a run's ending is said); `rulesets`
   (the ruleset's shape, import with a fidelity gate, prompt composition and
   batch planning, a directive section's name in words);
-  `settings` (the CLI path); and paths, ids and matching an error by the
+  `settings` (the CLI path, the emails that count as the person's); and
+  paths, ids and matching an error by the
   name its class sets.
 - `src/server/db/` - schema (16 tables), client, migrations 0000 to 0017, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
@@ -260,7 +265,8 @@ are accepted; anything else is refused by name.
 - `src/server/runtime.ts` - the one door to the database and the job
   manager; `data-dir-lock.ts` - one server per data directory;
   `cli-path.ts` and `cli-readiness.ts` - which CLI reviews use and whether
-  it can run one; `real-path.ts` - a path resolved through its links.
+  it can run one; `identities.ts` - which emails count as the person's;
+  `real-path.ts` - a path resolved through its links.
 - `src/server/api/` - one response shape for every route.
 - `src/proxy.ts` - the request guard in front of every route (MVP WP 2.3).
 - `src/app/api/` - 42 route handlers. `src/app/` - 9 screens, plus a root
