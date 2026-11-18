@@ -123,7 +123,8 @@ remains of each run is its summary in [docs/GATES.md](docs/GATES.md). No real mo
 that is the next gate, and it is the maintainer's to drive.
 
 A finished review leads with how its findings were proven and the five steps
-it was read in, then the queue, and the run's own account of itself folds away
+it was read in, then the queue (on a phone the queue comes first while
+findings wait to be decided), and the run's own account of itself folds away
 behind Run detail. The panel worth opening there is Coverage: it says how many
 files, hunks and sweep hits were accounted for, which is what separates
 "nothing is wrong" from "nothing was looked at". Its stage timeline shows the
@@ -236,10 +237,11 @@ both are switched off. Next.js, the framework, would record anonymous usage
 from `next dev` and `next build`; `next.config.ts` turns that off. The
 Claude Code CLI sends usage telemetry and error reports by default; every
 CLI the app starts is told to make only the requests a review needs,
-whatever your shell says. The one CLI it does not start is yours: in the
-interactive mode you run each stage yourself, from a command the app
-prints, in your own terminal and with your own environment, your choice
-about the CLI's telemetry included. Two requests the framework still makes, both to the npm registry:
+whatever your shell says. A CLI it does not start is yours: in the
+interactive mode you run each stage yourself, and a CLI whose path you keep
+on Settings or in `TRYSQUARE_CLAUDE_PATH` is signed in by you, each from a
+command the app prints, in your own terminal and with your own environment,
+your choice about the CLI's telemetry included. Two requests the framework still makes, both to the npm registry:
 when the app starts with `npm run dev`, or is built from a terminal or by an
 AI agent, Next.js asks whether its own installed version has a security
 advisory, sends that version number to do so, and reads the list of Next.js

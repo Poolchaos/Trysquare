@@ -198,15 +198,18 @@ boundary. Versions in `docs/PROJECT-STATE.md`.
 
 **Architectural laws:**
 
-- The app never writes inside a cloned project or a review worktree. Clones
-  are bare; reviews use detached worktrees pinned to a commit. A project's
+- The app never writes to a project's code, in its clone or in a review
+  worktree. Clones are bare, and only git writes in one: a fetch brings its
+  branches to the remote's, and a review registers its worktree there.
+  Reviews use detached worktrees pinned to a commit. A project's
   own commands, when turned on, run in a throwaway clone of its clone,
   apart from both (WP-I, D-196).
 - AI review stages get read-only tools only (Read, Grep, Glob). Widening
   that allowlist is a decision-log entry, never a convenience.
 - Every spawned `claude` process has `CLAUDECODE` scrubbed from its
   environment (it would otherwise run as that session's child, D-120), and
-  one that calls a model passes an explicit system prompt
+  a stage or a probe, the two that call a model, passes an explicit system
+  prompt
   (`--system-prompt-file` for a stage, `--system-prompt` for a probe) plus
   minimal `--tools`.
 - Full model ids only, never short aliases: `opus` and `sonnet` resolve to

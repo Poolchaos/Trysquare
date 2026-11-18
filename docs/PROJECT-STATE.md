@@ -361,8 +361,8 @@ None. Reviews run through the local Claude Code CLI, installed with the app
 (D-92), on the claude.ai subscription sign-in it shares with the editor's
 Claude Code, by default: API keys and paid providers in the server's
 environment are kept from it, a sign-in that bills per token, or may, is
-said on Settings and before Start, and a review on one starts only once
-its page has said so (D-161, D-162). The CLI gets only what it needs to
+said on Settings and before Start, and a headless review on one starts
+only once its page has said so (D-161, D-162). The CLI gets only what it needs to
 run and the sign-in (D-174); a managed Claude Code policy, which no flag
 keeps out, is said where one is found (D-175); see
 `06-MODELS-AND-PROFILES.md`.

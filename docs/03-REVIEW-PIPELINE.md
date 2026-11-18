@@ -83,7 +83,8 @@ S1 work its risk-tagged files first (U12).
    clone, checked out at fromCommit, apart from the review's read-only
    worktree; in it, install, then tests, then e2e, each that is set,
    through the platform's shell, with the person's environment less the
-   app's and Claude's, each under a 20-minute limit after which, or on a
+   app's, Claude's, `NODE_ENV` and Next's own (`NEXT_`, `__NEXT`), each
+   under a 20-minute limit after which, or on a
    cancel, its whole process tree is killed. A failed install stops the
    rest. Each command's output is kept in `runs/<id>/checks/logs`, the
    screenshots an e2e saved in its folder are copied to

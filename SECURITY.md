@@ -19,8 +19,10 @@ time for a response.
 Trysquare runs entirely on your own machine. Its only server listens on
 127.0.0.1, there is no account system, and the app sends no telemetry (the
 README says how Next.js's and the Claude Code CLI's own are switched off
-for what the app starts, that a CLI you start yourself in the interactive
-mode keeps your own setting, and which two requests Next.js still makes).
+for what the app starts, that a CLI you start yourself from a command the
+app prints, to run an interactive stage or to sign in a CLI at a path of
+your own, keeps your own setting, and which two requests Next.js still
+makes).
 That rules out
 whole categories of vulnerability, but it leaves some that matter:
 
@@ -89,6 +91,7 @@ shell (cmd.exe on Windows, /bin/sh elsewhere) and as you, in a throwaway copy of
 the branch under review. The branch's own code runs with your privileges, as it
 would if you ran its tests yourself: it can read your files and credentials,
 including the ones above, and reach the network. The app withholds only its own
-and Claude's environment variables from it. So turn the checks on only for a
+and Claude's environment variables from it, and the ones its own server runs
+under: `NODE_ENV` and any beginning `NEXT_` or `__NEXT`. So turn the checks on only for a
 repository you would run yourself. They are off for every project until you
 turn them on, and the New review pre-flight names the commands before Start.

@@ -205,8 +205,10 @@ established there are load-bearing here: every spawn scrubs `CLAUDECODE`
 from the child environment, and every spawn that calls a model passes an
 explicit system prompt (`--system-prompt-file` for a stage,
 `--system-prompt` for a probe) and minimal `--tools` list rather than
-inheriting the CLI's defaults. The three that call none, `--version`,
-`auth status` and the attached sign-in, pass neither.
+inheriting the CLI's defaults. The other three pass neither: `--version`
+and `auth status`, which call no model, and the attached run behind `npm
+run claude`, which hands the CLI a person's own arguments, `auth login` to
+sign in.
 
 ## 7a. Threat model: reviewed code is untrusted input
 

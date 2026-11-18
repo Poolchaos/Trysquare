@@ -241,7 +241,8 @@ findings in n of m decided and in what is left to decide, and Complete
 review waits on them too. Read only once the review is complete.
 
 Above the queue, and above the report once complete, the finished review in
-its five steps (WP-G): how the findings were proven (raised, proven once,
+its five steps (WP-G; at phone width, while findings wait to be decided, it
+comes after the queue, WP-K): how the findings were proven (raised, proven once,
 proven by both, open question) and what each step came to, refuted told
 apart from discarded, with the time and requests its stage rows recorded;
 screens graded C or D are counted apart from the code's funnel. In Run
