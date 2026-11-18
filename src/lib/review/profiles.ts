@@ -1,8 +1,9 @@
 /**
  * Which profile a review runs under, given the model it runs on.
  *
- * A profile decides how the adversarial work is divided into requests, never
- * how much of the protocol is applied (docs/06 section 3). That is why a
+ * A profile decides how the adversarial work is divided into requests; only
+ * `decomposed` also leaves rule and file pairs out, each named in the plan
+ * (docs/06 section 3). That is why a
  * downgrade is allowed and an upgrade is not: dividing the work more finely
  * than the model needs costs requests, while dividing it less finely than the
  * model can absorb quietly hands a weak model more than it can hold, and the
@@ -103,6 +104,21 @@ export function resolveProfile(input: ResolveProfileInput): ProfileResolution {
     profile: input.requested,
     downgradedFrom: input.requested === modelProfile ? null : modelProfile,
   };
+}
+
+/**
+ * The run note a deliberate downgrade leaves. Only `decomposed` narrows what
+ * is checked, so only there does the note say so: "the same rules are
+ * applied" was said of it too until the twelfth grade of the records.
+ */
+export function downgradeNote(from: ReviewProfile, to: ReviewProfile): string {
+  const what =
+    to === "decomposed"
+      ? "The rules are divided into more, smaller requests, and a rule is left out for a " +
+        "file whose path suggests none of its themes. Any pairs left out are counted in a " +
+        "note on the run."
+      : "The same rules are applied; they are divided into more, smaller requests.";
+  return `Profile downgraded from ${from} to ${to} on purpose. ${what}`;
 }
 
 /**

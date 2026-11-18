@@ -197,13 +197,15 @@ deliberately excluded (DECISIONS, 2026-07-30, WP-D, correcting this
 section's first wording, "every rule against every hunk"); every hunk and
 sweep hit is dispositioned, every deletion reviewed, and every finding
 verified, on every profile. Only `decomposed` excludes: a rule is not sent
-for a file whose path suggests none of the rule's themes, and each such
-pair is recorded with its reason, counted in the pre-flight, and named in
-a note on the run, the first twenty of them. `full-context` and `chunked`
-change only _how the work is divided into requests_. Summarising a rule to
-fit a weaker model is forbidden; the app splits the work instead. The
-planned requests are checked by app code before one is sent
-(`assertBatchesCoverEverything`, 03), so a pair is never left out unnamed.
+for a file whose path suggests none of the rule's themes, and the plan
+names each such pair with its reason. What the review keeps of them is
+their count, in the pre-flight and in a note on the run, and in that note
+the first twenty by name. `full-context` and `chunked` change only _how
+the work is divided into requests_. Summarising a rule to fit a weaker
+model is forbidden; the app splits the work instead. The planned requests
+are checked by app code before one is sent
+(`assertBatchesCoverEverything`, 03), so no pair is left out of the plan
+unnamed.
 
 Each model carries a `profileId`. Profiles are declarative config:
 
@@ -211,7 +213,7 @@ Each model carries a `profileId`. Profiles are declarative config:
 | ----------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------- |
 | `full-context`    | claude-opus-5-5, claude-fable-5-1, claude-fable-5[1m], claude-opus-5[1m]  | Entire ruleset verbatim in one prompt                                                                                                                                                                                      | Whole change set in one comprehension and one adversarial pass; split only if the estimate exceeds the window | All findings in one fresh session, then the proven ones in another (S5b) |
 | `chunked`         | claude-sonnet-5-5, claude-fable-5, claude-opus-5, claude-sonnet-5[1m]     | Full ruleset verbatim, but the adversarial pass runs once per rule theme (typescript, react, async, database, security, numeric, testing, organisation, general) with that theme's rules in the prompt                   | File groups sized to the window                                                                               | As full-context                   |
-| `decomposed`      | claude-sonnet-5, claude-opus-4-6, other mid-tier                          | Theme chunks as above, further narrowed: only the themes a file's path suggests reach that file's prompt, and the app records each (rule, file) pair left out, with its reason, so every pair is checked or named | Per file                                                                                                      | As full-context                   |
+| `decomposed`      | claude-sonnet-5, other mid-tier                                           | Theme chunks as above, further narrowed: only the themes a file's path suggests reach that file's prompt, and the plan names each (rule, file) pair left out, with its reason; the run keeps their count and the first twenty | Per file                                                                                                      | As full-context                   |
 | `mechanical-only` | anything untrusted for judgment; Haiku is retired (D-184)                 | Not offered for judgment stages                                                                                                                                                                                            | Meant for non-judgment helpers (e.g. summarising a sweep hit list); none is built                                      | Never                             |
 
 Profile selection is automatic from the model, shown in the pre-flight, and

@@ -1077,7 +1077,7 @@ function NewReview() {
 
               <Field
                 label="Profile"
-                hint="How the adversarial work is divided into requests. The same rules are applied either way; a weaker profile sends them in more, smaller requests."
+                hint="How the adversarial work is divided into requests. A weaker profile sends the rules in more, smaller requests. Decomposed also leaves a rule out for a file whose path suggests none of its themes, and the pre-flight says how many."
               >
                 <Select
                   value={profileOverride}

@@ -9,6 +9,7 @@
 import { describe, expect, it } from "vitest";
 import { REVIEW_PROFILES } from "@/lib/domain/enums";
 import {
+  downgradeNote,
   isJudgmentProfile,
   profileRank,
   resolveProfile,
@@ -125,5 +126,24 @@ describe("what each model gets, said in the picker (WP-F, D-187)", () => {
       "Each file against the rules that apply to it, 1 pass.",
     );
     expect(whatTheModelGets("mechanical-only")).toBeNull();
+  });
+});
+
+describe("the note a deliberate downgrade leaves on the run", () => {
+  it("says the same rules are applied only where they are", () => {
+    expect(downgradeNote("full-context", "chunked")).toBe(
+      "Profile downgraded from full-context to chunked on purpose. The same rules are " +
+        "applied; they are divided into more, smaller requests.",
+    );
+  });
+
+  it("says what decomposed leaves out, and where that is counted", () => {
+    const note = downgradeNote("full-context", "decomposed");
+    expect(note).toBe(
+      "Profile downgraded from full-context to decomposed on purpose. The rules are divided " +
+        "into more, smaller requests, and a rule is left out for a file whose path suggests " +
+        "none of its themes. Any pairs left out are counted in a note on the run.",
+    );
+    expect(note).not.toContain("same rules");
   });
 });

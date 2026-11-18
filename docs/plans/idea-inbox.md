@@ -150,6 +150,11 @@ pulled deliberately.
   the stored UTC time cut to the minute, shown with no zone: 06:04 at 08:04
   in the maintainer's (seen in WP-L's shots). Dates cut the same way can be
   a day off near midnight.
+- 2026-11-18: on `windows-latest` alone, CI run 44251352949 failed "the
+  confirmation queue has no accessibility violations" in the light theme,
+  30 seconds waiting for an element that did not come; the run before it
+  passed that test there on the same browser code. Parked with the other
+  Windows entries (D-232).
 
 ## Retired
 

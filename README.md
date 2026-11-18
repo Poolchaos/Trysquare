@@ -365,7 +365,8 @@ with the app, then `claude` on your PATH.
 
 ```bash
 ./verify.sh              # the gate: lint, format, types, house style,
-                         # private-material and hidden-file checks, unit tests
+                         # private-material, hidden-file and dead-export
+                         # checks, unit tests
 ./verify.sh --build      # adds a production build
 ./verify.sh --e2e        # adds end-to-end tests (needs chromium, below)
 ```

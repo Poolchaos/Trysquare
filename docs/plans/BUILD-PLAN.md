@@ -67,8 +67,9 @@ Every milestone ends runnable; no milestone is "infrastructure done".
 
 ## 3. Standing rails (every WP, no exceptions)
 
-- The app never writes inside clones/worktrees; the worktree-clean test
-  stays green forever.
+- The app never writes a project's code, in its clone or in a review's
+  worktree (git alone writes in a clone: a fetch, and a worktree added or
+  removed); the worktree-clean test stays green forever.
 - Tool allowlist for AI stages stays read-only; widening it is a
   decision-log entry, never a convenience.
 - Prompt or composition changes re-run the engine quality gate before DONE.

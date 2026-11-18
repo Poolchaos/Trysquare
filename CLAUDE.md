@@ -215,7 +215,8 @@ boundary. Versions in `docs/PROJECT-STATE.md`.
 - Full model ids only, never short aliases: an alias is whatever the CLI
   calls current, and `opus` and `sonnet` were a generation behind when
   measured (D-177).
-- `lib/` is pure and I/O-free; only `server/gitops` spawns git; only
+- Within `src/`: `lib/` is pure and I/O-free; only `server/gitops` spawns
+  git; only
   `server/engine` spawns claude; only `server/projectrun` spawns a
   project's own commands, and only in a throwaway copy of the branch; all
   DB access goes through repositories.

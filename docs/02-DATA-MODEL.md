@@ -302,7 +302,7 @@ that named it, and one gone from a database older than that reads as none,
 D-225), and identities (a list of the git emails that count as the
 person's; empty, the default, means `user.email` of their global git
 config, read when needed and never stored, D-243).
-Those five are the whole catalogue; any other key is refused by name. A new
+Those are the whole catalogue; any other key is refused by name. A new
 review starts on the model last used, with no setting for it
 (`src/lib/models/availability.ts`); the `defaultModel` key was deleted on
 purpose (`plans/M4-FINISH-PLAN.md`). The data directory is shown on

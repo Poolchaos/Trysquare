@@ -213,6 +213,24 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     const fullContextRequests = Number(await requestsRow.textContent());
     await page.getByTestId("profile-override").selectOption("decomposed");
     await expect(page.getByText(/Downgraded from full-context to decomposed/)).toBeVisible();
+    // The control says what the weakest profile leaves out: it said "the
+    // same rules are applied either way", which decomposed does not do.
+    const profileField = page.getByTestId("profile-override").locator("..");
+    await expect(profileField).toContainText(
+      "Decomposed also leaves a rule out for a file whose path suggests none of its themes, and the pre-flight says how many.",
+    );
+    await expect(page.getByText("The same rules are applied either way")).toHaveCount(0);
+    for (const [scheme, name] of [
+      ["light", "profile-hint-light"],
+      ["dark", "profile-hint-dark"],
+    ] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await profileField.screenshot({
+        path: join(EVIDENCE, `${name}.png`),
+        animations: "disabled",
+      });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
     await expect
       .poll(async () => Number(await requestsRow.textContent()))
       .toBeGreaterThan(fullContextRequests);

@@ -23,7 +23,13 @@ from 2026-11-03.
   storage key, and a sticky top bar photographed where the page had been
   scrolled to. `./verify.sh --e2e` exits 0 with 1522 unit tests passing, 8
   skipped, and 145 browser tests. Still to build: the same filter in the
-  new-review picker, and the scoreboard's author column.
+  new-review picker, and the scoreboard's author column. The same day the
+  records were graded twice more, C each time (`plans/AUDIT-2026-11-17.md`):
+  the twelfth grade's one material finding was on a screen, the new-review
+  Profile control saying the same rules are applied on every profile, and
+  it and the downgrade's run note now say what `decomposed` leaves out.
+  With that, `./verify.sh --e2e` exits 0 with 1524 unit tests passing, 8
+  skipped, and 145 browser tests.
 - 2026-11-17: an audit of what remains (`plans/AUDIT-2026-11-17.md`),
   graded C by an independent grader: fourteen findings and five the grader
   added. Its remaining work is `plans/COMPLETION-PLAN.md`, CP-1 to CP-15.
@@ -259,7 +265,8 @@ are accepted; anything else is refused by name.
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings, stage executions, the scoreboard, a project's checks and what
   they found.
-- `src/server/gitops/` - the only code that spawns git, including the
+- `src/server/gitops/` - the only code under `src/` that spawns git (the
+  setup and gate scripts under `scripts/` run it themselves), including the
   throwaway copy a project's own checks run in.
 - `src/server/projectrun/` - the only code that spawns a project's own
   commands, in that copy (WP-I, D-196).

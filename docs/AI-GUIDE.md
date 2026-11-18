@@ -109,7 +109,9 @@ list is in `PROJECT-STATE.md`, Structure.
   model.
 - **A setup check.** Add it to `runDoctor` in `scripts/lib/doctor.ts` and a
   case to `tests/scripts/doctor.test.ts`. A check the app cannot start
-  without fails; one a review needs is a warning.
+  without fails, and so does one no review can run without (the CLI
+  missing or unable to run); a lack the app itself says on a screen, such
+  as a sign-in missing or billing per token, is a warning.
 - **Seeing it run.** `npm run demo:fixture -- --fake` reviews a seeded
   fixture end to end with the fake CLI and spends nothing.
   `npm run dev` serves on 127.0.0.1:3000, after the doctor.

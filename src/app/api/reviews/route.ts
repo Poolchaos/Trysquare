@@ -25,7 +25,7 @@ import { appendRunNote, createReview, listActiveReviews } from "@/server/db/repo
 import { getModel, secondVerifierNotReady } from "@/server/db/repositories/models";
 import { effortRunsOn } from "@/lib/models/effort-support";
 import { reviewModelSchema } from "@/lib/models/model-id";
-import { resolveProfile } from "@/lib/review/profiles";
+import { downgradeNote, resolveProfile } from "@/lib/review/profiles";
 import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
 import { created, failed, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
@@ -285,9 +285,7 @@ export function POST(request: Request): Promise<Response> {
     if (resolution.downgradedFrom !== null) {
       appendRunNote(db, review.id, {
         kind: "note",
-        message:
-          `Profile downgraded from ${resolution.downgradedFrom} to ${resolution.profile} ` +
-          `on purpose. The same rules are applied; they are divided into more, smaller requests.`,
+        message: downgradeNote(resolution.downgradedFrom, resolution.profile),
       });
     }
 

@@ -265,7 +265,7 @@ Checking sign-in on Settings runs the CLI's own auth status and spends
 nothing. Pre-flight is git and arithmetic only. The test suite spends
 nothing: it runs against a fake CLI committed to the repository, bar one
 file that starts the installed CLI against a local stand-in for the API
-(`tests/server/engine/stand-in-api.test.ts`, D-124). A fifth thing spends,
+(`tests/server/engine/stand-in-api.test.ts`, D-124). One test spends too,
 and only when asked for by name: `tests/server/engine/real-cli.test.ts`,
 skipped unless `TRYSQUARE_REAL_CLI=1` is set.
 

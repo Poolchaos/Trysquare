@@ -103,7 +103,9 @@ Layering laws:
   call on the database handle. A type import is allowed, and the two files
   that own a handle, `server/runtime.ts` and `server/data-dir-lock.ts`, are
   named exceptions (MVP 5.10, widened in D-136).
-- Only `server/gitops` spawns git; only `server/engine` spawns claude;
+- Within `src/`, only `server/gitops` spawns git (the setup and gate
+  scripts under `scripts/` run it themselves); only `server/engine` spawns
+  claude;
   only `server/projectrun` spawns a project's own commands, and only in a
   throwaway copy (D-196). `tests/architecture/spawners.test.ts` holds it:
   no other source file may import `child_process`.

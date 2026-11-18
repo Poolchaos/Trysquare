@@ -341,7 +341,7 @@ enabled rule and a changed file is checked or recorded as deliberately
 excluded, and the app proves that on the planned requests before the
 adversarial stage sends one (`assertBatchesCoverEverything`). Only
 `decomposed` excludes; its exclusions are counted in the pre-flight and
-named in a note on the run (06 section 3). Rules are never summarised to
+in a note on the run, which names the first twenty (06 section 3). Rules are never summarised to
 fit a window, and truncation is never silent (workspace law); the app
 splits the work instead and records the split in the run log.
 
