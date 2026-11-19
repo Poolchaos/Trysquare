@@ -354,9 +354,10 @@ export function checksRan(input: Pick<ReportInput, "checks">): string | null {
 /**
  * The statement that lets a reader trust an empty findings list.
  *
- * Every number here is what the app counted and reconciled, not what a model
- * claimed: the coverage invariants mean the review could not have finished
- * with a hunk unaccounted for.
+ * Every number here but the last is what the app counted and reconciled, not
+ * what a model claimed: the coverage invariants mean the review could not
+ * have finished with a hunk unaccounted for. The last, the files read outside
+ * the change, is the comprehension answer's list, and the sentence says so.
  *
  * Exported for the page's typeset report, so the two cannot say different
  * things about what was examined.
@@ -372,7 +373,8 @@ export function completeness(input: Pick<ReportInput, "coverage" | "chainFilesRe
     `${input.coverage.totalFiles} changed file(s) and ${input.coverage.totalHunks} hunk(s) were ` +
     `read, and each hunk was either given a finding or cleared with a reason. ${sweep} ` +
     (refuted ? `${refuted} ` : "") +
-    `${input.chainFilesRead} file(s) outside the change set were opened to follow what it calls into.`
+    `By the model's own account it read ${input.chainFilesRead} file(s) outside the change set ` +
+    "to follow what the change calls into."
   );
 }
 

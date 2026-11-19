@@ -163,6 +163,10 @@ pulled deliberately.
   accounted for and names the profile, and nothing of the rule and file
   pairs left out; the pre-flight and a run note carry their count (the
   thirteenth grader, for Complete). Should the report say it too?
+- 2026-11-19: the report's count of files read outside the change is the
+  model's own list (D-247). Count it from the Read calls the engine sees
+  in a headless session instead, and say which it is for an interactive
+  review?
 
 ## Retired
 

@@ -142,8 +142,8 @@ Instruction: read every changed file in full, follow every execution chain
 (callers, callees, shared components), trace data paths end to end. Findings
 are FORBIDDEN in this stage's output (protocol: do not form findings yet).
 Output per file: what the change does and why (own words), chain files read
-(absolute repo paths; persisted to ledger_files.chainFilesRead), open
-uncertainties. A file whose behaviour cannot be explained gets an explicit
+(each as the model names it, no form asked for; persisted to
+ledger_files.chainFilesRead), open uncertainties. A file whose behaviour cannot be explained gets an explicit
 uncertainty entry, which S3 must resolve or convert to an open question.
 
 ### S3 Adversarial pass (protocol step 4)
@@ -155,7 +155,9 @@ advocate lenses. Disposition every sweep_hit: finding or cleared with
 reason. Output: candidate findings (protocol finding format fields +
 mechanism + ruleCode), per-hunk clears with reasons, sweep dispositions.
 App code cross-checks: every hunk and every sweep hit dispositioned, else
-the stage output is rejected as incomplete (one repair round, then fail).
+the stage output is rejected as incomplete and the stage fails. The repair
+round is for an answer of the wrong shape, not for this: the refused answer
+is struck from the checkpoints, so a resume asks the stage again.
 
 **Linked-review addendum (mandatory when a linked repo is present):** every
 changed exported type, interface, signature, enum/union, or default value
@@ -313,7 +315,8 @@ verifier's proof, and the finder's severity where the verifier's differs.
 
 Rendered by the app in its own fixed sections (`lib/review/report.ts`):
 what the change was for, when the person said; what was examined (ledger
-totals: files, hunks, sweep hits, files read outside the change); the
+totals: files, hunks, sweep hits; and, said as the model's own account,
+how many files outside the change S2 named as read, D-247); the
 confirmed findings grouped by severity
 in the exact finding format; what the project's own checks found; and how
 the review was run. It writes no out-of-scope notes and no verdict line.
@@ -322,8 +325,10 @@ Confirmed NITPICK findings are included
 the human already made). Dismissed findings appear in an appendix with
 their reasons, those left out unproven (dismissed open questions) under
 their own heading, apart from the ones a person rejected (D-190). Export: markdown file to `exports/`
-and clipboard. The report footer records: model, ruleset snapshot names and
-versions, commits reviewed, token usage, duration. No em dashes anywhere in
+and clipboard. The report footer records: the ruleset's name and version,
+the model with its effort and profile, the commit reviewed and its merge
+base, a linked project's branch and commit, token usage, the cost
+equivalent, and how long the review took. No em dashes anywhere in
 generated output (enforced by a lint on the renderer and a unit test).
 
 ## 4. Prompt composition

@@ -143,8 +143,8 @@ not reach a person says it is not a measurement.
 
 ## Run a first review
 
-Every step below is free until you press Start review, bar a Probe press in
-step 4, a real but tiny paid call.
+No step below sends a model a prompt until you press Start review, bar a
+Probe press in step 4, a real but tiny paid call.
 
 1. **Add a project.** Projects screen, paste a git URL, Add project. The row
    appears immediately and the clone runs in the background; if git fails, its

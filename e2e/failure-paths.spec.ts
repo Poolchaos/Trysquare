@@ -2490,7 +2490,7 @@ test("a stage the review screen does not know is named, and given no number", as
 });
 
 test("an unproven finding offers no Confirm, by button or by key", async ({ page }) => {
-  // Only proven findings reach the report: an open question can only be
+  // Only a proven finding can be confirmed: an open question can only be
   // dismissed (PG-2 (a), D-185). Its review is one the usage-limit test
   // before this one leaves awaiting decisions: a review of its own would
   // use up scripted answers the later tests read by count. Its verified
@@ -4415,10 +4415,11 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
   await expect(page.getByText("Risk started")).toBeVisible({ timeout: 60_000 });
 
   await startAReview(page);
-  // Said of the setting, not of one: Settings can let more than one run.
+  // Said of the setting, not of one: Settings can let more than one run. And
+  // of a place, not of a review: a finding being verified again holds one too.
   await expect(
     page.getByText(
-      "Waiting for a running review to finish. Settings limits how many run at once, because they share one usage limit.",
+      "Waiting for a place. A running review holds one, and so does a finding being verified again. Settings limits how many run at once, because they share one usage limit.",
     ),
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Start review" })).toHaveCount(0);
@@ -4450,7 +4451,7 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
   expect(await accessibilityViolations(page)).toEqual([]);
   await shootAll(page, page.getByRole("main"), "review-queued");
   await page.getByRole("button", { name: "Leave the line", exact: true }).click();
-  await expect(page.getByText(/Waiting for a running review to finish/)).toHaveCount(0);
+  await expect(page.getByText(/Waiting for a place/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Start review" })).toBeVisible();
   await expect(page.getByText("draft", { exact: true })).toBeVisible();
   expect(await accessibilityViolations(page)).toEqual([]);
@@ -4898,7 +4899,7 @@ test("Settings says as it opens that probes would cost API usage, above the mode
 }) => {
   // A probe is a real call, and under a sign-in billing per token it costs
   // API usage, which Settings said only once Check the CLI was pressed
-  // (review of D-161). The check is free, so it runs as Settings opens.
+  // (review of D-161). The check sends no prompt, so it runs as Settings opens.
   const stop = await routeUntilStopped(page, "**/api/auth*", (route) =>
     route.fulfill({
       status: 200,

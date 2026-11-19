@@ -14,7 +14,7 @@
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { answerOnce, routeUntilStopped } from "./answer-once";
 import { sidewaysOverflow } from "./overflow";
 import { APP_REPO, PROTOCOL_PATH, REFUTED_ISSUE, REFUTED_NOTE } from "./setup";
@@ -28,6 +28,23 @@ const EVIDENCE = join(
   "review",
   `${new Date().toISOString().slice(0, 10)}-e2e`,
 );
+
+/** One region of the page in light, in dark and at a phone's width. */
+async function shootInThree(page: Page, region: Locator, name: string): Promise<void> {
+  mkdirSync(EVIDENCE, { recursive: true });
+  const desktop = page.viewportSize();
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await region.screenshot({
+      path: join(EVIDENCE, `${name}-${scheme}.png`),
+      animations: "disabled",
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await region.screenshot({ path: join(EVIDENCE, `${name}-phone.png`), animations: "disabled" });
+  if (desktop) await page.setViewportSize(desktop);
+}
 
 /** Distinctive enough that finding it in the export cannot be a coincidence. */
 const EDITED_COMMENT = "Rewritten by hand: this bills a sub-cent invoice as zero.";
@@ -180,14 +197,18 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // could not run it, Haiku 4.5, is no longer a candidate (D-184). Falling
     // back to high on such a model is effortRunsOn's, tested on its own.
 
-    // The pre-flight is free and read-only, so it appears on its own once the
-    // four decisions are made.
+    // The pre-flight calls no model and creates no review, so it appears on its
+    // own once the four decisions are made.
     await expect(page.getByText("What this review will examine", { exact: true })).toBeVisible({
       timeout: 60_000,
     });
     await expect(page.getByText("Files changed")).toBeVisible();
     await expect(page.getByText("Merge base")).toBeVisible();
-    await expect(page.getByText(/pinned again when the review starts/)).toBeVisible();
+    await expect(
+      page.getByText(
+        "Start review pins the commits again, so these counts are a preview rather than a promise.",
+      ),
+    ).toBeVisible();
   });
 
   await test.step("the advanced fold offers only honest downgrades", async () => {
@@ -387,6 +408,9 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Refuted in verification" })).toBeVisible();
     await expect(page.getByText(REFUTED_ISSUE)).toBeVisible();
     await expect(page.getByText(REFUTED_NOTE)).toBeVisible();
+    const refuted = page.getByRole("heading", { name: "Refuted in verification" }).locator("..");
+    await expect(refuted.getByText("The report lists none of these.")).toBeVisible();
+    await shootInThree(page, refuted, "refuted-list");
 
     // The deterministic ends of the pipeline. They write no stage row, so
     // they are the rows most easily lost, and they are the parts of a review
@@ -904,6 +928,12 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // asserted against the exported file below, which is where it is actually
     // promised; here the claim is that a person can read it.
     await expect(page.getByRole("heading", { name: "What was examined" })).toBeVisible();
+    // The one count there that is the model's word is said as the model's (D-247).
+    const examined = page.getByText(
+      /By the model's own account it read \d+ file\(s\) outside the change set to follow what the change calls into\./,
+    );
+    await expect(examined).toBeVisible();
+    await shootInThree(page, examined, "report-examined");
     await expect(page.getByText(/confirmed finding/)).toBeVisible();
     await expect(page.getByText(/app\/src\//).first()).toBeVisible();
     await expect(page.getByText(EDITED_COMMENT)).toBeVisible();

@@ -1624,7 +1624,7 @@ describe("dividing the adversarial work by profile", () => {
       db,
       reviewId,
       worktreeRoot,
-      // A markdown file: the typescript and async themes do not apply to it.
+      // A markdown file: its path suggests neither the typescript nor the async theme.
       files: [
         ...FILES,
         ...parseUnifiedDiff(

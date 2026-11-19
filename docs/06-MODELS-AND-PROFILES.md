@@ -142,8 +142,8 @@ to on 2.1.301 is unmeasured (D-177).
 **Probe cost.** A probe with `--system-prompt <tiny> --tools ""` costs about
 $0.0007 cost-equivalent (121 input, 4 output tokens) versus $0.0748 for a
 naive `claude -p` probe that loads the full default system prompt and tool
-definitions. Probing the whole registry is therefore free in practice. The
-same lesson applies to review stages: the app always passes an explicit
+definitions. Probing the whole registry therefore costs little: under a
+cent for every ten models at that rate. The same lesson applies to review stages: the app always passes an explicit
 system prompt (a stage's by `--system-prompt-file`) and a minimal `--tools`
 list, never inheriting defaults.
 

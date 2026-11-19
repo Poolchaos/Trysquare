@@ -71,7 +71,7 @@ import {
 import { SETTING_KEYS, writeSetting } from "@/server/db/repositories/settings";
 import { models, reviews } from "@/server/db/schema";
 import { recordProbeSuccess, registerCandidate } from "@/server/db/repositories/models";
-import { listLedgerFiles } from "@/server/db/repositories/ledger";
+import { listLedgerFiles, setChainFilesRead } from "@/server/db/repositories/ledger";
 import { renderReport } from "@/lib/review/report";
 import { buildReportInput } from "@/server/review/report-input";
 import { listForReview, usageTotals } from "@/server/db/repositories/stage-executions";
@@ -449,6 +449,21 @@ describe("running a review to the point a human looks at it", () => {
       "Could not prove it; left for the next pass.",
     ]);
     expect(input.dismissed.map((finding) => finding.dismissReason)).toEqual(["Handled upstream."]);
+  }, 120_000);
+
+  it("counts, of the files the model says it read, only those outside the change", async () => {
+    // The comprehension answer names what else was read for each changed
+    // file. A changed file read to follow another is inside the change, and
+    // a file named for two of them is one file.
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    const [first, second] = listLedgerFiles(db, reviewId);
+    setChainFilesRead(db, first!.id, [second!.path, "app/src/outside/money.ts"]);
+    setChainFilesRead(db, second!.id, ["app/src/outside/money.ts", "app/src/outside/clock.ts"]);
+
+    expect(buildReportInput(db, reviewId).chainFilesRead).toBe(2);
   }, 120_000);
 
   it("finds the seeded defects, at the file and line the manifest states", async () => {
@@ -1124,7 +1139,7 @@ describe("when a review cannot finish", () => {
     // JSON, and the pipeline rejects it only afterwards. Left checkpointed as
     // succeeded, every resume would replay the rejected answer byte for byte
     // and fail identically forever; the only exit was deleting the review and
-    // paying for all five stages again.
+    // paying for every stage again.
     const reviewId = seedReview();
     const files = appFiles.map((file) => ({ repo: "primary" as const, slug: "app", file }));
     const outputs = buildIdealStageOutputs({

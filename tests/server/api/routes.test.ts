@@ -390,8 +390,9 @@ describe("creating a review", () => {
 
   it("refuses the top effort tier, whatever model is asked for", async () => {
     // On cost: up to 5.59 times high per call by the CLI's own index, and a
-    // review fans out across five stages and as many batches as the profile
-    // calls for, unattended, on a subscription this app is a guest on (D-125).
+    // review fans out across up to eight stages and as many batches as the
+    // profile calls for, unattended, on a subscription this app is a guest on
+    // (D-125).
     for (const model of ["claude-fable-5[1m]", "claude-sonnet-5"]) {
       const response = await routes.reviews.POST(
         post("http://localhost/api/reviews", {
@@ -947,8 +948,8 @@ describe("deleting a project", () => {
 });
 
 describe("looking before you pay", () => {
-  it("reports the size of the review without running or writing anything", async () => {
-    // Free and read-only on purpose: git and arithmetic, no model calls. A
+  it("reports the size of the review without running a model or making a review", async () => {
+    // Git and arithmetic on purpose: no model calls, and no review made. A
     // review is expensive enough that seeing its size first is worth a round
     // trip.
     const protocol = await (
@@ -1027,7 +1028,7 @@ describe("looking before you pay", () => {
     // rather than guessed at.
     expect(body.contextWindow).toBeNull();
 
-    // Nothing was written: no review row appeared.
+    // No review was made: no review row appeared.
     const reviews = (await (await routes.reviews.GET()).json()) as { reviews: unknown[] };
     const after = (await (await routes.reviews.GET()).json()) as { reviews: unknown[] };
     expect(after.reviews.length).toBe(reviews.reviews.length);

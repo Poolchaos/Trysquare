@@ -120,11 +120,11 @@ export function POST(request: Request): Promise<Response> {
       );
     }
 
-    // The free checks, before anything is fetched: a review the CLI cannot
-    // run is refused with the reason, creating nothing, rather than started
-    // and failed at its first stage (MVP 6.2). Asked first, not last, so a
-    // refusal waits on no fetch (review of the 6.2 changes). The interactive
-    // engine starts no CLI.
+    // The checks that send no prompt, before anything is fetched: a review
+    // the CLI cannot run is refused with the reason, creating nothing, rather
+    // than started and failed at its first stage (MVP 6.2). Asked first, not
+    // last, so a refusal waits on no fetch (review of the 6.2 changes). The
+    // interactive engine starts no CLI.
     const headless = (input.engineMode ?? "headless") === "headless";
     // The second verifier first: free, and a review it cannot finish is
     // not worth asking the CLI about (WP-E). In Mode B too: its second

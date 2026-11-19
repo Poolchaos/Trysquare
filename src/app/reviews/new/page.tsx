@@ -1382,8 +1382,8 @@ function NewReview() {
                   ) : null}
 
                   <p className="mt-3 text-xs text-[var(--color-ink-faint)]">
-                    The commits are pinned again when the review starts, so these counts are a
-                    preview rather than a promise.
+                    Start review pins the commits again, so these counts are a preview rather than a
+                    promise.
                   </p>
                 </Card>
               ) : null}
@@ -1462,7 +1462,7 @@ function NewReview() {
               <span className="text-sm text-[var(--color-ink-muted)]">
                 {baseReady && preflightPending
                   ? "The pre-flight is still working out what this review will examine."
-                  : "The commits are pinned when the review starts."}
+                  : "Pressing it pins the commits."}
               </span>
             )}
             {baseReady && verifierMissing ? (

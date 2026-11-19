@@ -168,8 +168,12 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
       .sort((a, b) => a.filePath.localeCompare(b.filePath) || a.lineStart - b.lineStart);
 
   const coverage = coverageReport(db, reviewId);
+  // The comprehension answer's own list, so the report says it as the
+  // model's account. A changed file named there is not outside the change.
+  const ledger = listLedgerFiles(db, reviewId);
+  const changed = new Set(ledger.map((file) => file.path));
   const chainFilesRead = new Set(
-    listLedgerFiles(db, reviewId).flatMap((file) => getChainFilesRead(file)),
+    ledger.flatMap((file) => getChainFilesRead(file)).filter((path) => !changed.has(path)),
   ).size;
 
   const linkedProject =

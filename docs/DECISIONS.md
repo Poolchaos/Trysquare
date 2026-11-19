@@ -6248,3 +6248,21 @@ verified evidence, in writing, here.
   `main`'s protection still requires the macOS check of a pull request, so
   one whose macOS job is red is the maintainer's to merge or to wait on.
   The README, the workflow's comment and the completion plan say so.
+- 2026-11-19 D-247 The report says the files read outside the change as
+  the model's account, and counts none that the change holds. The report
+  and the review page's typeset report ended "N file(s) outside the change
+  set were opened to follow what it calls into", under a comment saying
+  every number there is the app's count and not a model's claim. N was the
+  size of the lists the comprehension answer gives per changed file
+  (`chainFilesRead`), with nothing taken out: a changed file named as read
+  for another changed file was counted as outside the change, and no
+  reading of a session's Read calls stands behind any of it. Found reading
+  03 against the code before the fifteenth grade of the records. Now a
+  path that is a changed file's is left out (`server/review/report-input.ts`),
+  and the sentence reads "By the model's own account it read N file(s)
+  outside the change set to follow what the change calls into"
+  (`lib/review/report.ts`). A path the model spells differently from the
+  ledger still counts as outside: no form is asked of these paths. Rejected
+  for now: counting from the Read calls the engine sees in the session,
+  which an interactive review's terminal does not show it and a replayed
+  answer does not repeat; in the inbox.

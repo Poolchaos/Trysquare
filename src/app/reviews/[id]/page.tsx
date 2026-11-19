@@ -79,7 +79,11 @@ import { createEndingNotice } from "@/lib/review/ending-notice";
  * while anything is outstanding.
  */
 const STAGES = [
-  ["s0_prepare", "Prepare", "Fetch, pin, check out, build the bundle, run the sweeps"],
+  [
+    "s0_prepare",
+    "Prepare",
+    "Fetch, check out the pinned commits, build the bundle, run the sweeps",
+  ],
   ["s1_risk", "Risk", "Classify each changed file"],
   ["s2_comprehension", "Comprehension", "Read the code, including what it calls into"],
   ["s3_adversarial", "Adversarial", "Hunt against the rules"],
@@ -1338,8 +1342,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         ) : null}
         {snapshot.queued ? (
           <p className="mb-4 text-sm text-[var(--color-ink-muted)]">
-            Waiting for a running review to finish. Settings limits how many run at once, because
-            they share one usage limit.
+            Waiting for a place. A running review holds one, and so does a finding being verified
+            again. Settings limits how many run at once, because they share one usage limit.
           </p>
         ) : null}
 
@@ -1924,7 +1928,7 @@ function RunDetail({
               titled refuted that left some out would be its own silence. */}
           <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
             Raised by the review, then refuted by verification or discarded by the quotation check,
-            each with its reason. None of these reach the report.
+            each with its reason. The report lists none of these.
           </p>
           <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
             {refuted.map((finding) => (

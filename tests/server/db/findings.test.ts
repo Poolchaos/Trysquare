@@ -127,7 +127,7 @@ describe("finding verification", () => {
   });
 
   it("surfaces an open question for a human to dismiss, never to confirm", () => {
-    // PG-2 (a), D-185: only proven findings reach the report.
+    // PG-2 (a), D-185: only a proven finding can be confirmed.
     const finding = candidate();
     markOpenQuestion(db, finding.id, "Needs the caller in another repo to confirm the shape.");
     expect(listAwaitingDecision(db, reviewId)).toHaveLength(1);
@@ -142,7 +142,7 @@ describe("finding verification", () => {
 });
 
 describe("human decision", () => {
-  it("puts only confirmed findings into the report", () => {
+  it("counts a dismissed finding out of the confirmed ones", () => {
     const kept = candidate();
     const dropped = candidate({ issue: "Second finding" });
     for (const f of [kept, dropped]) {

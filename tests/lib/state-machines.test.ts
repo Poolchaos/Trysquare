@@ -106,9 +106,9 @@ describe("finding status machine", () => {
     expect(canTransitionFinding("verified", "confirmed")).toBe(true);
   });
 
-  it("lets an open question be dismissed, never confirmed: only proven findings are reported", () => {
-    // PG-2 (a), D-185: a finding verification could not prove stays out of
-    // the report; it is dismissed, or verified again.
+  it("lets an open question be dismissed, never confirmed: only a proven finding is", () => {
+    // PG-2 (a), D-185: a finding verification could not prove is never
+    // reported as a finding; it is dismissed, or verified again.
     expect(canTransitionFinding("open_question", "confirmed")).toBe(false);
     expect(canTransitionFinding("open_question", "dismissed")).toBe(true);
   });

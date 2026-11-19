@@ -157,7 +157,7 @@ Ruleset-scoped non-rule content composed into every review prompt.
 | ----------------------------------- | ------------ | ------------------------------------------ |
 | id                                  | text PK      |                                            |
 | projectId                           | text FK      |                                            |
-| fromBranch, fromCommit              | text         | commit pinned at start                     |
+| fromBranch, fromCommit              | text         | commit pinned when the review is created   |
 | intoBranch, intoCommit              | text         |                                            |
 | mergeBaseCommit                     | text         | diff base = merge-base(from, into)         |
 | linkedProjectId                     | text FK null | dependency project included in this review |
