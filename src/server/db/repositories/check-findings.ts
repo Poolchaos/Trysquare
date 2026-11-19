@@ -101,7 +101,7 @@ export function requireCheckFinding(db: Db, id: string): CheckFinding {
 
 /**
  * A person's decision, on the same transitions as a code finding's: only
- * one proven reaches the report, and only while the review waits on them.
+ * one proven can be confirmed, and only while the review waits on them.
  */
 function decide(
   db: Db,

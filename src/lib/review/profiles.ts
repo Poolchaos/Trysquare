@@ -131,6 +131,7 @@ export function whatTheModelGets(profile: ReviewProfile, passes?: number): strin
   const count = passes === undefined ? "" : `, ${passes} ${passes === 1 ? "pass" : "passes"}`;
   if (profile === "full-context") return "The whole ruleset in one pass.";
   if (profile === "chunked") return `One pass per rule theme${count}.`;
-  if (profile === "decomposed") return `Each file against the rules that apply to it${count}.`;
+  if (profile === "decomposed")
+    return `Each file against the rules whose themes its path suggests${count}.`;
   return null;
 }

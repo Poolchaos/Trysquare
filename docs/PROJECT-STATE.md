@@ -15,7 +15,11 @@ from 2026-11-03.
 
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
-  macOS needs. The macOS CI job stays a required check.
+  macOS needs. A failure only the macOS CI job shows is parked meanwhile,
+  and one only Windows shows is recorded and left (D-246); a push waits for
+  Ubuntu's job. A fourteenth grade of the records, at 31fcba7, was B again:
+  nothing materially wrong in about 190 claims sampled, ten immaterial
+  lines, corrected the same day; a fifteenth is owed.
 - 2026-11-19: before a thirteenth grade of the records, the screens were
   swept for claims the documents had already been corrected for, and four
   were found and put right (D-244). Settings said of the CLI's version and
@@ -27,8 +31,8 @@ from 2026-11-03.
   1524 unit tests passing, 8 skipped, and 147 browser tests. The thirteenth
   grade, at that commit, was B: nothing materially wrong in about 130
   claims sampled, one earlier line still open and ten immaterial lines new
-  (`plans/AUDIT-2026-11-17.md`), corrected the same day; a fourteenth is
-  owed.
+  (`plans/AUDIT-2026-11-17.md`), corrected the same day; the fourteenth is
+  the entry above.
 - 2026-11-18: WP-L's first slice of three (D-243). Settings keeps the git
   emails that count as the person's and, while none is kept, goes by the
   `user.email` of their git config and names it; a project's branches have

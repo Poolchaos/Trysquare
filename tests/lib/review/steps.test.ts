@@ -224,7 +224,7 @@ describe("what each step came to", () => {
 
   it("says each step's result, refuted and discarded told apart", () => {
     expect(STEPS.map((_, index) => stepResult(index, facts))).toEqual([
-      "14 rules frozen for this review, and the sweeps marked every line a rule names.",
+      "14 rules frozen for this review, and the sweeps marked every added line a rule's pattern matches.",
       "13 changed files classed by risk and read with what they call into.",
       "11 candidates raised, and every change and deletion accounted for.",
       "10 proven by both verifiers, 1 open question, none refuted, none discarded for quoting code that was not there.",
@@ -253,7 +253,9 @@ describe("what each step came to", () => {
       files: 1,
       tallies: { ...facts.tallies, raised: 0, provenOnce: 0, provenTwice: 0, open: 0 },
     };
-    expect(stepResult(0, empty)).toBe("The sweeps marked every line a rule names.");
+    expect(stepResult(0, empty)).toBe(
+      "The sweeps marked every added line a rule's pattern matches.",
+    );
     expect(stepResult(1, empty)).toBe(
       "1 changed file classed by risk and read with what it calls into.",
     );

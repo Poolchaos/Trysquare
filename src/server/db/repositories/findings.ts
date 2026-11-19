@@ -262,7 +262,7 @@ function assertDeciding(db: Db, findingId: string): void {
 }
 
 /**
- * Human decision. The only route into a report.
+ * Human decision. The only route into a report as a finding.
  *
  * A replacement comment is optional and kept beside the engine's, never over
  * it. The report reads the person's words because they are the ones written
@@ -288,8 +288,8 @@ export function confirmFinding(
 }
 
 /**
- * An open question is a finding verification could not prove, and only proven
- * findings reach the report (PG-2 (a), D-185). Said as such, not as a bare
+ * An open question is a finding verification could not prove, and only a
+ * proven finding can be confirmed (PG-2 (a), D-185). Said as such, not as a bare
  * illegal transition, so the person knows what they can do instead.
  */
 export class OpenQuestionNotConfirmableError extends Error {

@@ -195,12 +195,15 @@ it opened each image stands alone. A project with no e2e is reported as
   (GitHub's `ubuntu-latest` and `macos-latest`) against a stand-in for the
   CLI, and a pull request merges into `main` only with both green (the
   maintainer's own pushes are exempt, D-232). Real reviews have
-  run on Linux; macOS has had none.
+  run on Linux; macOS has had none. Linux comes first for now (D-245,
+  2026-11-19): a failure only the macOS job shows is recorded and parked
+  until the work on Linux is done.
 - Windows is not looked after for now (D-232, 2026-11-17): nobody who works
   on Trysquare uses it. The app was built to run there and ran real reviews
   there on 2026-10-22, and CI still runs the suite on `windows-latest`
   beside them, but that job gates nothing, and a failure only it shows is
-  recorded; fixing one is not required. Its runner sometimes refuses a browser test's
+  recorded and left (one was fixed on 2026-11-18, before that was settled).
+  Its runner sometimes refuses a browser test's
   connection with `net::ERR_NO_BUFFER_SPACE` before the app answers
   (D-105). If you need Windows, open an issue. Set `TRYSQUARE_CLAUDE_PATH`
   to `claude.exe` or an npm `claude.cmd` when using a CLI other than the one

@@ -4,7 +4,7 @@ Status: RATIFIED 2026-07-30 at G0. Supersedes the two-model assumption in
 `01-ARCHITECTURE.md` section 7. Facts below were measured on the maintainer's
 machine on 2026-07-30 with Claude Code 2.1.71; they are re-probed by the
 app, never trusted from this document. Re-verified on 2026-10-22 against
-the bundled 2.1.301 by reading its binary and running its free commands,
+the bundled 2.1.301 by reading its binary and running its commands that take no prompt,
 not by probing: the probe table and the probe's cost in section 1 were not
 measured again, since a probe spends usage (MVP 7.2).
 
@@ -23,7 +23,8 @@ Signed out, 2.1.301 prints `{"loggedIn":false,"authMethod":"none",...}` and
 exits 1 (measured 2026-10-20 with an empty config directory), so the status
 is read from stdout before the exit code. The app reads this when
 someone opens Settings, which says above Models that a sign-in billing per
-token makes a probe cost API usage, or presses Check the CLI there; opens
+token makes a probe cost API usage, or presses Check the CLI there, or
+saves a CLI path there; opens
 the new-review screen, which says the same of a review before Start
 (D-161); opens a review that can be started, whose page reads how it
 bills before Start; asks to verify a finding again, as the dialog opens
@@ -155,7 +156,8 @@ result stores resolved id, context window, availability, error text, and
 probe timestamp. The picker lets only what probed available be chosen, and
 shows it grouped by family, with the context window and the profile it will
 use; the rest are a press away, each with a probe control. Unavailable
-candidates render disabled with the error and probe age. A probe older than
+candidates render disabled with the error, and on Settings with the probe
+age too. A probe older than
 24 hours renders as unknown rather than assumed-good.
 
 Recommended-for-review flags (the maintainer 2026-07-30: Opus and Fable are the

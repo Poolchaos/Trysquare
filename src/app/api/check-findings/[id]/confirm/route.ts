@@ -1,7 +1,7 @@
 /**
  * A person accepting what a project's own checks found (WP-I, D-197): a
- * failing test, or a screenshot graded C or D. Into the report, as a code
- * finding goes, only by this.
+ * failing test, or a screenshot graded C or D. Reported as a finding, as
+ * a code finding is, only by this.
  */
 
 import { confirmCheckFinding } from "@/server/db/repositories/check-findings";

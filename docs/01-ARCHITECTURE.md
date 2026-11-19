@@ -243,7 +243,7 @@ can still be influenced within the bounds of what it is permitted to do,
 which is read files and produce findings. These mitigations bound the blast
 radius; they do not make prompt injection impossible. That is also why every
 finding is verified in a separate session and confirmed by a human before it
-reaches a report.
+is reported as one.
 
 ## 8. Errors and observability
 

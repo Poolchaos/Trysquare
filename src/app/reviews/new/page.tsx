@@ -264,7 +264,7 @@ function NewReview() {
     error: string;
   } | null>(null);
 
-  // Asked once as the screen opens, and free: a sign-in that bills per token
+  // Asked once as the screen opens, and with no prompt sent: a sign-in that bills per token
   // is said before Start, while it can still be changed, not in a run note
   // on a review already billing (D-161). Anything else the CLI cannot do is
   // refused at Start, with its reason (MVP 6.2). What was shown is sent with
@@ -502,7 +502,7 @@ function NewReview() {
       : linkInto;
 
   // The size of the review, recomputed whenever the decisions that change it
-  // do. Free and read-only, so it can run on every change without a thought.
+  // do. Free, and all it writes is git's fetch, so it can run on every change without a thought.
   const readyToPreflight =
     projectId !== "" && fromBranch !== "" && intoBranch !== "" && rulesetId !== "" && model !== "";
 

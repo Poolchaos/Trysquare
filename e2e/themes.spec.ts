@@ -120,6 +120,15 @@ test("the detail screens photograph on real content", async ({ page }, testInfo)
   await expect(page.getByTestId("model-picker")).toBeVisible({ timeout: 60_000 });
   await photograph(page, shot("new-review"));
 
+  // Every model, the unprobed among them: a `decomposed` one's line says
+  // which rules a file is sent, not that the rest do not apply.
+  await page.getByRole("button", { name: /that need probing/ }).click();
+  const picker = page.getByTestId("model-picker");
+  await expect(
+    picker.getByText(/Each file against the rules whose themes its path suggests/).first(),
+  ).toBeVisible();
+  await photograph(page, shot("new-review-all-models"));
+
   await page.goto("/rulesets");
   await page.getByRole("main").getByRole("link").first().click();
   await expect(page.getByRole("table")).toBeVisible();
@@ -523,6 +532,12 @@ test("Projects, the model picker and the CLI card say what the code does, on a p
     page.getByText("Only a model a fresh probe vouches for can be chosen here."),
   ).toBeVisible();
   await photograph(page, shot("new-review-phone"));
+  await page.getByRole("button", { name: /that need probing/ }).click();
+  const picker = page.getByTestId("model-picker");
+  await expect(
+    picker.getByText(/Each file against the rules whose themes its path suggests/).first(),
+  ).toBeVisible();
+  await photograph(page, shot("new-review-all-models-phone"));
 
   await page.goto("/settings");
   await expect(

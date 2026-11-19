@@ -123,7 +123,7 @@ describe("what each model gets, said in the picker (WP-F, D-187)", () => {
     expect(whatTheModelGets("chunked")).toBe("One pass per rule theme.");
     expect(whatTheModelGets("chunked", 8)).toBe("One pass per rule theme, 8 passes.");
     expect(whatTheModelGets("decomposed", 1)).toBe(
-      "Each file against the rules that apply to it, 1 pass.",
+      "Each file against the rules whose themes its path suggests, 1 pass.",
     );
     expect(whatTheModelGets("mechanical-only")).toBeNull();
   });

@@ -6236,3 +6236,15 @@ verified evidence, in writing, here.
   still waits for both. Open, asked the same day: whether a failure only
   the macOS job shows is meanwhile recorded and left, as one only Windows
   shows is. Windows stays as D-232 left it.
+- 2026-11-19 D-246 A failure only one platform's CI job shows, where that
+  platform is not the one being worked on. Two answers from the maintainer
+  on 2026-11-19, to the two questions D-245 and the twelfth grade's Z7 left
+  open. Of a failure only the macOS job shows, while Linux comes first:
+  "the failure can be parked for now". Of a failure only the Windows job
+  shows: "recorded and left". So each is written in the inbox with its run
+  and left; none is fixed, and none holds a push, which waits for Ubuntu's
+  job alone. 02f8e24, which fixed a Windows-only failure on 2026-11-18, was
+  made before this was said and stays. Not changed, because not asked:
+  `main`'s protection still requires the macOS check of a pull request, so
+  one whose macOS job is red is the maintainer's to merge or to wait on.
+  The README, the workflow's comment and the completion plan say so.

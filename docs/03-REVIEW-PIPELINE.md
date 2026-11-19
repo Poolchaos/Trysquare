@@ -16,7 +16,7 @@ than being edited away.
 - Sweeping whole changed files where the protocol asks for it (section 0.4).
   Sweeps run over added lines only (`lib/review/sweep.ts`), and a rule has
   no way to ask for more. Unowned.
-- Bulk dismissal by rule (section 7). A finding is dismissed one at a time,
+- Bulk dismissal by rule (section 2). A finding is dismissed one at a time,
   by id. Unowned: U7 built the rule text and the diff hunk in confirmation
   and did not take this on.
 
@@ -28,10 +28,12 @@ S1 work its risk-tagged files first (U12).
 
 ## 0. S0 Prepare (deterministic app code, no AI)
 
-1. `git fetch` the project; resolve fromBranch and intoBranch to commits;
-   pin them on the review row. Compute `mergeBaseCommit`. For a **linked
+1. `git fetch` the project, so the commits pinned on the review row stay
+   reachable. They were pinned, with `mergeBaseCommit`, when the review was
+   created, from refs fetched then (D-27), and a start never re-pins: a
+   draft started later reviews the commits of its creation. For a **linked
    review** (a dependency project included, e.g. shared-core alongside the app that consumes it),
-   do the same for the linked pair and pin the linked commits.
+   the same holds for the linked pair and its pinned commits.
 2. Create the worktree(s). Single review: detached checkout of fromCommit
    at `runs/<id>/worktree/<slug>/`, under the same parent a linked review
    uses. Linked review: that parent directory with one
@@ -309,10 +311,13 @@ verifier's proof, and the finder's severity where the verifier's differs.
 
 ## 3. S8 Report (deterministic)
 
-Rendered from confirmed findings in the protocol's Review Output Format:
-summary, completeness check (ledger totals: files, hunks, sweeps, chains
-read), findings grouped by severity in the exact finding format, out of
-scope notes, final verdict line. Confirmed NITPICK findings are included
+Rendered by the app in its own fixed sections (`lib/review/report.ts`):
+what the change was for, when the person said; what was examined (ledger
+totals: files, hunks, sweep hits, files read outside the change); the
+confirmed findings grouped by severity
+in the exact finding format; what the project's own checks found; and how
+the review was run. It writes no out-of-scope notes and no verdict line.
+Confirmed NITPICK findings are included
 (D-11 supersedes the earlier exclusion: a confirmed finding is a decision
 the human already made). Dismissed findings appear in an appendix with
 their reasons, those left out unproven (dismissed open questions) under

@@ -168,8 +168,8 @@ logic test).
 ### V4. Pre-flight and the linked toggle (T12 remainder)
 
 Route `POST /api/reviews/preflight` with the same body shape as review
-creation minus effort and intent. It is read-only and free: git only, no
-model calls, no rows written. Sequence: fetch both sides, resolve the pins,
+creation minus effort and intent. It is free: git only, no
+model calls, and no rows written but when a project was last fetched. Sequence: fetch both sides, resolve the pins,
 diff and parse in memory, then return:
 
 - Pinned commits with branch subjects and the fetch time (D-27 visibility:
@@ -377,8 +377,8 @@ confirms the wiring.
   is enforced by the server, not by UI state.
 - D-36 The file-context endpoint serves only paths that belong to the
   review's findings, and only while the review awaits confirmation.
-- D-37 Pre-flight is free and read-only: git only, no model calls, nothing
-  written. Its pins are advisory; creation re-fetches and re-pins (D-27).
+- D-37 Pre-flight is free: git only, no model calls, nothing written but
+  git's fetch into the clone and when it was. Its pins are advisory; creation re-fetches and re-pins (D-27).
 - D-38 The report is the app's fixed rendering of the protocol's finding
   format. A protocol's prose format section is not parsed. Confirmed
   NITPICKs are included (D-11); dismissed findings appear in an appendix

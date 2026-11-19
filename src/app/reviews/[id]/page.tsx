@@ -2409,7 +2409,7 @@ function ScanTheater({
           </div>
         ) : null}
 
-        {/* The five steps a person reads, over the eight stages that do the
+        {/* The five steps a person reads, over the ten stages that do the
           work (WP-G, the approved mockup): what is done, what is running now,
           what comes next, each with a count the run has measured. */}
         <ol aria-label="Review steps" className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-5">

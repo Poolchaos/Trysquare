@@ -10,7 +10,7 @@
 export const STEPS = [
   {
     title: "Understand the rules",
-    what: "The ruleset is frozen for this review, and the mechanical sweeps mark every line a rule names.",
+    what: "The ruleset is frozen for this review, and the mechanical sweeps mark every added line a rule's pattern matches.",
     stages: ["s0_prepare"],
   },
   {
@@ -201,8 +201,8 @@ export function stepResult(
   switch (index) {
     case 0:
       return facts.rules === null
-        ? "The sweeps marked every line a rule names."
-        : `${facts.rules} rules frozen for this review, and the sweeps marked every line a rule names.`;
+        ? "The sweeps marked every added line a rule's pattern matches."
+        : `${facts.rules} rules frozen for this review, and the sweeps marked every added line a rule's pattern matches.`;
     case 1:
       return facts.files === 1
         ? "1 changed file classed by risk and read with what it calls into."
