@@ -13,6 +13,9 @@ from 2026-11-03.
 
 ## Status
 
+- 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
+  completion plan is finished for a person on Linux before any work only
+  macOS needs. The macOS CI job stays a required check.
 - 2026-11-19: before a thirteenth grade of the records, the screens were
   swept for claims the documents had already been corrected for, and four
   were found and put right (D-244). Settings said of the CLI's version and

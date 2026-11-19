@@ -36,7 +36,10 @@ verdict from the maintainer; and what CG-5 puts in scope is built.
 **Non-goals.** Windows: no Windows-only proof is asked of new work, and no
 effort goes into Windows-only failures, until the maintainer says otherwise
 (2026-11-17: "no need to cater for it for now", "we might cater for it in
-the future"). Its CI leg keeps running and is not a required check. No
+the future"). Its CI leg keeps running and is not a required check. macOS:
+Linux comes first (2026-11-19, D-245: "getting it perfect for linux users
+first, then once that's 100%, for mac"), so work only macOS needs waits
+until the plan is done on Linux; its CI job stays required. No
 verdict is given by an AI: a gate passes on the maintainer's word alone.
 
 ## 2. Work packages

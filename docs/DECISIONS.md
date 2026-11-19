@@ -6224,3 +6224,15 @@ verified evidence, in writing, here.
   measurement, which saw the host asked and not the request. What is known
   is that the app gives neither check a prompt, and the card, the runbook
   and 06 now say that.
+- 2026-11-19 D-245 Linux first, then macOS. The maintainer, 2026-11-19:
+  "let's focus on getting it perfect for linux users first, then once
+  that's 100%, for mac". An order of work. Read by the session as: the
+  completion plan (`plans/COMPLETION-PLAN.md`) is finished for a person on
+  Linux first, its goal as written and proven on the maintainer's Linux
+  machine as since D-232; work that only macOS needs waits until then (in
+  the plan today: reading the macOS shutdown anomaly again, CP-6's last
+  line). Not changed by this until the maintainer says so: the macOS CI job
+  stays a required check on `main` beside Ubuntu's (D-232), and a push
+  still waits for both. Open, asked the same day: whether a failure only
+  the macOS job shows is meanwhile recorded and left, as one only Windows
+  shows is. Windows stays as D-232 left it.
