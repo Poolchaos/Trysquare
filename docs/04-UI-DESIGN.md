@@ -183,9 +183,11 @@ Pre-flight summary: the commit the branch is at, merge base, files/hunks
 counts, sweep hit count, composed prompt token estimate, every
 request by stage, and whether the model's window splits the work or a file
 is too large for it on its own; the profile is on the model's row, and a
-deliberate downgrade is said in the advanced fold. Choosing a model
-whose profile is weaker than `full-context` states plainly that the review
-will run as more, smaller requests and why. When the project's own checks are on, it
+deliberate downgrade is said in the advanced fold. A model
+whose profile is weaker than `full-context` says on its row how its work is
+divided, and one not recommended that accuracy may fall; that a weaker
+profile sends the rules in more, smaller requests is the Profile control's
+line in the advanced fold. When the project's own checks are on, it
 says first that they run, which commands, on a throwaway copy of the branch
 and as you, and, with an e2e, that its screenshots are then graded at a
 request for each eight and one for each eight graded C or D, counted once
@@ -211,12 +213,13 @@ refuses one too.
   graded C or D), Report (S6 and the person). Each
   is done, now or next with one count the run has measured; a step not
   begun says Waiting. While proving, the findings so far: proven by the
-  first verifier, refuted, discarded for quoting code that was not there,
+  first verifier, refuted, discarded by the quotation check,
   open question, still to prove, which add up to what was raised.
 - Stage timeline (S0-S6) with per-stage status, duration, token usage.
 - Coverage panel: files, hunks and sweep hits accounted for, the counters
-  climbing live. Not built: risk tags per file and the chain files read,
-  which no screen shows.
+  climbing live. Not built: risk tags per file and the chain files read.
+  A run note names the first five risk-tagged files with their tags, and
+  nothing shows the chain files.
 - Activity feed: current stage's tool activity (file being read), errors.
 - Usage meter: cumulative tokens and cost-equivalent.
 - Controls: cancel, which asks first and says when it failed (5.1); start,

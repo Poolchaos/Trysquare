@@ -157,7 +157,7 @@ describe("what each step says it did", () => {
     expect(stepCount(2, "next", facts)).toBe("Waiting");
     // Running, a count is not yet a result.
     const none = { ...facts, tallies: { ...facts.tallies, raised: 0 } };
-    expect(stepCount(2, "now", none)).toBe("Walking the rules");
+    expect(stepCount(2, "now", none)).toBe("Changes with the model");
     expect(stepCount(2, "now", facts)).toBe("11 candidates so far");
   });
 
@@ -179,19 +179,19 @@ describe("what each step says it did", () => {
     };
     expect(stepCount(0, "done", one)).toBe("1 rule frozen");
     expect(stepCount(1, "done", one)).toBe("1 file given to read");
-    expect(stepCount(1, "now", one)).toBe("Reading 1 file");
+    expect(stepCount(1, "now", one)).toBe("1 file with the model");
     expect(stepCount(2, "now", one)).toBe("1 candidate so far");
     expect(stepCount(2, "done", one)).toBe("1 candidate raised");
     expect(stepCount(4, "now", one)).toBe("1 waits for you");
   });
 
   it("says when a step is grading screens, not walking rules or proving code", () => {
-    // During S4b the step said "Walking the rules", and during S5c "0 to
-    // prove", while neither was happening (review round 8).
+    // During S4b the step said the rules were being walked, and during S5c
+    // "0 to prove", while neither was happening (review round 8).
     const none = { ...facts, tallies: { ...facts.tallies, raised: 0, toProve: 0 } };
     expect(stepCount(2, "now", none, "s4b_design_grading")).toBe("Grading the screens");
     expect(stepCount(3, "now", none, "s5c_design_second")).toBe("Grading the screens again");
-    expect(stepCount(2, "now", none, "s3_adversarial")).toBe("Walking the rules");
+    expect(stepCount(2, "now", none, "s3_adversarial")).toBe("Changes with the model");
     // Waiting is waiting, whatever is running elsewhere.
     expect(stepCount(3, "next", none, "s4b_design_grading")).toBe("Waiting");
   });
@@ -227,7 +227,7 @@ describe("what each step came to", () => {
       "14 rules frozen for this review, and the sweeps marked every added line a rule's pattern matches.",
       "13 changed files classed by risk and given to the model to read with what they call into.",
       "11 candidates raised, and every change and deletion accounted for.",
-      "10 proven by both verifiers, 1 open question, none refuted, none discarded for quoting code that was not there.",
+      "10 proven by both verifiers, 1 open question, none refuted, none discarded by the quotation check.",
       "Coverage audited. Your confirmation, then the report.",
     ]);
     const mixed = {
@@ -235,10 +235,10 @@ describe("what each step came to", () => {
       tallies: { ...facts.tallies, provenTwice: 0, open: 2, refuted: 3, discarded: 1 },
     };
     expect(stepResult(3, mixed)).toBe(
-      "None proven by both verifiers, 2 open questions, 3 refuted, 1 discarded for quoting code that was not there.",
+      "None proven by both verifiers, 2 open questions, 3 refuted, 1 discarded by the quotation check.",
     );
     expect(stepResult(4, { ...facts, status: "complete" })).toBe(
-      "Coverage audited, every finding decided, and the report written.",
+      "Coverage audited and every finding decided. The report is below.",
     );
   });
 

@@ -226,7 +226,7 @@ Each model carries a `profileId`. Profiles are declarative config:
 | `decomposed`      | claude-sonnet-5, other mid-tier                                           | Theme chunks as above, further narrowed: only the themes a file's path suggests reach that file's prompt, and the plan names each (rule, file) pair left out, with its reason; the run keeps their count and the first twenty | Per file                                                                                                      | As full-context                   |
 | `mechanical-only` | anything untrusted for judgment; Haiku is retired (D-184)                 | Not offered for judgment stages                                                                                                                                                                                            | Meant for non-judgment helpers (e.g. summarising a sweep hit list); none is built                                      | Never                             |
 
-Profile selection is automatic from the model, shown in the pre-flight, and
+Profile selection is automatic from the model, shown on the model's row in the picker, and
 overridable per review (a deliberate downgrade is allowed and recorded on
 the review; an upgrade beyond the model's tier is not).
 

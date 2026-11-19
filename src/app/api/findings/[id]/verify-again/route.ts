@@ -1,5 +1,5 @@
 /**
- * Verifies an open question again: one new request, in a fresh session, held
+ * Verifies an open question again: new requests, each in a fresh session, held
  * to S5's checks (proof-and-steps plan, WP-D2).
  *
  * Paid requests, so refused unless the page said so first, and answered

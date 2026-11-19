@@ -2492,7 +2492,7 @@ function ScanTheater({
           ) : null}
         </div>
         {/* What proving has found so far, kept apart as the mockup has them:
-          proven, refuted, discarded for quoting what was not there, open, and
+          proven, refuted, discarded by the quotation check, open, and
           what is left, which add up to what was raised. Only once there is
           something to prove. */}
         {states[3] !== "next" && tallies.raised > 0 ? (
@@ -2518,7 +2518,7 @@ function ScanTheater({
                   "",
                 ],
                 [
-                  "discarded: the cited code was not there",
+                  "discarded by the quotation check",
                   tallies.discarded,
                   "bg-[var(--color-warning-soft)]",
                   "text-[var(--color-warning)]",

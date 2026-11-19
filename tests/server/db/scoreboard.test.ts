@@ -16,7 +16,9 @@ import {
   markOpenQuestion,
   markVerified,
 } from "@/server/db/repositories/findings";
+import { confirmCheckFinding, recordFailedCommand } from "@/server/db/repositories/check-findings";
 import { readScoreboard } from "@/server/db/repositories/scoreboard";
+import { recordAttempt } from "@/server/db/repositories/stage-executions";
 import { transitionReview } from "@/server/db/repositories/reviews";
 import { eq } from "drizzle-orm";
 import { projects } from "@/server/db/schema";
@@ -209,6 +211,31 @@ describe("what the dashboard widgets need", () => {
     expect(board.awaitingReviews[0]?.fromBranch).toBe("feature/x");
   });
 
+  it("dates a wait from the run's last stage, not from when the review was made", () => {
+    // A waiting review has no completion time, so the wait was counted from
+    // its creation: one made on Monday and run on Friday had waited a week.
+    const second = seedReview(db, seedProject(db, "other").id).id;
+    const ended = { [reviewId]: "2999-01-02T00:00:00.000Z", [second]: "2999-01-01T00:00:00.000Z" };
+    for (const id of [reviewId, second]) {
+      transitionReview(db, id, "running");
+      recordAttempt(db, {
+        reviewId: id,
+        stage: "s5_verification",
+        promptHash: "hash",
+        attempt: 1,
+        status: "succeeded",
+        startedAt: "2999-01-01T00:00:00.000Z",
+        endedAt: ended[id]!,
+      });
+      transitionReview(db, id, "verifying");
+      transitionReview(db, id, "awaiting_confirmation");
+    }
+
+    const waiting = readScoreboard(db).awaitingReviews;
+    expect(waiting.map((row) => row.id)).toEqual([second, reviewId]);
+    expect(waiting.map((row) => row.since)).toEqual([ended[second], ended[reviewId]]);
+  });
+
   it("counts a dismissal as a decision, and leaves killed findings out of the queue", () => {
     // The widget's whole job is saying how much is left. Counting only the
     // confirmed ones told someone who had dismissed a queue that they had not
@@ -257,5 +284,36 @@ describe("what the dashboard widgets need", () => {
     expect(fresh).toBeDefined();
     expect(fresh?.reviews).toBe(0);
     expect(fresh?.latest).toBeNull();
+  });
+});
+
+describe("what a project's own checks found", () => {
+  it("is counted with the code's findings, as the review's own queue counts it", () => {
+    // Read from the findings table alone, a review whose only finding was a
+    // failing test said "no findings" on the dashboard while it waited on one.
+    const failed = recordFailedCommand(db, reviewId, {
+      step: "tests",
+      command: "npm test",
+      exitCode: 1,
+      timedOut: false,
+      logPath: "/tmp/tests.log",
+      tail: "1 failed",
+    });
+    waitOnAPerson();
+
+    const waiting = readScoreboard(db);
+    expect(waiting.awaitingReviews[0]).toMatchObject({ decided: 0, total: 1 });
+    expect(waiting.recent[0]).toMatchObject({ confirmed: 0, total: 1 });
+
+    confirmCheckFinding(db, failed.id);
+
+    const decided = readScoreboard(db);
+    expect(decided.awaitingReviews[0]).toMatchObject({ decided: 1, total: 1 });
+    expect(decided.recent[0]).toMatchObject({ confirmed: 1, total: 1 });
+    expect(decided.projects[0]?.latest).toMatchObject({ confirmed: 1, total: 1 });
+    // The two rates stay the code's: a failing command cites no rule and was
+    // never a quotation to check.
+    expect(decided.precision).toBeNull();
+    expect(decided.inventionRate).toBeNull();
   });
 });

@@ -1166,7 +1166,9 @@ export function ConfirmationQueue({
                                   ? ", which may be billed per token"
                                   : ""}
                               . Each can take up to {againTerms.minutes} minutes. If both prove it,
-                              you can confirm it; if not, it stays an open question.
+                              you can confirm it. If the first refutes it, or gives a proof that
+                              does not hold, it leaves the queue for good and the report will not
+                              list it. Otherwise it stays an open question.
                             </p>
                           ) : (
                             <p className="text-[var(--color-ink-muted)]">Reading what it costs.</p>

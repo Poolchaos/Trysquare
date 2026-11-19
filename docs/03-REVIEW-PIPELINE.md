@@ -198,9 +198,10 @@ image asks again rather than replaying a grade of the old. The stage may
 read the screenshots' folder and nothing else outside its checkout:
 `--add-dir` names that folder, the tools stay Read, Grep and Glob (D-198).
 Each grade says whether the grader opened the image, and the engine sees
-every file the session opened with Read. App code then checks that every
-screenshot asked about was opened and graded exactly once, the opening
-seen in the session, not taken on the grader's word, and that a C or D
+every Read call the session makes. App code then checks that every
+screenshot asked about was graded exactly once and had a Read call naming
+it in the session, the call seen and not taken on the grader's word (what
+the call returned rests on the grader's `opened`), and that a C or D
 says what is off, refusing the answer otherwise: a screen that could not
 be opened is a failed stage, never a D nobody saw (round 9). A replayed
 answer was checked when it was given; Mode B's terminal is not watched, so
@@ -370,8 +371,8 @@ splits the work instead and records the split in the run log.
   resume re-invokes the stage with `--resume <sessionId>`.
 - Cancel: kills the subprocess and marks the review cancelled; the stage
   that was running is recorded as failed, with the error class
-  `cancelled` (`src/server/review/checkpointing-runner.ts`). The worktree
-  and completed-stage results are kept.
+  `cancelled` (`src/server/review/checkpointing-runner.ts`). The
+  completed-stage results are kept and the worktree is removed.
 - Server restart: running reviews become `interrupted`; resume re-runs the
   interrupted stage only.
 - A resume reuses the ledger seeded on the first run only when it is the

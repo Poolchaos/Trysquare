@@ -222,6 +222,9 @@ read") so the reader can tell nothing-wrong from nothing-looked-at; findings
 grouped by severity, most severe first, each with file:line, rule code,
 issue, comment, mechanism and the checked quotation; open questions;
 an appendix of dismissed findings with their reasons (the human record);
+(as planned then: the report built since says the files and hunks were put
+to the model, gives the chain files as the model's own account, and has no
+open questions section, one left out being listed as left out unproven);
 footer with model, effort, profile, ruleset name and version, pinned
 commits (both sides when linked), usage, wall time. A protocol's own prose
 format section is not parsed: rendering arbitrary prose instructions is not

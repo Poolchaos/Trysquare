@@ -118,8 +118,8 @@ const FINDING_TRANSITIONS: Readonly<Record<FindingStatus, readonly FindingStatus
   candidate: ["verified", "killed", "open_question"],
   // Only a human moves a finding into or out of a report.
   verified: ["confirmed", "dismissed"],
-  // Never confirmed: verification could not prove it, so it stays out of
-  // the report (PG-2 (a), D-185). Dismissed, or verified again, which can
+  // Never confirmed: verification could not prove it, and the report lists
+  // it apart as left out unproven (PG-2 (a), D-185, D-190). Dismissed, or verified again, which can
   // prove or refute it (WP-D2).
   open_question: ["dismissed", "verified", "killed"],
   // Killed findings are kept rather than deleted: they are the measurement of

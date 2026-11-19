@@ -8,7 +8,8 @@ it is genuinely square, rather than merely looking square. That is the whole
 idea here. An AI can produce a review that reads well and is quietly wrong: a
 line number that drifted, a bug that a guard clause upstream already handles, a
 quotation of code that is not there. Trysquare is built so those failures are
-caught by the program rather than trusted away.
+checked for rather than trusted away: the program holds every quotation to the
+file, and a finding stands only when two independent verifiers each prove it.
 
 ## Status
 
@@ -183,8 +184,9 @@ are graded A to D by the review's model, against the project's design standard
 when it names one; one graded C or D is graded again by a second model (Fable
 5.1 for an Opus review, Opus 5.5 otherwise), and both must fail it for it to
 stand. In the default mode the app watches each grading session and refuses a
-grade of a screenshot it never opened. In the interactive mode, where a review
-runs in your own terminal, nothing is watched, so there the grader's word that
+grade of a screenshot the session never asked to read. In the interactive mode,
+where a review runs in your own terminal, nothing is watched, so there the
+grader's word that
 it opened each image stands alone. A project with no e2e is reported as
 "design not checked", never given a grade.
 

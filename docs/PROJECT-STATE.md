@@ -31,14 +31,23 @@ from 2026-11-03.
   where an answer of the wrong shape adds one for either verifier. Eleven
   immaterial lines came with it, among them the second step and the report
   saying files "were read", which is asked of the model and not checked.
-  All twelve are corrected, and a sixteenth grade is owed. Before it, a
+  Eleven are corrected, and the twelfth, the report's token line without
+  cache-write tokens, is a question in the inbox. Before the sixteenth, a
   sweep for the four kinds of line the fifteenth found corrected about
   twenty-five more: on screens the third step, which said every change is
   walked against its rules where that is asked of the model, and the
   dashboard's rule yield; in the report its summary where nothing is
   confirmed and the line over the author's intent; five lines of 04 that
-  no screen bears out; and quotations in finished plans.
-  `./verify.sh --e2e` exits 0 with 1525 unit tests passing, 8 skipped, and
+  no screen bears out; and quotations in finished plans. The sixteenth
+  grade, at 21361b9, was C on two lines, both on screens: the verify-again
+  dialog said a finding not proven by both "stays an open question", where
+  the first verifier can refute it for good, and the dashboard counted a
+  review's findings without what the project's own checks found, so one
+  waiting on a failed test said "no findings". Both are fixed, the second
+  in the scoreboard's read, with a wait now dated from the run's last
+  stage and not the review's creation; thirteen immaterial lines came with
+  them and are corrected. A seventeenth grade is owed.
+  `./verify.sh --e2e` exits 0 with 1527 unit tests passing, 8 skipped, and
   147 browser tests.
 - 2026-11-19: before a thirteenth grade of the records, the screens were
   swept for claims the documents had already been corrected for, and four

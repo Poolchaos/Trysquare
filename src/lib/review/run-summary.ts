@@ -19,7 +19,7 @@ export function runSummary(
   },
 ): string {
   return (
-    `Reviewed ${fileCount} changed file(s): ${result.candidatesRaised} candidate(s) raised, ` +
+    `${fileCount} changed file(s) put to the model: ${result.candidatesRaised} candidate(s) raised, ` +
     `${result.verified} verified, ${result.killed - result.killedByQuoteCheck} refuted, ` +
     `${result.openQuestions} left open${secondOpen(result.secondVerifierDisagreed)}, ` +
     `${result.killedByQuoteCheck} discarded by the quotation check.`

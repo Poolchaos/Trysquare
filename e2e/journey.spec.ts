@@ -466,7 +466,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(steps.nth(0)).toContainText("no requests");
     await expect(steps.nth(2)).toContainText("10 candidates raised");
     await expect(steps.nth(3)).toContainText(
-      "9 proven by both verifiers, no open questions, 1 refuted, none discarded for quoting code that was not there.",
+      "9 proven by both verifiers, no open questions, 1 refuted, none discarded by the quotation check.",
     );
     // S5 and S5b, one request each.
     await expect(steps.nth(3)).toContainText(/, 2 requests$/);
@@ -919,7 +919,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // The summary stays, its last step now done (WP-G).
     await expect(
       page.getByRole("region", { name: "How the review went" }).getByRole("listitem").nth(4),
-    ).toContainText("Coverage audited, every finding decided, and the report written.");
+    ).toContainText("Coverage audited and every finding decided. The report is below.");
     await expect(page.getByText(/its checkout could not be removed: EBUSY/)).toBeVisible();
     await stopAdding();
 

@@ -173,6 +173,13 @@ pulled deliberately.
 - 2026-11-19: the dashboard's Needs you says "waiting 2m ago" and "waiting
   just now" (`src/app/page.tsx`, seen in `light-dashboard.png`); "waiting
   2m" would read right. A browser test holds the present words.
+- 2026-11-19: two shots show figures that do not agree, seen while grading
+  and not yet traced to the page or to how the test stages its data.
+  `verify-again-light.png`: "0 of 9 decided" beside 9 proven by both and 6
+  open questions of 10 raised. `review-finished-clean-light.png`: "No
+  candidates raised" beside "1 hunk(s) were accounted for only by findings
+  that verification refuted". To root-cause before anything else is built
+  on those screens.
 
 ## Retired
 

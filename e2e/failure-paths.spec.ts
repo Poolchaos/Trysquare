@@ -1038,7 +1038,7 @@ for (const held of [
     tiles: [
       ["proven by the first verifier", "0"],
       ["refuted", "0"],
-      ["discarded: the cited code was not there", "0"],
+      ["discarded by the quotation check", "0"],
       ["open question", "0"],
       ["still to prove", "10"],
     ],
@@ -1053,7 +1053,7 @@ for (const held of [
     tiles: [
       ["proven by the first verifier", "9"],
       ["refuted", "1"],
-      ["discarded: the cited code was not there", "0"],
+      ["discarded by the quotation check", "0"],
       ["open question", "0"],
       ["still to prove", "0"],
     ],

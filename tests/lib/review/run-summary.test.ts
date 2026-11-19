@@ -14,7 +14,7 @@ describe("the note a finished run leaves", () => {
         openQuestions: 0,
       }),
     ).toBe(
-      "Reviewed 4 changed file(s): 5 candidate(s) raised, 1 verified, 1 refuted, 0 left open, " +
+      "4 changed file(s) put to the model: 5 candidate(s) raised, 1 verified, 1 refuted, 0 left open, " +
         "3 discarded by the quotation check.",
     );
   });

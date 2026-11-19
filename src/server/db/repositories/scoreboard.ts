@@ -18,7 +18,7 @@
 
 import { desc, eq } from "drizzle-orm";
 import type { Db } from "../client";
-import { findings, projects, reviews } from "../schema";
+import { checkFindings, findings, projects, reviews, stageExecutions } from "../schema";
 
 export interface ScoreboardRow {
   id: string;
@@ -59,7 +59,7 @@ export interface AwaitingReview {
    * that counts them can never be reached.
    */
   total: number;
-  /** When the review stopped and started waiting on a person. */
+  /** When the run's last stage ended, so when the wait began. */
   since: string;
 }
 
@@ -160,6 +160,35 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     }
   }
 
+  // What a project's own checks found is decided in the same queue (D-197),
+  // so each review's counts take it in. The two rates and the rule yield do
+  // not: a failing command or a graded screen cites no rule and quotes no code.
+  const checkRows = db
+    .select({ reviewId: checkFindings.reviewId, status: checkFindings.status })
+    .from(checkFindings)
+    .all();
+  for (const row of checkRows) {
+    const tally = byReview.get(row.reviewId) ?? { confirmed: 0, decided: 0, queued: 0, total: 0 };
+    tally.total += 1;
+    tally.queued += 1;
+    if (row.status === "confirmed") tally.confirmed += 1;
+    if (row.status === "confirmed" || row.status === "dismissed") tally.decided += 1;
+    byReview.set(row.reviewId, tally);
+  }
+
+  // When each review's last stage ended. A waiting review has no completion
+  // time: it is cleared as a run starts and set only when one is complete,
+  // failed or cancelled. ISO times, so the greatest string is the latest.
+  const lastStageEnded = new Map<string, string>();
+  for (const row of db
+    .select({ reviewId: stageExecutions.reviewId, endedAt: stageExecutions.endedAt })
+    .from(stageExecutions)
+    .all()) {
+    if (row.endedAt !== null && row.endedAt > (lastStageEnded.get(row.reviewId) ?? "")) {
+      lastStageEnded.set(row.reviewId, row.endedAt);
+    }
+  }
+
   const projectRows = db
     .select({ id: projects.id, name: projects.name })
     .from(projects)
@@ -211,9 +240,10 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
         intoBranch: review.intoBranch,
         decided: byReview.get(review.id)?.decided ?? 0,
         total: byReview.get(review.id)?.queued ?? 0,
-        // When it stopped, which is when the waiting began. A review that
-        // never finished a run has only its creation to go on.
-        since: review.completedAt ?? review.createdAt,
+        // When its last stage ended, which is when the waiting began, to
+        // the second or two the audit takes. One with no stage row has only
+        // its creation to go on.
+        since: lastStageEnded.get(review.id) ?? review.createdAt,
       }))
       .sort((a, b) => a.since.localeCompare(b.since)),
     // Every project, including those with no review yet: a project that has

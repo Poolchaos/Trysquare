@@ -226,12 +226,12 @@ export function stepResult(
         tallies.open === 0
           ? "no open questions"
           : counted(tallies.open, "open question", "open questions");
-      const line = `${proven}, ${open}, ${noneOr(tallies.refuted, "refuted")}, ${noneOr(tallies.discarded, "discarded")} for quoting code that was not there.`;
+      const line = `${proven}, ${open}, ${noneOr(tallies.refuted, "refuted")}, ${noneOr(tallies.discarded, "discarded")} by the quotation check.`;
       return line.charAt(0).toUpperCase() + line.slice(1) + screens;
     }
     default:
       return facts.status === "complete"
-        ? "Coverage audited, every finding decided, and the report written."
+        ? "Coverage audited and every finding decided. The report is below."
         : "Coverage audited. Your confirmation, then the report.";
   }
 }
@@ -258,12 +258,12 @@ export function stepCount(
     case 1:
       return state === "done"
         ? `${counted(facts.files, "file", "files")} given to read`
-        : `Reading ${counted(facts.files, "file", "files")}`;
+        : `${counted(facts.files, "file", "files")} with the model`;
     case 2:
       // Running, it has raised what it has so far, which is not yet a result.
       if (state === "now") {
         return tallies.raised === 0
-          ? "Walking the rules"
+          ? "Changes with the model"
           : `${counted(tallies.raised, "candidate", "candidates")} so far`;
       }
       return `${counted(tallies.raised, "candidate", "candidates")} raised`;
