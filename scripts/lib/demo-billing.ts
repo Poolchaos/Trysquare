@@ -1,7 +1,8 @@
 /**
  * What the real demo says of the CLI before its probe and review, both real
  * calls: under a sign-in billing per token, or that may, they cost API usage,
- * and the demo said nothing (review of D-161). The check it reads is free.
+ * and the demo said nothing (review of D-161). The check it reads sends no
+ * prompt (D-244).
  */
 
 import type { CliStatus } from "@/server/engine/probe";

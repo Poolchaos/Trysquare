@@ -212,7 +212,7 @@ export default function SettingsPage() {
     setCheckingCli(false);
   }
 
-  // Asked as Settings opens, since it is free: a probe below is a real call,
+  // Asked as Settings opens, since it sends no prompt: a probe below is a real call,
   // and under a sign-in billing per token it costs API usage, which was said
   // only once Check the CLI was pressed (review of D-161).
   useEffect(() => {
