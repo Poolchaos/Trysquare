@@ -116,8 +116,9 @@ Common contract for every AI stage:
 - System prompt = composed ruleset snapshot + stage instruction + the
   protocol's scope rule (review changed code only) + output contract.
 - Output = one JSON document matching the stage's zod schema. Invalid output
-  triggers exactly one repair round (same session, "your output failed
-  schema validation at X") and then fails the stage. No silent retries.
+  triggers exactly one repair round (same session, told what was wrong with
+  the answer's shape and to change no judgement) and then fails the stage.
+  No silent retries.
 - Every stage's result event (tokens, cost-equivalent, session id) is
   persisted to stage_executions before the pipeline advances.
 - Stages S1-S4 share one CLI session (resumed) so comprehension context

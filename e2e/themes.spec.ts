@@ -477,12 +477,22 @@ test("no screen makes the page scroll sideways", async ({ page }) => {
   }
 });
 
-test("the shell works at phone width", async ({ page }) => {
+test("the shell works at phone width", async ({ page }, testInfo) => {
   // WP-K: monitoring a run and deciding findings are first-class on a phone.
   // The bar is the part every screen depends on, so it is the part measured:
   // navigation still reachable, nothing pushed off the side, and the page
   // still not scrolling horizontally at the width where it is likeliest to.
   await page.setViewportSize({ width: 360, height: 780 });
+
+  // Said of confirmation, not of the report: the report lists the dismissed
+  // too. Its card alone, the page being several phones tall.
+  await page.goto("/");
+  const ruleYield = page.getByRole("heading", { name: "Rule yield" }).locator("..");
+  await expect(ruleYield).toContainText("How often each rule's findings are confirmed.");
+  await ruleYield.screenshot({
+    path: join(EVIDENCE, `${testInfo.project.name}-dashboard-rule-yield-phone.png`),
+    animations: "disabled",
+  });
 
   for (const path of ["/", "/reviews", "/settings"]) {
     await page.goto(path);

@@ -117,7 +117,7 @@ describe("what the report says was found", () => {
 
   it("keeps code out of the comment line and in the quotation", () => {
     // The comment is what a person reads to decide; the code is the evidence
-    // underneath it, quoted and byte-checked.
+    // underneath it, quoted and checked against the file.
     const report = renderReport(BASE);
     const commentLine = report.split("\n").find((line) => line.startsWith("Comment: "));
     expect(commentLine).toBeDefined();
@@ -218,10 +218,10 @@ describe("what the report keeps about the human's decisions", () => {
     expect(html).toContain("Left out: Could not prove it here.");
   });
 
-  it("quotes the author's description as a claim that was checked", () => {
+  it("quotes the author's description as a claim put to the model", () => {
     const report = renderReport({ ...BASE, intent: "Rename the prefs field." });
     expect(report).toContain("> Rename the prefs field.");
-    expect(report).toContain("checked against the code");
+    expect(report).toContain("put to the model as a claim to check against the code");
   });
 });
 

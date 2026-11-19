@@ -4,9 +4,9 @@
  * Runs the stages in order and, between them, does the bookkeeping that makes
  * the review's claims checkable: seeding the ledger from the deterministic
  * inventory, running the mechanical sweeps, reconciling what each stage
- * accounted for against what it was given, byte-checking every verified
- * finding against the file it cites, and refusing to finish while anything is
- * outstanding.
+ * accounted for against what it was given, checking every verified
+ * finding's quotation against the file it cites, and refusing to finish
+ * while anything is outstanding.
  *
  * The stage runner is injected. The real one spawns the CLI; tests supply a
  * scripted one, so the orchestration can be exercised end to end without

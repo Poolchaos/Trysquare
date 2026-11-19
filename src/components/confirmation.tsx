@@ -899,7 +899,7 @@ export function ConfirmationQueue({
                 {current.quotedCode ? (
                   <figure className="mt-3">
                     {/* Numbered from the finding's own lineStart. The quotation
-                    was byte-checked against the file at those lines before it
+                    was checked against the file at those lines before it
                     could be verified, so these numbers are read off the
                     record rather than guessed at. */}
                     <figcaption className="flex items-center justify-between gap-3 rounded-t border border-b-0 border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-1.5">

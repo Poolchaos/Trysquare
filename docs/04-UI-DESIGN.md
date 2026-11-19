@@ -114,10 +114,10 @@ precision is a claim about findings somebody judged.
 
 - **Stat tiles:** total spend, reviews completed, precision (confirmed vs
   dismissed, a finding left out unproven counting as neither, D-190) and invention rate (quote-check kills), in large tabular
-  numerals, each with a sparkline from this machine's own history. A
-  sparkline needs two points to be a line and draws nothing below that.
+  numerals. Total spend alone has a sparkline, from this machine's own
+  history; it needs two points to be a line and draws nothing below that.
 - **Needs you:** every review awaiting a decision, oldest wait first, each
-  row carrying its branch pair, project, confirmed-of-total and age, and
+  row carrying its branch pair, project, decided-of-total and age, and
   linking straight into that queue. The count in the bar says there is work;
   this says where it is. Empty, it says so in one line and takes no more
   room than that.
@@ -170,16 +170,20 @@ choose rules, run).
 One screen, four decisions, in order: from-branch (filterable picker with the same Mine filter as the project detail),
 into-branch (default: detected default branch), rulesets (grouped
 global/tech/project, multi-select with rule counts and per-ruleset preview
-drawer), model (dropdown listing the models this account probed available,
-grouped by family, each showing its context window and the review profile it
-will run; recommended models first; unavailable candidates disabled with the
-probe error; a probe-now action sits in the picker). Engine mode and
+drawer), model (a list, one row a model, family by family, a family with a
+recommended model first and that model first in it
+(`src/lib/models/availability.ts`): the models a fresh probe vouches for,
+each showing its context window, the review profile it will run and the
+probe's age; the rest, behind a link once one model can be chosen, each
+disabled with its probe error or as unknown, and a Probe button beside it).
+Engine mode and
 a deliberate profile downgrade live in an advanced fold; default headless.
 Primary action: Start review.
-Pre-flight summary: commits pinned, merge base, files/hunks counts, sweep
-hit count, composed prompt token estimate, the selected profile, every
+Pre-flight summary: the commit the branch is at, merge base, files/hunks
+counts, sweep hit count, composed prompt token estimate, every
 request by stage, and whether the model's window splits the work or a file
-is too large for it on its own. Choosing a model
+is too large for it on its own; the profile is on the model's row, and a
+deliberate downgrade is said in the advanced fold. Choosing a model
 whose profile is weaker than `full-context` states plainly that the review
 will run as more, smaller requests and why. When the project's own checks are on, it
 says first that they run, which commands, on a throwaway copy of the branch
@@ -276,8 +280,9 @@ one whose screenshots were all left out, and that some were left out when
 the rest were graded, never a grade (WP-I, D-197). A screen is shown whole
 in the report while its screenshots, counted as the base64 they are
 carried as, come to under 24 MiB, spent in the report's order (confirmed,
-left out unproven, dismissed), and named after that. Past reports
-listed per project with merged badges; delete per 02 rules.
+left out unproven, dismissed), and named after that. Past reviews are
+listed on Reviews, which can be narrowed to a project, each with a merged
+badge once its branch is found merged; delete per 02 rules.
 
 ### Rulesets
 

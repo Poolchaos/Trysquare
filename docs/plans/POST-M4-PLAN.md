@@ -144,8 +144,8 @@ it. Two mechanisms, in order:
 1. **Mechanical, testable, first:** dedup at candidate creation. A stage
    answer finding whose (path, overlapping line range) matches an existing
    candidate from an earlier stage of the same run is folded, not inserted;
-   the fold is counted on the review (a run note: "S4 re-raised N finding(s)
-   S3 already held; folded"). This is enforceable in app code and provable
+   the fold is counted on the review (a run note saying how many the
+   deletions stage raised again, and where). This is enforceable in app code and provable
    in the fake suite: extend the scripted runner so S4 returns a
    near-duplicate of an S3 finding and assert one candidate, one note.
    The fake gate is currently blind to this class (ideal answers never

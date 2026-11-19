@@ -7,8 +7,8 @@ A try square is the tool a woodworker holds against a joint to find out whether
 it is genuinely square, rather than merely looking square. That is the whole
 idea here. An AI can produce a review that reads well and is quietly wrong: a
 line number that drifted, a bug that a guard clause upstream already handles, a
-file it never opened. Trysquare is built so those failures are caught by the
-program rather than trusted away.
+quotation of code that is not there. Trysquare is built so those failures are
+caught by the program rather than trusted away.
 
 ## Status
 

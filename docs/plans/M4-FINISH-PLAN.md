@@ -437,7 +437,7 @@ Original scope:
 ### U9. Rulesets manager to the T15 bar. DONE 2026-08-04
 
 Landed: the import route returns the fidelity numbers and the screen says
-"All N lines accounted for" from the importer's own counts; the unmapped
+"All N lines of the document are accounted for." from the importer's own counts; the unmapped
 block exists but cannot fire on a correct importer, which turned out to be a
 property of the block partitioning rather than a gap (D-48 AMENDED, probed
 three ways). Severity edits share `patchRule` with the toggle and bump the

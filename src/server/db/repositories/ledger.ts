@@ -264,7 +264,7 @@ export interface CoverageReport {
   unresolvedCandidates: number;
   /**
    * Given findings, every one of which verification refuted (D-97). Still
-   * accounted for, since the code was read and the refutation has a reason,
+   * accounted for, since the refutation has a reason,
    * but counted so a refutation never reads as a clean pass.
    */
   refutedOnlyHunks: number;

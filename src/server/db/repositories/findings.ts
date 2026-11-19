@@ -131,7 +131,7 @@ function transitionFinding(
 
 /**
  * Verification succeeded. The quoted code is required: it is what the
- * byte-comparison against the worktree file checks, and a finding without it
+ * comparison against the worktree file checks, and a finding without it
  * cannot be proven, which is the whole point of the stage.
  */
 export function markVerified(

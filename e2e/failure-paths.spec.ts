@@ -994,7 +994,7 @@ test("the scan theater follows the review from stage to stage", async ({ page })
     // Said of the rules a file is sent, not of every rule: `decomposed`
     // leaves pairs out, and the step is the same words on every profile.
     await expect(steps.locator('[aria-current="step"]')).toContainText(
-      "Every change is walked against each rule sent for its file",
+      "Each change goes to the model with the rules sent for its file",
     );
     await expect(steps.getByRole("listitem").nth(0)).toContainText(/Done.*rules frozen/);
     await expect(steps.getByRole("listitem").nth(1)).toContainText(/Done.*files given to read/);

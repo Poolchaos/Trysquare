@@ -132,7 +132,7 @@ drag, no per-user layout, no persistence. Order and spans:
 | Widget | Content | Data | Empty state |
 | --- | --- | --- | --- |
 | Stat tiles (row, 4-up) | as today | `/api/scoreboard` | as today |
-| Needs you | Every review awaiting a decision: branch pair mono, project, confirmed-of-total, age; each row links straight to its queue | new `awaitingReviews` on the scoreboard read (the count exists; the rows do not) | "Nothing is waiting on you." and nothing else; this widget earns its space only when it has work |
+| Needs you | Every review awaiting a decision: branch pair mono, project, decided-of-total (as built), age; each row links straight to its queue | new `awaitingReviews` on the scoreboard read (the count exists; the rows do not) | "Nothing is waiting on you." and nothing else; this widget earns its space only when it has work |
 | Live scan | When a review runs: mini ruled gauge of the seven stages, current stage name, elapsed, cost so far, one action "Open scan view" into the theater. When none: hidden entirely, not an empty box | extended `/api/reviews/attention` (add `currentStage`, `startedAt`, `costEquivalentUsd`) | hidden |
 | Recent reviews (wide) | as today | as today | as today |
 | Rule yield | as today | as today | as today |

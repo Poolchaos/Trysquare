@@ -170,6 +170,9 @@ pulled deliberately.
 - 2026-11-19: the report's token line gives fresh input, cached read and
   output, and leaves out cache-write tokens, which the review page shows
   (the fifteenth grader). Add them to the line?
+- 2026-11-19: the dashboard's Needs you says "waiting 2m ago" and "waiting
+  just now" (`src/app/page.tsx`, seen in `light-dashboard.png`); "waiting
+  2m" would read right. A browser test holds the present words.
 
 ## Retired
 

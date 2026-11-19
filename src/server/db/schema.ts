@@ -384,7 +384,7 @@ export const findings = sqliteTable(
     editedComment: text("edited_comment"),
     /** The traced path from input to wrong output. Internal, shown in the UI. */
     mechanism: text("mechanism").notNull(),
-    /** Quoted at verification time and byte-compared against the file. */
+    /** Quoted at verification time and compared against the file. */
     quotedCode: text("quoted_code").notNull().default(""),
     /**
      * The verifier's proof as JSON: the trigger, the evidence path, every step

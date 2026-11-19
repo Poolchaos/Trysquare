@@ -190,7 +190,9 @@ export function renderReport(input: ReportInput): string {
   if (input.intent) {
     lines.push("## What the change was for");
     lines.push("");
-    lines.push("As described by its author, and checked against the code rather than taken on:");
+    lines.push(
+      "As described by its author, and put to the model as a claim to check against the code, not as an instruction:",
+    );
     lines.push("");
     lines.push(...input.intent.split(/\r\n?|\n/).map((line) => `> ${md(line)}`));
     lines.push("");
@@ -311,7 +313,7 @@ function summary(input: ReportInput): string {
         ? "No confirmed findings. "
         : `No confirmed findings in the code; ${fromChecks}. `) +
       `${input.coverage.totalHunks} hunk(s) across ` +
-      `${input.coverage.totalFiles} file(s) were examined and every one was accounted for.`
+      `${input.coverage.totalFiles} file(s) were put to the model and every one was accounted for.`
     );
   }
 
@@ -381,9 +383,9 @@ export function completeness(input: Pick<ReportInput, "coverage" | "chainFilesRe
 /**
  * What rests only on refuted findings (D-97), or null when nothing does.
  *
- * Such a hunk or hit counts as accounted for, since verification read the code
- * and gave its reason, but a reader is told rather than left to assume every
- * finding raised there stood.
+ * Such a hunk or hit counts as accounted for, since verification gave its
+ * reason, but a reader is told rather than left to assume every finding
+ * raised there stood.
  */
 export function refutedOnlySentence(coverage: {
   refutedOnlyHunks: number;
@@ -404,8 +406,8 @@ export function refutedOnlySentence(coverage: {
  * Labelled fields rather than prose, because a finding is read by someone
  * deciding what to fix: the file, the lines, what is wrong and what it breaks,
  * each findable without reading a paragraph. The comment is plain language by
- * contract; the code that proves it sits below, quoted and byte-checked,
- * rather than inside the sentence explaining it.
+ * contract; the code that proves it sits below, quoted and checked against
+ * the file, rather than inside the sentence explaining it.
  */
 function renderFinding(finding: ReportFinding): string[] {
   return [

@@ -182,8 +182,9 @@ diff and parse in memory, then return:
 - Token estimate: `estimateTokens` over the composed adversarial system
   prompt and full prompt, against the model's registry `contextWindow` when
   its probe is current, with `null` otherwise and a plain sentence in the
-  UI ("window unknown until this model is probed; the review will run
-  unsplit").
+  UI (as built: "This model has not been probed, so its context window is
+  unknown and the review will send each batch as one request without
+  splitting.").
 - Estimated request count: `planRuleBatches(...).batches.length`, split
   further with `splitToFit` only when a window is known.
 
@@ -219,7 +220,7 @@ Format" and "Review Output" sections: summary line; a completeness statement
 ("reviewed N files, M hunks, K sweep hits, all dispositioned; C chain files
 read") so the reader can tell nothing-wrong from nothing-looked-at; findings
 grouped by severity, most severe first, each with file:line, rule code,
-issue, comment, mechanism and the byte-checked quotation; open questions;
+issue, comment, mechanism and the checked quotation; open questions;
 an appendix of dismissed findings with their reasons (the human record);
 footer with model, effort, profile, ruleset name and version, pinned
 commits (both sides when linked), usage, wall time. A protocol's own prose

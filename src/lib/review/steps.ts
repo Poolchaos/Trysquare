@@ -20,7 +20,7 @@ export const STEPS = [
   },
   {
     title: "Find issues",
-    what: "Every change is walked against each rule sent for its file, every deletion is accounted for, and the project's screens are graded when its e2e saved any.",
+    what: "Each change goes to the model with the rules sent for its file, every change and deletion must come back accounted for, and the project's screens are graded when its e2e saved any.",
     stages: ["s3_adversarial", "s4_deletions", "s4b_design_grading"],
   },
   {

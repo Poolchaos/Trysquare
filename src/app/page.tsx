@@ -514,8 +514,8 @@ export default function HomePage() {
               <Card className="self-start p-4">
                 <h2 className="text-heading font-semibold">Rule yield</h2>
                 <p className="mt-1 text-aside text-[var(--color-ink-muted)]">
-                  How often each rule&apos;s findings survive to a report. A rule that fires and is
-                  never confirmed is costing review attention for nothing.
+                  How often each rule&apos;s findings are confirmed. A rule that fires and is never
+                  confirmed is costing review attention for nothing.
                 </p>
                 {board.ruleYield.length === 0 ? (
                   <p className="mt-3 text-aside text-[var(--color-ink-faint)]">

@@ -102,7 +102,7 @@ describe("finding verification", () => {
     });
     expect(statusOf(verified)).toBe("verified");
     // The quoted code is the whole point of the stage: it is what gets
-    // byte-compared against the file, so assert it was actually stored.
+    // compared against the file, so assert it was actually stored.
     expect(verified.quotedCode).toBe("const total = items.reduce((a, b) => a + b.price, 0);");
     expect(verified.verificationNote).toBe("Confirmed against the checked-out file.");
     // Verification corrects the line numbers rather than trusting the candidate.
