@@ -6,7 +6,7 @@
  * draft's own Start and every review a restart left waiting, and asked at
  * create alone, a review that failed because its CLI signed out was resumed
  * into the same failure with nothing said first (review of the 6.2 changes).
- * The checks are free: `--version` asks no host, and `auth status` asks
+ * The checks are given no prompt: `--version` asks no host, and `auth status` asks
  * Anthropic's API and reads as signed in even when refused (D-244). A sign-in
  * that bills per token is a warning, not a block (D-92), though one the page
  * has not shown is refused until it has (review of D-161).

@@ -5,7 +5,7 @@
  * Worth surfacing because the difference is money: an API-key login bills per
  * token, and someone who set one up for something else would otherwise not
  * find out until a bill arrived. Runs `claude --version` and `claude auth
- * status` locally and spends nothing.
+ * status`, neither given a prompt; the second asks Anthropic's API (D-244).
  *
  * As every review sees it, headless or interactive, each reading no settings
  * (D-174), with the one thing reading none does not keep out: the machine's

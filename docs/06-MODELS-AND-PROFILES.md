@@ -33,14 +33,17 @@ which is refused with the reason when the CLI is not found, cannot run or
 is signed out (MVP 6.2), and, when it bills per token or may, until the
 page has said so: each page sends what it showed with Create and Start,
 and one refused shows the notice for the next (review of D-161). `npm run
-doctor` reads it too, once, and is the `predev` of `npm run dev`. The
+doctor` reads it too, once, and is the `predev` of `npm run dev`; `npm run
+claude:auth` reads it to decide whether to sign in, and again after; and
+the demos read it before a run with `--real` or `--model`. The
 server itself never reads it at startup or on a timer.
-Both checks are free, so they run as those screens open; D-31 keeps every
-call that spends to an explicit action. Free is not offline: measured on
+Neither check is given a prompt, so they run as those screens open; D-31
+keeps every call that spends to an explicit action. That they cost nothing
+rests on that, not on a bill read, and it is not offline: measured on
 2026-11-19 on 2.1.301, signed in on a subscription, `auth status` asked a
 proxy for `api.anthropic.com:443` three times, each refused, and still
 printed the status and exited 0, while `--version` asked for nothing
-(D-244). The check asks `auth status` with
+(D-244). What it asks there was not seen. The check asks `auth status` with
 `--setting-sources ""`, as every review and probe runs, an interactive
 review's printed commands included (D-174), so an apiKeyHelper or provider
 it names is one a review uses (D-170), set by a managed policy (below).
@@ -149,8 +152,9 @@ The app ships a candidate list (the ids in section 1 plus any the maintainer add
 and probes it only when someone presses a probe control, never on first run
 and never on a timer (D-31: a probe is a real call that spends usage). Each
 result stores resolved id, context window, availability, error text, and
-probe timestamp. The picker shows only what probed available, grouped by
-family, with the context window and the profile it will use. Unavailable
+probe timestamp. The picker lets only what probed available be chosen, and
+shows it grouped by family, with the context window and the profile it will
+use; the rest are a press away, each with a probe control. Unavailable
 candidates render disabled with the error and probe age. A probe older than
 24 hours renders as unknown rather than assumed-good.
 

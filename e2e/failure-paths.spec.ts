@@ -2537,7 +2537,7 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   });
   await page.goto(`/reviews/${waiting!.id}`);
   await expect(page.getByTestId("not-proven")).toContainText(
-    "Not proven, so it cannot go into the report.",
+    "Not proven, so it cannot be confirmed as a finding.",
   );
   await expect(page.getByText("Verification: Could not be settled.")).toBeVisible();
   await expect(page.getByRole("region", { name: "How it was proven" })).toHaveCount(0);
@@ -2592,6 +2592,9 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
     ["dark", "unproven-dark"],
   ] as const) {
     await page.emulateMedia({ colorScheme: scheme });
+    // From the top: a body capture draws the sticky top bar where the page
+    // is scrolled to, and g g had left it across the middle of the queue.
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.locator("body").screenshot({
       path: join(evidence, `${name}.png`),
       animations: "disabled",
@@ -2600,6 +2603,7 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   }
   await page.emulateMedia({ colorScheme: "light" });
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.locator("body").screenshot({
     path: join(evidence, "unproven-phone.png"),
     animations: "disabled",
@@ -4411,9 +4415,12 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
   await expect(page.getByText("Risk started")).toBeVisible({ timeout: 60_000 });
 
   await startAReview(page);
-  await expect(page.getByText(/Waiting for the running review to finish/)).toBeVisible({
-    timeout: 30_000,
-  });
+  // Said of the setting, not of one: Settings can let more than one run.
+  await expect(
+    page.getByText(
+      "Waiting for a running review to finish. Settings limits how many run at once, because they share one usage limit.",
+    ),
+  ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Start review" })).toHaveCount(0);
   await expect(page.getByLabel("Ruleset to start with")).toHaveCount(0);
 
@@ -4443,7 +4450,7 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
   expect(await accessibilityViolations(page)).toEqual([]);
   await shootAll(page, page.getByRole("main"), "review-queued");
   await page.getByRole("button", { name: "Leave the line", exact: true }).click();
-  await expect(page.getByText(/Waiting for the running review to finish/)).toHaveCount(0);
+  await expect(page.getByText(/Waiting for a running review to finish/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Start review" })).toBeVisible();
   await expect(page.getByText("draft", { exact: true })).toBeVisible();
   expect(await accessibilityViolations(page)).toEqual([]);

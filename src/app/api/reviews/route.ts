@@ -206,7 +206,7 @@ export function POST(request: Request): Promise<Response> {
     // registry knows what each model can absorb; asking for more than that is
     // refused, and asking for less is a deliberate downgrade that is recorded.
     // Refused for every model, on cost: up to 5.59 times high per call by the
-    // CLI's own index, across five stages, unattended (D-125). Enforced here
+    // CLI's own index, across up to eight stages, unattended (D-125). Enforced here
     // as well as in the picker, because a rule only the screen knows is not a
     // rule.
     if (!isSelectableEffort(input.effort)) {

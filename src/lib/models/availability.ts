@@ -2,9 +2,10 @@
  * What a probe result means, and how a picker orders what it knows.
  *
  * Pure and structural, because the same judgment is needed on both sides of
- * the wire: the server decides what may run a review, and the picker decides
- * what may be chosen, and those two answers drifting apart is how a screen
- * ends up offering what the server refuses (06 section 2).
+ * the wire: the server decides whether the second verifier may run, and the
+ * picker decides what may be chosen, and those two answers drifting apart is
+ * how a screen ends up offering what the server refuses (06 section 2). The
+ * review's own model is held to a probe by the picker alone (D-244).
  */
 
 export interface ProbeState {

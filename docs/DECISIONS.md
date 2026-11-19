@@ -6217,4 +6217,10 @@ verified evidence, in writing, here.
   keeping "nothing is sent" on the strength of D-240, which measured a
   stage's call and not this command; passing the check through a proxy of
   the app's own to stop the request, a change to how a person's sign-in is
-  read for a request the CLI makes to its own vendor.
+  read for a request the CLI makes to its own vendor. Added the same day,
+  from the thirteenth grade: two more comments said "run locally"
+  (`server/engine/probe.ts`, `api/auth/route.ts`), corrected with it; and
+  "free" and "spends nothing" of the two checks were wider than this
+  measurement, which saw the host asked and not the request. What is known
+  is that the app gives neither check a prompt, and the card, the runbook
+  and 06 now say that.

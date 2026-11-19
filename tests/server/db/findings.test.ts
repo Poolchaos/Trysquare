@@ -132,7 +132,7 @@ describe("finding verification", () => {
     markOpenQuestion(db, finding.id, "Needs the caller in another repo to confirm the shape.");
     expect(listAwaitingDecision(db, reviewId)).toHaveLength(1);
     expect(() => confirmFinding(db, finding.id)).toThrow(OpenQuestionNotConfirmableError);
-    expect(() => confirmFinding(db, finding.id)).toThrow(/cannot go into the report/);
+    expect(() => confirmFinding(db, finding.id)).toThrow(/cannot be confirmed as a finding/);
     expect(statusOf(requireFinding(db, finding.id))).toBe("open_question");
     const dismissed = dismissFinding(db, finding.id, "Not reproducible here.");
     expect(dismissed.status).toBe("dismissed");

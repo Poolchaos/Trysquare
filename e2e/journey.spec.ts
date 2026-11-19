@@ -770,6 +770,30 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // The decision lands in the list, and stepping back onto the confirmed
     // finding shows the rewritten comment marked as the person's.
     await expect(page.getByText("in report").first()).toBeVisible();
+    // Not "dropped": the report lists a dismissed finding, with its reason.
+    await expect(page.getByText("dismissed", { exact: true }).first()).toBeVisible();
+    // The list with both chips, in both themes and at phone width, for the
+    // grade: the page whole is too tall to read a chip on.
+    const decidedList = page.getByRole("navigation", { name: "Findings" });
+    const desk = page.viewportSize();
+    mkdirSync(EVIDENCE, { recursive: true });
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await decidedList.screenshot({
+        path: join(EVIDENCE, `decided-list-${scheme}.png`),
+        animations: "disabled",
+      });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 360, height: 780 });
+    // Clear of the sticky top bar: brought to the top edge, the list's first
+    // row, the dismissed one, was photographed under it.
+    await decidedList.evaluate((list) => list.scrollIntoView({ block: "center" }));
+    await decidedList.screenshot({
+      path: join(EVIDENCE, "decided-list-phone.png"),
+      animations: "disabled",
+    });
+    if (desk) await page.setViewportSize(desk);
     await page.locator("body").press("k");
     await expect(page.getByText("(edited)")).toBeVisible();
     await expect(page.getByText(EDITED_COMMENT)).toBeVisible();

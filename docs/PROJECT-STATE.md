@@ -21,7 +21,11 @@ from 2026-11-03.
   against every change, Projects that nothing there is ever written to, and
   the model picker that only a probed model can run a review, which the
   picker holds and the server does not. `./verify.sh --e2e` exits 0 with
-  1524 unit tests passing, 8 skipped, and 147 browser tests.
+  1524 unit tests passing, 8 skipped, and 147 browser tests. The thirteenth
+  grade, at that commit, was B: nothing materially wrong in about 130
+  claims sampled, one earlier line still open and ten immaterial lines new
+  (`plans/AUDIT-2026-11-17.md`), corrected the same day; a fourteenth is
+  owed.
 - 2026-11-18: WP-L's first slice of three (D-243). Settings keeps the git
   emails that count as the person's and, while none is kept, goes by the
   `user.email` of their git config and names it; a project's branches have
@@ -352,14 +356,13 @@ own now (D-75, D-81).
   voids that acceptance; the re-check trigger is in `DECISIONS.md`.
 - `npm audit --omit=dev` reports 0 vulnerabilities (2026-11-17, after next
   moved from 16.4.4 to 16.4.6, D-231; D-228 had moved it from 16.3.8 and zod
-  from 4.4.3 to 4.6.7). The full audit reports 18 on the evening of
-  2026-11-17, all dev-only, in two chains: 6 moderate through the
-  typescript-eslint packages to `minimatch` below 11.0.1, accepted in D-228
-  (`npm audit` says a fix is available; `npm audit fix --dry-run` left that
-  chain as it was the same morning, when it counted 7); and 12 high to
-  `picomatch`, an advisory published that day against every version,
-  accepted in D-241. The `braces` chain D-89 accepted is no longer
-  reported.
+  from 4.4.3 to 4.6.7). The full audit reports 7 on 2026-11-19, all
+  moderate and dev-only, one chain: through the typescript-eslint packages
+  to `minimatch` below 11.0.1, accepted in D-228 (`npm audit` says a fix is
+  available; `npm audit fix --dry-run` left that chain as it was on the
+  morning of 2026-11-17). The 12 high to `picomatch` it reported on the
+  evening of 2026-11-17, accepted in D-241, are no longer reported, nor is
+  the `braces` chain D-89 accepted.
 - An advisory against the installed next stops `next build` once, with exit
   1, when an AI session runs it, and prints text telling the agent what to
   do (D-231). The answer is the upgrade, by `npm install`.

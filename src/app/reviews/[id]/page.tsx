@@ -1338,8 +1338,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         ) : null}
         {snapshot.queued ? (
           <p className="mb-4 text-sm text-[var(--color-ink-muted)]">
-            Waiting for the running review to finish. One runs at a time, because two would race for
-            the same usage limit.
+            Waiting for a running review to finish. Settings limits how many run at once, because
+            they share one usage limit.
           </p>
         ) : null}
 

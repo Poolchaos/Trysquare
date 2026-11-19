@@ -304,7 +304,9 @@ describe("a step the state machine does not allow", () => {
     expect(refused.status).toBe(409);
     const body = (await refused.json()) as { code: string; error: string };
     expect(body.code).toBe("OpenQuestionNotConfirmableError");
-    expect(body.error).toMatch(/cannot go into the report\. Dismiss it, or verify it again\.$/);
+    expect(body.error).toMatch(
+      /cannot be confirmed as a finding\. Dismiss it, or verify it again\.$/,
+    );
 
     // Verifying again is a paid request, refused until the page said so, and
     // refused before the CLI is asked anything when it cannot run (WP-D2).

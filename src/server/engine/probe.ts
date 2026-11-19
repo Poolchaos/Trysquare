@@ -152,8 +152,9 @@ function runCli(
  *
  * The app shows this so a user knows whether a review can run at all, and
  * whether it draws on the plan they already pay for or bills per token. The
- * credentials themselves are never read, copied, or logged. Every step costs
- * nothing: `--version` and `auth status` run locally.
+ * credentials themselves are never read, copied, or logged. No step is given
+ * a prompt: `--version` asks no host, and `auth status` asks Anthropic's API
+ * (D-244).
  *
  * Asked with no settings sources, as every review and probe the app starts
  * reads none (D-124, D-174). Asked without, it read the person's settings and

@@ -416,7 +416,7 @@ export default function SettingsPage() {
             <h2 className="mb-1 text-heading font-semibold">Claude Code</h2>
             <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
               Finds the CLI reviews run through and runs its own version and sign-in checks. The
-              sign-in check contacts Anthropic&apos;s API; neither check spends anything.
+              sign-in check contacts Anthropic&apos;s API; neither check sends a model a prompt.
             </p>
             {settings === null ? null : (
               <div className="mb-3 grid gap-1">

@@ -98,8 +98,8 @@ interface FileContext {
 }
 
 const UNDECIDED = new Set(["verified", "open_question"]);
-// Only a proven finding can go into the report; an open question is
-// dismissed, or verified again (PG-2 (a), D-185).
+// Only a proven finding can be confirmed; an open question is left out,
+// which the report lists apart, or verified again (PG-2 (a), D-185).
 const CONFIRMABLE = new Set(["verified"]);
 
 /** Worst first: a queue is worked from the top, so the top must be the worst. */
@@ -1090,7 +1090,7 @@ export function ConfirmationQueue({
                     {CONFIRMABLE.has(current.status) ? null : (
                       <p className="text-xs" data-testid="not-proven">
                         <span className="font-medium">
-                          Not proven, so it cannot go into the report.{" "}
+                          Not proven, so it cannot be confirmed as a finding.{" "}
                         </span>
                         {/* Why is said above it, as every finding's note is. */}
                         <span className="text-[var(--color-ink-muted)]">
@@ -1277,7 +1277,7 @@ function severityEdge(severity: string): string {
 
 function StateChip({ status }: { status: string }) {
   const label =
-    { confirmed: "in report", dismissed: "dropped", left_out: "left out", open_question: "?" }[
+    { confirmed: "in report", dismissed: "dismissed", left_out: "left out", open_question: "?" }[
       status
     ] ?? "";
   if (label === "") {

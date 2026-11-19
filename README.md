@@ -91,7 +91,9 @@ endings and the indentation a quote may have lost. A finding with a line number 
 regardless of how confident anything was about it.
 
 **A human decides what counts.** Surviving findings are presented for you to
-confirm or dismiss with a reason. Only what you confirm reaches the report.
+confirm or dismiss with a reason. Only what you confirm is reported as a
+finding; what you dismiss or leave out is listed after the findings, with
+your reason.
 
 **Reviewed code is never modified.** Projects are cloned bare, reviews run in
 detached worktrees pinned to a commit, and the model gets a read-only tool
@@ -198,7 +200,7 @@ it opened each image stands alone. A project with no e2e is reported as
   on Trysquare uses it. The app was built to run there and ran real reviews
   there on 2026-10-22, and CI still runs the suite on `windows-latest`
   beside them, but that job gates nothing, and a failure only it shows is
-  recorded, not fixed. Its runner sometimes refuses a browser test's
+  recorded; fixing one is not required. Its runner sometimes refuses a browser test's
   connection with `net::ERR_NO_BUFFER_SPACE` before the app answers
   (D-105). If you need Windows, open an issue. Set `TRYSQUARE_CLAUDE_PATH`
   to `claude.exe` or an npm `claude.cmd` when using a CLI other than the one

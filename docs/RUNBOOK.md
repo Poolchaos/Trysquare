@@ -257,12 +257,12 @@ used the real CLI:
   spent nothing, when that bills per token or may, unless `--per-token` is
   passed.
 - `npm run claude -- <arguments>` hands the CLI whatever you give it. The
-  two uses this runbook names, `auth login` and `auth status`, spend
-  nothing; a prompt given to it is a request to a model like any other you
+  two uses this runbook names, `auth login` and `auth status`, give it no
+  prompt; a prompt given to it is a request to a model like any other you
   make with that CLI.
 
-Checking sign-in on Settings runs the CLI's own auth status, which asks
-Anthropic's API (D-244) and spends nothing. Pre-flight is git and arithmetic only. The test suite spends
+Checking sign-in on Settings runs the CLI's own auth status, which is given
+no prompt and asks Anthropic's API (D-244). Pre-flight is git and arithmetic only. The test suite spends
 nothing: it runs against a fake CLI committed to the repository, bar one
 file that starts the installed CLI against a local stand-in for the API
 (`tests/server/engine/stand-in-api.test.ts`, D-124). One test spends too,

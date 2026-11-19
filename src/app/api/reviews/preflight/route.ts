@@ -1,7 +1,8 @@
 /**
  * What a review would examine, before anyone pays for it.
  *
- * Read-only and free: git and arithmetic, no model calls, nothing written.
+ * Free: git and arithmetic, no model calls. All it writes is git's fetch
+ * into the clone, and when that fetch was.
  * That is the whole point. A review is expensive enough that being able to see
  * the size of it beforehand, and to notice that a branch pair is empty or
  * enormous, is worth a round trip.

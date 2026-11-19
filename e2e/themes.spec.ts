@@ -526,7 +526,9 @@ test("Projects, the model picker and the CLI card say what the code does, on a p
 
   await page.goto("/settings");
   await expect(
-    page.getByText("The sign-in check contacts Anthropic's API; neither check spends anything."),
+    page.getByText(
+      "The sign-in check contacts Anthropic's API; neither check sends a model a prompt.",
+    ),
   ).toBeVisible();
   await photograph(page, shot("settings-phone"));
 });

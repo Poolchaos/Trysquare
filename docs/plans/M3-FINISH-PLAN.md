@@ -263,7 +263,7 @@ report route refuses a review that is not complete.
   (`stageTimeoutMinutes` positive int, `maxConcurrentReviews` positive int,
   `stageMaxBudgetUsd` nonnegative number). The settings page gains a small
   form for the three, plus an auth card with a "Check" button calling
-  `readAuthStatus` (runs `claude auth status` locally, no tokens) showing
+  `readAuthStatus` (runs `claude auth status`, given no prompt; it asks Anthropic's API, D-244) showing
   subscription versus API-key state, with a plain warning when an API key
   would be billed.
 - Models: a probe button per model row and "probe all" (each an explicit

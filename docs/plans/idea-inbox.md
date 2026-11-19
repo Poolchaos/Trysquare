@@ -159,6 +159,10 @@ pulled deliberately.
   vouches for. `POST /api/reviews` takes any full model id, and Start does
   not ask either; the second verifier alone is refused on the server
   (D-244). Should the server refuse the review's own model too?
+- 2026-11-19: the report of a `decomposed` review says each hunk was
+  accounted for and names the profile, and nothing of the rule and file
+  pairs left out; the pre-flight and a run note carry their count (the
+  thirteenth grader, for Complete). Should the report say it too?
 
 ## Retired
 

@@ -120,9 +120,10 @@ asked to change, even if it works:
 - **Coverage is enforced by code.** Anything that decides whether a hunk,
   sweep hit, or deletion was handled must be a program check. Do not replace a
   program check with a prompt instruction.
-- **Layering.** `src/lib/` is pure and does no I/O. Only `src/server/gitops`
-  spawns git, only `src/server/engine` spawns the CLI, and all database access
-  goes through repositories.
+- **Layering.** `src/lib/` is pure and does no I/O. Within `src/`, only
+  `server/gitops` spawns git (the setup and gate scripts under `scripts/`
+  run it themselves), only `server/engine` spawns the CLI, and all database
+  access goes through repositories.
 - **Never depend on `rg`.** It is not a binary on every machine. Use `grep` or
   Node.
 
