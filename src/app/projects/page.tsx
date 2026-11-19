@@ -138,7 +138,10 @@ export default function ProjectsPage() {
 
   return (
     <>
-      <PageHeader title="Projects" subtitle="Cloned read-only. Nothing here is ever written to." />
+      <PageHeader
+        title="Projects"
+        subtitle="Cloned read-only. Trysquare never writes to a project's code."
+      />
       <PageBody>
         <Card className="mb-6 p-4">
           <form onSubmit={add} className="flex flex-wrap items-end gap-3">

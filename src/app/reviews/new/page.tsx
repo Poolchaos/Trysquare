@@ -947,7 +947,7 @@ function NewReview() {
           <Card className="p-4">
             <h2 className="text-heading font-medium">Model</h2>
             <p className="mt-1 mb-3 text-xs text-[var(--color-ink-muted)]">
-              Only a model a fresh probe vouches for can run a review. A probe is one tiny paid
+              Only a model a fresh probe vouches for can be chosen here. A probe is one tiny paid
               call, made only when you press the button (never on a timer).
             </p>
             <ul className="grid gap-1" data-testid="model-picker">

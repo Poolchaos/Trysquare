@@ -36,7 +36,11 @@ and one refused shows the notice for the next (review of D-161). `npm run
 doctor` reads it too, once, and is the `predev` of `npm run dev`. The
 server itself never reads it at startup or on a timer.
 Both checks are free, so they run as those screens open; D-31 keeps every
-call that spends to an explicit action. The check asks `auth status` with
+call that spends to an explicit action. Free is not offline: measured on
+2026-11-19 on 2.1.301, signed in on a subscription, `auth status` asked a
+proxy for `api.anthropic.com:443` three times, each refused, and still
+printed the status and exited 0, while `--version` asked for nothing
+(D-244). The check asks `auth status` with
 `--setting-sources ""`, as every review and probe runs, an interactive
 review's printed commands included (D-174), so an apiKeyHelper or provider
 it names is one a review uses (D-170), set by a managed policy (below).

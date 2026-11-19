@@ -21,8 +21,8 @@ Trysquare runs entirely on your own machine. Its only server listens on
 README says how Next.js's and the Claude Code CLI's own are switched off
 for what the app starts, that a CLI you start yourself from a command the
 app prints, to run an interactive stage or to sign in a CLI at a path of
-your own, keeps your own setting, and which two requests Next.js still
-makes).
+your own, keeps your own setting, which two requests Next.js still makes,
+and that the CLI's sign-in check asks Anthropic's API).
 That rules out
 whole categories of vulnerability, but it leaves some that matter:
 

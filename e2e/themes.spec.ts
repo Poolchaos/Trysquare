@@ -494,6 +494,43 @@ test("the shell works at phone width", async ({ page }) => {
   }
 });
 
+/**
+ * Three lines that said more than the code does, until a sweep of the screens
+ * on 2026-11-19 (D-244): git writes in a clone, the picker and not the server
+ * keeps a review to a probed model, and the sign-in check asks Anthropic's
+ * API. Read here so each stays what was measured, and photographed at the
+ * width where a longer line is likeliest to break.
+ */
+test("Projects, the model picker and the CLI card say what the code does, on a phone too", async ({
+  page,
+}, testInfo) => {
+  const shot = (name: string) => join(EVIDENCE, `${testInfo.project.name}-${name}.png`);
+  await page.setViewportSize({ width: 360, height: 780 });
+
+  await page.goto("/projects");
+  await expect(
+    page.getByText("Cloned read-only. Trysquare never writes to a project's code."),
+  ).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "app", exact: true })).toBeVisible({
+    timeout: 60_000,
+  });
+  await photograph(page, shot("projects-phone"));
+
+  await page.getByRole("main").getByRole("link", { name: "app", exact: true }).click();
+  await page.getByRole("link", { name: "New review" }).click();
+  await expect(page.getByTestId("model-picker")).toBeVisible({ timeout: 60_000 });
+  await expect(
+    page.getByText("Only a model a fresh probe vouches for can be chosen here."),
+  ).toBeVisible();
+  await photograph(page, shot("new-review-phone"));
+
+  await page.goto("/settings");
+  await expect(
+    page.getByText("The sign-in check contacts Anthropic's API; neither check spends anything."),
+  ).toBeVisible();
+  await photograph(page, shot("settings-phone"));
+});
+
 test("Mine leaves the branches I last committed to, and an empty one says whose it looked for", async ({
   page,
 }, testInfo) => {

@@ -415,8 +415,8 @@ export default function SettingsPage() {
           <Card className="p-4">
             <h2 className="mb-1 text-heading font-semibold">Claude Code</h2>
             <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
-              Finds the CLI reviews run through and runs its own version and sign-in checks locally.
-              Nothing is sent anywhere and nothing is spent.
+              Finds the CLI reviews run through and runs its own version and sign-in checks. The
+              sign-in check contacts Anthropic&apos;s API; neither check spends anything.
             </p>
             {settings === null ? null : (
               <div className="mb-3 grid gap-1">

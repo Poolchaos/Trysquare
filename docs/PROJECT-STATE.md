@@ -13,6 +13,15 @@ from 2026-11-03.
 
 ## Status
 
+- 2026-11-19: before a thirteenth grade of the records, the screens were
+  swept for claims the documents had already been corrected for, and four
+  were found and put right (D-244). Settings said of the CLI's version and
+  sign-in checks that nothing is sent anywhere: measured, the sign-in check
+  asks Anthropic's API. The Find issues step said every rule is walked
+  against every change, Projects that nothing there is ever written to, and
+  the model picker that only a probed model can run a review, which the
+  picker holds and the server does not. `./verify.sh --e2e` exits 0 with
+  1524 unit tests passing, 8 skipped, and 147 browser tests.
 - 2026-11-18: WP-L's first slice of three (D-243). Settings keeps the git
   emails that count as the person's and, while none is kept, goes by the
   `user.email` of their git config and names it; a project's branches have
@@ -394,7 +403,11 @@ The Claude Code CLI's own telemetry and error reports are off for every CLI
 the app starts (`src/lib/engine/command.ts`, D-240): a test runs the
 installed CLI against a stand-in API behind a proxy that refuses and
 records, and the CLI asks for no other host. Not yet run against the real
-API; `plans/COMPLETION-PLAN.md` CP-7 is that run.
+API; `plans/COMPLETION-PLAN.md` CP-7 is that run. The sign-in check is a
+request too: `auth status`, run as the screens that show the sign-in open,
+asked for `api.anthropic.com` three times behind a refusing proxy and read
+as signed in all the same, and `--version` asked for nothing (D-244,
+measured 2026-11-19 on 2.1.301, signed in on a subscription).
 Next's usage telemetry is off (`next.config.ts`, D-233). Two requests the
 framework still makes, both to registry.npmjs.org (D-234): on `npm run dev`
 outside CI, and on `npm run build` from a terminal or an AI agent, it posts

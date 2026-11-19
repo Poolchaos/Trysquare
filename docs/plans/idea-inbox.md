@@ -155,6 +155,10 @@ pulled deliberately.
   30 seconds waiting for an element that did not come; the run before it
   passed that test there on the same browser code. Parked with the other
   Windows entries (D-232).
+- 2026-11-19: only the picker keeps a review to a model a fresh probe
+  vouches for. `POST /api/reviews` takes any full model id, and Start does
+  not ask either; the second verifier alone is refused on the server
+  (D-244). Should the server refuse the review's own model too?
 
 ## Retired
 

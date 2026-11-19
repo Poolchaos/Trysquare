@@ -257,7 +257,14 @@ AI agent, Next.js asks whether its own installed version has a security
 advisory, sends that version number to do so, and reads the list of Next.js
 releases if one does; and when a browser first opens the app under
 `npm run dev`, it asks which Next.js version is the latest. `npm run start`,
-on a build already made, makes neither.
+on a build already made, makes neither. The CLI's sign-in check is a request
+of its own: the app runs `auth status` as the screens that show the sign-in
+open, before a headless review is created or started, and in `npm run
+doctor` (`docs/06-MODELS-AND-PROFILES.md`, section 1, lists each occasion),
+and on 2.1.301, signed in on a subscription, that command asked for
+`api.anthropic.com` three times behind a proxy that refused each, and still
+read as signed in. What it asks there was not seen. The version check asked
+for no host.
 
 Be clear about what that does and does not mean. Reviewing code with a model
 means sending code to that model: when a review runs, the diff, the contents of

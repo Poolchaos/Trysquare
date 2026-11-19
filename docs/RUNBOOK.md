@@ -261,8 +261,8 @@ used the real CLI:
   nothing; a prompt given to it is a request to a model like any other you
   make with that CLI.
 
-Checking sign-in on Settings runs the CLI's own auth status and spends
-nothing. Pre-flight is git and arithmetic only. The test suite spends
+Checking sign-in on Settings runs the CLI's own auth status, which asks
+Anthropic's API (D-244) and spends nothing. Pre-flight is git and arithmetic only. The test suite spends
 nothing: it runs against a fake CLI committed to the repository, bar one
 file that starts the installed CLI against a local stand-in for the API
 (`tests/server/engine/stand-in-api.test.ts`, D-124). One test spends too,

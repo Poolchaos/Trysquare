@@ -294,8 +294,8 @@ export class IncompleteRuleCoverageError extends Error {
 /**
  * Proves the plan accounts for every rule against every file.
  *
- * This is what makes "a weaker model gets more requests, not less scrutiny" a
- * checkable statement rather than an intention. Run before the adversarial
+ * This is what makes "every rule and file pair is checked or named as left
+ * out" a checkable statement rather than an intention. Run before the adversarial
  * stage, so a narrowing bug fails immediately rather than producing a review
  * that quietly skipped a rule.
  */

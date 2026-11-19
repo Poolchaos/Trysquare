@@ -6184,3 +6184,37 @@ verified evidence, in writing, here.
   branch table, which the Mine filter does not need. Still to build under
   WP-L: the same filter in the new-review picker, and the scoreboard's
   author column.
+- 2026-11-19 D-244 The sign-in check contacts Anthropic, and the screens
+  and records say so. Settings said of its Claude Code card, since
+  2026-07-31, "Nothing is sent anywhere and nothing is spent", and a code
+  comment that the two checks "run locally". Neither had been measured.
+  Measured on 2026-11-19 with the installed CLI, 2.1.301, signed in on a
+  subscription, through the app's own attached run (`scripts/claude.ts`:
+  the environment the check itself gets, telemetry off as D-240 set it,
+  and the terminal's own variables added)
+  with every proxy variable pointed at a local proxy that refuses each
+  tunnel and writes down what it was asked for: `--version` exited 0 and
+  asked for nothing; `--setting-sources "" auth status`, the arguments the
+  check uses (`server/engine/probe.ts`), asked for `api.anthropic.com:443`
+  three times, each refused, and still printed `loggedIn: true` with
+  `authMethod: claude.ai` and exited 0. Not seen: what it asks there, the
+  tunnel being refused, and what a signed-out CLI or one on an API key
+  does. So the check is free, as 06 has it, and not offline: the app runs
+  it as Settings, the new-review screen and a review that can be started
+  open, when a finding is verified again, when a headless review is
+  created or started, and in `npm run doctor`. The Settings card, the
+  README, 06, the runbook and the comment now say that. Found by a sweep
+  of the screens for claims the records had been corrected for, before the
+  thirteenth grade, with three siblings on screens: the Find issues step
+  said every rule is walked against every change (Y1's claim, where
+  `decomposed` leaves pairs out); Projects said nothing there is ever
+  written to (Y2's, where git writes in a clone); and the model picker
+  said only a model a fresh probe vouches for can run a review, which the
+  picker holds and the server does not (the create route takes a model no
+  probe vouches for, and leaves a run note only for one the registry does
+  not hold; whether the server should refuse is in the inbox). Each now
+  says what the code does. Rejected:
+  keeping "nothing is sent" on the strength of D-240, which measured a
+  stage's call and not this command; passing the check through a proxy of
+  the app's own to stop the request, a change to how a person's sign-in is
+  read for a request the CLI makes to its own vendor.
