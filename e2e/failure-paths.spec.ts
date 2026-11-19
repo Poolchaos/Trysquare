@@ -997,7 +997,7 @@ test("the scan theater follows the review from stage to stage", async ({ page })
       "Every change is walked against each rule sent for its file",
     );
     await expect(steps.getByRole("listitem").nth(0)).toContainText(/Done.*rules frozen/);
-    await expect(steps.getByRole("listitem").nth(1)).toContainText(/Done.*files read/);
+    await expect(steps.getByRole("listitem").nth(1)).toContainText(/Done.*files given to read/);
     await expect(steps.getByRole("listitem").nth(4)).toContainText(/Next.*Waiting/);
     const evidence = join(
       fileURLToPath(new URL("..", import.meta.url)),
@@ -2654,7 +2654,8 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   // Both verifiers, as in a run (WP-E): the second only if the first proves it.
   await expect(dialog).toContainText(
     "This asks claude-fable-5[1m] again in a fresh session and, if it proves the finding, " +
-      "claude-opus-5-5 too: up to two requests",
+      "claude-opus-5-5 too: two requests at most, and one more for either if its answer " +
+      "comes back in the wrong shape, using your Claude usage",
   );
   await expect(dialog).toContainText(/Each can take up to \d+ minutes\./);
   expect(sent).toHaveLength(0);

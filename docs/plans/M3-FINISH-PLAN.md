@@ -189,8 +189,9 @@ diff and parse in memory, then return:
 
 UI: the panel renders automatically once from-branch, into-branch, ruleset
 and model are all chosen, with a refresh action. Creation still re-fetches
-and re-pins (D-27); the panel says "pins are retaken when the review
-starts" so the numbers are advisory, the start is authoritative.
+and re-pins (D-27); the panel says so ("Start review pins the commits
+again", its words since 2026-11-19), so the numbers are advisory and the
+review's creation is authoritative.
 
 Linked toggle: when the project has dependency links, one toggle per link
 ("Include shared-core (@acme/shared-core)"), never auto-enabled. When the
@@ -211,7 +212,7 @@ positive); the same-name suggestion as a pure helper test; creation with
 confirmed findings (all of them, NITPICKs included, D-11), dismissed
 findings with reasons, `coverageReport` totals, ledger chain-files-read
 count, snapshot ruleset name and version, usage including cached tokens,
-wall time from `createdAt` to `completedAt`.
+wall time from `startedAt` to `completedAt`.
 
 Format is the app's fixed rendering of the example protocol's "Finding
 Format" and "Review Output" sections: summary line; a completeness statement

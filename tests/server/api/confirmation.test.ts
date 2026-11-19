@@ -877,7 +877,7 @@ describe("the report a completed review produces", () => {
     expect(markdown).toContain("# Review: app feature/rename-prefs into main");
     expect(markdown).toContain("confirmed finding(s)");
     expect(markdown).toContain("## What was examined");
-    expect(markdown).toContain("hunk(s) were read");
+    expect(markdown).toContain("hunk(s) were put to the model");
     expect(markdown).toContain("## Dismissed");
     expect(markdown).toContain("Deliberate: the wrapper already guards this.");
     expect(markdown).toContain("Ruleset: Example protocol version 1");

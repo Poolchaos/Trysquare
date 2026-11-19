@@ -970,8 +970,8 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // The report contains the confirmed set and nothing else. One finding was
     // dismissed, so the findings section holds exactly the rest, and the
     // dismissed one appears only in its own section with its reason. This is
-    // the promise the whole app rests on: nothing reaches a report that a
-    // person did not accept.
+    // the promise the whole app rests on: nothing is reported as a finding
+    // that a person did not accept.
     const findingsSection = report.slice(
       report.indexOf("## Findings"),
       report.indexOf("## Dismissed"),

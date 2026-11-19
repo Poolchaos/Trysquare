@@ -257,7 +257,7 @@ export function planRuleBatches(
         skipped.push({
           rule: rule.code,
           file,
-          reason: `the ${theme} theme does not apply to this file`,
+          reason: `this file's path does not suggest the ${theme} theme`,
         });
       }
     }

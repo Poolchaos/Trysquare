@@ -146,7 +146,7 @@ describe("what each step says it did", () => {
 
   it("counts what it has measured, and waits when it has not begun", () => {
     expect(stepCount(0, "done", facts)).toBe("14 rules frozen");
-    expect(stepCount(1, "done", facts)).toBe("13 files read");
+    expect(stepCount(1, "done", facts)).toBe("13 files given to read");
     expect(stepCount(2, "done", facts)).toBe("11 candidates raised");
     expect(stepCount(3, "done", facts)).toBe("10 proven by both verifiers");
     expect(stepCount(3, "now", { ...facts, tallies: { ...facts.tallies, toProve: 4 } })).toBe(
@@ -178,7 +178,7 @@ describe("what each step says it did", () => {
       waiting: 1,
     };
     expect(stepCount(0, "done", one)).toBe("1 rule frozen");
-    expect(stepCount(1, "done", one)).toBe("1 file read");
+    expect(stepCount(1, "done", one)).toBe("1 file given to read");
     expect(stepCount(1, "now", one)).toBe("Reading 1 file");
     expect(stepCount(2, "now", one)).toBe("1 candidate so far");
     expect(stepCount(2, "done", one)).toBe("1 candidate raised");
@@ -225,7 +225,7 @@ describe("what each step came to", () => {
   it("says each step's result, refuted and discarded told apart", () => {
     expect(STEPS.map((_, index) => stepResult(index, facts))).toEqual([
       "14 rules frozen for this review, and the sweeps marked every added line a rule's pattern matches.",
-      "13 changed files classed by risk and read with what they call into.",
+      "13 changed files classed by risk and given to the model to read with what they call into.",
       "11 candidates raised, and every change and deletion accounted for.",
       "10 proven by both verifiers, 1 open question, none refuted, none discarded for quoting code that was not there.",
       "Coverage audited. Your confirmation, then the report.",
@@ -257,7 +257,7 @@ describe("what each step came to", () => {
       "The sweeps marked every added line a rule's pattern matches.",
     );
     expect(stepResult(1, empty)).toBe(
-      "1 changed file classed by risk and read with what it calls into.",
+      "1 changed file classed by risk and given to the model to read with what it calls into.",
     );
     expect(stepResult(2, empty)).toBe(
       "No candidates raised, and every change and deletion accounted for.",

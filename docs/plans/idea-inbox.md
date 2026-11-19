@@ -167,6 +167,9 @@ pulled deliberately.
   model's own list (D-247). Count it from the Read calls the engine sees
   in a headless session instead, and say which it is for an interactive
   review?
+- 2026-11-19: the report's token line gives fresh input, cached read and
+  output, and leaves out cache-write tokens, which the review page shows
+  (the fifteenth grader). Add them to the line?
 
 ## Retired
 

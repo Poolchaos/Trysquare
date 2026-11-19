@@ -303,9 +303,11 @@ Nothing is reported as a finding without an explicit confirm, and only a proven
 (verified) finding can be confirmed: an open question is dismissed, or
 verified again, never confirmed (PG-2 (a), D-185). Verifying again asks S5
 about that one finding in a fresh session, never replayed from a stored
-answer, and holds the answer to the same checks (proof-and-steps plan,
-WP-D2). The card says what that request costs, the model, the billing
-and the stage timeout, and sends nothing until Send request is pressed.
+answer, and, if S5 proves it, the second verifier too, each held to the
+same checks (proof-and-steps plan, WP-D2). The card says how many requests
+that can be (two, and one more for either whose answer comes back in the
+wrong shape), the models, the billing and the stage timeout, and sends
+nothing until Send request is pressed.
 It counts against the reviews at once, and while it runs its finding
 cannot be decided nor its review completed or deleted;
 the card shows the
@@ -325,10 +327,12 @@ Confirmed NITPICK findings are included
 the human already made). Dismissed findings appear in an appendix with
 their reasons, those left out unproven (dismissed open questions) under
 their own heading, apart from the ones a person rejected (D-190). Export: markdown file to `exports/`
-and clipboard. The report footer records: the ruleset's name and version,
-the model with its effort and profile, the commit reviewed and its merge
-base, a linked project's branch and commit, token usage, the cost
-equivalent, and how long the review took. No em dashes anywhere in
+and clipboard, with a single-file HTML written beside it. The markdown's
+footer records: the ruleset's name and version, the model with its effort
+and profile, the commit reviewed and its merge base, a linked project's
+branch and commit, token usage, the cost equivalent, and how long the
+review took. The HTML's footer and the page's leave out the tokens, the
+duration and the linked project. No em dashes anywhere in
 generated output (enforced by a lint on the renderer and a unit test).
 
 ## 4. Prompt composition

@@ -138,7 +138,7 @@ describe("what the report says was examined", () => {
     // value of the thing.
     const report = renderReport({ ...BASE, confirmed: [] });
     expect(report).toContain("No confirmed findings.");
-    expect(report).toContain("10 changed file(s) and 12 hunk(s) were read");
+    expect(report).toContain("10 changed file(s) and 12 hunk(s) were put to the model");
     // The one number here that is the model's word and not the app's count.
     expect(report).toContain(
       "By the model's own account it read 3 file(s) outside the change set to follow what the change calls into.",

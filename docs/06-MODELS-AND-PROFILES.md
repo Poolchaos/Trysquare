@@ -156,9 +156,9 @@ result stores resolved id, context window, availability, error text, and
 probe timestamp. The picker lets only what probed available be chosen, and
 shows it grouped by family, with the context window and the profile it will
 use; the rest are a press away, each with a probe control. Unavailable
-candidates render disabled with the error, and on Settings with the probe
-age too. A probe older than
-24 hours renders as unknown rather than assumed-good.
+candidates render disabled with the error, and on Settings with the date
+of the probe too. A probe older than 24 hours is not assumed good: the
+new-review picker says unknown, and Settings prints its state, `stale`.
 
 Recommended-for-review flags (the maintainer 2026-07-30: Opus and Fable are the
 reliable ones; 2026-10-22: Opus 5.5 recommended, D-184) mark `claude-opus-5-5`,

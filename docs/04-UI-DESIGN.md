@@ -173,7 +173,7 @@ global/tech/project, multi-select with rule counts and per-ruleset preview
 drawer), model (dropdown listing the models this account probed available,
 grouped by family, each showing its context window and the review profile it
 will run; recommended models first; unavailable candidates disabled with the
-probe error and age; a probe-now action sits in the picker). Engine mode and
+probe error; a probe-now action sits in the picker). Engine mode and
 a deliberate profile downgrade live in an advanced fold; default headless.
 Primary action: Start review.
 Pre-flight summary: commits pinned, merge base, files/hunks counts, sweep
@@ -210,8 +210,9 @@ refuses one too.
   first verifier, refuted, discarded for quoting code that was not there,
   open question, still to prove, which add up to what was raised.
 - Stage timeline (S0-S6) with per-stage status, duration, token usage.
-- Coverage panel: files/hunks dispositioned counters climbing live, risk
-  tags per file, chain files read.
+- Coverage panel: files, hunks and sweep hits accounted for, the counters
+  climbing live. Not built: risk tags per file and the chain files read,
+  which no screen shows.
 - Activity feed: current stage's tool activity (file being read), errors.
 - Usage meter: cumulative tokens and cost-equivalent.
 - Controls: cancel, which asks first and says when it failed (5.1); start,
@@ -260,7 +261,9 @@ alike, as the queue's n of m does.
 Rendered report (protocol output format), typeset in-app rather than shown
 as raw markdown: title, one bold summary sentence, prose-first finding
 cards grouped by severity with the code excerpt subordinate, and a
-provenance footer (model, rulesets+versions, commits, usage, duration).
+provenance footer (model, effort, profile, ruleset and version, commit,
+merge base, cost equivalent; the markdown's footer alone adds tokens,
+duration and a linked project).
 Copy and export actions; export writes the markdown and a self-contained
 single-file HTML beside it, so a report can be handed to a colleague whole
 (D-69). What a project's own checks found and a person decided has a

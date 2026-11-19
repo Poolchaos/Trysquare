@@ -6,8 +6,8 @@ since names the decision that added it.
 
 The rule that matters most is at the bottom of this section: **almost nothing
 in this app spends model usage, and the few things that do are listed.** A
-review is the expensive action. Everything else, including the whole demo with
-`--fake`, is free.
+review is the expensive action. The whole demo with `--fake` sends no model
+anything, and what else is paid is listed under "What spends model usage" below.
 
 ## Prerequisites
 
@@ -247,8 +247,9 @@ used the real CLI:
 - Starting a review, or resuming one: Resume pays for the stages that had
   not finished, and replays the finished ones for free.
 - Verify again on an open question: a paid request to the first verifier
-  and, if it proves the finding, one to the second, which the dialog says
-  before either is sent (D-190).
+  and, if it proves the finding, one to the second, and one more for either
+  whose answer comes back in the wrong shape, which the dialog says before
+  any is sent (D-190).
 - Pressing Probe on the Settings screen, or a probe control in the model
   picker. Each probe is a real call, which is why nothing probes on a timer or
   at startup.

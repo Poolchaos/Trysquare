@@ -54,7 +54,7 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/MVP-PLAN.md](plans/MVP-PLAN.md) | The MVP: three-OS support, security, engine fixes, spend safety, Claude connect, then the G1 and G2 verdicts. Seven phases, decision gates MG-1..MG-10. RATIFIED 2026-10-16 (D-86). |
 | [plans/PROOF-AND-STEPS-PLAN.md](plans/PROOF-AND-STEPS-PLAN.md) | After the MVP: the 5.5 models, proof a finding must carry and a second verifier, and the run shown as five steps, then the design of what a branch builds. BUILT 2026-10-24 (D-184, D-186); the verdicts on WP-I and WP-J are the maintainer's. |
 | [plans/COMPLETION-PLAN.md](plans/COMPLETION-PLAN.md) | The standing plan from the 2026-11-17 audit to completion: work packages CP-1..15 and decision gates CG-1..6. DRAFT 2026-11-17. |
-| [plans/AUDIT-2026-11-17.md](plans/AUDIT-2026-11-17.md) | The 2026-11-17 audit of what remains: the evidence, fourteen findings and five the grader added, an independent grade of C, and the remaining work in order; and, since, what was fixed and every regrade of Honest (the fourteenth, 2026-11-19, B). |
+| [plans/AUDIT-2026-11-17.md](plans/AUDIT-2026-11-17.md) | The 2026-11-17 audit of what remains: the evidence, fourteen findings and five the grader added, an independent grade of C, and the remaining work in order; and, since, what was fixed and every regrade of Honest (the fifteenth, 2026-11-19, C). |
 
 ## Specs
 

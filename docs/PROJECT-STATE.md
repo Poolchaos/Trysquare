@@ -19,15 +19,21 @@ from 2026-11-03.
   and one only Windows shows is recorded and left (D-246); a push waits for
   Ubuntu's job. A fourteenth grade of the records, at 31fcba7, was B again:
   nothing materially wrong in about 190 claims sampled, ten immaterial
-  lines, corrected the same day; a fifteenth is owed. Before it, a sweep by
+  lines, corrected the same day. Before the fifteenth, a sweep by
   the session for what the last two grades found most of, and a reading of
   03 against the code, corrected about twenty more lines
   (`plans/AUDIT-2026-11-17.md`), five of them on screens, and found one
   fault in the report itself: its count of files read outside the change
   was the model's own list, changed files among them, said as a fact. It is
-  said as the model's account now, and counts none the change holds
-  (D-247). `./verify.sh --e2e` exits 0 with 1525 unit tests passing, 8
-  skipped, and 147 browser tests.
+  said as the model's account now, and counts no path that is a changed
+  file's as the ledger spells it (D-247). The fifteenth grade, at ad29eca,
+  was C on one line: the verify-again dialog said "up to two requests",
+  where an answer of the wrong shape adds one for either verifier. Eleven
+  immaterial lines came with it, among them the second step and the report
+  saying files "were read", which is asked of the model and not checked.
+  All twelve are corrected, and a sixteenth grade is owed.
+  `./verify.sh --e2e` exits 0 with 1525 unit tests passing, 8 skipped, and
+  147 browser tests.
 - 2026-11-19: before a thirteenth grade of the records, the screens were
   swept for claims the documents had already been corrected for, and four
   were found and put right (D-244). Settings said of the CLI's version and

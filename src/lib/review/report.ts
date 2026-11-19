@@ -371,7 +371,7 @@ export function completeness(input: Pick<ReportInput, "coverage" | "chainFilesRe
 
   return (
     `${input.coverage.totalFiles} changed file(s) and ${input.coverage.totalHunks} hunk(s) were ` +
-    `read, and each hunk was either given a finding or cleared with a reason. ${sweep} ` +
+    `put to the model, and each hunk was either given a finding or cleared with a reason. ${sweep} ` +
     (refuted ? `${refuted} ` : "") +
     `By the model's own account it read ${input.chainFilesRead} file(s) outside the change set ` +
     "to follow what the change calls into."

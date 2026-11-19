@@ -1158,7 +1158,8 @@ export function ConfirmationQueue({
                               This asks <Mono>{model}</Mono> again in a fresh session and, if it
                               proves the finding,{" "}
                               {verifierModel ? <Mono>{verifierModel}</Mono> : "the second verifier"}{" "}
-                              too: up to two requests, using your Claude usage
+                              too: two requests at most, and one more for either if its answer comes
+                              back in the wrong shape, using your Claude usage
                               {againTerms.billing?.state === "perToken"
                                 ? ", billed per token"
                                 : againTerms.billing?.state === "maybePerToken"
