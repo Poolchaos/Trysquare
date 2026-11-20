@@ -62,10 +62,12 @@ from 2026-11-03.
   run's (D-248) beside tokens and a cost that are every run's, and the
   review's page, the reviews list, the dashboard and the report now say
   "last run" where an earlier run asked a model anything.
+  AE5 is a line: the dashboard's "Total spend" and the review page's
+  "$ cost" are "Cost equivalent", as the report names the figure (D-250).
   `./verify.sh --e2e` exits 0 with 1552 unit tests passing, 8 skipped, and
-  153 browser tests. Two of the twenty-four are open (AE5, AE14) and are
-  the next work, and an eighteenth grade after them. AE14 is read in the
-  code and holds, and is a question for the maintainer in the inbox.
+  154 browser tests. One of the twenty-four is open, AE14: it is read in
+  the code and holds, and is a question for the maintainer in the inbox.
+  An eighteenth grade is the next work.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,

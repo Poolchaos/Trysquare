@@ -6305,3 +6305,19 @@ verified evidence, in writing, here.
   and read the one now. A report's seconds under ten are written "4m 05s",
   where it wrote "4m 5s". Rejected: rounding everywhere, since a clock that
   says 60s before the minute has passed is the fault.
+- 2026-11-20 D-250 The dollar figure is named the cost equivalent on the
+  screens, as the report, 02 and 03 already name it. The dashboard's tile
+  read "Total spend" (04's name for it, from the dashboard shell) and the
+  review page's "$ cost". The figure is the CLI's `total_cost_usd`
+  (`lib/engine/events.ts`): what the usage would cost at API prices. On the
+  subscription sign-in reviews run on by default (D-161) none of it is
+  spent, so "spend" said money left that did not (the seventeenth grade,
+  AE5, which its grader was least sure was immaterial). Both tiles and the
+  header of the dashboard's Recent column say "Cost equivalent"; a bare
+  dollar figure with no label beside it (the reviews list, a stage's line,
+  the live scan) is left as it is. Taken by the session and not by the
+  maintainer, who was told before it was made and can reverse it: it
+  changes a label and no figure. Rejected: keeping "Total spend" with a
+  line under it, two names for one figure; and wording by the sign-in's
+  billing, which a figure summed over reviews run on different sign-ins
+  cannot follow.

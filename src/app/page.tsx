@@ -338,7 +338,9 @@ export default function HomePage() {
         ) : (
           <div className="grid gap-6">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <StatTile label="Total spend" value={`$${board.spendUsd.toFixed(2)}`}>
+              {/* What the CLI says the usage would cost at API prices: on a
+                  subscription none of it is spent (D-250). */}
+              <StatTile label="Cost equivalent" value={`$${board.spendUsd.toFixed(2)}`}>
                 <Sparkline values={board.spendHistory} />
               </StatTile>
               <StatTile
@@ -472,7 +474,9 @@ export default function HomePage() {
                       <th className="px-4 py-2 text-left font-medium">Branch pair</th>
                       <th className="px-4 py-2 text-left font-medium">Model</th>
                       <th className="px-4 py-2 text-right font-medium">Findings</th>
-                      <th className="px-4 py-2 text-right font-medium">Cost</th>
+                      <th className="px-4 py-2 text-right font-medium whitespace-nowrap">
+                        Cost equivalent
+                      </th>
                       <th className="px-4 py-2 text-right font-medium">Took</th>
                       <th className="px-4 py-2 text-left font-medium">Status</th>
                     </tr>

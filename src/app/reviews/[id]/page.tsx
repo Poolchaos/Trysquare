@@ -1429,7 +1429,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 mock gives them; the token breakdown stays, beneath, at the
                 weight it deserves. */}
             <div className="grid grid-cols-2 gap-3">
-              <StatTile label="$ cost" value={`$${review.costEquivalentUsd.toFixed(2)}`} />
+              <StatTile label="Cost equivalent" value={`$${review.costEquivalentUsd.toFixed(2)}`} />
               <StatTile
                 // Beside a cost that is every run's, a resumed run's time
                 // is said as the last run's (D-248: a resume is a new run).

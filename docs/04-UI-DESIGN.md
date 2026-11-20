@@ -112,9 +112,10 @@ Everything on it is measured, never estimated, and a rate with no
 denominator renders as a dash rather than as zero, because zero percent
 precision is a claim about findings somebody judged.
 
-- **Stat tiles:** total spend, reviews completed, precision (confirmed vs
+- **Stat tiles:** the cost equivalent of every review (what the CLI says
+  the usage would cost at API prices, D-250), reviews completed, precision (confirmed vs
   dismissed, a finding left out unproven counting as neither, D-190) and invention rate (quote-check kills), in large tabular
-  numerals. Total spend alone has a sparkline, from this machine's own
+  numerals. The cost equivalent alone has a sparkline, from this machine's own
   history; it needs two points to be a line and draws nothing below that.
 - **Needs you:** every review awaiting a decision, oldest wait first, each
   row carrying its branch pair, project, decided-of-total and age, and

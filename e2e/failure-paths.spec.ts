@@ -2301,6 +2301,33 @@ test("Rule yield says when it lists some of the rules cited and not all", async 
   await stop();
 });
 
+test("a cost is named for what it is, a cost equivalent", async ({ page }) => {
+  // The seventeenth grade, AE5: the figure is what the CLI says the usage
+  // would cost at API prices, and on a subscription nothing is spent. The
+  // dashboard called it "Total spend" and a review's page "$ cost"; the
+  // report and the records call it the cost equivalent, and so do these.
+  const board = (await (await page.request.get("/api/scoreboard")).json()) as {
+    spendUsd: number;
+    recent: { id: string; costUsd: number }[];
+  };
+  await page.goto("/");
+  const tile = page.getByText("Cost equivalent", { exact: true }).first().locator("..");
+  await expect(tile).toContainText(`$${board.spendUsd.toFixed(2)}`);
+  expect(await page.getByText(/spend/i).count()).toBe(0);
+  await shootAll(page, tile, "cost-equivalent-dashboard");
+  const head = page.getByRole("table").getByRole("row").first();
+  await expect(head.getByRole("columnheader", { name: "Cost equivalent" })).toBeVisible();
+  expect(await head.getByRole("columnheader", { name: "Cost", exact: true }).count()).toBe(0);
+  await shootAll(page, head, "cost-equivalent-recent");
+
+  const costed = board.recent.find((row) => row.costUsd > 0)!;
+  await page.goto(`/reviews/${costed.id}`);
+  const onReview = page.getByText("Cost equivalent", { exact: true }).first().locator("..");
+  await expect(onReview).toContainText(`$${costed.costUsd.toFixed(2)}`);
+  expect(await page.getByText("$ cost", { exact: true }).count()).toBe(0);
+  await shootAll(page, onReview.locator(".."), "cost-equivalent-review");
+});
+
 test("a quiet dashboard keeps its times and its waiting list current", async ({ page }) => {
   // Audit finding U3: the clock behind "waiting 4m ago" ticked only while a
   // run was live, so a quiet dashboard froze; and the scoreboard was read
@@ -2418,7 +2445,7 @@ test("an older reading of what is running does not put back what it said", async
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Review scoreboard", level: 1 })).toBeVisible();
     // The scoreboard drawn, so a phantom run would have somewhere to show.
-    await expect(page.getByText("Total spend")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Cost equivalent").first()).toBeVisible({ timeout: 30_000 });
     // Both pollers' first readings are out, held; their next are answered.
     await expect.poll(() => held, { timeout: 15_000, intervals: [100] }).toBe(2);
     await expect

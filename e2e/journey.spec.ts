@@ -1057,7 +1057,7 @@ test("the scoreboard counts what the machine has actually run", async ({ page })
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Review scoreboard" })).toBeVisible();
 
-  await expect(page.getByText("Total spend")).toBeVisible();
+  await expect(page.getByText("Cost equivalent").first()).toBeVisible();
   // The journey's one kill is the verifier refuting a finding (D-97), which
   // cited real code and is not invention; it used to count as some (4.24).
   const invention = page.getByText("Invention rate").locator("..");
