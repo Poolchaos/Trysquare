@@ -14,13 +14,17 @@ from 2026-11-03.
 ## Status
 
 - 2026-11-20: the questions that waited on the maintainer are decided by
-  the session, as D-251 has it (D-252 to D-263). To build from them: the
-  "Invention rate" tile renamed "Proofs discarded" (AE14); the lists
-  counting a review's findings as its queue holds them; a `decomposed`
-  review's report saying the pairs its profile left out, and its token
-  line giving cache-write tokens; three lines on screens; Needs you
-  listing a review that waits on a Resume; and two unread table entries
-  dropped. A paid fixture run's evidence is committed under
+  the session, as D-251 has it (D-252 to D-263). Built from them: the
+  "Invention rate" tile is "Proofs discarded" (AE14, the last of the
+  seventeenth grade's twenty-four), and three lines on screens: Needs you
+  says "waiting 2m", a run short of a second is "under a second", and a
+  status in the dashboard's Recent stays on one line on a phone.
+  `./verify.sh --e2e` exits 0 with 1552 unit tests passing, 8 skipped, and
+  154 browser tests. To build: the lists counting a review's findings as
+  its queue holds them; a `decomposed` review's report saying the pairs
+  its profile left out, and its token line giving cache-write tokens;
+  Needs you listing a review that waits on a Resume; and two unread table
+  entries dropped. A paid fixture run's evidence is committed under
   `docs/evidence/` from the next run on (D-261). The handover hooks are
   left to the maintainer (D-262).
 - 2026-11-20: the maintainer handed the app's decisions to the AI session

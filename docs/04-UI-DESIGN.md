@@ -114,7 +114,7 @@ precision is a claim about findings somebody judged.
 
 - **Stat tiles:** the cost equivalent of every review (what the CLI says
   the usage would cost at API prices, D-250), reviews completed, precision (confirmed vs
-  dismissed, a finding left out unproven counting as neither, D-190) and invention rate (quote-check kills), in large tabular
+  dismissed, a finding left out unproven counting as neither, D-190) and proofs discarded (the quotation check's kills, of the findings raised; named "Invention rate" until D-252), in large tabular
   numerals. The cost equivalent alone has a sparkline, from this machine's own
   history; it needs two points to be a line and draws nothing below that.
 - **Needs you:** every review awaiting a decision, oldest wait first, each
@@ -126,8 +126,10 @@ precision is a claim about findings somebody judged.
   elapsed, spend so far, and a way into the scan theater. When nothing runs
   it is absent, not empty: a panel labelled live with nothing in it is the
   dashboard claiming to have something to watch.
-- **Recent reviews:** branch pair, model, findings count, cost, duration and
-  status chip, with any review awaiting a decision highlighted.
+- **Recent reviews:** branch pair with its project and model under it,
+  findings count, cost equivalent, duration and status chip, with any review
+  awaiting a decision highlighted. The pair truncates, whole in its title; the
+  model and the status are never broken.
 - **Rule yield:** the eight rules with the lowest share of their findings
   that survived to confirmation, worst first, because a rule that only ever
   produces dismissals is costing review attention for nothing. With more

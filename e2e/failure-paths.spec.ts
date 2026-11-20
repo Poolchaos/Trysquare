@@ -1997,7 +1997,13 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   // AE6). The first run asked once before the limit, so the cost is both
   // runs' and the time the second's: each screen says whose time it is.
   const listed = (await (await page.request.get("/api/reviews")).json()) as {
-    reviews: { id: string; ranBefore: boolean; startedAt: string; runEndedAt: string }[];
+    reviews: {
+      id: string;
+      model: string;
+      ranBefore: boolean;
+      startedAt: string;
+      runEndedAt: string;
+    }[];
   };
   const resumed = listed.reviews.find((review) => review.id === id)!;
   expect(resumed.ranBefore).toBe(true);
@@ -2040,7 +2046,26 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
       ),
       animations: "disabled",
     });
+  // Every status in the table on one line: "AWAITING YOUR DECISION" broke
+  // over three at this width, in a table that scrolls sideways (D-258).
+  const badges = page.getByRole("table").locator("tbody td:last-child span");
+  const heights = await badges.evaluateAll((nodes) =>
+    nodes.map((node) => ({
+      text: node.textContent,
+      height: Math.round(node.getBoundingClientRect().height),
+    })),
+  );
+  expect(heights.map((badge) => badge.text)).toContain("awaiting your decision");
+  // One line of 11px type with its padding and border is under 30px; two are over.
+  expect(heights.filter((badge) => badge.height > 30)).toEqual([]);
   if (desktop) await page.setViewportSize(desktop);
+  // At desk width the table fits its card, the badge whole, and the model id
+  // is never broken: kept on one line, the badge took the room the model's
+  // column had, and the id broke at its hyphens over three lines.
+  const card = page.getByRole("table").locator("..");
+  expect(await card.evaluate((node) => node.scrollWidth - node.clientWidth)).toBe(0);
+  const model = inRecent.getByText(resumed.model, { exact: true });
+  expect(await model.evaluate((node) => node.getClientRects().length)).toBe(1);
 });
 
 test("a decision that moves onto an open question leaves the focus on its title", async ({
@@ -2329,7 +2354,7 @@ test("a cost is named for what it is, a cost equivalent", async ({ page }) => {
 });
 
 test("a quiet dashboard keeps its times and its waiting list current", async ({ page }) => {
-  // Audit finding U3: the clock behind "waiting 4m ago" ticked only while a
+  // Audit finding U3: the clock behind "waiting 4m" ticked only while a
   // run was live, so a quiet dashboard froze; and the scoreboard was read
   // once, so its Needs you list drifted from the top bar. The clock is the
   // test's own, and what the bar polls is answered as quiet, then as one
@@ -2356,7 +2381,8 @@ test("a quiet dashboard keeps its times and its waiting list current", async ({ 
   await page.route("**/api/scoreboard", failOnce);
   try {
     await page.goto("/");
-    const waiting = page.getByText(/^waiting (just now|\d+[mhd] ago)$/).first();
+    // A wait is a span, not a moment: "waiting 2m", never "waiting 2m ago" (D-258).
+    const waiting = page.getByText(/^waiting (under a minute|\d+[mhd])$/).first();
     await expect(waiting).toBeVisible({ timeout: 30_000 });
     const before = await waiting.textContent();
     // Hours, so the words change however long the review has waited.

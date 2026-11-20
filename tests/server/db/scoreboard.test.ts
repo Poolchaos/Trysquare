@@ -67,7 +67,7 @@ describe("a scoreboard with nothing to report", () => {
     // none judged, the honest answer is that there is no answer yet.
     const board = readScoreboard(db);
     expect(board.precision).toBeNull();
-    expect(board.inventionRate).toBeNull();
+    expect(board.proofsDiscardedRate).toBeNull();
     expect(board.spendUsd).toBe(0);
     expect(board.ruleYield).toEqual([]);
   });
@@ -104,9 +104,9 @@ describe("the two rates the product is about", () => {
     expect(readScoreboard(db).precision).toBe(0.5);
   });
 
-  it("measures invention against everything raised, including what was hidden", () => {
+  it("measures discarded proofs against everything raised, including what was hidden", () => {
     // Killed findings are filtered out of every other screen. Here they are
-    // the point: they are how often the engine cited code that was not there.
+    // the point: how often a proof failed the program's check of it.
     const real = candidate();
     markVerified(db, real.id, evidence);
     waitOnAPerson();
@@ -118,13 +118,12 @@ describe("the two rates the product is about", () => {
       "quote_check",
     );
 
-    expect(readScoreboard(db).inventionRate).toBe(0.5);
+    expect(readScoreboard(db).proofsDiscardedRate).toBe(0.5);
   });
 
-  it("counts only the quotation check's kills as invention, not a refutation (4.24)", () => {
-    // A finding the verifier read and judged wrong was not invented: it cited
-    // real code. Counting it too made the rate say the engine invented code
-    // more often than it did.
+  it("counts only the quotation check's kills, not a refutation (4.24)", () => {
+    // A finding the verifier read and judged wrong had no proof to discard:
+    // it cited real code, and counting it too overstated the rate.
     const real = candidate();
     markVerified(db, real.id, evidence);
     waitOnAPerson();
@@ -137,7 +136,7 @@ describe("the two rates the product is about", () => {
       "quote_check",
     );
 
-    expect(readScoreboard(db).inventionRate).toBeCloseTo(1 / 3);
+    expect(readScoreboard(db).proofsDiscardedRate).toBeCloseTo(1 / 3);
   });
 });
 
@@ -355,6 +354,6 @@ describe("what a project's own checks found", () => {
     // The two rates stay the code's: a failing command cites no rule and was
     // never a quotation to check.
     expect(decided.precision).toBeNull();
-    expect(decided.inventionRate).toBeNull();
+    expect(decided.proofsDiscardedRate).toBeNull();
   });
 });

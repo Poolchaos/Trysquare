@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ranBefore, runTimeMs, runTimeSaid, runTimeWords } from "@/lib/review/run-time";
+import {
+  ranBefore,
+  runTimeMs,
+  runTimeParts,
+  runTimeSaid,
+  runTimeWords,
+} from "@/lib/review/run-time";
 
 const RAN = {
   status: "complete",
@@ -30,7 +36,10 @@ describe("how long a run took", () => {
 
 describe("a run's time in words", () => {
   it("is whole seconds already passed, never rounded up to one not reached", () => {
-    expect(runTimeWords(0)).toBe("0s");
+    // A step of that length is said so too; "0s" read as no time at all (D-258).
+    expect(runTimeWords(0)).toBe("under a second");
+    expect(runTimeWords(999)).toBe("under a second");
+    expect(runTimeWords(1000)).toBe("1s");
     expect(runTimeWords(59_600)).toBe("59s");
     expect(runTimeWords(60_000)).toBe("1m 00s");
     expect(runTimeWords(270_000)).toBe("4m 30s");
@@ -64,5 +73,8 @@ describe("a run's time beside totals that sum every run", () => {
   it("says whose time it is where an earlier run spent something", () => {
     expect(runTimeSaid(30_000, true)).toBe("last run 30s");
     expect(runTimeSaid(30_000, false)).toBe("30s");
+    // In parts, for a cell that may break between them and nowhere else.
+    expect(runTimeParts(30_000, true)).toEqual(["last run", "30s"]);
+    expect(runTimeParts(30_000, false)).toEqual(["30s"]);
   });
 });

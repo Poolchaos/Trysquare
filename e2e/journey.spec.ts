@@ -447,7 +447,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
   await test.step("the finished review is summed up in its five steps", async () => {
     // The run has stopped, so its time is said now, before any decision. It
     // was said only once the review was completed, and counted to then (D-248).
-    const took = page.getByText(/^took \d/);
+    const took = page.getByText(/^took (under a second|\d)/);
     await expect(took).toBeVisible();
     ranFor = (await took.textContent()) ?? "";
 
@@ -930,7 +930,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
       page.getByRole("region", { name: "How the review went" }).getByRole("listitem").nth(4),
     ).toContainText("Coverage audited and every finding decided. The report is below.");
     // The run's time, not the time since: the deciding above is not in it.
-    await expect(page.getByText(/^took \d/)).toHaveText(ranFor);
+    await expect(page.getByText(/^took (under a second|\d)/)).toHaveText(ranFor);
     await expect(page.getByText(/its checkout could not be removed: EBUSY/)).toBeVisible();
     await stopAdding();
 
@@ -1059,9 +1059,12 @@ test("the scoreboard counts what the machine has actually run", async ({ page })
 
   await expect(page.getByText("Cost equivalent").first()).toBeVisible();
   // The journey's one kill is the verifier refuting a finding (D-97), which
-  // cited real code and is not invention; it used to count as some (4.24).
-  const invention = page.getByText("Invention rate").locator("..");
-  await expect(invention.getByText(/^0%$/)).toBeVisible();
+  // cited real code and had no proof to discard; it used to count (4.24).
+  // The tile is named for what it counts (D-252).
+  const discarded = page.getByText("Proofs discarded").locator("..");
+  await expect(discarded.getByText(/^0%$/)).toBeVisible();
+  await expect(discarded.getByText("by the quotation check, of findings raised")).toBeVisible();
+  await expect(page.getByText("Invention rate")).toHaveCount(0);
 
   // The journey confirmed several findings and dismissed one, so precision is
   // a real fraction rather than the dash an undecided app would show.

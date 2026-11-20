@@ -17,7 +17,7 @@
  */
 
 import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
 import { asSentence, send } from "@/components/request";
 import {
@@ -30,7 +30,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
-import { runTimeSaid } from "@/lib/review/run-time";
+import { runTimeParts } from "@/lib/review/run-time";
 
 interface Row {
   id: string;
@@ -70,7 +70,7 @@ interface Scoreboard {
   reviewsCompleted: number;
   reviewsTotal: number;
   precision: number | null;
-  inventionRate: number | null;
+  proofsDiscardedRate: number | null;
   awaiting: number;
   awaitingReviews: AwaitingRow[];
   spendHistory: number[];
@@ -139,7 +139,7 @@ function ago(iso: string, now: number): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-/** How long a run has gone on: "just now elapsed" read as no span at all. */
+/** How long a run or a wait has gone on: "just now elapsed" read as no span at all. */
 function elapsed(iso: string, now: number): string {
   const since = ago(iso, now);
   return since === "just now" ? "under a minute" : since.replace(" ago", "");
@@ -170,8 +170,8 @@ function Widget({
   );
 }
 
-function duration(ms: number | null, earlierRun: boolean): string {
-  return ms === null ? "" : runTimeSaid(ms, earlierRun);
+function duration(ms: number | null, earlierRun: boolean): string[] {
+  return ms === null ? [] : runTimeParts(ms, earlierRun);
 }
 
 /**
@@ -361,13 +361,16 @@ export default function HomePage() {
                     : "confirmed of the proven findings decided"
                 }
               />
+              {/* Named for what is counted: the check also discards a proof
+                  that quotes true code off the cited lines, which is no
+                  invention (D-252). */}
               <StatTile
-                label="Invention rate"
-                value={percent(board.inventionRate)}
+                label="Proofs discarded"
+                value={percent(board.proofsDiscardedRate)}
                 note={
-                  board.inventionRate === null
+                  board.proofsDiscardedRate === null
                     ? "nothing raised yet"
-                    : "killed by the quotation check"
+                    : "by the quotation check, of findings raised"
                 }
               />
             </div>
@@ -454,7 +457,9 @@ export default function HomePage() {
                         <span className="text-dense tabular-nums">
                           {row.total > 0 ? `${row.decided} of ${row.total} decided` : "no findings"}
                           <span className="ml-3 text-[var(--color-ink-muted)]">
-                            {row.since === null ? "waiting" : `waiting ${ago(row.since, now)}`}
+                            {/* A wait is a span, so "waiting 2m", as a run's
+                                elapsed time is said, not "waiting 2m ago". */}
+                            {row.since === null ? "waiting" : `waiting ${elapsed(row.since, now)}`}
                           </span>
                         </span>
                       </Link>
@@ -472,7 +477,6 @@ export default function HomePage() {
                   <thead className="font-[family-name:var(--font-mono)] text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
                     <tr>
                       <th className="px-4 py-2 text-left font-medium">Branch pair</th>
-                      <th className="px-4 py-2 text-left font-medium">Model</th>
                       <th className="px-4 py-2 text-right font-medium">Findings</th>
                       <th className="px-4 py-2 text-right font-medium whitespace-nowrap">
                         Cost equivalent
@@ -492,28 +496,46 @@ export default function HomePage() {
                         }`}
                       >
                         <td className="px-4 py-2">
-                          <Link href={`/reviews/${row.id}`} className="block min-w-0">
+                          {/* The model rides under the pair, with the project:
+                              as a column of its own it was the part that gave,
+                              its id broken at the hyphens. The pair truncates,
+                              whole in its title, as the reviews list's does. */}
+                          <Link
+                            href={`/reviews/${row.id}`}
+                            title={`${row.fromBranch} into ${row.intoBranch}`}
+                            className="block max-w-[18rem] min-w-0"
+                          >
                             <Mono className="block truncate">
                               {row.fromBranch} into {row.intoBranch}
                             </Mono>
-                            <span className="text-aside text-[var(--color-ink-faint)]">
-                              {row.projectName}
+                            <span className="block truncate text-aside text-[var(--color-ink-faint)]">
+                              {row.projectName} ·{" "}
+                              <span className="whitespace-nowrap">{row.model}</span>
                             </span>
                           </Link>
                         </td>
-                        <td className="px-4 py-2 text-[var(--color-ink-muted)]">{row.model}</td>
                         <td className="px-4 py-2 text-right tabular-nums">
                           {row.total > 0 ? `${row.confirmed} of ${row.total}` : "-"}
                         </td>
                         <td className="px-4 py-2 text-right tabular-nums">
                           {row.costUsd > 0 ? `$${row.costUsd.toFixed(2)}` : "-"}
                         </td>
-                        {/* One line: "last run 4m 05s" broke a word to a line
-                            on a phone, where the table scrolls sideways. */}
-                        <td className="px-4 py-2 text-right whitespace-nowrap tabular-nums text-[var(--color-ink-muted)]">
-                          {duration(row.durationMs, row.ranBefore) || "-"}
+                        {/* "last run" and the time each whole: one word to a
+                            line on a phone read as noise, and one line at
+                            desk width pushed the table past its card. */}
+                        <td className="px-4 py-2 text-right tabular-nums text-[var(--color-ink-muted)]">
+                          {duration(row.durationMs, row.ranBefore).length === 0
+                            ? "-"
+                            : duration(row.durationMs, row.ranBefore).map((part, index) => (
+                                <Fragment key={part}>
+                                  {index > 0 ? " " : null}
+                                  <span className="whitespace-nowrap">{part}</span>
+                                </Fragment>
+                              ))}
                         </td>
-                        <td className="px-4 py-2">
+                        {/* One line: "awaiting your decision" broke over three
+                            on a phone, where the table scrolls sideways. */}
+                        <td className="px-4 py-2 whitespace-nowrap">
                           <Badge tone={statusTone(row.status)}>{statusLabel(row.status)}</Badge>
                         </td>
                       </tr>

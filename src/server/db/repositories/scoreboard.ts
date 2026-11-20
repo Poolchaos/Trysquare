@@ -8,10 +8,11 @@
  *
  * The two rates are the ones the product is actually about. Precision is what
  * a person confirmed out of what they decided, which measures whether the
- * findings are worth reading. Invention is what the quotation check killed out
- * of everything ever raised, which measures how often the engine makes things
- * up. Only those kills: one the verifier refuted cited real code, and counting
- * it too overstated invention (4.24). Elsewhere killed findings are only
+ * findings are worth reading. Proofs discarded is what the quotation check
+ * killed out of everything ever raised: a proof that is not the code at its
+ * lines, or one that quotes true code off the lines the finding cites, so it
+ * is not a count of inventions (D-252). Only those kills: one the verifier
+ * refuted had no proof to check (4.24). Elsewhere killed findings are only
  * listed, under a review's run detail (D-97); this is the one place they are
  * counted.
  */
@@ -85,7 +86,7 @@ export interface Scoreboard {
   /** Confirmed over decided. Null until something has been decided. */
   precision: number | null;
   /** Killed by the quotation check over everything raised. Null until then. */
-  inventionRate: number | null;
+  proofsDiscardedRate: number | null;
   awaiting: number;
   /** The reviews behind that count, so the screen can list them. */
   awaitingReviews: AwaitingReview[];
@@ -135,7 +136,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
   const byRule = new Map<string, RuleYield>();
   let confirmed = 0;
   let dismissed = 0;
-  let invented = 0;
+  let discarded = 0;
 
   for (const row of findingRows) {
     const tally = byReview.get(row.reviewId) ?? { confirmed: 0, decided: 0, queued: 0, total: 0 };
@@ -150,7 +151,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     // Left out unproven is not rejected: precision is about findings that
     // were proven and read (D-190).
     if (row.status === "dismissed" && row.dismissedFrom !== "open_question") dismissed += 1;
-    if (row.status === "killed" && row.killedBy === "quote_check") invented += 1;
+    if (row.status === "killed" && row.killedBy === "quote_check") discarded += 1;
 
     // A finding that cited no rule is counted in the totals above but has no
     // rule to credit, so it is left out here rather than filed under a made-up
@@ -199,7 +200,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     reviewsCompleted: completed.length,
     reviewsTotal: reviewRows.length,
     precision: decided === 0 ? null : confirmed / decided,
-    inventionRate: raised === 0 ? null : invented / raised,
+    proofsDiscardedRate: raised === 0 ? null : discarded / raised,
     awaiting: reviewRows.filter((review) => review.status === "awaiting_confirmation").length,
     // Oldest first, so the shape reads left to right the way time does.
     spendHistory: [...completed].reverse().map((review) => review.cost),

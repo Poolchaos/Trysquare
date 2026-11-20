@@ -176,7 +176,7 @@ pulled deliberately.
 - 2026-11-19: the dashboard's Needs you says "waiting 2m ago" and "waiting
   just now" (`src/app/page.tsx`, seen in `light-dashboard.png`); "waiting
   2m" would read right. A browser test holds the present words.
-  DECIDED 2026-11-20 (D-258): "waiting 2m", to build.
+  DECIDED 2026-11-20 (D-258): "waiting 2m". BUILT the same day.
 - 2026-11-20: only the Windows job failed in CI run 44684645272 at eedc356
   (Ubuntu and macOS passed): `tests/server/projectrun/run.test.ts`, "is
   stopped at its time limit, with everything it started", "expected true to
@@ -205,12 +205,14 @@ pulled deliberately.
 - 2026-11-20: at 390px the dashboard's Recent table breaks the status
   badge over three lines ("AWAITING / YOUR / DECISION"), in a table that
   scrolls sideways anyway. Seen grading `last-run-recent-phone.png`.
-  DECIDED 2026-11-20 (D-258): one line, to build.
+  DECIDED 2026-11-20 (D-258): one line. BUILT the same day; it measured
+  56px tall before, by the test.
 - 2026-11-20: a run of under a second reads "took 0s", and 0s in the
   Duration tile and the lists, where a step of the same length says "under
   a second" (`src/app/reviews/[id]/page.tsx`, `elapsedBetween`). Only the
   fake engine is that fast; a waiting review shows it since D-248.
-  DECIDED 2026-11-20 (D-258): "under a second", to build.
+  DECIDED 2026-11-20 (D-258): "under a second". BUILT the same day, in
+  the one function that words a run's time (D-249).
 - 2026-11-20: the dashboard's Needs you says "Nothing is waiting on you"
   while a review is paused at the usage limit, interrupted or failed, each
   of which goes on only when a person presses Resume. 04 has Needs you list
@@ -225,7 +227,7 @@ pulled deliberately.
   cites, which is not an invention (the seventeenth grade, AE14). Rename
   the tile, or count only a quotation that matched nothing? The name is
   D-68's, so it is left. DECIDED 2026-11-20 (D-252): renamed "Proofs
-  discarded", the count unchanged, to build.
+  discarded", the count unchanged. BUILT the same day.
 - 2026-11-20: the audit stage asks no model, and two tables still carry an
   entry for it that is never read: its output shape
   (`lib/review/stage-schemas.ts`) and its instruction, "Summarise what was

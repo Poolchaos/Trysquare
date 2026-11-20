@@ -164,8 +164,8 @@ export type SweepDisposition = z.infer<typeof sweepDispositionSchema>;
  * Why a finding was killed (4.24). `verification`: the verifier read the code
  * and refuted it. `quote_check`: the program's own checks threw it out, a
  * quotation that did not match the file, a file that could not be read, or a
- * verdict about lines the finding does not cite. Only the second measures how
- * often the engine cites code that is not there.
+ * verdict about lines the finding does not cite. Only the second is counted
+ * on the dashboard, as proofs discarded (D-252).
  */
 export const KILL_KINDS = ["verification", "quote_check"] as const;
 export const killKindSchema = z.enum(KILL_KINDS);

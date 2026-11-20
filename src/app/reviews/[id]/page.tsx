@@ -1772,7 +1772,7 @@ function FinishedSummary({ snapshot }: { snapshot: Snapshot }) {
                 <span className="col-start-2 text-aside text-[var(--color-ink-muted)] tabular-nums sm:col-start-auto sm:text-right">
                   {spent.requests === 0
                     ? "no requests"
-                    : `${spent.ms < 1000 ? "under a second" : elapsedBetween(0, spent.ms)}, ${spent.requests} ${spent.requests === 1 ? "request" : "requests"}`}
+                    : `${elapsedBetween(0, spent.ms)}, ${spent.requests} ${spent.requests === 1 ? "request" : "requests"}`}
                 </span>
               </li>
             );

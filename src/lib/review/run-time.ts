@@ -47,15 +47,22 @@ export function ranBefore(
 
 /** A run's time as a list gives it: said as the last run's where an earlier one spent something. */
 export function runTimeSaid(ms: number, earlierRun: boolean): string {
-  return earlierRun ? `last run ${runTimeWords(ms)}` : runTimeWords(ms);
+  return runTimeParts(ms, earlierRun).join(" ");
+}
+
+/** The same words in their parts, for a cell that may break between them and nowhere else. */
+export function runTimeParts(ms: number, earlierRun: boolean): string[] {
+  return earlierRun ? ["last run", runTimeWords(ms)] : [runTimeWords(ms)];
 }
 
 /**
  * A time in words, the same on every screen and in the report (D-249):
- * whole seconds passed, never rounded up to one not reached.
+ * whole seconds passed, never rounded up to one not reached. A time short
+ * of its first second is said so: "0s" read as no time at all (D-258).
  */
 export function runTimeWords(ms: number): string {
   const seconds = Math.max(0, Math.floor(ms / 1000));
+  if (seconds < 1) return "under a second";
   if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
   return minutes < 60
