@@ -27,6 +27,7 @@ const FINDING = {
 };
 
 const BASE: ReportInput = {
+  ranBefore: false,
   projectName: "app",
   fromBranch: "feature/rename-prefs",
   intoBranch: "main",
@@ -252,6 +253,14 @@ describe("the footer that makes a report reproducible", () => {
   it("reports how long it took, and omits it when it cannot be known", () => {
     expect(renderReport(BASE)).toContain("Took: 4m 30s");
     expect(renderReport({ ...BASE, runEndedAt: null })).not.toContain("Took:");
+  });
+
+  it("says the time is the last run's where an earlier run spent something", () => {
+    // The tokens and cost above it sum every run (AE6).
+    expect(renderReport({ ...BASE, ranBefore: true })).toContain(
+      "- Last run took: 4m 30s (the tokens and the cost are every run's)\n",
+    );
+    expect(renderReport({ ...BASE, ranBefore: true })).not.toContain("- Took:");
   });
 
   it("words the time as the screens word it", () => {

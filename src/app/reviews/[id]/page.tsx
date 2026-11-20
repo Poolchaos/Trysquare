@@ -209,6 +209,8 @@ interface Snapshot {
   findings: Finding[];
   /** What the project's own checks found (D-197); absent from an older server. */
   checkFindings?: CheckFindingRow[];
+  /** An earlier run spent something: the run's time is the last run's alone. */
+  ranBefore?: boolean;
   /** Null only if the project was deleted out from under the review. */
   project: { id: string; name: string } | null;
   /** Median milliseconds per stage for this model, measured on this machine. */
@@ -1112,7 +1114,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {review.startedAt && snapshot.running ? (
               <span className="tabular-nums">{elapsedSince(review.startedAt, now)} elapsed</span>
             ) : null}
-            {ranFor ? <span className="tabular-nums">took {ranFor}</span> : null}
+            {ranFor ? (
+              <span className="tabular-nums">
+                {snapshot.ranBefore ? "last run took" : "took"} {ranFor}
+              </span>
+            ) : null}
           </span>
         }
         actions={
@@ -1425,7 +1431,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             <div className="grid grid-cols-2 gap-3">
               <StatTile label="$ cost" value={`$${review.costEquivalentUsd.toFixed(2)}`} />
               <StatTile
-                label="Duration"
+                // Beside a cost that is every run's, a resumed run's time
+                // is said as the last run's (D-248: a resume is a new run).
+                label={snapshot.ranBefore ? "Last run" : "Duration"}
                 value={
                   snapshot.running && review.startedAt
                     ? elapsedSince(review.startedAt, now)

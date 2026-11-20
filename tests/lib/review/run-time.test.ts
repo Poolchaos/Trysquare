@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runTimeMs, runTimeWords } from "@/lib/review/run-time";
+import { ranBefore, runTimeMs, runTimeSaid, runTimeWords } from "@/lib/review/run-time";
 
 const RAN = {
   status: "complete",
@@ -40,5 +40,29 @@ describe("a run's time in words", () => {
   it("counts in hours past the sixtieth minute", () => {
     expect(runTimeWords(3_599_999)).toBe("59m 59s");
     expect(runTimeWords(3_930_600)).toBe("1h 05m");
+  });
+});
+
+describe("a run's time beside totals that sum every run", () => {
+  // The seventeenth grade, AE6: a resumed run is a new one (D-248), so its
+  // time is the last run's, while the tokens and cost beside it are every
+  // run's, and no word said so.
+  const STARTED = "2026-08-18T10:00:00.000Z";
+
+  it("knows an earlier run asked a model by a stage row older than the run", () => {
+    expect(ranBefore(STARTED, "2026-08-18T09:40:00.000Z")).toBe(true);
+    expect(ranBefore(STARTED, "2026-08-18T10:00:01.000Z")).toBe(false);
+  });
+
+  it("says nothing of an earlier run with no stage row or no run to compare", () => {
+    // A run that stopped before its first stage spent nothing.
+    expect(ranBefore(STARTED, null)).toBe(false);
+    expect(ranBefore(STARTED, undefined)).toBe(false);
+    expect(ranBefore(null, "2026-08-18T09:40:00.000Z")).toBe(false);
+  });
+
+  it("says whose time it is where an earlier run spent something", () => {
+    expect(runTimeSaid(30_000, true)).toBe("last run 30s");
+    expect(runTimeSaid(30_000, false)).toBe("30s");
   });
 });

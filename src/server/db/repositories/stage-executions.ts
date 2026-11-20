@@ -9,7 +9,7 @@
  * that place is the checkpointing runner.
  */
 
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { newId, nowIso } from "@/lib/ids";
 import type { ReviewStage, StageErrorClass, StageStatus } from "@/lib/domain/enums";
 import type { Db } from "../client";
@@ -174,6 +174,25 @@ export function listForReview(db: Db, reviewId: string): StageExecution[] {
     .where(eq(stageExecutions.reviewId, reviewId))
     .orderBy(asc(stageExecutions.startedAt), asc(stageExecutions.attempt), asc(stageExecutions.id))
     .all();
+}
+
+/**
+ * When each review's oldest stage row started, a finding verified again
+ * left out, for `ranBefore` (`lib/review/run-time.ts`). One grouped read
+ * for a whole list, or one review's.
+ */
+export function firstStageStarts(db: Db, reviewId?: string): Map<string, string> {
+  const ofRuns = isNull(stageExecutions.findingId);
+  const rows = db
+    .select({
+      reviewId: stageExecutions.reviewId,
+      firstAt: sql<string>`min(${stageExecutions.startedAt})`,
+    })
+    .from(stageExecutions)
+    .where(reviewId === undefined ? ofRuns : and(ofRuns, eq(stageExecutions.reviewId, reviewId)))
+    .groupBy(stageExecutions.reviewId)
+    .all();
+  return new Map(rows.map((row) => [row.reviewId, row.firstAt]));
 }
 
 /** How many live attempts a stage has taken, so the next one is numbered. */

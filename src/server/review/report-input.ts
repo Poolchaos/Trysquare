@@ -14,6 +14,8 @@ import { getChainFilesRead, coverageReport, listLedgerFiles } from "../db/reposi
 import { listFindings, statusOf } from "../db/repositories/findings";
 import { requireProject } from "../db/repositories/projects";
 import { requireReview } from "../db/repositories/reviews";
+import { firstStageStarts } from "../db/repositories/stage-executions";
+import { ranBefore } from "@/lib/review/run-time";
 import { readReviewSnapshotMeta } from "../db/repositories/rulesets";
 import type { Db } from "../db/client";
 import type {
@@ -230,5 +232,6 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
     },
     startedAt: review.startedAt,
     runEndedAt: review.runEndedAt,
+    ranBefore: ranBefore(review.startedAt, firstStageStarts(db, reviewId).get(reviewId)),
   };
 }

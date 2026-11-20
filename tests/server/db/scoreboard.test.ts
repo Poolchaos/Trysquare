@@ -257,6 +257,24 @@ describe("what the dashboard widgets need", () => {
       .run();
 
     expect(readScoreboard(db).recent[0]?.durationMs).toBe(600_000);
+    // Run once: the time is the review's whole.
+    expect(readScoreboard(db).recent[0]?.ranBefore).toBe(false);
+
+    // A stage answered before this run started was an earlier run's, whose
+    // cost is in the row's and whose time is not (AE6). One verified again
+    // is no run.
+    const earlier = {
+      reviewId,
+      promptHash: "hash",
+      attempt: 1,
+      status: "succeeded" as const,
+      startedAt: "2026-08-18T09:40:00.000Z",
+      endedAt: "2026-08-18T09:41:00.000Z",
+    };
+    recordAttempt(db, { ...earlier, stage: "s5_verification", findingId: "verified-again" });
+    expect(readScoreboard(db).recent[0]?.ranBefore).toBe(false);
+    recordAttempt(db, { ...earlier, stage: "s1_risk" });
+    expect(readScoreboard(db).recent[0]?.ranBefore).toBe(true);
   });
 
   it("counts a dismissal as a decision, and leaves killed findings out of the queue", () => {

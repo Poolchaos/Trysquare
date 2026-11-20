@@ -30,7 +30,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
-import { runTimeWords } from "@/lib/review/run-time";
+import { runTimeSaid } from "@/lib/review/run-time";
 
 interface Row {
   id: string;
@@ -43,6 +43,7 @@ interface Row {
   total: number;
   costUsd: number;
   durationMs: number | null;
+  ranBefore: boolean;
   createdAt: string;
 }
 
@@ -169,8 +170,8 @@ function Widget({
   );
 }
 
-function duration(ms: number | null): string {
-  return ms === null ? "" : runTimeWords(ms);
+function duration(ms: number | null, earlierRun: boolean): string {
+  return ms === null ? "" : runTimeSaid(ms, earlierRun);
 }
 
 /**
@@ -503,8 +504,10 @@ export default function HomePage() {
                         <td className="px-4 py-2 text-right tabular-nums">
                           {row.costUsd > 0 ? `$${row.costUsd.toFixed(2)}` : "-"}
                         </td>
-                        <td className="px-4 py-2 text-right tabular-nums text-[var(--color-ink-muted)]">
-                          {duration(row.durationMs) || "-"}
+                        {/* One line: "last run 4m 05s" broke a word to a line
+                            on a phone, where the table scrolls sideways. */}
+                        <td className="px-4 py-2 text-right whitespace-nowrap tabular-nums text-[var(--color-ink-muted)]">
+                          {duration(row.durationMs, row.ranBefore) || "-"}
                         </td>
                         <td className="px-4 py-2">
                           <Badge tone={statusTone(row.status)}>{statusLabel(row.status)}</Badge>

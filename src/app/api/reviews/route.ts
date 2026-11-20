@@ -30,6 +30,8 @@ import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gito
 import { created, failed, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
 import { findingTallies } from "@/server/db/repositories/findings";
+import { firstStageStarts } from "@/server/db/repositories/stage-executions";
+import { ranBefore } from "@/lib/review/run-time";
 import { runtime } from "@/server/runtime";
 import {
   billingNotShown,
@@ -80,11 +82,14 @@ export function GET(): Promise<Response> {
 
     // One grouped query for the whole list rather than one per row.
     const tallies = findingTallies(db);
+    const firstStages = firstStageStarts(db);
     const reviews = listProjects(db).flatMap((project) =>
       listReviewsForProject(db, project.id).map((review) => ({
         ...review,
         projectName: project.name,
         findings: tallies.get(review.id) ?? { total: 0, confirmed: 0, dismissed: 0, killed: 0 },
+        // The time is the last run's where an earlier one spent something.
+        ranBefore: ranBefore(review.startedAt, firstStages.get(review.id)),
       })),
     );
     reviews.sort((a, b) => b.createdAt.localeCompare(a.createdAt));

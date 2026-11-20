@@ -483,6 +483,15 @@ describe("running a review to the point a human looks at it", () => {
       .run();
 
     expect(renderReport(buildReportInput(db, reviewId))).toContain("- Took: 4m 30s");
+
+    // With its stage rows older than the run's start, as a resumed review's
+    // are, the time is said as the last run's (AE6).
+    db.update(reviews)
+      .set({ startedAt: "2999-01-01T10:00:00.000Z", runEndedAt: "2999-01-01T10:00:30.000Z" })
+      .where(eq(reviews.id, reviewId))
+      .run();
+    expect(buildReportInput(db, reviewId).ranBefore).toBe(true);
+    expect(renderReport(buildReportInput(db, reviewId))).toContain("- Last run took: 30s (");
   }, 120_000);
 
   it("finds the seeded defects, at the file and line the manifest states", async () => {

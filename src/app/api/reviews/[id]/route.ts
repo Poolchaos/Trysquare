@@ -3,7 +3,8 @@
 import { listCheckFindings } from "@/server/db/repositories/check-findings";
 import { listFindings } from "@/server/db/repositories/findings";
 import { getProject } from "@/server/db/repositories/projects";
-import { stageDurationMedians } from "@/server/db/repositories/stage-executions";
+import { firstStageStarts, stageDurationMedians } from "@/server/db/repositories/stage-executions";
+import { ranBefore } from "@/lib/review/run-time";
 import { requireReview, statusOf } from "@/server/db/repositories/reviews";
 import { deleteReviewEntirely } from "@/server/review/service";
 import { detectMerged } from "@/server/review/merged";
@@ -31,6 +32,9 @@ export async function GET(
       // A project's own checks, kept apart from code findings (D-197).
       checkFindings: listCheckFindings(db, id),
       project: project ? { id: project.id, name: project.name } : null,
+      // An earlier run spent something: the run's time is the last run's,
+      // beside tokens and a cost that are every run's.
+      ranBefore: ranBefore(review.startedAt, firstStageStarts(db, id).get(id)),
       // What this machine has actually measured for this model, so a stage in
       // flight can say what it usually takes instead of only that it is still
       // going. Empty until a stage has been timed enough times to mean it.

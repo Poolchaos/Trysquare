@@ -134,6 +134,8 @@ export interface ReportInput {
   startedAt: string | null;
   /** When the run stopped: the wait for a person after it is not the run's (D-248). */
   runEndedAt: string | null;
+  /** An earlier run spent something: the time is the last run's, the usage every run's. */
+  ranBefore: boolean;
 }
 
 /**
@@ -453,7 +455,13 @@ function footer(input: ReportInput): string[] {
   );
 
   const ran = spanMs(input.startedAt, input.runEndedAt);
-  if (ran !== null) rows.push(`- Took: ${runTimeWords(ran)}`);
+  if (ran !== null) {
+    rows.push(
+      input.ranBefore
+        ? `- Last run took: ${runTimeWords(ran)} (the tokens and the cost are every run's)`
+        : `- Took: ${runTimeWords(ran)}`,
+    );
+  }
 
   return rows;
 }

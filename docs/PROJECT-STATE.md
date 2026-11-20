@@ -58,11 +58,14 @@ from 2026-11-03.
   nothing of what the project's own checks found and said "No findings",
   while the lists counted it. It draws them now, read only, and says when
   they are decided.
-  `./verify.sh --e2e` exits 0 with 1548 unit tests passing, 8 skipped, and
-  153 browser tests. Three of the twenty-four are open (AE5, AE6, AE14)
-  and are the next work, and an eighteenth grade after them. AE14 is read
-  in the code and holds, and is a question for the maintainer in the
-  inbox.
+  AE6 is a line on four surfaces: a resumed review's time is its last
+  run's (D-248) beside tokens and a cost that are every run's, and the
+  review's page, the reviews list, the dashboard and the report now say
+  "last run" where an earlier run asked a model anything.
+  `./verify.sh --e2e` exits 0 with 1552 unit tests passing, 8 skipped, and
+  153 browser tests. Two of the twenty-four are open (AE5, AE14) and are
+  the next work, and an eighteenth grade after them. AE14 is read in the
+  code and holds, and is a question for the maintainer in the inbox.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,

@@ -18,6 +18,7 @@ import { expect, test, type Locator, type Response, type Route } from "@playwrig
 import { answerOnce, routeUntilStopped } from "./answer-once";
 import { sidewaysOverflow } from "./overflow";
 import { accessibilityViolations } from "./axe";
+import { runTimeWords } from "@/lib/review/run-time";
 import {
   ANSWERS_DIR,
   APP_REPO,
@@ -1991,6 +1992,55 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   await expect(stamp).toHaveText(worded);
   await shootAll(page, notes, "run-notes-dated");
   await shootAll(page, stages, "stages-two-requests");
+
+  // The run's time beside totals that sum both runs (the seventeenth grade,
+  // AE6). The first run asked once before the limit, so the cost is both
+  // runs' and the time the second's: each screen says whose time it is.
+  const listed = (await (await page.request.get("/api/reviews")).json()) as {
+    reviews: { id: string; ranBefore: boolean; startedAt: string; runEndedAt: string }[];
+  };
+  const resumed = listed.reviews.find((review) => review.id === id)!;
+  expect(resumed.ranBefore).toBe(true);
+  const took = runTimeWords(Date.parse(resumed.runEndedAt) - Date.parse(resumed.startedAt));
+  const header = page.locator("header").filter({ has: page.getByRole("heading", { level: 1 }) });
+  await expect(header.getByText(`last run took ${took}`, { exact: true })).toBeVisible();
+  const tile = page.getByText("Last run", { exact: true }).locator("..");
+  await expect(tile).toContainText(took);
+  expect(await page.getByText("Duration", { exact: true }).count()).toBe(0);
+  await shootAll(page, header, "last-run-header");
+  // Both tiles: the cost of every run beside the time of the last.
+  await shootAll(page, tile.locator(".."), "last-run-tiles");
+
+  await page.goto("/reviews");
+  const inList = page
+    .getByRole("listitem")
+    .filter({ has: page.locator(`a[href="/reviews/${id}"]`) });
+  await expect(inList.getByText(`last run ${took}`, { exact: true })).toBeVisible();
+  await shootAll(page, inList, "last-run-list");
+
+  await page.goto("/");
+  const inRecent = page.getByRole("row").filter({ has: page.locator(`a[href="/reviews/${id}"]`) });
+  await expect(inRecent.getByText(`last run ${took}`, { exact: true })).toBeVisible();
+  await shootAll(page, inRecent, "last-run-recent");
+  // On a phone the table scrolls sideways inside its card, and the row's own
+  // shot stops at the card's edge, short of the time. Photographed again
+  // with the time scrolled into view, the card whole.
+  const desktop = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await inRecent.getByText(`last run ${took}`, { exact: true }).scrollIntoViewIfNeeded();
+  await page
+    .getByRole("table")
+    .locator("..")
+    .screenshot({
+      path: join(
+        fileURLToPath(new URL("..", import.meta.url)),
+        "review",
+        `${new Date().toISOString().slice(0, 10)}-e2e`,
+        "last-run-recent-phone.png",
+      ),
+      animations: "disabled",
+    });
+  if (desktop) await page.setViewportSize(desktop);
 });
 
 test("a decision that moves onto an open question leaves the focus on its title", async ({

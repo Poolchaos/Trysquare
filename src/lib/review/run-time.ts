@@ -27,6 +27,30 @@ export function spanMs(startedAt: string | null, endedAt: string | null): number
 }
 
 /**
+ * Whether an earlier run of the review asked a model anything. A resumed
+ * run is a new one (D-248), so the run's time leaves the earlier run out
+ * while the review's tokens and cost keep it, and the time is then said as
+ * the last run's. The evidence is a stage row older than this run's start:
+ * a run that stopped before its first stage spent nothing, so nothing
+ * beside the time is more than this run's.
+ *
+ * @param firstStageAt When the review's oldest stage row started, a finding
+ * verified again left out: that is no run.
+ */
+export function ranBefore(
+  startedAt: string | null,
+  firstStageAt: string | null | undefined,
+): boolean {
+  if (!startedAt || !firstStageAt) return false;
+  return Date.parse(firstStageAt) < Date.parse(startedAt);
+}
+
+/** A run's time as a list gives it: said as the last run's where an earlier one spent something. */
+export function runTimeSaid(ms: number, earlierRun: boolean): string {
+  return earlierRun ? `last run ${runTimeWords(ms)}` : runTimeWords(ms);
+}
+
+/**
  * A time in words, the same on every screen and in the report (D-249):
  * whole seconds passed, never rounded up to one not reached.
  */

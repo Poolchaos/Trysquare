@@ -25,7 +25,7 @@ import {
   statusTone,
 } from "@/components/ui";
 import { send } from "@/components/request";
-import { runTimeMs, runTimeWords } from "@/lib/review/run-time";
+import { runTimeMs, runTimeSaid } from "@/lib/review/run-time";
 
 interface Row {
   id: string;
@@ -40,13 +40,16 @@ interface Row {
   costEquivalentUsd: number;
   startedAt: string | null;
   runEndedAt: string | null;
+  ranBefore: boolean;
   findings: { total: number; confirmed: number; dismissed: number; killed: number };
 }
 
 /** A run's wall clock, from columns the list already receives. */
-function ranFor(review: Pick<Row, "status" | "startedAt" | "runEndedAt">): string | null {
+function ranFor(
+  review: Pick<Row, "status" | "startedAt" | "runEndedAt" | "ranBefore">,
+): string | null {
   const ms = runTimeMs(review);
-  return ms === null ? null : runTimeWords(ms);
+  return ms === null ? null : runTimeSaid(ms, review.ranBefore);
 }
 
 /** Statuses that own a running process, so the row offers no delete. */

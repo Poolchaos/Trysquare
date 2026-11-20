@@ -184,6 +184,15 @@ pulled deliberately.
   what the code does, on a phone too", dark theme, 60 seconds waiting for
   the project's link in `main`, "element(s) not found". Recorded and left
   (D-246); cause not looked at.
+- 2026-11-20: the reviews list says "0 of 10 confirmed" of a review whose
+  page says "0 of 9 decided": the list's ten counts a finding verification
+  refuted, which nobody can confirm (`findingTallies`,
+  `server/db/repositories/findings.ts`), and the dashboard's Recent the
+  same. Seen grading `last-run-list-light.png`. Not fixed: should the
+  lists count what the queue holds?
+- 2026-11-20: at 390px the dashboard's Recent table breaks the status
+  badge over three lines ("AWAITING / YOUR / DECISION"), in a table that
+  scrolls sideways anyway. Seen grading `last-run-recent-phone.png`.
 - 2026-11-20: a run of under a second reads "took 0s", and 0s in the
   Duration tile and the lists, where a step of the same length says "under
   a second" (`src/app/reviews/[id]/page.tsx`, `elapsedBetween`). Only the

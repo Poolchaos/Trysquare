@@ -17,9 +17,10 @@
  */
 
 import { desc, eq } from "drizzle-orm";
-import { runTimeMs } from "@/lib/review/run-time";
+import { ranBefore, runTimeMs } from "@/lib/review/run-time";
 import type { Db } from "../client";
 import { checkFindings, findings, projects, reviews } from "../schema";
+import { firstStageStarts } from "./stage-executions";
 
 export interface ScoreboardRow {
   id: string;
@@ -32,6 +33,8 @@ export interface ScoreboardRow {
   total: number;
   costUsd: number;
   durationMs: number | null;
+  /** An earlier run spent something, so `durationMs` is the last run's and `costUsd` every run's. */
+  ranBefore: boolean;
   createdAt: string;
 }
 
@@ -186,6 +189,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     .orderBy(projects.name)
     .all();
 
+  const firstStages = firstStageStarts(db);
   const completed = reviewRows.filter((review) => review.status === "complete");
   const decided = confirmed + dismissed;
   const raised = findingRows.length;
@@ -212,6 +216,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
       // The run's time: to when it stopped, not to when a person completed
       // the review, which can be days later (D-248).
       durationMs: runTimeMs(review),
+      ranBefore: ranBefore(review.startedAt, firstStages.get(review.id)),
       createdAt: review.createdAt,
     })),
     // Worst yield first: a rule that fires often and is confirmed rarely is
