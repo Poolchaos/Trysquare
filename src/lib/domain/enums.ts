@@ -111,6 +111,9 @@ export const REVIEW_STAGES = [
 export const reviewStageSchema = z.enum(REVIEW_STAGES);
 export type ReviewStage = z.infer<typeof reviewStageSchema>;
 
+/** Every stage that asks a model. The audit is the app's own count. */
+export type ModelStage = Exclude<ReviewStage, "s6_audit">;
+
 export const STAGE_STATUSES = ["running", "succeeded", "failed", "cancelled"] as const;
 export const stageStatusSchema = z.enum(STAGE_STATUSES);
 export type StageStatus = z.infer<typeof stageStatusSchema>;

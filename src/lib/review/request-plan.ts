@@ -11,10 +11,7 @@
  * wrong shape, which no count can know either.
  */
 
-import type { ReviewStage } from "@/lib/domain/enums";
-
-/** Every stage that asks a model. */
-export type ModelStage = Exclude<ReviewStage, "s6_audit">;
+import type { ModelStage } from "@/lib/domain/enums";
 
 export interface RequestPlan {
   byStage: Record<ModelStage, number>;

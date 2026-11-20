@@ -8,8 +8,10 @@ import {
   planRuleBatches,
   renderRule,
   renderRuleIndex,
+  stageInstruction,
   themesForPath,
 } from "@/lib/rulesets/compose";
+import { stageSchemaFor } from "@/lib/review/stage-schemas";
 import { importProtocol } from "@/lib/rulesets/import";
 
 const EXAMPLE = readFileSync(
@@ -20,6 +22,15 @@ const { ruleset } = importProtocol(EXAMPLE);
 const FILES = ["src/orders/total.ts", "src/ui/Cart.tsx", "docs/notes.md"];
 
 describe("what a stage is told", () => {
+  it("holds nothing for the audit, which asks no model (D-260)", () => {
+    // Both tables carried an audit entry nothing read. Typed by the stages
+    // that ask a model, they cannot be asked for one.
+    // @ts-expect-error The audit is not a stage that asks a model.
+    expect(stageInstruction("s6_audit")).toBeUndefined();
+    // @ts-expect-error The audit is not a stage that asks a model.
+    expect(stageSchemaFor("s6_audit")).toBeUndefined();
+  });
+
   it("sends the protocol's own wording, not a paraphrase of it", () => {
     const prompt = composeSystemPrompt({
       directives: ruleset.directives,

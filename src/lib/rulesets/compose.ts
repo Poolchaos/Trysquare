@@ -9,7 +9,7 @@
  * narrowed review is never indistinguishable from a complete one.
  */
 
-import type { ReviewProfile, ReviewStage } from "@/lib/domain/enums";
+import type { ModelStage, ReviewProfile } from "@/lib/domain/enums";
 import type { ImportedDirective, ImportedRule } from "./model";
 
 /** Rules are grouped into themes when a model cannot hold them all at once. */
@@ -39,7 +39,7 @@ export function pairKey(ruleCode: string, file: string): string {
   return `${ruleCode}::${file}`;
 }
 
-const STAGE_INSTRUCTIONS: Record<ReviewStage, string> = {
+const STAGE_INSTRUCTIONS: Record<ModelStage, string> = {
   s1_risk:
     "Classify each changed file by the risk categories it touches. Do not report findings yet.",
   s2_comprehension:
@@ -71,10 +71,9 @@ const STAGE_INSTRUCTIONS: Record<ReviewStage, string> = {
   // the scale and carries the project's standard; these name them only.
   s4b_design_grading: "Grade each screenshot A to D by looking at it.",
   s5c_design_second: "Grade each screenshot A to D by looking at it, independently.",
-  s6_audit: "Summarise what was reviewed and what was found, for the report.",
 };
 
-export function stageInstruction(stage: ReviewStage): string {
+export function stageInstruction(stage: ModelStage): string {
   return STAGE_INSTRUCTIONS[stage];
 }
 
@@ -113,7 +112,7 @@ export function renderDirectives(directives: readonly ImportedDirective[]): stri
 export interface ComposeOptions {
   directives: readonly ImportedDirective[];
   rules: readonly ImportedRule[];
-  stage: ReviewStage;
+  stage: ModelStage;
   /** Full rule text is sent only where the stage needs to apply the rules. */
   includeFullRules: boolean;
   /** Appended verbatim; the schema the stage must answer with. */

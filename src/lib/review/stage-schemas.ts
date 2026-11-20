@@ -9,7 +9,7 @@
  */
 
 import { z } from "zod";
-import { RISK_TAGS, SEVERITIES, type ReviewStage } from "@/lib/domain/enums";
+import { RISK_TAGS, SEVERITIES, type ModelStage } from "@/lib/domain/enums";
 import { designGradesSchema } from "./design";
 
 export const riskStageSchema = z.object({
@@ -187,11 +187,8 @@ const STAGE_SCHEMAS = {
   s5b_second_verification: verificationStageSchema,
   s4b_design_grading: designGradesSchema,
   s5c_design_second: designGradesSchema,
-  // The audit asks no model, so no answer is ever held to this entry: the
-  // type wants one for every stage.
-  s6_audit: riskStageSchema,
-} as const satisfies Record<ReviewStage, z.ZodType>;
+} as const satisfies Record<ModelStage, z.ZodType>;
 
-export function stageSchemaFor(stage: ReviewStage): z.ZodType {
+export function stageSchemaFor(stage: ModelStage): z.ZodType {
   return STAGE_SCHEMAS[stage];
 }

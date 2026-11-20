@@ -240,7 +240,8 @@ pulled deliberately.
   (`lib/review/stage-schemas.ts`) and its instruction, "Summarise what was
   reviewed and what was found, for the report" (`lib/rulesets/compose.ts`).
   Typing both by `ModelStage` would drop them. DECIDED 2026-11-20
-  (D-260): yes, to build.
+  (D-260): yes. BUILT the same day: `ModelStage` sits beside `ReviewStage`
+  in `lib/domain/enums.ts`, and a stage request carries one.
 - 2026-11-20: the top bar's links and the underlined text buttons are
   shorter than the 40px the other controls keep (04 section 4 says so now;
   the seventeenth grade, AE22). Whether they should be taller is open,

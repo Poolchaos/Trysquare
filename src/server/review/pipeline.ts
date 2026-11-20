@@ -13,7 +13,7 @@
  * spending model usage or depending on what a model happens to say today.
  */
 
-import type { RepoRole, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
+import type { ModelStage, RepoRole, ReviewProfile, ReviewStage } from "@/lib/domain/enums";
 import { opaqueChanges } from "@/lib/git/opaque";
 import { unsafeRepoPathReason } from "@/lib/git/repo-path";
 import type { ChangedSymbol } from "@/lib/git/symbols";
@@ -97,7 +97,8 @@ import {
 } from "@/server/db/repositories/ledger";
 
 export interface StageRequest {
-  stage: ReviewStage;
+  /** Only a stage that asks a model makes a request. */
+  stage: ModelStage;
   systemPrompt: string;
   prompt: string;
   resumeSessionId?: string | undefined;
@@ -185,7 +186,7 @@ export interface PipelineInput {
    * Composes the system prompt. Given a batch's rules when the profile sends
    * fewer than all of them, so the caller keeps ownership of composition.
    */
-  systemPromptFor: (stage: ReviewStage, batch?: { rules: readonly ImportedRule[] }) => string;
+  systemPromptFor: (stage: ModelStage, batch?: { rules: readonly ImportedRule[] }) => string;
   run: StageRunner;
   /**
    * Told when this pipeline rejects a stage's already-stored answer, so the

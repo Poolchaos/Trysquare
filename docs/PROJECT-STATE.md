@@ -24,8 +24,9 @@ from 2026-11-03.
   Projects count a review's findings as its queue holds them, the killed
   apart (D-253). A `decomposed` review's report says how many rule and
   file pairs its profile left out (D-255), and the report's token line
-  gives cache-write tokens (D-257). To build: Needs you listing a review that waits on a Resume; and two unread table
-  entries dropped. A paid fixture run's evidence is committed under
+  gives cache-write tokens (D-257). The audit stage's two unread table entries are gone, the tables typed
+  by the stages that ask a model (D-260). To build: Needs you listing a
+  review that waits on a Resume. A paid fixture run's evidence is committed under
   `docs/evidence/` from the next run on (D-261). The handover hooks are
   left to the maintainer (D-262).
 - 2026-11-20: the maintainer handed the app's decisions to the AI session
