@@ -2524,6 +2524,78 @@ test("the dashboard names a stage it does not know by its id", async ({ page }) 
   }
 });
 
+test("the dashboard counts a run's stage and the reviews as the other screens do", async ({
+  page,
+}) => {
+  // The Live scan said "stage 4 of 10" where the review's page says "of up
+  // to 10", a run asking fewer when nothing is graded; and the tile counted
+  // every review as "started", a draft never started among them (the
+  // seventeenth grade, AE19 and AE17). A draft is made here, and removed.
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = projects.projects.find((project) => project.name === "app")!;
+  const made = await page.request.post("/api/reviews", {
+    data: {
+      projectId: app.id,
+      fromBranch: "feature/rename-prefs",
+      intoBranch: "main",
+      model: "claude-fable-5[1m]",
+    },
+  });
+  expect(made.status()).toBe(201);
+  const draft = ((await made.json()) as { review: { id: string } }).review;
+  const stop = await routeUntilStopped(page, "**/api/reviews/attention", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        active: {
+          id: "COUNTED",
+          status: "running",
+          projectName: "app",
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          currentStage: "s3_adversarial",
+          startedAt: new Date().toISOString(),
+          costEquivalentUsd: 0,
+        },
+      },
+    });
+  });
+  try {
+    await page.goto("/");
+    const card = page
+      .getByRole("main")
+      .locator('a[href="/reviews/COUNTED"]')
+      .locator("xpath=ancestor::div[contains(@class, 'rounded-lg')][1]");
+    await expect(card.getByText("Adversarial · stage 4 of up to 10", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+    await shootAll(page, card, "live-scan-stage-count");
+
+    const board = (await (await page.request.get("/api/scoreboard")).json()) as {
+      reviewsTotal: number;
+      reviewsCompleted: number;
+    };
+    // The draft is one, never started, and not completed.
+    expect(board.reviewsTotal).toBeGreaterThan(board.reviewsCompleted);
+    const tile = page
+      .getByRole("main")
+      .getByText("Reviews completed", { exact: true })
+      .locator("..");
+    await expect(tile).toContainText(`${board.reviewsTotal} in all`);
+    expect(await tile.getByText(/started/).count()).toBe(0);
+    await shootAll(page, tile, "reviews-completed-tile");
+  } finally {
+    await stop();
+    const removed = await page.request.delete(`/api/reviews/${draft.id}`);
+    expect.soft(removed.status(), "the draft removed").toBe(200);
+  }
+});
+
 test("a review resumed into the line no longer says how its last run ended", async ({ page }) => {
   // Review round 16: after a watched run ended, a Resume that put the review
   // in the line left the ending said beside a badge saying queued. A
@@ -3249,7 +3321,7 @@ test("a list whose data cannot be read says so, and reads again on Try again", a
       "**/api/rulesets",
       (on) => on.getByRole("main").getByText("Example protocol").first(),
     ],
-    ["/settings", "**/api/settings", (on) => on.getByLabel("Stage timeout (minutes)")],
+    ["/settings", "**/api/settings", (on) => on.getByLabel("Timeout per call (minutes)")],
     ["/", "**/api/scoreboard", (on) => on.getByText("Precision").first()],
   ];
   for (const [screen, api, content] of screens) {

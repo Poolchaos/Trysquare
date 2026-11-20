@@ -657,7 +657,7 @@ export function ConfirmationQueue({
           title={
             undecided.length + checks.undecided > 0
               ? `${undecided.length + checks.undecided} finding(s) still need a decision`
-              : "Close the review and write the report"
+              : "Close the review and show its report"
           }
         >
           Complete review

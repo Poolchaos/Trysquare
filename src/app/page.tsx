@@ -342,7 +342,7 @@ export default function HomePage() {
                 value={String(board.reviewsCompleted)}
                 note={
                   board.reviewsTotal > board.reviewsCompleted
-                    ? `${board.reviewsTotal} started`
+                    ? `${board.reviewsTotal} in all`
                     : undefined
                 }
               />
@@ -390,7 +390,7 @@ export default function HomePage() {
                   <span className="text-body text-[var(--color-ink-muted)]">
                     {scan.currentStage ? stageName(scan.currentStage) : "Preparing"}
                     {scan.currentStage && STAGE_ORDER.includes(scan.currentStage)
-                      ? ` · stage ${STAGE_ORDER.indexOf(scan.currentStage) + 1} of ${STAGE_ORDER.length}`
+                      ? ` · stage ${STAGE_ORDER.indexOf(scan.currentStage) + 1} of up to ${STAGE_ORDER.length}`
                       : ""}
                   </span>
                   {scan.startedAt ? (

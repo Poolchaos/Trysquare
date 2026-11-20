@@ -15,7 +15,7 @@ export const STEPS = [
   },
   {
     title: "Understand the change",
-    what: "Each changed file is classed by risk and given to the model to read with what it calls into.",
+    what: "Each changed file is given to the model to class by risk and to read with what it calls into.",
     stages: ["s1_risk", "s2_comprehension"],
   },
   {
@@ -246,8 +246,8 @@ export function stepResult(
         : `${facts.rules} rules frozen for this review, and the sweeps marked every added line a rule's pattern matches.`;
     case 1:
       return facts.files === 1
-        ? "1 changed file classed by risk and given to the model to read with what it calls into."
-        : `${facts.files} changed files classed by risk and given to the model to read with what they call into.`;
+        ? "1 changed file given to the model to class by risk and to read with what it calls into."
+        : `${facts.files} changed files given to the model to class by risk and to read with what they call into.`;
     case 2:
       return (
         `${tallies.raised === 0 ? "No candidates" : counted(tallies.raised, "candidate", "candidates")} raised, and every change and deletion accounted for.` +
