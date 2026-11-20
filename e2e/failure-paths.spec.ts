@@ -3904,6 +3904,71 @@ test("a ruleset chosen as the default is the one a new review starts on", async 
   }
 });
 
+test("a ruleset with nothing switched on is refused before Start, in the run's words", async ({
+  page,
+}) => {
+  // The pre-flight sized every rule, one switched off too, so a ruleset with
+  // none on showed a card of counts beside a Start the run then refused (the
+  // seventeenth grade, AE4). The copy the test above left is switched off
+  // rule by rule and put back after; made here when that test has not run.
+  const listed = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string; name: string }[];
+  };
+  let rulesetId = listed.rulesets.find((ruleset) => ruleset.name === "Zz default sweep")?.id;
+  if (rulesetId === undefined) {
+    const example = listed.rulesets.find((ruleset) => ruleset.name === "Example protocol")!;
+    const made = await page.request.post(`/api/rulesets/${example.id}/duplicate`, {
+      data: { tier: "global", name: "Zz default sweep" },
+    });
+    expect(made.status()).toBe(201);
+    rulesetId = ((await made.json()) as { rulesetId: string }).rulesetId;
+  }
+  const detail = (await (await page.request.get(`/api/rulesets/${rulesetId}`)).json()) as {
+    rules: { code: string; enabled: boolean }[];
+  };
+  const wereOn = detail.rules.filter((rule) => rule.enabled).map((rule) => rule.code);
+  expect(wereOn.length).toBeGreaterThan(0);
+  const switchAll = async (enabled: boolean) => {
+    for (const code of wereOn) {
+      const patched = await page.request.patch(
+        `/api/rulesets/${rulesetId}/rules/${encodeURIComponent(code)}`,
+        { data: { enabled } },
+      );
+      expect.soft(patched.status(), `rule ${code} switched ${enabled ? "on" : "off"}`).toBe(200);
+    }
+  };
+  await switchAll(false);
+  try {
+    await fillANewReview(page);
+    const rules = page
+      .locator("select")
+      .filter({ has: page.locator(`option[value="${rulesetId}"]`) });
+    await rules.selectOption(rulesetId);
+    await expect(rules.locator("option:checked")).toHaveText(
+      /^Zz default sweep \(v\d+, 0 rules\)$/,
+    );
+    const refusal = page.getByText(
+      'Ruleset "Zz default sweep" has no enabled rules, so a review using it would check ' +
+        "nothing and report a clean result for the wrong reason.",
+      { exact: true },
+    );
+    await expect(refusal).toBeVisible({ timeout: 60_000 });
+    // Read once, the refusal being the answer: no card of counts beside it.
+    expect(await page.getByText("What this review will examine", { exact: true }).count()).toBe(0);
+    const start = page.getByRole("button", { name: "Start review" });
+    await expect(start).toBeDisabled();
+    const beside = start.locator("..");
+    await expect(beside).toContainText(
+      "The pre-flight says this review would refuse to start: see above.",
+    );
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, refusal, "preflight-nothing-switched-on");
+    await shootAll(page, beside, "preflight-nothing-switched-on-start");
+  } finally {
+    await switchAll(true);
+  }
+});
+
 test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {
   // Number("") is 0, and zero removes the ceiling: clearing the field and
   // leaving it lifted the cap on every model call without a word (5.3).

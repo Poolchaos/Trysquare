@@ -185,7 +185,9 @@ prompt (an estimate in tokens, labelled "Rules and change"; not the
 review's tokens, since every stage sends a prompt of its own), every
 request by stage, and whether the model's window splits the work or a file
 is too large for it on its own; the profile is on the model's row, and a
-deliberate downgrade is said in the advanced fold. A model
+deliberate downgrade is said in the advanced fold. All of it is counted
+over the rules switched on, as a run freezes them; a ruleset with none on
+is refused there in the run's words, and Start stays off. A model
 whose profile is weaker than `full-context` says on its row how its work is
 divided, and one not recommended that accuracy may fall; that a weaker
 profile sends the rules in more, smaller requests is the Profile control's

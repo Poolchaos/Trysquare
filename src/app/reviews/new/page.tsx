@@ -262,6 +262,8 @@ function NewReview() {
     key: string;
     body: Preflight | null;
     error: string;
+    /** The refusal's code, where the route gave one. */
+    refusal: string;
   } | null>(null);
 
   // Asked once as the screen opens, and with no prompt sent: a sign-in that bills per token
@@ -561,6 +563,7 @@ function NewReview() {
         key,
         body: sent.ok ? sent.body : null,
         error: sent.ok ? "" : sent.error,
+        refusal: !sent.ok && typeof sent.body.code === "string" ? sent.body.code : "",
       });
     })();
     return () => {
@@ -711,8 +714,11 @@ function NewReview() {
   const secondVerifier = secondVerifierReadiness(pairedId, paired?.availability);
   const verifierMissing = model !== "" && !secondVerifier.usable;
   // Started anyway, the run stopped at its sweep, which will not pass a
-  // pattern it could not run (5.14, audit U11).
-  const wouldRefuse = preflight !== null && preflight.sweepProblems.length > 0;
+  // pattern it could not run (5.14, audit U11), or before it, on a ruleset
+  // with nothing switched on, which the pre-flight refuses as a run does.
+  const wouldRefuse =
+    (preflight !== null && preflight.sweepProblems.length > 0) ||
+    answered?.refusal === "NoEnabledRulesError";
   // And not before the pre-flight for these choices has answered: on beside
   // "Working out...", Start offered a review nothing had yet sized (D-147).
   const ready =

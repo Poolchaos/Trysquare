@@ -37,10 +37,13 @@ from 2026-11-03.
   to any; and the second, the Stages card now giving a stage's requests
   and their time, tokens and cost summed; and the third, the pre-flight's
   row now named for what its figure is the size of, the rules and the
-  change as one prompt. `./verify.sh --e2e` exits 0 with 1542 unit tests
-  passing, 8 skipped, and 148 browser tests. Two stale lines of the
-  records are put right too, so eighteen of the twenty-four are open and
-  are the next work, and an eighteenth grade after them.
+  change as one prompt. A fourth, AE4, was a fault: the pre-flight counted
+  every rule, one switched off too, where a run freezes the enabled ones.
+  It reads what a run would freeze now, and refuses a ruleset with none on
+  in the run's words, with Start off. `./verify.sh --e2e` exits 0 with
+  1543 unit tests passing, 8 skipped, and 149 browser tests. Two stale
+  lines of the records are put right too, so seventeen of the twenty-four
+  are open and are the next work, and an eighteenth grade after them.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,

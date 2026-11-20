@@ -245,6 +245,27 @@ export function loadRuleset(
   };
 }
 
+export class NoEnabledRulesError extends Error {
+  constructor(readonly rulesetName: string) {
+    super(
+      `Ruleset "${rulesetName}" has no enabled rules, so a review using it would check nothing ` +
+        "and report a clean result for the wrong reason.",
+    );
+    this.name = "NoEnabledRulesError";
+  }
+}
+
+/**
+ * The rules a review is judged against: those switched on, and never none.
+ * A review's snapshot freezes this and the pre-flight sizes it, so what is
+ * counted before Start is what the run is given.
+ */
+export function loadEnabledRuleset(db: Db, rulesetId: string): ImportedRuleset {
+  const enabled = loadRuleset(db, rulesetId, { enabledOnly: true });
+  if (enabled.rules.length === 0) throw new NoEnabledRulesError(enabled.title);
+  return enabled;
+}
+
 export class RulesetNotFoundError extends Error {
   constructor(readonly rulesetId: string) {
     super(`Ruleset ${rulesetId} was not found.`);
@@ -360,13 +381,7 @@ export function writeReviewSnapshot(db: Db, reviewId: string, rulesetId: string)
 
   // Only the enabled rules: the snapshot is what this review is judged
   // against, and a rule someone switched off is not part of that judgement.
-  const enabled = loadRuleset(db, rulesetId, { enabledOnly: true });
-  if (enabled.rules.length === 0) {
-    throw new Error(
-      `Ruleset "${row.name}" has no enabled rules, so a review using it would check nothing ` +
-        "and report a clean result for the wrong reason.",
-    );
-  }
+  const enabled = loadEnabledRuleset(db, rulesetId);
 
   const snapshot = toSnapshot(row.name, row.version, enabled);
   db.insert(reviewRulesets)

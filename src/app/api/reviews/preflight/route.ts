@@ -28,12 +28,12 @@ import { reviewModelSchema } from "@/lib/models/model-id";
 import { getModel } from "@/server/db/repositories/models";
 import { recordFetch, requireClonedProject } from "@/server/db/repositories/projects";
 import { getProjectChecks } from "@/server/db/repositories/project-checks";
-import { loadRuleset } from "@/server/db/repositories/rulesets";
+import { loadEnabledRuleset } from "@/server/db/repositories/rulesets";
 import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
 import { git } from "@/server/gitops/run";
 import { renderAdversarialPrompt, type ChangedFileEntry } from "@/server/review/content";
 import { countRequests } from "@/server/review/request-count";
-import { failed, handler, ok, readJson } from "@/server/api/respond";
+import { failed, handler, isNamed, ok, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -79,7 +79,16 @@ export function POST(request: Request): Promise<Response> {
     // (review of the D-133 fixes).
     const dependency =
       input.linked === undefined ? undefined : requireClonedProject(db, input.linked.projectId);
-    const ruleset = loadRuleset(db, input.rulesetId);
+    // The rules a run would freeze, so a rule switched off is not swept
+    // for, sized or counted here either. None switched on is refused in the
+    // run's own words, before anything is fetched.
+    let ruleset;
+    try {
+      ruleset = loadEnabledRuleset(db, input.rulesetId);
+    } catch (error) {
+      if (isNamed(error, "NoEnabledRulesError")) return failed(error, 400);
+      throw error;
+    }
 
     let primary: Side;
     let linkedSide: Side | undefined;

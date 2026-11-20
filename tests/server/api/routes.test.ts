@@ -1105,6 +1105,74 @@ describe("looking before you pay", () => {
     expect(tiny.withinWindow).toBe(false);
   }, 120_000);
 
+  it("sizes the review by the rules switched on, as a run freezes them", async () => {
+    // Every rule was counted, one switched off too, where a run is judged
+    // against the enabled ones only: a sweep hit and a prompt's worth of
+    // rules the review would never have (the seventeenth grade, AE4).
+    const protocol = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/x", {
+        name: "Switched-off rules",
+        tier: "global",
+        markdown: protocol,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+    const ask = () =>
+      routes.preflight.POST(
+        post("http://localhost/api/reviews/preflight", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          rulesetId,
+          model: "claude-fable-5[1m]",
+        }),
+      );
+    const sized = async () =>
+      (await (await ask()).json()) as { sweepHits: number; estimatedTokens: number };
+    const switchOff = async (code: string) => {
+      const patched = await routes.rule.PATCH(
+        new Request("http://localhost", {
+          method: "PATCH",
+          body: JSON.stringify({ enabled: false }),
+        }),
+        { params: Promise.resolve({ id: rulesetId, code }) },
+      );
+      expect(patched.status).toBe(200);
+    };
+
+    const every = await sized();
+    expect(every.sweepHits).toBe(1);
+
+    // The one line the sweep matches is the money rule's, so with that rule
+    // off the review sweeps for nothing there and its prompt is shorter.
+    const detail = (await (
+      await routes.ruleset.GET(new Request("http://localhost"), params(rulesetId))
+    ).json()) as { rules: { code: string; title: string }[] };
+    const money = detail.rules.find((rule) => rule.title === "Money in Floating Point");
+    expect(money, "the fixture protocol's money rule").toBeDefined();
+    await switchOff(money!.code);
+    const without = await sized();
+    expect(without.sweepHits).toBe(0);
+    expect(without.estimatedTokens).toBeLessThan(every.estimatedTokens);
+
+    // With nothing switched on a run refuses to start, so the pre-flight
+    // says so in the run's words and sizes nothing.
+    for (const rule of detail.rules) {
+      if (rule.code !== money!.code) await switchOff(rule.code);
+    }
+    const none = await ask();
+    expect(none.status).toBe(400);
+    expect(await none.json()).toEqual({
+      error:
+        'Ruleset "Switched-off rules" has no enabled rules, so a review using it would check ' +
+        "nothing and report a clean result for the wrong reason.",
+      code: "NoEnabledRulesError",
+    });
+  }, 120_000);
+
   it("says which branch it could not find, rather than a bare failure", async () => {
     const imported = await routes.rulesets.POST(
       post("http://localhost/x", {
