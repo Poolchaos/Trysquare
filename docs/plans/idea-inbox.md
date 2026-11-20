@@ -184,6 +184,13 @@ pulled deliberately.
   what the code does, on a phone too", dark theme, 60 seconds waiting for
   the project's link in `main`, "element(s) not found". Recorded and left
   (D-246); cause not looked at.
+- 2026-11-20: only the Windows job failed in CI run 44797222893 at 3b3d3b2
+  (Ubuntu and macOS passed): `e2e/failure-paths.spec.ts`, "a pre-flight
+  that says it would refuse leaves the other reasons beside Start", a
+  click that met the test's 120 seconds. The change it ran on does not
+  touch that test. The runs before and after it, 44795459803 at d9c3baa
+  and 44792451743 at b830c0e, passed on Windows. Recorded and left
+  (D-246); cause not looked at.
 - 2026-11-20: the reviews list says "0 of 10 confirmed" of a review whose
   page says "0 of 9 decided": the list's ten counts a finding verification
   refuted, which nobody can confirm (`findingTallies`,
