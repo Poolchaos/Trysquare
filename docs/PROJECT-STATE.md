@@ -51,7 +51,9 @@ from 2026-11-03.
   given to do. `./verify.sh --e2e` exits 0 with 1546 unit tests passing, 8
   skipped, and 150 browser tests. Six of the twenty-four are open (AE5,
   AE6, AE12, AE14, AE15, AE24) and are the next work, and an eighteenth
-  grade after them.
+  grade after them. Of the six, AE12, AE14 and AE24 are read in the code
+  and hold, what each needs said in its entry, and AE14's is a question
+  for the maintainer in the inbox.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,

@@ -189,6 +189,12 @@ pulled deliberately.
   waiting on a Resume belongs there is the maintainer's. Seen grading
   `dashboard-paused-at-limit-light.png`, where the pause is said only by
   the status chips and the bar.
+- 2026-11-20, a question for the maintainer: the dashboard's "Invention
+  rate" counts every finding the quotation check killed, and that check
+  also kills a proof that quotes true code off the lines the finding
+  cites, which is not an invention (the seventeenth grade, AE14). Rename
+  the tile, or count only a quotation that matched nothing? The name is
+  D-68's, so it is left.
 - 2026-11-20: the audit stage asks no model, and two tables still carry an
   entry for it that is never read: its output shape
   (`lib/review/stage-schemas.ts`) and its instruction, "Summarise what was
