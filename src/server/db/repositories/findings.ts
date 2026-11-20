@@ -17,7 +17,7 @@ import {
 } from "@/lib/domain/state-machines";
 import type { EvidenceStep } from "@/lib/review/evidence";
 import type { Db } from "../client";
-import { findings, reviews } from "../schema";
+import { checkFindings, findings, reviews } from "../schema";
 
 export class FindingNotFoundError extends Error {
   constructor(readonly findingId: string) {
@@ -397,6 +397,25 @@ export function findingTallies(db: Db): Map<string, FindingTally> {
     if (row.status === "confirmed") tally.confirmed += row.count;
     if (row.status === "dismissed") tally.dismissed += row.count;
     if (row.status === "killed") tally.killed += row.count;
+    tallies.set(row.reviewId, tally);
+  }
+
+  // What a project's own checks found is decided in the same queue (D-197),
+  // and the dashboard counts it, so the list does. None is ever killed.
+  const checkRows = db
+    .select({
+      reviewId: checkFindings.reviewId,
+      status: checkFindings.status,
+      count: sql<number>`count(*)`,
+    })
+    .from(checkFindings)
+    .groupBy(checkFindings.reviewId, checkFindings.status)
+    .all();
+  for (const row of checkRows) {
+    const tally = tallies.get(row.reviewId) ?? { total: 0, confirmed: 0, dismissed: 0, killed: 0 };
+    tally.total += row.count;
+    if (row.status === "confirmed") tally.confirmed += row.count;
+    if (row.status === "dismissed") tally.dismissed += row.count;
     tallies.set(row.reviewId, tally);
   }
   return tallies;

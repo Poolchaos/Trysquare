@@ -17,6 +17,7 @@ import {
   requireFinding,
   statusOf,
 } from "@/server/db/repositories/findings";
+import { confirmCheckFinding, recordFailedCommand } from "@/server/db/repositories/check-findings";
 import { transitionReview } from "@/server/db/repositories/reviews";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
 
@@ -252,5 +253,34 @@ describe("what a review yielded, across the whole list", () => {
 
   it("reports nothing for a review that raised nothing", () => {
     expect(findingTallies(db).has(reviewId)).toBe(false);
+  });
+
+  it("counts what the project's own checks found, as the dashboard does", () => {
+    // Read from the code's findings alone, a review whose only finding was a
+    // failing test showed no count on the reviews list, beside "1 of 1" on
+    // the dashboard.
+    const failed = recordFailedCommand(db, reviewId, {
+      step: "tests",
+      command: "npm test",
+      exitCode: 1,
+      timedOut: false,
+      logPath: "/tmp/tests.log",
+      tail: "1 failed",
+    });
+    expect(findingTallies(db).get(reviewId)).toEqual({
+      total: 1,
+      confirmed: 0,
+      dismissed: 0,
+      killed: 0,
+    });
+
+    confirmCheckFinding(db, failed.id);
+    markKilled(db, candidate().id, "False positive.", "verification");
+    expect(findingTallies(db).get(reviewId)).toEqual({
+      total: 2,
+      confirmed: 1,
+      dismissed: 0,
+      killed: 1,
+    });
   });
 });
