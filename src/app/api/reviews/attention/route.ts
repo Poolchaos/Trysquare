@@ -22,9 +22,13 @@ export function GET(): Promise<Response> {
 
     // A row can say running while no process owns it, after a restart the
     // recovery has not reached yet. The manager knows which are genuinely in
-    // flight, so the chip follows it rather than the column.
+    // flight, so the chip follows it rather than the column. One running
+    // comes before one paused at the usage limit: found first, a pause
+    // nobody resumed hid the run going on now (the seventeenth grade, AE1).
     const active =
-      inFlight.find((row) => row.status === "paused_limit" || manager.isRunning(row.id)) ?? null;
+      inFlight.find((row) => manager.isRunning(row.id)) ??
+      inFlight.find((row) => row.status === "paused_limit") ??
+      null;
 
     return ok({ active, awaiting: countAwaitingConfirmation(db) });
   });

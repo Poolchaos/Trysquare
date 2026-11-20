@@ -182,6 +182,13 @@ pulled deliberately.
   Duration tile and the lists, where a step of the same length says "under
   a second" (`src/app/reviews/[id]/page.tsx`, `elapsedBetween`). Only the
   fake engine is that fast; a waiting review shows it since D-248.
+- 2026-11-20: the dashboard's Needs you says "Nothing is waiting on you"
+  while a review is paused at the usage limit, interrupted or failed, each
+  of which goes on only when a person presses Resume. 04 has Needs you list
+  reviews awaiting a decision, so the line is as designed; whether a review
+  waiting on a Resume belongs there is the maintainer's. Seen grading
+  `dashboard-paused-at-limit-light.png`, where the pause is said only by
+  the status chips and the bar.
 - 2026-11-19: two shots show figures that do not agree, seen while grading
   and not yet traced to the page or to how the test stages its data.
   `verify-again-light.png`: "0 of 9 decided" beside 9 proven by both and 6

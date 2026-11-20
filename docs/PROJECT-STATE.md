@@ -30,9 +30,14 @@ from 2026-11-03.
   last request's time, tokens and cost as the stage's; and the pre-flight's
   "Estimated tokens" is one prompt's size, not the review's. Twenty-one
   immaterial lines came with them. All are logged as AE1 to AE24 in the
-  audit file and not yet checked against the code or corrected, bar two
-  stale lines of the records; that is the next work, and an eighteenth
-  grade after it.
+  audit file. Corrected since, each checked against the code first: the
+  first, with a fault found beside it (a review left paused hid one
+  running after it, from the top bar and the dashboard), and AE16, the
+  dashboard's Projects saying "no findings" of a review that had not run
+  to any. `./verify.sh --e2e` exits 0 with 1540 unit tests passing, 8
+  skipped, and 147 browser tests. The other twenty are the next work, bar
+  two stale lines of the records already put right, and an eighteenth
+  grade after them.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,

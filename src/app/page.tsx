@@ -259,7 +259,12 @@ export default function HomePage() {
   // dashboard they froze (audit finding U3). Keyed to whether a run exists
   // rather than to the polled object, which is a new identity every four
   // seconds and would restart the clock each time it arrived.
-  const running = live !== null;
+  //
+  // The bar is told of a review paused at the usage limit too, and says
+  // Paused. Nothing of it is live: drawn here it was a scan in progress, its
+  // clock counting through the pause (the seventeenth grade, AE1).
+  const scan = live !== null && live.status !== "paused_limit" ? live : null;
+  const running = scan !== null;
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), running ? 1000 : 60_000);
     return () => clearInterval(tick);
@@ -370,12 +375,12 @@ export default function HomePage() {
                 everything that already did. Hidden entirely when nothing is
                 running, because an empty "live" panel is a dashboard
                 claiming to have something to watch. */}
-            {live ? (
+            {scan ? (
               <Widget
                 label="Live scan"
                 action={
                   <Link
-                    href={`/reviews/${live.id}`}
+                    href={`/reviews/${scan.id}`}
                     className="text-aside text-[var(--color-accent)] underline underline-offset-2"
                   >
                     Open scan view
@@ -384,27 +389,27 @@ export default function HomePage() {
               >
                 <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                   <Mono className="text-heading">
-                    {live.fromBranch} <span className="text-[var(--color-ink-faint)]">into</span>{" "}
-                    {live.intoBranch}
+                    {scan.fromBranch} <span className="text-[var(--color-ink-faint)]">into</span>{" "}
+                    {scan.intoBranch}
                   </Mono>
                   <span className="text-body text-[var(--color-ink-muted)]">
-                    {live.currentStage ? stageName(live.currentStage) : "Preparing"}
-                    {live.currentStage && STAGE_ORDER.includes(live.currentStage)
-                      ? ` · stage ${STAGE_ORDER.indexOf(live.currentStage) + 1} of ${STAGE_ORDER.length}`
+                    {scan.currentStage ? stageName(scan.currentStage) : "Preparing"}
+                    {scan.currentStage && STAGE_ORDER.includes(scan.currentStage)
+                      ? ` · stage ${STAGE_ORDER.indexOf(scan.currentStage) + 1} of ${STAGE_ORDER.length}`
                       : ""}
                   </span>
-                  {live.startedAt ? (
+                  {scan.startedAt ? (
                     <span className="font-[family-name:var(--font-mono)] text-body tabular-nums">
-                      {elapsed(live.startedAt, now)} elapsed
+                      {elapsed(scan.startedAt, now)} elapsed
                     </span>
                   ) : null}
                   <span className="font-[family-name:var(--font-mono)] text-body tabular-nums">
-                    ${live.costEquivalentUsd.toFixed(2)}
+                    ${scan.costEquivalentUsd.toFixed(2)}
                   </span>
                 </div>
                 <div className="mt-3 flex gap-1.5" aria-hidden>
                   {STAGE_ORDER.map((stage, index) => {
-                    const at = live.currentStage ? STAGE_ORDER.indexOf(live.currentStage) : 0;
+                    const at = scan.currentStage ? STAGE_ORDER.indexOf(scan.currentStage) : 0;
                     return (
                       <span
                         key={stage}
@@ -576,11 +581,17 @@ export default function HomePage() {
                               {statusLabel(project.latest.status)}
                             </Badge>
                           </Link>
-                          <span className="text-[var(--color-ink-muted)] tabular-nums">
-                            {project.latest.total > 0
-                              ? `${project.latest.confirmed} of ${project.latest.total} confirmed`
-                              : "no findings"}
-                          </span>
+                          {/* "no findings" is a result, said only of a review
+                              that ran to one: beside a pause or a failure it
+                              read as a clean review (AE16). */}
+                          {project.latest.total > 0 ? (
+                            <span className="text-[var(--color-ink-muted)] tabular-nums">
+                              {project.latest.confirmed} of {project.latest.total} confirmed
+                            </span>
+                          ) : project.latest.status === "awaiting_confirmation" ||
+                            project.latest.status === "complete" ? (
+                            <span className="text-[var(--color-ink-muted)]">no findings</span>
+                          ) : null}
                           {/* When, and how many times. A project reviewed once
                               last March is a different thing from one reviewed
                               nine times this week, and the widget said neither. */}

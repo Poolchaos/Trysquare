@@ -14,7 +14,7 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test, type Locator, type Route } from "@playwright/test";
+import { expect, test, type Locator, type Response, type Route } from "@playwright/test";
 import { answerOnce, routeUntilStopped } from "./answer-once";
 import { sidewaysOverflow } from "./overflow";
 import { accessibilityViolations } from "./axe";
@@ -1694,6 +1694,37 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   // And the half that makes a pause a wait rather than a hang: when to return.
   await expect(page.getByText(/The limit clears at/)).toBeVisible();
   await expect(page.getByText(/resuming before then will pause again/i)).toBeVisible();
+
+  // The dashboard meanwhile (the seventeenth grade, AE1): it drew the pause
+  // as a live scan, its clock counting on. The bar says Paused, the review
+  // is listed as paused, and nothing is drawn as live.
+  const pausedAt = page.url();
+  let answers = 0;
+  const counted = (response: Response) => {
+    if (response.url().endsWith("/api/reviews/attention")) answers += 1;
+  };
+  page.on("response", counted);
+  await page.goto("/");
+  const dashboard = page.getByRole("main");
+  await expect(page.getByRole("banner").getByText("Paused", { exact: true })).toBeVisible();
+  await expect(dashboard.getByText("paused limit").first()).toBeVisible();
+  // The bar and the dashboard each ask what is in flight. Both have been
+  // answered by the fourth answer, and an absence read before that would
+  // hold on a page that had not yet been told of the pause.
+  await expect.poll(() => answers, { timeout: 30_000 }).toBeGreaterThanOrEqual(4);
+  page.off("response", counted);
+  expect(await dashboard.getByText("Live scan", { exact: true }).count()).toBe(0);
+  expect(await dashboard.getByText(/elapsed/).count()).toBe(0);
+  // Nor is it said to have found nothing: it has not run to its findings
+  // (AE16). Projects said "no findings" beside the pause.
+  const project = dashboard
+    .locator("li")
+    .filter({ has: page.getByRole("link", { name: "app", exact: true }) });
+  await expect(project).toContainText("paused limit");
+  expect(await project.getByText("no findings").count()).toBe(0);
+  await shootAll(page, dashboard, "dashboard-paused-at-limit");
+  await page.goto(pausedAt);
+  await expect(page.getByText("paused limit")).toBeVisible({ timeout: 30_000 });
 
   // A resume the server refuses, as it does when another tab has already
   // cancelled the review, says why rather than watching a run that never
