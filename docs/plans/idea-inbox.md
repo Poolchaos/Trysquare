@@ -180,6 +180,15 @@ pulled deliberately.
   candidates raised" beside "1 hunk(s) were accounted for only by findings
   that verification refuted". To root-cause before anything else is built
   on those screens.
+  TRACED 2026-11-20: both were how the browser test staged its answer, not
+  the page. The first showed verified findings as open questions and left
+  each its second proof, which the server writes only as it verifies one
+  (`markVerified`), and no finding goes from verified to open. The second
+  emptied the findings and left the fixture's count of hunks resting on
+  refuted ones, its verification requests under "Nothing to prove" and a
+  completion time on a review still waiting. Each staging now gives what
+  the server can, and each test asserts the figures agree
+  (`e2e/failure-paths.spec.ts`).
 
 ## Retired
 

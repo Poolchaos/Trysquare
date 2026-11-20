@@ -2496,7 +2496,9 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   // use up scripted answers the later tests read by count. Its verified
   // criticals are shown as open questions, so with none decided yet, the
   // queue, worst first, opens on one; its warnings stay verified, each as if
-  // its finder had called it critical.
+  // its finder had called it critical. Shown as the server keeps one the
+  // second verifier did not prove: the first proof, and no second. Left with
+  // its second proof, the page counted it proven by both and open at once.
   const listed = (await (await page.request.get("/api/reviews")).json()) as {
     reviews: { id: string; status: string; findings: { confirmed: number; dismissed: number } }[];
   };
@@ -2526,7 +2528,12 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
             ? finding
             : finding.severity === "WARNING"
               ? { ...finding, raisedSeverity: "CRITICAL" }
-              : { ...finding, status: "open_question", verificationNote: "Could not be settled." },
+              : {
+                  ...finding,
+                  status: "open_question",
+                  verificationNote: "Could not be settled.",
+                  secondProofJson: null,
+                },
         ),
       },
     });
@@ -2540,6 +2547,21 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
     "Not proven, so it cannot be confirmed as a finding.",
   );
   await expect(page.getByText("Verification: Could not be settled.")).toBeVisible();
+  // The summary's figures divide what was raised: none is counted twice.
+  const summary = page.getByRole("region", { name: "How the review went" });
+  const figure = async (label: string) => {
+    const term = summary.getByRole("term").filter({ hasText: new RegExp(`^${label}$`) });
+    return Number(await term.locator("..").getByRole("definition").first().textContent());
+  };
+  const raised = await figure("Raised");
+  const provenByBoth = await figure("Proven by both");
+  const open = await figure("Open question");
+  expect(open).toBeGreaterThan(1);
+  expect(provenByBoth).toBeGreaterThan(0);
+  expect(provenByBoth + open).toBeLessThanOrEqual(raised);
+  await expect(summary.getByRole("listitem").nth(3)).toContainText(
+    `${provenByBoth} proven by both verifiers, ${open} open questions,`,
+  );
   await expect(page.getByRole("region", { name: "How it was proven" })).toHaveCount(0);
   await expect(page.getByText("Shift+C", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Confirm", exact: true })).toHaveCount(0);
@@ -3326,20 +3348,57 @@ test("a review that finished with nothing to decide can be completed", async ({ 
   // mounted only with findings to decide, so the commonest clean outcome could
   // not be finished; D-224's empty text then called it stopped. The fixture's
   // review always finds something, so its reading is answered as a finished
-  // one with nothing on the table.
+  // one with nothing on the table: no finding, so no hunk that rests on a
+  // refuted one either. Left with the fixture's count, the page said none were
+  // raised beside a hunk accounted for only by findings verification refuted.
   const asClean = async (route: import("@playwright/test").Route) => {
     if (route.request().method() !== "GET") return route.fallback();
     const response = await route.fetch();
-    const body = (await response.json()) as { review: { status: string } };
+    type Spent = {
+      inputTokens: number;
+      cacheCreationTokens: number;
+      cacheReadTokens: number;
+      outputTokens: number;
+      costEquivalentUsd: number;
+    };
+    const body = (await response.json()) as {
+      review: {
+        status: string;
+        completedAt: string | null;
+        usageInputTokens: number;
+        usageCacheCreationTokens: number;
+        usageCacheReadTokens: number;
+        usageOutputTokens: number;
+        costEquivalentUsd: number;
+      };
+      stages: ({ stage: string } & Spent)[];
+      coverage: { refutedOnlyHunks: number; refutedOnlySweepHits: number };
+    };
+    // With nothing raised, verification asks nothing: its requests go, with
+    // what they spent, and a review still waiting has no completion time.
+    const proving = body.stages.filter((row) => row.stage.startsWith("s5"));
+    const spent = (key: keyof Spent) => proving.reduce((sum, row) => sum + row[key], 0);
     await route.fulfill({
       response,
       json: {
         ...body,
         running: false,
         queued: false,
-        review: { ...body.review, status: "awaiting_confirmation" },
+        review: {
+          ...body.review,
+          status: "awaiting_confirmation",
+          completedAt: null,
+          usageInputTokens: body.review.usageInputTokens - spent("inputTokens"),
+          usageCacheCreationTokens:
+            body.review.usageCacheCreationTokens - spent("cacheCreationTokens"),
+          usageCacheReadTokens: body.review.usageCacheReadTokens - spent("cacheReadTokens"),
+          usageOutputTokens: body.review.usageOutputTokens - spent("outputTokens"),
+          costEquivalentUsd: body.review.costEquivalentUsd - spent("costEquivalentUsd"),
+        },
+        stages: body.stages.filter((row) => !row.stage.startsWith("s5")),
         findings: [],
         checkFindings: [],
+        coverage: { ...body.coverage, refutedOnlyHunks: 0, refutedOnlySweepHits: 0 },
       },
     });
   };
@@ -3359,6 +3418,16 @@ test("a review that finished with nothing to decide can be completed", async ({ 
       page.getByText("No code findings: the review raised none that verification kept."),
     ).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText("All 0 decided.")).toBeVisible();
+    await expect(
+      page.getByText("Everything the change touched ended with a finding or an explicit clear."),
+    ).toBeVisible();
+    await expect(page.getByText("verification refuted")).toHaveCount(0);
+    const proving = page
+      .getByRole("region", { name: "How the review went" })
+      .getByRole("listitem")
+      .nth(3);
+    await expect(proving).toContainText("Nothing to prove.");
+    await expect(proving).toContainText("no requests");
     await expect(page.getByRole("button", { name: "Complete review" })).toBeEnabled();
     await expect(page.getByText("None were reported before the review stopped.")).toHaveCount(0);
     expect(await accessibilityViolations(page)).toEqual([]);
