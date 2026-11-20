@@ -108,6 +108,9 @@ const STAGE_ORDER = [
  * its id rather than shown as nothing and "stage 0 of 10", as the review
  * screen already does (audit finding U10).
  */
+/** How many rules Rule yield lists; with more cited, it says how many there are. */
+const RULES_LISTED = 8;
+
 function stageName(stage: string): string {
   return STAGE_NAMES[stage] ?? stage.replace(/^s\d+[a-z]?_/, "").replace(/_/g, " ");
 }
@@ -524,7 +527,7 @@ export default function HomePage() {
                   </p>
                 ) : (
                   <ul className="mt-3 grid gap-2">
-                    {board.ruleYield.slice(0, 8).map((rule) => {
+                    {board.ruleYield.slice(0, RULES_LISTED).map((rule) => {
                       const share = rule.confirmed / rule.total;
                       return (
                         <li key={rule.ruleCode} className="text-dense">
@@ -551,6 +554,17 @@ export default function HomePage() {
                     })}
                   </ul>
                 )}
+                {/* The list arrives worst yield first, so the ones left out
+                    are the rules confirmed most often. */}
+                {board.ruleYield.length > RULES_LISTED ? (
+                  <p
+                    className="mt-3 text-aside text-[var(--color-ink-muted)]"
+                    data-testid="rules-not-listed"
+                  >
+                    The {RULES_LISTED} confirmed least often, of {board.ruleYield.length} rules
+                    cited.
+                  </p>
+                ) : null}
               </Card>
 
               <Widget label="Projects" className="self-start">

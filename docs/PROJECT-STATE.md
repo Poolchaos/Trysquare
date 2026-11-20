@@ -52,11 +52,12 @@ from 2026-11-03.
   was said to be refuted, its proof not holding, whichever way it was
   killed. The answer says which kill it was now, and the notice says the
   verifier's refutation apart from a proof the quotation check failed.
+  AE24 is two lines: Rule yield says when it lists eight of more rules
+  cited, and a run note carries its day with its time.
   `./verify.sh --e2e` exits 0 with 1547 unit tests passing, 8 skipped, and
-  151 browser tests. Five of the twenty-four are open (AE5, AE6, AE14,
-  AE15, AE24) and are the next work, and an eighteenth grade after them.
-  Of the five, AE14 and AE24 are read in the code and hold, what each
-  needs said in its entry, and AE14's is a question for the maintainer in
+  152 browser tests. Four of the twenty-four are open (AE5, AE6, AE14,
+  AE15) and are the next work, and an eighteenth grade after them. AE14
+  is read in the code and holds, and is a question for the maintainer in
   the inbox.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only

@@ -127,9 +127,10 @@ precision is a claim about findings somebody judged.
   dashboard claiming to have something to watch.
 - **Recent reviews:** branch pair, model, findings count, cost, duration and
   status chip, with any review awaiting a decision highlighted.
-- **Rule yield:** each rule with the share of its findings that survived to
-  confirmation, worst first, because a rule that only ever produces
-  dismissals is costing review attention for nothing.
+- **Rule yield:** the eight rules with the lowest share of their findings
+  that survived to confirmation, worst first, because a rule that only ever
+  produces dismissals is costing review attention for nothing. With more
+  than eight cited, a line under the list says how many there are.
 - **Projects:** each project with its last review's outcome and a way to
   review a branch. Projects are matched to their reviews by id, never by
   name: two remotes can end in the same repository name.

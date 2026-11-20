@@ -1952,9 +1952,14 @@ function RunDetail({
           <ul className="grid gap-2">
             {snapshot.notes.map((note, index) => (
               <li key={`${note.at}-${index}`} className="text-aside [overflow-wrap:anywhere]">
-                <span className="text-[var(--color-ink-muted)]">
-                  {new Date(note.at).toLocaleTimeString()}
-                </span>{" "}
+                {/* With its day: a review resumed on a later day keeps the
+                    notes of both runs. */}
+                <time dateTime={note.at} className="text-[var(--color-ink-muted)]">
+                  {new Date(note.at).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "medium",
+                  })}
+                </time>{" "}
                 {note.message}
               </li>
             ))}

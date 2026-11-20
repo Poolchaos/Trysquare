@@ -1890,6 +1890,21 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
     line.getByText(both < 1000 ? `${both}ms` : `${(both / 1000).toFixed(1)}s`, { exact: true }),
   ).toBeVisible();
   expect(await stages.getByText(/attempts/).count()).toBe(0);
+
+  // A run note says its day as well as its time (the seventeenth grade,
+  // AE24): this review ran, paused and ran again, and one resumed on a later
+  // day keeps the notes of both. Worded as the reader's own browser words it.
+  const notes = page.getByRole("heading", { name: "What this run recorded" }).locator("..");
+  const stamp = notes.locator("time").first();
+  const at = await stamp.getAttribute("datetime");
+  expect(Number.isNaN(Date.parse(at!))).toBe(false);
+  const worded = await page.evaluate(
+    (iso) => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "medium" }),
+    at!,
+  );
+  expect(worded).toContain(String(new Date(at!).getFullYear()));
+  await expect(stamp).toHaveText(worded);
+  await shootAll(page, notes, "run-notes-dated");
   await shootAll(page, stages, "stages-two-requests");
 });
 
@@ -2103,6 +2118,52 @@ test("a watched run that ends with its theater open says so", async ({ page }) =
     rmSync(STALL_TRIGGER, { force: true });
     writeFileSync(COUNTER_FILE, callsBefore, "utf8");
   }
+});
+
+test("Rule yield says when it lists some of the rules cited and not all", async ({ page }) => {
+  // The seventeenth grade, AE24: the card lists eight, the worst yield
+  // first, and said nothing of the rest. The journey's review cites more
+  // rules than that, so the card is read against the scoreboard's own
+  // answer.
+  type Yield = { ruleCode: string; confirmed: number; total: number };
+  const board = (await (await page.request.get("/api/scoreboard")).json()) as {
+    ruleYield: Yield[];
+  };
+  expect(board.ruleYield.length, "more rules cited than the card lists").toBeGreaterThan(8);
+  await page.goto("/");
+  const card = page.getByRole("heading", { name: "Rule yield" }).locator("..");
+  const rows = card.getByRole("listitem");
+  await expect(rows).toHaveCount(8);
+  // Exact: "Rule 1" is also the start of "Rule 11".
+  for (const [row, listed] of [
+    [rows.first(), board.ruleYield[0]!],
+    [rows.last(), board.ruleYield[7]!],
+  ] as const) {
+    await expect(row.getByText(`Rule ${listed.ruleCode}`, { exact: true })).toBeVisible();
+    await expect(
+      row.getByText(`${listed.confirmed}/${listed.total}`, { exact: true }),
+    ).toBeVisible();
+  }
+  await expect(card.getByTestId("rules-not-listed")).toHaveText(
+    `The 8 confirmed least often, of ${board.ruleYield.length} rules cited.`,
+  );
+  await shootAll(page, card, "rule-yield-some");
+
+  // With every rule listed there is no such line: answered with its first
+  // eight, as a machine whose findings cite eight rules would be. The card
+  // alone is read, the page's other figures not being that machine's.
+  const stop = await routeUntilStopped(page, "**/api/scoreboard", async (route) => {
+    const response = await route.fetch();
+    const answered = (await response.json()) as { ruleYield: Yield[] };
+    await route.fulfill({
+      response,
+      json: { ...answered, ruleYield: answered.ruleYield.slice(0, 8) },
+    });
+  });
+  await page.reload();
+  await expect(rows).toHaveCount(8);
+  expect(await card.getByTestId("rules-not-listed").count()).toBe(0);
+  await stop();
 });
 
 test("a quiet dashboard keeps its times and its waiting list current", async ({ page }) => {
