@@ -25,7 +25,7 @@ import {
   statusTone,
 } from "@/components/ui";
 import { send } from "@/components/request";
-import { runTimeMs } from "@/lib/review/run-time";
+import { runTimeMs, runTimeWords } from "@/lib/review/run-time";
 
 interface Row {
   id: string;
@@ -46,13 +46,7 @@ interface Row {
 /** A run's wall clock, from columns the list already receives. */
 function ranFor(review: Pick<Row, "status" | "startedAt" | "runEndedAt">): string | null {
   const ms = runTimeMs(review);
-  if (ms === null) return null;
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  return minutes < 60
-    ? `${minutes}m ${String(seconds % 60).padStart(2, "0")}s`
-    : `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
+  return ms === null ? null : runTimeWords(ms);
 }
 
 /** Statuses that own a running process, so the row offers no delete. */

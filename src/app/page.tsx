@@ -30,6 +30,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
+import { runTimeWords } from "@/lib/review/run-time";
 
 interface Row {
   id: string;
@@ -166,13 +167,7 @@ function Widget({
 }
 
 function duration(ms: number | null): string {
-  if (ms === null) return "";
-  const seconds = Math.max(0, Math.floor(ms / 1000));
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  return minutes < 60
-    ? `${minutes}m ${String(seconds % 60).padStart(2, "0")}s`
-    : `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
+  return ms === null ? "" : runTimeWords(ms);
 }
 
 /**

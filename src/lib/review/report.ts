@@ -18,6 +18,8 @@
  * the code that writes it.
  */
 
+import { runTimeWords, spanMs } from "./run-time";
+
 const SEVERITY_ORDER = ["CRITICAL", "WARNING", "NITPICK"] as const;
 
 export interface ReportFinding {
@@ -450,18 +452,10 @@ function footer(input: ReportInput): string[] {
     `- Cost equivalent: ${input.usage.costEquivalentUsd.toFixed(4)} USD`,
   );
 
-  const duration = elapsed(input.startedAt, input.runEndedAt);
-  if (duration) rows.push(`- Took: ${duration}`);
+  const ran = spanMs(input.startedAt, input.runEndedAt);
+  if (ran !== null) rows.push(`- Took: ${runTimeWords(ran)}`);
 
   return rows;
-}
-
-function elapsed(startedAt: string | null, endedAt: string | null): string | null {
-  if (!startedAt || !endedAt) return null;
-  const seconds = Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 1000);
-  if (!Number.isFinite(seconds) || seconds < 0) return null;
-  if (seconds < 60) return `${seconds}s`;
-  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
 /**

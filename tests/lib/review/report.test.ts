@@ -253,6 +253,24 @@ describe("the footer that makes a report reproducible", () => {
     expect(renderReport(BASE)).toContain("Took: 4m 30s");
     expect(renderReport({ ...BASE, runEndedAt: null })).not.toContain("Took:");
   });
+
+  it("words the time as the screens word it", () => {
+    // Its own formatter rounded where the screens floor and never counted in
+    // hours, so a run the review's page gave as "59s" or "1h 05m" the report
+    // gave as "1m 0s" or "65m 31s" (the seventeenth grade, AE7).
+    expect(renderReport({ ...BASE, runEndedAt: "2026-07-31T10:00:59.600Z" })).toContain(
+      "- Took: 59s\n",
+    );
+    expect(renderReport({ ...BASE, runEndedAt: "2026-07-31T10:04:05.000Z" })).toContain(
+      "- Took: 4m 05s\n",
+    );
+    expect(renderReport({ ...BASE, runEndedAt: "2026-07-31T11:05:30.600Z" })).toContain(
+      "- Took: 1h 05m\n",
+    );
+    expect(renderReport({ ...BASE, runEndedAt: "2026-07-31T09:00:00.000Z" })).not.toContain(
+      "Took:",
+    );
+  });
 });
 
 describe("the house style the report is held to", () => {

@@ -40,10 +40,13 @@ from 2026-11-03.
   change as one prompt. A fourth, AE4, was a fault: the pre-flight counted
   every rule, one switched off too, where a run freezes the enabled ones.
   It reads what a run would freeze now, and refuses a ruleset with none on
-  in the run's words, with Start off. `./verify.sh --e2e` exits 0 with
-  1543 unit tests passing, 8 skipped, and 149 browser tests. Two stale
-  lines of the records are put right too, so seventeen of the twenty-four
-  are open and are the next work, and an eighteenth grade after them.
+  in the run's words, with Start off. A fifth, AE7, too: the report worded
+  a run's time with a formatter of its own, so "Took" could disagree with
+  the screens for the same run, and one function words it everywhere now
+  (D-249). `./verify.sh --e2e` exits 0 with 1546 unit tests passing, 8
+  skipped, and 149 browser tests. Two stale lines of the records are put
+  right too, so sixteen of the twenty-four are open and are the next
+  work, and an eighteenth grade after them.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,

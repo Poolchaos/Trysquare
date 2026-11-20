@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runTimeMs } from "@/lib/review/run-time";
+import { runTimeMs, runTimeWords } from "@/lib/review/run-time";
 
 const RAN = {
   status: "complete",
@@ -25,5 +25,20 @@ describe("how long a run took", () => {
     expect(runTimeMs({ ...RAN, startedAt: null })).toBeNull();
     expect(runTimeMs({ ...RAN, runEndedAt: "2026-08-18T09:00:00.000Z" })).toBeNull();
     expect(runTimeMs({ ...RAN, runEndedAt: "not a time" })).toBeNull();
+  });
+});
+
+describe("a run's time in words", () => {
+  it("is whole seconds already passed, never rounded up to one not reached", () => {
+    expect(runTimeWords(0)).toBe("0s");
+    expect(runTimeWords(59_600)).toBe("59s");
+    expect(runTimeWords(60_000)).toBe("1m 00s");
+    expect(runTimeWords(270_000)).toBe("4m 30s");
+    expect(runTimeWords(245_900)).toBe("4m 05s");
+  });
+
+  it("counts in hours past the sixtieth minute", () => {
+    expect(runTimeWords(3_599_999)).toBe("59m 59s");
+    expect(runTimeWords(3_930_600)).toBe("1h 05m");
   });
 });

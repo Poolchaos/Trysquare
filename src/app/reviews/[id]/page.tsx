@@ -69,7 +69,7 @@ import {
 } from "@/lib/review/steps";
 import { emptyFindings } from "@/lib/review/empty-findings";
 import { createEndingNotice } from "@/lib/review/ending-notice";
-import { runTimeMs } from "@/lib/review/run-time";
+import { runTimeMs, runTimeWords } from "@/lib/review/run-time";
 
 /**
  * The whole pipeline, not only the stages that call a model.
@@ -353,11 +353,7 @@ function executingStage(snapshot: Snapshot, done: ReadonlySet<string>): string |
  * a bare millisecond count means nothing at any point.
  */
 function elapsedBetween(fromMs: number, toMs: number): string {
-  const seconds = Math.max(0, Math.floor((toMs - fromMs) / 1000));
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 1) return `${seconds}s`;
-  if (minutes < 60) return `${minutes}m ${String(seconds % 60).padStart(2, "0")}s`;
-  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
+  return runTimeWords(toMs - fromMs);
 }
 
 function elapsedSince(startedAt: string, now: number): string {

@@ -6294,3 +6294,14 @@ verified evidence, in writing, here.
   and reading the last stage row at display time, which a stage replayed
   from its stored answer does not write
   (`server/review/checkpointing-runner.ts`).
+- 2026-11-20 D-249 A run's time is worded by one function wherever it is
+  said, `runTimeWords` in `lib/review/run-time.ts`: whole seconds passed,
+  and hours past the sixtieth minute. D-248 gave the screens one function
+  for the span and left the report its own formatter, which rounded and
+  counted minutes without end, so a run the review's page gave as "59s" or
+  "1h 05m" its report gave as "1m 0s" or "65m 31s" (the seventeenth
+  grade, AE7, by a test on the old code). The dashboard, the reviews list
+  and the review's page each had a copy of the screens' wording, alike,
+  and read the one now. A report's seconds under ten are written "4m 05s",
+  where it wrote "4m 5s". Rejected: rounding everywhere, since a clock that
+  says 60s before the minute has passed is the fault.
