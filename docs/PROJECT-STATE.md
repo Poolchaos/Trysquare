@@ -495,12 +495,13 @@ own now (D-75, D-81).
 - More than one dependency per review: the model and the screens take a
   single linked project.
 - More than one ruleset per review, so tiers compose: designed, not built.
-- Emailing a report: in scope since D-251, not planned yet (what it means
-  for the README's and SECURITY.md's lines: `plans/idea-inbox.md`,
-  2026-07-30).
+- Emailing a review's result: in scope since D-251, planned in
+  `plans/EMAIL-REPORT-PLAN.md` (D-264). Its sender waits on the
+  maintainer's mailbox; where a result goes is set in the app.
 - Rules added, edited or removed in the app, and ruleset templates shipped
-  with it: in scope since D-251, not planned yet. A rule can be switched
-  off and its severity changed; its text comes only from an imported file.
+  with it: in scope since D-251, planned in `plans/RULES-IN-APP-PLAN.md`
+  and `plans/RULESET-TEMPLATES-PLAN.md` (D-265). A rule can be switched off
+  and its severity changed; its text comes only from an imported file.
 - A viewer for a failed stage's transcript: the review page names the file
   and renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
 - The live output of git while a project clones: a failure's stderr is

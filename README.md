@@ -104,9 +104,9 @@ to the remote's, and a review registers its worktree there.
 
 ## What it looks like
 
-![The home dashboard: stat tiles for spend, reviews completed, precision and
-invention rate, above what is waiting on a person and what each project last
-produced.](docs/images/dashboard.png)
+![The home dashboard: stat tiles for the cost equivalent, reviews completed,
+precision and proofs discarded, above what is waiting on a person, the recent
+reviews and each rule's yield.](docs/images/dashboard.png)
 
 The home is a board of widgets ordered by what it costs you to miss: anything
 waiting on a person sits above anything that merely happened. Every number on
@@ -118,8 +118,9 @@ it cites and the code it quotes.](docs/images/confirmation-queue.png)
 
 The three screenshots are of the seeded test fixture, whose defects are
 planted on purpose and whose findings say so. They are the browser suite's own
-screenshots, copied here by hand rather than staged for the README, last on
-2026-10-25; the suite takes them again on every CI run, so a copy here can fall
+screenshots, copied here by hand rather than staged for the README: the
+dashboard on 2026-11-20, the other two on 2026-10-25. The suite takes them
+again on every CI run, so a copy here can fall
 behind the screens. What they show is the fake engine's scripted review. The
 real-model smoke runs described in Status happened locally and their evidence,
 including every finding's text, was kept under `review/`, which is

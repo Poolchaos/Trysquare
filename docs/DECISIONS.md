@@ -6437,3 +6437,43 @@ verified evidence, in writing, here.
   rule beside his global file's; the README's opening stays as reworded on
   2026-11-19. The fourth, an update review his `~/.claude/skills/VENDORED.md`
   records as due by 2026-11-09, is outside this repository and his.
+- 2026-11-20 D-264 A review's result is emailed as
+  `plans/EMAIL-REPORT-PLAN.md` has it, and its sender waits on the
+  maintainer. Planned under the architecture standard: four ways to send
+  (this machine's `sendmail`, the app speaking SMTP itself, a mail
+  company's API, the person's mail program by hand) went to a blind
+  reviewer, who signed off on none; its grades and its refusal are in the
+  plan. Its main findings: `sendmail` moves the credential into a file
+  root keeps and, without a relay, mail from a laptop to Gmail may be
+  refused or filed as spam; the app's own SMTP is a password sign-in to a
+  third party unless the account is made for it. The maintainer the same
+  evening: "we can setup an email on my account or something. users
+  should be able to configure what email it should go to in the app". So,
+  decided by the session and his to reverse: where a result goes is set
+  in the app, addresses kept on Settings and one picked or typed for a
+  review, never read from a repository; it is sent from a mailbox set up
+  for this alone, through its server by the app, the password given where
+  the server starts and kept from every process the app starts (git
+  included, which inherits the server's whole environment today, read in
+  `gitEnv`); which result is mailed is chosen per review, the report once
+  completed by default, or what the run found as it ends, said first to be
+  undecided by any person. Still his: the mailbox's provider, and a real
+  message sent. Rejected for now: a mail company's API (a vendor, an
+  account and a bill for a few messages a day), and the machine's own
+  `sendmail` as the first path (a root-set relay on each machine).
+- 2026-11-20 D-265 Rules are edited in the app as the markdown they are,
+  and ruleset templates ship as protocol documents in the repository
+  (`plans/RULES-IN-APP-PLAN.md`, `plans/RULESET-TEMPLATES-PLAN.md`), both
+  read through the importer that already accounts for every line. A rule
+  saved in the app is parsed as a one-rule document and refused unless it
+  is exactly one rule with no line lost, so what the model is given stays
+  the person's words (`lib/rulesets/model.ts`). A template has at most
+  fifteen rules, each provable from a diff, each sweep pattern tested
+  against its own examples, each with its source cited, and each template
+  is run once against a fixture of planted violations before its card
+  stops saying it has not been; that run is the maintainer's to start.
+  Rejected: a form of separate fields for a rule, which would rebuild the
+  markdown in the app's words; and templates fetched from the network.
+  With the plans written, CP-12 is no longer behind CP-9: the maintainer's
+  own review is his to drive when he likes, and the work he asked for in
+  D-251 does not wait on its verdict.
