@@ -2981,6 +2981,152 @@ test("an unproven finding offers no Confirm, by button or by key", async ({ page
   await stop();
 });
 
+test("a finding killed on verifying again is said for the kill it was", async ({ page }) => {
+  // The seventeenth grade, AE12: the notice said "Its proof did not hold" of
+  // every kill. There are two. The verifier refutes the finding, with a
+  // reason and no proof; or it gives a proof and the quotation check fails
+  // it, which is no refutation. A review of its own, answered by the fake
+  // and not staged: its verifier leaves two findings open, then answers one
+  // press each way. The answers are written past those setup wrote, then
+  // taken away, the count put back, as the grading test does.
+  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+  const written = readdirSync(ANSWERS_DIR).filter((file) => /^\d{3}\.json$/.test(file)).length;
+  const numbered = (n: number) => join(ANSWERS_DIR, `${String(n).padStart(3, "0")}.json`);
+  const perRun = written / 2;
+  expect(perRun, "a run's answers as setup writes them").toBe(6);
+  const [s1, s2, s3, s4, s5, s5b] = Array.from({ length: perRun }, (_, index) =>
+    readFileSync(numbered(index + 1), "utf8"),
+  );
+  type Step = { path: string; lineStart: number; lineEnd: number; quote: string };
+  type Verdict = { ref: string; verdict: string; evidence?: Step[] };
+  const first = JSON.parse(s5!) as { verdicts: Verdict[] };
+  const [refuted, discarded] = first.verdicts.filter((verdict) => verdict.verdict === "verified");
+  expect(discarded?.evidence?.[0], "two findings the first verifier proves").toBeDefined();
+  const leftOpen = new Set([refuted!.ref, discarded!.ref]);
+  const REASON = "A caller checks the value before this line runs.";
+  const answers = [
+    s1,
+    s2,
+    s3,
+    s4,
+    JSON.stringify({
+      verdicts: first.verdicts.map((verdict) =>
+        leftOpen.has(verdict.ref)
+          ? { ref: verdict.ref, verdict: "open_question", note: "Could not be settled." }
+          : verdict,
+      ),
+    }),
+    // The second verifier is asked only about what the first proved.
+    JSON.stringify({
+      verdicts: (JSON.parse(s5b!) as { verdicts: Verdict[] }).verdicts.filter(
+        (verdict) => !leftOpen.has(verdict.ref),
+      ),
+    }),
+    JSON.stringify({ verdicts: [{ ref: refuted!.ref, verdict: "killed", note: REASON }] }),
+    JSON.stringify({
+      verdicts: [
+        {
+          ...discarded!,
+          evidence: [{ ...discarded!.evidence![0]!, quote: "const somethingThatIsNotThere = 1;" }],
+        },
+      ],
+    }),
+  ];
+  const extra = answers.map((_, index) => numbered(written + 1 + index));
+  answers.forEach((answer, index) => writeFileSync(extra[index]!, answer!));
+  writeFileSync(COUNTER_FILE, String(written), "utf8");
+
+  let reviewId = "";
+  try {
+    await startAReview(page);
+    reviewId = page.url().split("/").pop()!;
+    await expect(page.getByText("awaiting your decision")).toBeVisible({ timeout: 120_000 });
+    type Row = {
+      id: string;
+      status: string;
+      killedBy: string | null;
+      filePath: string;
+      lineStart: number;
+      issue: string;
+      verificationNote: string | null;
+    };
+    const rows = async () =>
+      ((await (await page.request.get(`/api/reviews/${reviewId}`)).json()) as { findings: Row[] })
+        .findings;
+    const open = (await rows()).filter((row) => row.status === "open_question");
+    expect(open).toHaveLength(2);
+    // Each answer names its finding by where it is, so each press is on that one.
+    const at = (verdict: Verdict) => {
+      const [, path, line] = /^<<candidate:(.+):(\d+)>>$/.exec(verdict.ref)!;
+      return open.find((row) => row.filePath === path && String(row.lineStart) === line)!;
+    };
+    const queue = page.getByRole("navigation", { name: "Findings" });
+    const notice = page.getByTestId("verified-again");
+    const verifyAgain = async (row: Row) => {
+      await queue.getByRole("button").filter({ hasText: row.issue }).click();
+      await expect(page.getByTestId("not-proven")).toBeVisible();
+      await page.getByRole("button", { name: "Verify again" }).click();
+      await page.getByRole("button", { name: "Send request" }).click();
+    };
+    const listed = "under Refuted in verification, in Run detail";
+
+    const refutedRow = at(refuted!);
+    await verifyAgain(refutedRow);
+    await expect(notice).toHaveText(
+      `Refuted by the verifier: ${refutedRow.issue.replace(/\.$/, "")}. It has left the queue, ` +
+        `and the verifier's reason is ${listed}.`,
+      { timeout: 60_000 },
+    );
+    await expect(queue.getByRole("button").filter({ hasText: refutedRow.issue })).toHaveCount(0);
+    await shootAll(page, notice, "verified-again-refuted");
+
+    const discardedRow = at(discarded!);
+    await verifyAgain(discardedRow);
+    await expect(notice).toHaveText(
+      `Discarded by the quotation check: ${discardedRow.issue.replace(/\.$/, "")}. The verifier ` +
+        "gave a proof that did not pass the check, so the finding has left the queue. What " +
+        `the check found is ${listed}.`,
+      { timeout: 60_000 },
+    );
+    await expect(queue.getByRole("button").filter({ hasText: discardedRow.issue })).toHaveCount(0);
+    await shootAll(page, notice, "verified-again-discarded");
+
+    // Where the notice sends the reader, each is listed with its reason, and
+    // the server kept which kill each was.
+    const after = await rows();
+    const kept = (row: Row) => after.find((candidate) => candidate.id === row.id)!;
+    expect(kept(refutedRow)).toMatchObject({
+      status: "killed",
+      killedBy: "verification",
+      verificationNote: REASON,
+    });
+    expect(kept(discardedRow)).toMatchObject({ status: "killed", killedBy: "quote_check" });
+    await page.getByText("Run detail", { exact: true }).click();
+    const refutedCard = page
+      .getByRole("heading", { name: "Refuted in verification" })
+      .locator("..");
+    await expect(
+      refutedCard.getByRole("listitem").filter({ hasText: refutedRow.issue }),
+    ).toContainText(REASON);
+    await expect(
+      refutedCard.getByRole("listitem").filter({ hasText: discardedRow.issue }),
+    ).toContainText(kept(discardedRow).verificationNote!);
+    await expect(
+      page.getByText(
+        `Verified again: ${discardedRow.filePath}:${discardedRow.lineStart} ${discardedRow.issue} ` +
+          "is now killed, its proof failing the quotation check.",
+      ),
+    ).toBeVisible();
+  } finally {
+    if (reviewId !== "") {
+      const deleted = await page.request.delete(`/api/reviews/${reviewId}`);
+      expect.soft(deleted.status(), "the review deleted").toBe(200);
+    }
+    for (const file of extra) rmSync(file, { force: true });
+    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
+  }
+});
+
 test("cancelling a running review stops it and says so", async ({ page }) => {
   // A cancel is an ordinary ending, not a fault: the person changed their
   // mind, or saw the wrong branch pair. What has to hold is that the run

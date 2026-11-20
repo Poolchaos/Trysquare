@@ -48,12 +48,16 @@ from 2026-11-03.
   to AE19): the timeout is said per call, Complete review shows a report
   where it said it wrote one, the dashboard counts reviews "in all" and a
   run's stage "of up to 10", and the second step says what the model is
-  given to do. `./verify.sh --e2e` exits 0 with 1546 unit tests passing, 8
-  skipped, and 150 browser tests. Six of the twenty-four are open (AE5,
-  AE6, AE12, AE14, AE15, AE24) and are the next work, and an eighteenth
-  grade after them. Of the six, AE12, AE14 and AE24 are read in the code
-  and hold, what each needs said in its entry, and AE14's is a question
-  for the maintainer in the inbox.
+  given to do. AE12 was a fault too: a finding killed on verifying again
+  was said to be refuted, its proof not holding, whichever way it was
+  killed. The answer says which kill it was now, and the notice says the
+  verifier's refutation apart from a proof the quotation check failed.
+  `./verify.sh --e2e` exits 0 with 1547 unit tests passing, 8 skipped, and
+  151 browser tests. Five of the twenty-four are open (AE5, AE6, AE14,
+  AE15, AE24) and are the next work, and an eighteenth grade after them.
+  Of the five, AE14 and AE24 are read in the code and hold, what each
+  needs said in its entry, and AE14's is a question for the maintainer in
+  the inbox.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,

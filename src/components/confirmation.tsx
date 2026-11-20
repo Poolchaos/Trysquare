@@ -380,7 +380,7 @@ export function ConfirmationQueue({
     setAgainBusy(true);
     againAbort.current = new AbortController();
     try {
-      const sent = await send<{ status: string }>(
+      const sent = await send<{ status: string; killedBy: string | null }>(
         `/api/findings/${finding.id}/verify-again`,
         {
           method: "POST",
@@ -408,11 +408,20 @@ export function ConfirmationQueue({
       focusAfterAgain.current = "title";
       setAgainFor(null);
       const named = finding.issue.replace(/\.$/, "");
+      // Two kills, said apart: the verifier refuting it, which carries a
+      // reason and no proof, and the program's check failing a proof the
+      // verifier gave, which is no refutation.
+      const listed = "under Refuted in verification, in Run detail";
       setAgainNotice(
         sent.body.status === "verified"
           ? `Proven: ${named}. It can be confirmed now.`
           : sent.body.status === "killed"
-            ? `Refuted: ${named}. Its proof did not hold, so it has left the queue.`
+            ? sent.body.killedBy === "quote_check"
+              ? `Discarded by the quotation check: ${named}. The verifier gave a proof ` +
+                `that did not pass the check, so the finding has left the queue. What the ` +
+                `check found is ${listed}.`
+              : `Refuted by the verifier: ${named}. It has left the queue, and the ` +
+                `verifier's reason is ${listed}.`
             : `Still not settled: ${named}. The verifier's newer note is on the card.`,
       );
       await onChanged();

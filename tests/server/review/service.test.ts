@@ -626,7 +626,7 @@ describe("verifying an open question again (proof-and-steps plan, WP-D2)", () =>
       answer(verdict),
     ]);
 
-    await expect(again(finding.id)).resolves.toMatchObject({ status: "verified" });
+    await expect(again(finding.id)).resolves.toEqual({ status: "verified", killedBy: null });
     const proven = requireFinding(db, finding.id);
     expect(findingStatusOf(proven)).toBe("verified");
     expect(proven.proofJson).not.toBeNull();
@@ -678,9 +678,40 @@ describe("verifying an open question again (proof-and-steps plan, WP-D2)", () =>
       answer({ ...verdict, quotedCode: "const somethingThatIsNotThere = true;" }),
     ]);
 
-    await expect(again(finding.id)).resolves.toMatchObject({ status: "killed" });
+    // Which kill it was is in the answer: the page words the two apart.
+    await expect(again(finding.id)).resolves.toEqual({
+      status: "killed",
+      killedBy: "quote_check",
+    });
     expect(requireFinding(db, finding.id).killedBy).toBe("quote_check");
+    expect(
+      readRunNotes(requireReview(db, finding.reviewId)).map((note) => note.message),
+    ).toContainEqual(
+      `Verified again: ${finding.filePath}:${finding.lineStart} ${finding.issue} is now ` +
+        "killed, its proof failing the quotation check.",
+    );
     // Nothing proved, so the second verifier is not asked.
+    expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("7");
+  }, 120_000);
+
+  it("answers a refutation by the verifier as one, with its reason kept", async () => {
+    const { finding } = await leaveOneOpen((verdict) => [
+      {
+        verdicts: [
+          {
+            ref: candidateToken(verdict.path, verdict.lineStart),
+            verdict: "killed",
+            note: "A caller already checks this.",
+          },
+        ],
+      },
+    ]);
+
+    await expect(again(finding.id)).resolves.toEqual({
+      status: "killed",
+      killedBy: "verification",
+    });
+    expect(requireFinding(db, finding.id).verificationNote).toBe("A caller already checks this.");
     expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("7");
   }, 120_000);
 

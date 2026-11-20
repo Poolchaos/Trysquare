@@ -274,7 +274,9 @@ Finding status machine:
 `candidate -> verified | killed | open_question` (S5, fresh session);
 `verified -> confirmed | dismissed` (the maintainer only, S7 UI);
 `open_question -> dismissed | verified | killed` (unproven, so never confirmed:
-PG-2 (a), D-185; verified again, it can be proven or refuted, WP-D2).
+PG-2 (a), D-185; verified again, it can be proven, refuted by the
+verifier, or killed by the quotation check failing a proof the verifier
+gave, WP-D2).
 Killed findings are kept for engine-quality metrics, and listed with their
 reasons under the review's run detail (D-97).
 

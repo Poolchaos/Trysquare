@@ -187,7 +187,7 @@ export class JobManager {
    * reviews at once (review round 2, F2). A signal that aborts, a closed tab,
    * stops it, and so does a drain.
    */
-  async verifyAgain(findingId: string, signal?: AbortSignal): Promise<{ status: string }> {
+  async verifyAgain(findingId: string, signal?: AbortSignal): ReturnType<typeof verifyAgain> {
     const db = this.requireDb();
     const dataDir = this.dataDir ?? resolveDataDir(process.env, homedir());
     const { review } = assertCanVerifyAgain(db, findingId, dataDir);

@@ -178,6 +178,12 @@ pulled deliberately.
   stopped at its time limit, with everything it started", "expected true to
   be false". The change it ran on does not touch that test or what it
   tests. Recorded and left (D-246); cause not looked at.
+- 2026-11-20: only the Windows job failed in CI run 44704221453 at 3085f87
+  (Ubuntu and macOS passed), on a commit that changed records alone:
+  `e2e/themes.spec.ts`, "Projects, the model picker and the CLI card say
+  what the code does, on a phone too", dark theme, 60 seconds waiting for
+  the project's link in `main`, "element(s) not found". Recorded and left
+  (D-246); cause not looked at.
 - 2026-11-20: a run of under a second reads "took 0s", and 0s in the
   Duration tile and the lists, where a step of the same length says "under
   a second" (`src/app/reviews/[id]/page.tsx`, `elapsedBetween`). Only the

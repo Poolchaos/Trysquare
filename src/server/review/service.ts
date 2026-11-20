@@ -30,8 +30,10 @@ import type { EngineEvent } from "@/lib/engine/events";
 import { SHUTDOWN } from "@/lib/domain/shutdown";
 import {
   engineModeSchema,
+  killKindSchema,
   reviewEffortSchema,
   reviewProfileSchema,
+  type KillKind,
   type ReviewStage,
   type RulesetTier,
 } from "@/lib/domain/enums";
@@ -511,14 +513,18 @@ export class VerifyAgainUnavailableError extends Error {
 /**
  * Asks verification about one open question again, in a fresh session, and
  * holds the answer to S5's checks (proof-and-steps plan, WP-D2). Proven, it
- * can be confirmed; refuted, it is killed; unsettled, it stays open with the
- * newer note. A paid request, so never replayed from the last answer.
+ * can be confirmed; unsettled, it stays open with the newer note. A paid
+ * request, so never replayed from the last answer.
+ *
+ * It is killed two ways, and `killedBy` says which: the verifier refuting
+ * it, with a reason and no proof, or the program's check failing a proof
+ * the verifier gave. The page words them apart.
  */
 export async function verifyAgain(
   db: Db,
   findingId: string,
   options: Pick<PrepareAndRunOptions, "dataDir" | "claudePath" | "signal"> = {},
-): Promise<{ status: string }> {
+): Promise<{ status: string; killedBy: KillKind | null }> {
   const dataDir = options.dataDir ?? resolveDataDir(process.env, homedir());
   const { finding, review, worktreeRoot } = assertCanVerifyAgain(db, findingId, dataDir);
 
@@ -601,15 +607,19 @@ export async function verifyAgain(
       });
       await applySecondVerdicts(context, held, parseVerdicts(second.output, 1), verifierModel);
     }
-    const after = findingStatusOf(requireFinding(db, finding.id));
+    const settled = requireFinding(db, finding.id);
+    const after = findingStatusOf(settled);
+    const killedBy = killKindSchema.nullable().parse(settled.killedBy);
     appendRunNote(db, review.id, {
       kind: "note",
       message:
         `Verified again: ${finding.filePath}:${finding.lineStart} ${finding.issue} is now ` +
         `${after.replace(/_/g, " ")}` +
-        (tally.killedByQuoteCheck > 0 ? ", its proof not matching the code." : "."),
+        // A proof of true code off the cited lines fails it too, so not
+        // "does not match the code".
+        (killedBy === "quote_check" ? ", its proof failing the quotation check." : "."),
     });
-    return { status: after };
+    return { status: after, killedBy };
   } catch (error) {
     appendRunNote(db, review.id, {
       kind: "note",
