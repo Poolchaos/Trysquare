@@ -77,6 +77,15 @@ recommendations while I'm away"): CG-1, CG-3, CG-5 and CG-6 are taken at
 the recommendation written below. CG-2 and CG-4 are open: each needs the
 maintainer himself.
 
+State on 2026-11-20, by D-251 (the maintainer: "you can drive every
+decision"): CG-5 is answered by him, and wider than the recommendation
+below. In scope are rules added, edited and removed in the app, ruleset
+templates shipped with the app, and a finished review's report emailed to
+a person; each is planned in its own plan file before it is built (CP-12).
+CG-2 and CG-4 are the session's to take, at the recommendation written
+below, each with its own decision entry. A gate's verdict and a run that
+spends his usage stay his until he says otherwise.
+
 - **CG-1: spend for CP-7.** One run of each fixture on Opus 5.5 with Fable
   5.1 second. The last such runs cost $2.7884 and $2.4593 cost-equivalent on
   the subscription (D-202, D-200). Go, or judge on the decision log's

@@ -6321,3 +6321,32 @@ verified evidence, in writing, here.
   line under it, two names for one figure; and wording by the sign-in's
   billing, which a figure summed over reviews run on different sign-ins
   cannot follow.
+- 2026-11-20 D-251 DECIDED by the maintainer: the AI session drives the
+  decisions on this app. His words: "I want you to drive the decisions on
+  this app. I want an app that I can add a project, say which branch into
+  which branch, use or add config rules, and best quality and world class
+  templates, and it should do it's thing and email a user their response.
+  we expect best quality, and no missing findings. shouldn't waste tokens
+  unnecessarily though." and "other than that, you can drive every
+  decision". What it changes:
+  1. A question that would have waited on him is decided by the session at
+     its written recommendation, logged here and told to him, and he
+     reverses what he does not want. That covers the questions open in
+     `plans/idea-inbox.md` and the handovers, D-250, and CG-2 to CG-6 of
+     `plans/COMPLETION-PLAN.md`.
+  2. CG-5 is answered. In scope: rules added, edited and removed in the
+     app; ruleset templates shipped with the app, good enough to start a
+     review from; and a finished review's report emailed to a person. The
+     order when two aims pull apart: no finding missed first, then no token
+     spent that buys nothing.
+  3. Not changed, by the session's reading and not his words: a gate's
+     verdict stays his (`CLAUDE.md` section 1, the human is the
+     done-gatekeeper), and so does starting a run that spends his usage
+     (CG-1, CP-7). He was asked the same day whether he wants those driven
+     too.
+  4. Emailing a report sends reviewed code off the machine and needs a
+     credential kept (the inbox, 2026-07-30), which the README and
+     SECURITY.md say never happens. Those lines change with the feature,
+     which is planned in a plan file of its own before it is built. Open
+     for that plan: whether the email goes once a person has completed the
+     review, or as the run ends, for a review started to run unattended.

@@ -13,6 +13,13 @@ from 2026-11-03.
 
 ## Status
 
+- 2026-11-20: the maintainer handed the app's decisions to the AI session
+  and said what the app is for (D-251): add a project, say which branch
+  into which, use or add rules, start from templates worth starting from,
+  and have the report emailed to a person; no finding missed, and no token
+  spent that buys nothing. Of those, three are not built: rules edited in
+  the app, ruleset templates shipped with it, and the email (Not built,
+  below). A gate's verdict and a paid run stay his.
 - 2026-11-20: before a seventeenth grade of the records, a sweep for the
   kinds the sixteenth found, which were faults and not lines. A review's
   duration ran to the moment Complete review was pressed, so the wait for a
@@ -474,7 +481,12 @@ own now (D-75, D-81).
 - More than one dependency per review: the model and the screens take a
   single linked project.
 - More than one ruleset per review, so tiers compose: designed, not built.
-- Emailing a report (`plans/idea-inbox.md`).
+- Emailing a report: in scope since D-251, not planned yet (what it means
+  for the README's and SECURITY.md's lines: `plans/idea-inbox.md`,
+  2026-07-30).
+- Rules added, edited or removed in the app, and ruleset templates shipped
+  with it: in scope since D-251, not planned yet. A rule can be switched
+  off and its severity changed; its text comes only from an imported file.
 - A viewer for a failed stage's transcript: the review page names the file
   and renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
 - The live output of git while a project clones: a failure's stderr is
