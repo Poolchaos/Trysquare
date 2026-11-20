@@ -200,8 +200,9 @@ pulled deliberately.
   refuted, which nobody can confirm (`findingTallies`,
   `server/db/repositories/findings.ts`), and the dashboard's Recent the
   same. Seen grading `last-run-list-light.png`. Not fixed: should the
-  lists count what the queue holds? DECIDED 2026-11-20 (D-253): yes, to
-  build.
+  lists count what the queue holds? DECIDED 2026-11-20 (D-253): yes.
+  BUILT the same day: the reviews list, Recent and Projects count what a
+  person can decide, the killed apart.
 - 2026-11-20: at 390px the dashboard's Recent table breaks the status
   badge over three lines ("AWAITING / YOUR / DECISION"), in a table that
   scrolls sideways anyway. Seen grading `last-run-recent-phone.png`.

@@ -171,6 +171,18 @@ describe("which rules earn their keep", () => {
 });
 
 describe("the recent list", () => {
+  it("counts a review's findings as its queue holds them, the killed left out (D-253)", () => {
+    // Recent said "0 of 10" of a review whose page said "0 of 9 decided":
+    // the ten counted a finding verification refuted, which nobody can
+    // confirm.
+    markVerified(db, candidate().id, evidence);
+    markKilled(db, candidate({ issue: "Refuted" }).id, "Guarded upstream.", "verification");
+
+    const board = readScoreboard(db);
+    expect(board.recent[0]).toMatchObject({ confirmed: 0, total: 1 });
+    expect(board.projects[0]?.latest).toMatchObject({ confirmed: 0, total: 1 });
+  });
+
   it("carries each review's own tally and leaves duration null until it ends", () => {
     markVerified(db, candidate().id, evidence);
 

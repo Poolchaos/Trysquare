@@ -368,11 +368,13 @@ export function listUnresolvedCandidates(db: Db, reviewId: string): Finding[] {
  * that confirmed twelve criticals looked exactly like a cancelled one. These
  * are the numbers that tell them apart.
  *
- * Killed findings are counted here rather than hidden. They are the engine's
- * own error rate, and a list that quietly drops them reports a cleaner
- * history than actually happened.
+ * Killed findings are counted apart, not hidden, and are not in the total:
+ * the total is what the review's queue holds, so "0 of 9 confirmed" on the
+ * list matches "0 of 9 decided" on its page, where a total with the killed
+ * in it said ten, which nobody could reach (D-253).
  */
 export interface FindingTally {
+  /** What a person can decide: everything raised but the killed. */
   total: number;
   confirmed: number;
   dismissed: number;
@@ -393,10 +395,10 @@ export function findingTallies(db: Db): Map<string, FindingTally> {
   const tallies = new Map<string, FindingTally>();
   for (const row of rows) {
     const tally = tallies.get(row.reviewId) ?? { total: 0, confirmed: 0, dismissed: 0, killed: 0 };
-    tally.total += row.count;
+    if (row.status === "killed") tally.killed += row.count;
+    else tally.total += row.count;
     if (row.status === "confirmed") tally.confirmed += row.count;
     if (row.status === "dismissed") tally.dismissed += row.count;
-    if (row.status === "killed") tally.killed += row.count;
     tallies.set(row.reviewId, tally);
   }
 

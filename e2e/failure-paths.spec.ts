@@ -2022,6 +2022,14 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
     .getByRole("listitem")
     .filter({ has: page.locator(`a[href="/reviews/${id}"]`) });
   await expect(inList.getByText(`last run ${took}`, { exact: true })).toBeVisible();
+  // Counted as the queue holds them, the killed out of the total (D-253): this
+  // review read "0 of 10 confirmed" here beside "0 of 9 decided" on its page.
+  const detail = (await (await page.request.get(`/api/reviews/${id}`)).json()) as {
+    findings: { status: string }[];
+  };
+  const queued = detail.findings.filter((finding) => finding.status !== "killed").length;
+  expect(queued).toBeLessThan(detail.findings.length);
+  await expect(inList.getByText(`0 of ${queued} confirmed`, { exact: true })).toBeVisible();
   await shootAll(page, inList, "last-run-list");
 
   await page.goto("/");

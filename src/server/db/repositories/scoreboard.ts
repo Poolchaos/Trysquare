@@ -129,18 +129,14 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     .from(findings)
     .all();
 
-  const byReview = new Map<
-    string,
-    { confirmed: number; decided: number; queued: number; total: number }
-  >();
+  const byReview = new Map<string, { confirmed: number; decided: number; queued: number }>();
   const byRule = new Map<string, RuleYield>();
   let confirmed = 0;
   let dismissed = 0;
   let discarded = 0;
 
   for (const row of findingRows) {
-    const tally = byReview.get(row.reviewId) ?? { confirmed: 0, decided: 0, queued: 0, total: 0 };
-    tally.total += 1;
+    const tally = byReview.get(row.reviewId) ?? { confirmed: 0, decided: 0, queued: 0 };
     if (row.status === "confirmed") tally.confirmed += 1;
     if (row.status === "confirmed" || row.status === "dismissed") tally.decided += 1;
     // Everything the queue will show. A killed finding is not in it.
@@ -176,8 +172,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     .from(checkFindings)
     .all();
   for (const row of checkRows) {
-    const tally = byReview.get(row.reviewId) ?? { confirmed: 0, decided: 0, queued: 0, total: 0 };
-    tally.total += 1;
+    const tally = byReview.get(row.reviewId) ?? { confirmed: 0, decided: 0, queued: 0 };
     tally.queued += 1;
     if (row.status === "confirmed") tally.confirmed += 1;
     if (row.status === "confirmed" || row.status === "dismissed") tally.decided += 1;
@@ -212,7 +207,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
       model: review.model,
       status: review.status,
       confirmed: byReview.get(review.id)?.confirmed ?? 0,
-      total: byReview.get(review.id)?.total ?? 0,
+      total: byReview.get(review.id)?.queued ?? 0,
       costUsd: review.cost,
       // The run's time: to when it stopped, not to when a person completed
       // the review, which can be days later (D-248).
@@ -261,7 +256,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
               id: latest.id,
               status: latest.status,
               confirmed: byReview.get(latest.id)?.confirmed ?? 0,
-              total: byReview.get(latest.id)?.total ?? 0,
+              total: byReview.get(latest.id)?.queued ?? 0,
               at: latest.createdAt,
             }
           : null,

@@ -239,16 +239,18 @@ describe("what a review yielded, across the whole list", () => {
     dismissFinding(db, dropped.id, "Handled upstream.");
     markKilled(db, invented.id, "Quoted code that was not there.", "quote_check");
 
+    // The total is what the queue holds, as the review's page counts it, so
+    // the list never says "of 3" where the page says "of 2" (D-253).
     const tally = findingTallies(db).get(reviewId);
-    expect(tally).toEqual({ total: 3, confirmed: 1, dismissed: 1, killed: 1 });
+    expect(tally).toEqual({ total: 2, confirmed: 1, dismissed: 1, killed: 1 });
   });
 
-  it("keeps killed findings in the count rather than hiding the engine's misses", () => {
-    // They are the measurement of how often the engine invents things, and a
-    // history that drops them reads cleaner than the one that happened.
+  it("counts killed findings apart, out of the total a person can decide (D-253)", () => {
+    // A killed finding is not in the queue, so a total that counts it can
+    // never be reached. It is still counted, as killed.
     markKilled(db, candidate().id, "False positive.", "verification");
     expect(findingTallies(db).get(reviewId)?.killed).toBe(1);
-    expect(findingTallies(db).get(reviewId)?.total).toBe(1);
+    expect(findingTallies(db).get(reviewId)?.total).toBe(0);
   });
 
   it("reports nothing for a review that raised nothing", () => {
@@ -277,7 +279,7 @@ describe("what a review yielded, across the whole list", () => {
     confirmCheckFinding(db, failed.id);
     markKilled(db, candidate().id, "False positive.", "verification");
     expect(findingTallies(db).get(reviewId)).toEqual({
-      total: 2,
+      total: 1,
       confirmed: 1,
       dismissed: 0,
       killed: 1,
