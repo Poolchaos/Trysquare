@@ -6266,3 +6266,31 @@ verified evidence, in writing, here.
   for now: counting from the Read calls the engine sees in the session,
   which an interactive review's terminal does not show it and a replayed
   answer does not repeat; in the inbox.
+- 2026-11-20 D-248 A review's duration is its run's: from `startedAt` to a
+  new `runEndedAt`, stamped when the run stops, whatever stops it. D-77 set
+  the duration to time the run and not the calendar, and stopped the clock
+  at `completedAt`, which is stamped as Complete review is pressed: a run
+  of 4m 30s completed two days later read "Took: 2884m 30s" in its report,
+  by a test on the old code, and the same on the review's page, the reviews
+  list and the dashboard. Found sweeping the times on screens before the
+  seventeenth grade of the records. `transitionReview` stamps `runEndedAt`
+  on any move out of running or verifying, clears it on a move into
+  running, and never stamps it again, so cancelling a paused review does
+  not lengthen its run. The exception is a run a server death ended, found
+  at the next start (`markOrphanedReviewsInterrupted`): nobody saw it
+  stop, so it gets no end and shows no duration. One function,
+  `lib/review/run-time.ts`, answers for every screen, and says nothing for
+  a paused or interrupted review, which will run again. A waiting review
+  now shows what its run took, where it showed a dash until completed. The
+  dashboard dates a wait from `runEndedAt` too, in place of the last stage
+  row of 2026-11-19, which a finding verified again moved; a waiting review
+  with no end recorded says "waiting" and no age. Migration 0018 gives
+  rows from before the column an end where their own rows say one: for a
+  review waiting, complete or failed, the last stage row of its latest
+  run, leaving out a finding verified again. A review cancelled, paused or
+  interrupted before the column gets none: its rows do not say whether the
+  run was still going. Rejected: stamping `completedAt` as the run ends,
+  since "complete, failed or cancelled" is what it is read as elsewhere;
+  and reading the last stage row at display time, which a stage replayed
+  from its stored answer does not write
+  (`server/review/checkpointing-runner.ts`).

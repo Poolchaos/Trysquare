@@ -13,6 +13,17 @@ from 2026-11-03.
 
 ## Status
 
+- 2026-11-20: before a seventeenth grade of the records, a sweep for the
+  kinds the sixteenth found, which were faults and not lines. A review's
+  duration ran to the moment Complete review was pressed, so the wait for a
+  person was in it, on the review's page, the reviews list, the dashboard
+  and the report's "Took": it is the run's now, to a recorded end (D-248),
+  and a wait is dated from that end. The reviews list counted a review's
+  findings without what the project's own checks found, as the dashboard
+  had. Two browser tests staged answers the server cannot give, and their
+  shots' figures disagreed; they are staged as the server answers. The
+  seventeenth grade is still owed. `./verify.sh --e2e` exits 0 with 1537
+  unit tests passing, 8 skipped, and 147 browser tests.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,
@@ -356,7 +367,7 @@ are accepted; anything else is refused by name.
 - `tests/` - unit and integration tests. `e2e/` - the browser journey, the
   failure paths, the theme and screenshot pass with the axe accessibility
   pass, and the shutdown pass.
-  `drizzle/` - eighteen committed migrations.
+  `drizzle/` - nineteen committed migrations.
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and

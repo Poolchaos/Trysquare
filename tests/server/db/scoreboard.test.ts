@@ -21,7 +21,7 @@ import { readScoreboard } from "@/server/db/repositories/scoreboard";
 import { recordAttempt } from "@/server/db/repositories/stage-executions";
 import { transitionReview } from "@/server/db/repositories/reviews";
 import { eq } from "drizzle-orm";
-import { projects } from "@/server/db/schema";
+import { projects, reviews } from "@/server/db/schema";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
 
 let ctx: TestDb;
@@ -211,29 +211,52 @@ describe("what the dashboard widgets need", () => {
     expect(board.awaitingReviews[0]?.fromBranch).toBe("feature/x");
   });
 
-  it("dates a wait from the run's last stage, not from when the review was made", () => {
+  it("dates a wait from when the run ended, not from when the review was made", () => {
     // A waiting review has no completion time, so the wait was counted from
     // its creation: one made on Monday and run on Friday had waited a week.
+    // Then from its last stage row, which a finding verified again moves.
     const second = seedReview(db, seedProject(db, "other").id).id;
+    const unseen = seedReview(db, seedProject(db, "unseen").id).id;
     const ended = { [reviewId]: "2999-01-02T00:00:00.000Z", [second]: "2999-01-01T00:00:00.000Z" };
-    for (const id of [reviewId, second]) {
+    for (const id of [reviewId, second, unseen]) {
       transitionReview(db, id, "running");
-      recordAttempt(db, {
-        reviewId: id,
-        stage: "s5_verification",
-        promptHash: "hash",
-        attempt: 1,
-        status: "succeeded",
-        startedAt: "2999-01-01T00:00:00.000Z",
-        endedAt: ended[id]!,
-      });
       transitionReview(db, id, "verifying");
       transitionReview(db, id, "awaiting_confirmation");
+      db.update(reviews)
+        .set({ runEndedAt: ended[id] ?? null })
+        .where(eq(reviews.id, id))
+        .run();
     }
+    recordAttempt(db, {
+      reviewId: second,
+      stage: "s5_verification",
+      promptHash: "hash",
+      attempt: 1,
+      status: "succeeded",
+      startedAt: "2999-01-03T00:00:00.000Z",
+      endedAt: "2999-01-03T00:00:00.000Z",
+      findingId: "verified-again",
+    });
 
     const waiting = readScoreboard(db).awaitingReviews;
-    expect(waiting.map((row) => row.id)).toEqual([second, reviewId]);
-    expect(waiting.map((row) => row.since)).toEqual([ended[second], ended[reviewId]]);
+    // One whose run's end nobody recorded says no time, and comes last.
+    expect(waiting.map((row) => row.id)).toEqual([second, reviewId, unseen]);
+    expect(waiting.map((row) => row.since)).toEqual([ended[second], ended[reviewId], null]);
+  });
+
+  it("times a review by its run, leaving out the wait for a person", () => {
+    waitOnAPerson();
+    transitionReview(db, reviewId, "complete");
+    db.update(reviews)
+      .set({
+        startedAt: "2026-08-18T10:00:00.000Z",
+        runEndedAt: "2026-08-18T10:10:00.000Z",
+        completedAt: "2026-08-20T10:10:00.000Z",
+      })
+      .where(eq(reviews.id, reviewId))
+      .run();
+
+    expect(readScoreboard(db).recent[0]?.durationMs).toBe(600_000);
   });
 
   it("counts a dismissal as a decision, and leaves killed findings out of the queue", () => {

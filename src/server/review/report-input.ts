@@ -229,6 +229,6 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
       costEquivalentUsd: review.costEquivalentUsd,
     },
     startedAt: review.startedAt,
-    completedAt: review.completedAt,
+    runEndedAt: review.runEndedAt,
   };
 }

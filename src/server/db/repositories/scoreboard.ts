@@ -17,8 +17,9 @@
  */
 
 import { desc, eq } from "drizzle-orm";
+import { runTimeMs } from "@/lib/review/run-time";
 import type { Db } from "../client";
-import { checkFindings, findings, projects, reviews, stageExecutions } from "../schema";
+import { checkFindings, findings, projects, reviews } from "../schema";
 
 export interface ScoreboardRow {
   id: string;
@@ -59,8 +60,11 @@ export interface AwaitingReview {
    * that counts them can never be reached.
    */
   total: number;
-  /** When the run's last stage ended, so when the wait began. */
-  since: string;
+  /**
+   * When the run ended, so when the wait began. Null on a review from before
+   * that was recorded whose rows do not say (D-248).
+   */
+  since: string | null;
 }
 
 export interface ProjectOutcome {
@@ -102,7 +106,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
       status: reviews.status,
       cost: reviews.costEquivalentUsd,
       startedAt: reviews.startedAt,
-      completedAt: reviews.completedAt,
+      runEndedAt: reviews.runEndedAt,
       createdAt: reviews.createdAt,
     })
     .from(reviews)
@@ -176,19 +180,6 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     byReview.set(row.reviewId, tally);
   }
 
-  // When each review's last stage ended. A waiting review has no completion
-  // time: it is cleared as a run starts and set only when one is complete,
-  // failed or cancelled. ISO times, so the greatest string is the latest.
-  const lastStageEnded = new Map<string, string>();
-  for (const row of db
-    .select({ reviewId: stageExecutions.reviewId, endedAt: stageExecutions.endedAt })
-    .from(stageExecutions)
-    .all()) {
-    if (row.endedAt !== null && row.endedAt > (lastStageEnded.get(row.reviewId) ?? "")) {
-      lastStageEnded.set(row.reviewId, row.endedAt);
-    }
-  }
-
   const projectRows = db
     .select({ id: projects.id, name: projects.name })
     .from(projects)
@@ -218,10 +209,9 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
       confirmed: byReview.get(review.id)?.confirmed ?? 0,
       total: byReview.get(review.id)?.total ?? 0,
       costUsd: review.cost,
-      durationMs:
-        review.startedAt && review.completedAt
-          ? new Date(review.completedAt).getTime() - new Date(review.startedAt).getTime()
-          : null,
+      // The run's time: to when it stopped, not to when a person completed
+      // the review, which can be days later (D-248).
+      durationMs: runTimeMs(review),
       createdAt: review.createdAt,
     })),
     // Worst yield first: a rule that fires often and is confirmed rarely is
@@ -240,12 +230,14 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
         intoBranch: review.intoBranch,
         decided: byReview.get(review.id)?.decided ?? 0,
         total: byReview.get(review.id)?.queued ?? 0,
-        // When its last stage ended, which is when the waiting began, to
-        // the second or two the audit takes. One with no stage row has only
-        // its creation to go on.
-        since: lastStageEnded.get(review.id) ?? review.createdAt,
+        since: review.runEndedAt,
       }))
-      .sort((a, b) => a.since.localeCompare(b.since)),
+      // ISO times, so the least string is the oldest. One with no time last.
+      .sort((a, b) =>
+        a.since === null || b.since === null
+          ? Number(a.since === null) - Number(b.since === null)
+          : a.since.localeCompare(b.since),
+      ),
     // Every project, including those with no review yet: a project that has
     // never been reviewed is the most useful thing this widget can point at.
     projects: projectRows.map((project) => {

@@ -130,7 +130,8 @@ export interface ReportInput {
     costEquivalentUsd: number;
   };
   startedAt: string | null;
-  completedAt: string | null;
+  /** When the run stopped: the wait for a person after it is not the run's (D-248). */
+  runEndedAt: string | null;
 }
 
 /**
@@ -449,15 +450,15 @@ function footer(input: ReportInput): string[] {
     `- Cost equivalent: ${input.usage.costEquivalentUsd.toFixed(4)} USD`,
   );
 
-  const duration = elapsed(input.startedAt, input.completedAt);
+  const duration = elapsed(input.startedAt, input.runEndedAt);
   if (duration) rows.push(`- Took: ${duration}`);
 
   return rows;
 }
 
-function elapsed(startedAt: string | null, completedAt: string | null): string | null {
-  if (!startedAt || !completedAt) return null;
-  const seconds = Math.round((Date.parse(completedAt) - Date.parse(startedAt)) / 1000);
+function elapsed(startedAt: string | null, endedAt: string | null): string | null {
+  if (!startedAt || !endedAt) return null;
+  const seconds = Math.round((Date.parse(endedAt) - Date.parse(startedAt)) / 1000);
   if (!Number.isFinite(seconds) || seconds < 0) return null;
   if (seconds < 60) return `${seconds}s`;
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;

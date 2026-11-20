@@ -441,7 +441,16 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Coverage" })).toBeHidden();
   });
 
+  // What the run took, as said while the review waits; read again once it is
+  // completed, many seconds of deciding later.
+  let ranFor = "";
   await test.step("the finished review is summed up in its five steps", async () => {
+    // The run has stopped, so its time is said now, before any decision. It
+    // was said only once the review was completed, and counted to then (D-248).
+    const took = page.getByText(/^took \d/);
+    await expect(took).toBeVisible();
+    ranFor = (await took.textContent()) ?? "";
+
     // WP-G: how the findings came to be proven, then what each step came to
     // and spent, refuted told apart from discarded.
     const summary = page.getByRole("region", { name: "How the review went" });
@@ -920,6 +929,8 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(
       page.getByRole("region", { name: "How the review went" }).getByRole("listitem").nth(4),
     ).toContainText("Coverage audited and every finding decided. The report is below.");
+    // The run's time, not the time since: the deciding above is not in it.
+    await expect(page.getByText(/^took \d/)).toHaveText(ranFor);
     await expect(page.getByText(/its checkout could not be removed: EBUSY/)).toBeVisible();
     await stopAdding();
 

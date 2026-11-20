@@ -213,7 +213,8 @@ positive); the same-name suggestion as a pure helper test; creation with
 confirmed findings (all of them, NITPICKs included, D-11), dismissed
 findings with reasons, `coverageReport` totals, ledger chain-files-read
 count, snapshot ruleset name and version, usage including cached tokens,
-wall time from `startedAt` to `completedAt`.
+wall time from `startedAt` to `completedAt` (to `runEndedAt` since D-248:
+the wait for a person was in it).
 
 Format is the app's fixed rendering of the example protocol's "Finding
 Format" and "Review Output" sections: summary line; a completeness statement

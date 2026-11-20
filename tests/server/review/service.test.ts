@@ -466,6 +466,25 @@ describe("running a review to the point a human looks at it", () => {
     expect(buildReportInput(db, reviewId).chainFilesRead).toBe(2);
   }, 120_000);
 
+  it("times the report by the run, not by when the review was completed", async () => {
+    // "Took" ran to the moment Complete review was pressed, so a review
+    // decided two days after it ran said it took two days (D-248).
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    await run(reviewId);
+
+    db.update(reviews)
+      .set({
+        startedAt: "2026-08-18T10:00:00.000Z",
+        runEndedAt: "2026-08-18T10:04:30.000Z",
+        completedAt: "2026-08-20T10:04:30.000Z",
+      })
+      .where(eq(reviews.id, reviewId))
+      .run();
+
+    expect(renderReport(buildReportInput(db, reviewId))).toContain("- Took: 4m 30s");
+  }, 120_000);
+
   it("finds the seeded defects, at the file and line the manifest states", async () => {
     const reviewId = seedReview();
     writeIdealAnswers();

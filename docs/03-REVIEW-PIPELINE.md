@@ -333,7 +333,8 @@ and clipboard, with a single-file HTML written beside it. The markdown's
 footer records: the ruleset's name and version, the model with its effort
 and profile, the commit reviewed and its merge base, a linked project's
 branch and commit, token usage, the cost equivalent, and how long the
-review took. The HTML's footer and the page's leave out the tokens, the
+run took, to when it stopped and not to when the review was completed
+(D-248). The HTML's footer and the page's leave out the tokens, the
 duration and the linked project. No em dashes anywhere in
 generated output (enforced by a lint on the renderer and a unit test).
 

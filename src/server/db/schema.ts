@@ -216,6 +216,13 @@ export const reviews = sqliteTable(
     mergedDetectedAt: text("merged_detected_at"),
     createdAt: text("created_at").notNull(),
     startedAt: text("started_at"),
+    /**
+     * When the run stopped, whatever stopped it: the end of the clock that
+     * `startedAt` starts (D-248). Null while it runs, and for a run a server
+     * death ended, whose time nobody recorded. `completedAt` is later by
+     * however long the review waited on a person.
+     */
+    runEndedAt: text("run_ended_at"),
     completedAt: text("completed_at"),
   },
   (table) => [

@@ -180,7 +180,8 @@ Ruleset-scoped non-rule content composed into every review prompt.
 | costEquivalentUsd                   | real         | informational, from CLI results            |
 | runNotes                            | text JSON    | dated notes on how the run was carried out, append-only |
 | mergedDetectedAt                    | text null    | set when into-branch contains fromCommit   |
-| createdAt, startedAt, completedAt   | text         |                                            |
+| createdAt, startedAt, completedAt   | text         | startedAt is stamped on every entry into running (D-77); completedAt when the review is complete, failed or cancelled |
+| runEndedAt                          | text null    | when the run stopped, whatever stopped it; startedAt to here is the duration every screen and the report give (D-248). Null while it runs and where nobody saw it stop |
 
 Review status machine:
 `draft -> running -> verifying -> awaiting_confirmation -> complete`,

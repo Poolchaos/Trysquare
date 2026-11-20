@@ -52,7 +52,8 @@ interface AwaitingRow {
   intoBranch: string;
   decided: number;
   total: number;
-  since: string;
+  /** When its run ended; null where no row says (D-248). */
+  since: string | null;
 }
 
 interface ProjectRow {
@@ -447,7 +448,7 @@ export default function HomePage() {
                         <span className="text-dense tabular-nums">
                           {row.total > 0 ? `${row.decided} of ${row.total} decided` : "no findings"}
                           <span className="ml-3 text-[var(--color-ink-muted)]">
-                            waiting {ago(row.since, now)}
+                            {row.since === null ? "waiting" : `waiting ${ago(row.since, now)}`}
                           </span>
                         </span>
                       </Link>

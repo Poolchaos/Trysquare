@@ -55,7 +55,7 @@ const BASE: ReportInput = {
     costEquivalentUsd: 0.021,
   },
   startedAt: "2026-07-31T10:00:00.000Z",
-  completedAt: "2026-07-31T10:04:30.000Z",
+  runEndedAt: "2026-07-31T10:04:30.000Z",
 };
 
 describe("what the report says was found", () => {
@@ -251,7 +251,7 @@ describe("the footer that makes a report reproducible", () => {
 
   it("reports how long it took, and omits it when it cannot be known", () => {
     expect(renderReport(BASE)).toContain("Took: 4m 30s");
-    expect(renderReport({ ...BASE, completedAt: null })).not.toContain("Took:");
+    expect(renderReport({ ...BASE, runEndedAt: null })).not.toContain("Took:");
   });
 });
 

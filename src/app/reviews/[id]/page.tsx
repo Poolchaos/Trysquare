@@ -68,6 +68,7 @@ import {
 } from "@/lib/review/steps";
 import { emptyFindings } from "@/lib/review/empty-findings";
 import { createEndingNotice } from "@/lib/review/ending-notice";
+import { runTimeMs } from "@/lib/review/run-time";
 
 /**
  * The whole pipeline, not only the stages that call a model.
@@ -174,6 +175,8 @@ interface Snapshot {
     usageCacheCreationTokens: number;
     costEquivalentUsd: number;
     startedAt: string | null;
+    /** When the run stopped; the wait for a decision after it is not the run's. */
+    runEndedAt: string | null;
     completedAt: string | null;
   };
   stages: {
@@ -261,7 +264,7 @@ interface ReportData {
   profile: string;
   usage: { costEquivalentUsd: number };
   startedAt: string | null;
-  completedAt: string | null;
+  runEndedAt: string | null;
 }
 
 /**
@@ -358,11 +361,6 @@ function elapsedBetween(fromMs: number, toMs: number): string {
 
 function elapsedSince(startedAt: string, now: number): string {
   return elapsedBetween(new Date(startedAt).getTime(), now);
-}
-
-/** A finished run's wall clock, from the two columns that always held it. */
-function totalRunTime(startedAt: string, completedAt: string): string {
-  return elapsedBetween(new Date(startedAt).getTime(), new Date(completedAt).getTime());
 }
 
 function formatDuration(startedAt: string, endedAt: string | null): string | null {
@@ -999,6 +997,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   const undecidedChecks = checkRows.filter(isUndecidedCheck).length;
   const toDecide = queueRows.length + checkRows.length;
   const decided = decidedRows + checkRows.length - undecidedChecks;
+  const ranMs = runTimeMs(review);
+  const ranFor = ranMs === null ? null : elapsedBetween(0, ranMs);
   const done = new Set(
     snapshot.stages.filter((row) => row.status === "succeeded").map((r) => r.stage),
   );
@@ -1117,11 +1117,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {review.startedAt && snapshot.running ? (
               <span className="tabular-nums">{elapsedSince(review.startedAt, now)} elapsed</span>
             ) : null}
-            {review.startedAt && review.completedAt ? (
-              <span className="tabular-nums">
-                took {totalRunTime(review.startedAt, review.completedAt)}
-              </span>
-            ) : null}
+            {ranFor ? <span className="tabular-nums">took {ranFor}</span> : null}
           </span>
         }
         actions={
@@ -1433,9 +1429,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 value={
                   snapshot.running && review.startedAt
                     ? elapsedSince(review.startedAt, now)
-                    : review.startedAt && review.completedAt
-                      ? totalRunTime(review.startedAt, review.completedAt)
-                      : "-"
+                    : (ranFor ?? "-")
                 }
               />
             </div>

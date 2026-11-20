@@ -106,6 +106,7 @@ export function createReview(db: Db, input: CreateReviewInput): Review {
     mergedDetectedAt: null,
     createdAt: now,
     startedAt: null,
+    runEndedAt: null,
     completedAt: null,
   };
   db.insert(reviews).values(row).run();
@@ -132,6 +133,11 @@ export interface TransitionOptions {
   pausedReason?: string | null;
   /** Unix seconds the usage limit clears, when the CLI said. */
   pausedResetsAt?: number | null;
+  /**
+   * The run stopped at a time nobody recorded: a server death, found at the
+   * next start. Its end stays empty rather than taking the time it was found.
+   */
+  runEndUnseen?: boolean;
 }
 
 /**
@@ -175,6 +181,15 @@ export function transitionReview(
   // duration describe a run that ended and then kept going.
   if (to === "running") patch.completedAt = null;
   if (to === "complete" || to === "failed" || to === "cancelled") patch.completedAt = now;
+
+  // The run's clock stops when the run does, whatever stopped it, and not
+  // again: a review decided two days after its run ended did not take two
+  // days (D-248). `completedAt` is when the review ended, which is later by
+  // however long it waited on a person.
+  const wasRunning = (ACTIVE_REVIEW_STATUSES as readonly string[]).includes(from);
+  const stillRunning = (ACTIVE_REVIEW_STATUSES as readonly string[]).includes(to);
+  if (to === "running") patch.runEndedAt = null;
+  else if (wasRunning && !stillRunning && !options.runEndUnseen) patch.runEndedAt = now;
 
   const updated = db
     .update(reviews)
@@ -372,7 +387,7 @@ export function countAwaitingConfirmation(db: Db): number {
 export function markOrphanedReviewsInterrupted(db: Db): number {
   const active = listActiveReviews(db);
   for (const review of active) {
-    transitionReview(db, review.id, "interrupted");
+    transitionReview(db, review.id, "interrupted", { runEndUnseen: true });
   }
   return active.length;
 }

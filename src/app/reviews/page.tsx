@@ -25,6 +25,7 @@ import {
   statusTone,
 } from "@/components/ui";
 import { send } from "@/components/request";
+import { runTimeMs } from "@/lib/review/run-time";
 
 interface Row {
   id: string;
@@ -38,17 +39,15 @@ interface Row {
   model: string;
   costEquivalentUsd: number;
   startedAt: string | null;
-  completedAt: string | null;
+  runEndedAt: string | null;
   findings: { total: number; confirmed: number; dismissed: number; killed: number };
 }
 
-/** A finished review's wall clock, from columns the list already receives. */
-function ranFor(startedAt: string | null, completedAt: string | null): string | null {
-  if (!startedAt || !completedAt) return null;
-  const seconds = Math.max(
-    0,
-    Math.floor((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000),
-  );
+/** A run's wall clock, from columns the list already receives. */
+function ranFor(review: Pick<Row, "status" | "startedAt" | "runEndedAt">): string | null {
+  const ms = runTimeMs(review);
+  if (ms === null) return null;
+  const seconds = Math.floor(ms / 1000);
   if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
   return minutes < 60
@@ -243,9 +242,9 @@ function ReviewsList() {
                         {review.findings.confirmed} of {review.findings.total} confirmed
                       </span>
                     ) : null}
-                    {ranFor(review.startedAt, review.completedAt) ? (
+                    {ranFor(review) ? (
                       <span className="text-xs text-[var(--color-ink-muted)] tabular-nums">
-                        {ranFor(review.startedAt, review.completedAt)}
+                        {ranFor(review)}
                       </span>
                     ) : null}
                     {review.costEquivalentUsd > 0 ? (
