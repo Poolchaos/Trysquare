@@ -22,8 +22,17 @@ from 2026-11-03.
   findings without what the project's own checks found, as the dashboard
   had. Two browser tests staged answers the server cannot give, and their
   shots' figures disagreed; they are staged as the server answers. The
-  seventeenth grade is still owed. `./verify.sh --e2e` exits 0 with 1537
-  unit tests passing, 8 skipped, and 147 browser tests.
+  `./verify.sh --e2e` exits 0 with 1537 unit tests passing, 8 skipped, and
+  147 browser tests. The seventeenth grade, at eedc356, was C on three
+  lines, all on screens and none inherited: the dashboard shows a review
+  paused at the usage limit as a live scan with a running clock; the
+  review page's Stages card calls a stage's requests attempts and gives the
+  last request's time, tokens and cost as the stage's; and the pre-flight's
+  "Estimated tokens" is one prompt's size, not the review's. Twenty-one
+  immaterial lines came with them. All are logged as AE1 to AE24 in the
+  audit file and not yet checked against the code or corrected, bar two
+  stale lines of the records; that is the next work, and an eighteenth
+  grade after it.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,
@@ -321,7 +330,7 @@ are accepted; anything else is refused by name.
   `settings` (the CLI path, the emails that count as the person's); and
   paths, ids and matching an error by the
   name its class sets.
-- `src/server/db/` - schema (16 tables), client, migrations 0000 to 0017, and
+- `src/server/db/` - schema (16 tables), client, migrations 0000 to 0018, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings, stage executions, the scoreboard, a project's checks and what
   they found.

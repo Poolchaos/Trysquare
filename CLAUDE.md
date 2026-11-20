@@ -254,5 +254,9 @@ template: `docs/SESSION-HANDOVER.md`.
 - **Then say so, as the last lines of the reply, in these words:** "Handover
   needed. Run /clear, then start the new session with: Read
   .claude/handover/HANDOVER.md and continue." Nothing is started after them.
-- **A session that ends below the limit writes the handover too**, when its
-  work is finished or it is blocked, and says that no /clear is needed yet.
+- **A session that ends below the limit hands over the same way**, when its
+  work is finished or it is blocked: the handover is written then, and the
+  same last lines are said.
+- **The handover is written only when the session is ready to hand over**,
+  in the turn that ends it. Never ahead of time, and never without those
+  last lines (the maintainer, 2026-11-20).

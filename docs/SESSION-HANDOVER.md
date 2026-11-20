@@ -47,8 +47,14 @@ is not built (D-230).
    /clear. On 2026-11-17 a session stopped at 423,523 on this ground; the
    change it left read 89,343 before and 188,187 after in the next.
 3. **The work asked for is finished, or the session is blocked.** Write the
-   handover, and say that no /clear is needed yet.
+   handover, and tell the maintainer to run /clear.
 4. **The maintainer asks for one.**
+
+In every case it is written in the turn that ends the session, and that
+reply tells the maintainer to run /clear and how to start the next one. A
+session that will carry on, or that only expects to hand over later, writes
+none: one written early is rewritten, and that is wasted tokens (the
+maintainer, 2026-11-20).
 
 ## The procedure
 
@@ -73,12 +79,9 @@ In order, and before the reply that ends the session:
    line in it is something this session checked. What it could not check is
    said as not checked.
 6. **Measure again** and put the reading in the handover.
-7. **Say it**, as the last lines of the reply:
-   - at the limit, or with a next change that will not fit: "Handover
-     needed. Run /clear, then start the new session with: Read
-     .claude/handover/HANDOVER.md and continue."
-   - otherwise: the reading, that the handover is written, and that no
-     /clear is needed yet.
+7. **Say it**, as the last lines of the reply, whatever the reason for the
+   handover: "Handover needed. Run /clear, then start the new session with:
+   Read .claude/handover/HANDOVER.md and continue."
 
 Nothing is started after those lines.
 

@@ -173,6 +173,11 @@ pulled deliberately.
 - 2026-11-19: the dashboard's Needs you says "waiting 2m ago" and "waiting
   just now" (`src/app/page.tsx`, seen in `light-dashboard.png`); "waiting
   2m" would read right. A browser test holds the present words.
+- 2026-11-20: only the Windows job failed in CI run 44684645272 at eedc356
+  (Ubuntu and macOS passed): `tests/server/projectrun/run.test.ts`, "is
+  stopped at its time limit, with everything it started", "expected true to
+  be false". The change it ran on does not touch that test or what it
+  tests. Recorded and left (D-246); cause not looked at.
 - 2026-11-20: a run of under a second reads "took 0s", and 0s in the
   Duration tile and the lists, where a step of the same length says "under
   a second" (`src/app/reviews/[id]/page.tsx`, `elapsedBetween`). Only the
