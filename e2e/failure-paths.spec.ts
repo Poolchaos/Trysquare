@@ -584,6 +584,81 @@ test("a pre-flight for choices since changed is not left on screen", async ({ pa
   await stopHolding();
 });
 
+test("the pre-flight says what its token figure is the size of", async ({ page }) => {
+  // The card said "Estimated tokens" beside "Model requests", and the figure
+  // is the rules and the change as one prompt, where a review sends five
+  // requests or more (the seventeenth grade, AE3).
+  let size = 0;
+  const stopReading = await routeUntilStopped(page, "**/api/reviews/preflight", async (route) => {
+    const response = await route.fetch();
+    size = ((await response.json()) as { estimatedTokens: number }).estimatedTokens;
+    await route.fulfill({ response });
+  });
+  await fillANewReview(page);
+  const examined = page.getByText("What this review will examine", { exact: true }).locator("..");
+  const figure = examined
+    .getByText("Rules and change", { exact: true })
+    .locator("..")
+    .locator("dd");
+  expect(size).toBeGreaterThan(0);
+  await expect(figure).toHaveText(`about ${size.toLocaleString("en-US")} tokens`);
+  await expect(examined.getByText("Estimated tokens")).toHaveCount(0);
+  await stopReading();
+
+  const evidence = join(
+    fileURLToPath(new URL("..", import.meta.url)),
+    "review",
+    `${new Date().toISOString().slice(0, 10)}-e2e`,
+  );
+  mkdirSync(evidence, { recursive: true });
+  const whole = (cell: Locator) =>
+    cell.evaluate((element) => element.scrollWidth <= element.clientWidth);
+  const desktop = page.viewportSize();
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await examined.screenshot({
+      path: join(evidence, `preflight-prompt-size-${scheme}.png`),
+      animations: "disabled",
+    });
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await whole(figure)).toBe(true);
+  await examined.screenshot({
+    path: join(evidence, "preflight-prompt-size-phone.png"),
+    animations: "disabled",
+  });
+
+  // The widest figure the chosen model's window takes whole: past four
+  // fifths of it the work is split (`budgetFor`), which changes the counts
+  // beside it. The route's own answer with that size, so the rest of the
+  // card is as the server gives it.
+  const window = 1_000_000;
+  const largest = Math.floor(window * 0.8) - 1;
+  await expect(
+    page
+      .getByTestId("model-picker")
+      .locator("li")
+      .filter({ has: page.getByRole("radio", { checked: true }) }),
+  ).toContainText(`${window.toLocaleString("en-US")} token window`);
+  const stopStaging = await routeUntilStopped(page, "**/api/reviews/preflight", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as object;
+    await route.fulfill({ response, json: { ...body, estimatedTokens: largest } });
+  });
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(figure).toHaveText("about 799,999 tokens", { timeout: 60_000 });
+  expect(await whole(figure)).toBe(true);
+  const sideways = await sidewaysOverflow(page);
+  expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
+  await examined.screenshot({
+    path: join(evidence, "preflight-prompt-size-largest-phone.png"),
+    animations: "disabled",
+  });
+  if (desktop) await page.setViewportSize(desktop);
+  await stopStaging();
+});
+
 test("a Refresh asks the pre-flight again, so an empty half pushed to since is not still blocked", async ({
   page,
 }) => {

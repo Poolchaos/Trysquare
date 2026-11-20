@@ -1272,8 +1272,8 @@ function NewReview() {
                     <Row label="Model requests" value={String(preflight.requests)} />
                     <Row label="Second verifier" value={paired?.displayName ?? pairedId} />
                     <Row
-                      label="Estimated tokens"
-                      value={preflight.estimatedTokens.toLocaleString("en-US")}
+                      label="Rules and change"
+                      value={`about ${preflight.estimatedTokens.toLocaleString("en-US")} tokens`}
                     />
                     <Row
                       label="Reviewing"

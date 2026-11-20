@@ -204,7 +204,9 @@ Probe press in step 4, a real but tiny paid call.
 5. **Read the pre-flight.** It appears once the branches, ruleset and model
    are chosen, and costs nothing: the commits it would pin (when their refs
    were fetched is on the branch card above), file and hunk counts, sweep hits, changed exported symbols,
-   an estimated token count, and the number of model requests over every
+   about how many tokens the rules and the change come to as one prompt
+   (one prompt's size, not what the review will use: every stage sends a
+   prompt of its own), and the number of model requests over every
    stage: one each, the adversarial stage's rule batches split to fit the
    model's window (an estimate when it splits, since the run orders files by
    the risk its first stage finds), a file too large for the window said, and

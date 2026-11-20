@@ -184,8 +184,10 @@ export function POST(request: Request): Promise<Response> {
       byProfile.map(([name, count]) => [name, count.passes]),
     );
 
-    // The heaviest prompt the run would send, which is what decides whether it
-    // has to be split at all.
+    // Every rule and every changed file as one adversarial prompt: what
+    // full-context sends when it fits the window, and more than any one
+    // request of a profile that batches the rules. Not the review's tokens:
+    // every stage sends a prompt of its own.
     const systemPrompt = composeSystemPrompt({
       directives: ruleset.directives,
       rules: ruleset.rules,

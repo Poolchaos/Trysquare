@@ -35,11 +35,12 @@ from 2026-11-03.
   running after it, from the top bar and the dashboard), and AE16, the
   dashboard's Projects saying "no findings" of a review that had not run
   to any; and the second, the Stages card now giving a stage's requests
-  and their time, tokens and cost summed. `./verify.sh --e2e` exits 0 with
-  1542 unit tests passing, 8 skipped, and 147 browser tests. The other
-  nineteen are the next work, bar
-  two stale lines of the records already put right, and an eighteenth
-  grade after them.
+  and their time, tokens and cost summed; and the third, the pre-flight's
+  row now named for what its figure is the size of, the rules and the
+  change as one prompt. `./verify.sh --e2e` exits 0 with 1542 unit tests
+  passing, 8 skipped, and 148 browser tests. Two stale lines of the
+  records are put right too, so eighteen of the twenty-four are open and
+  are the next work, and an eighteenth grade after them.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,

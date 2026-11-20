@@ -180,7 +180,9 @@ Engine mode and
 a deliberate profile downgrade live in an advanced fold; default headless.
 Primary action: Start review.
 Pre-flight summary: the commit the branch is at, merge base, files/hunks
-counts, sweep hit count, composed prompt token estimate, every
+counts, sweep hit count, the size of the rules and the change as one
+prompt (an estimate in tokens, labelled "Rules and change"; not the
+review's tokens, since every stage sends a prompt of its own), every
 request by stage, and whether the model's window splits the work or a file
 is too large for it on its own; the profile is on the model's row, and a
 deliberate downgrade is said in the advanced fold. A model
