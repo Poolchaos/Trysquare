@@ -1443,6 +1443,91 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
   }
 });
 
+test("a review that stopped short shows what the project's checks found", async ({ page }) => {
+  // The seventeenth grade, AE15: a failing command is recorded before any
+  // stage and the lists count it, and a paused, failed or cancelled
+  // review's page drew none of it and said "No findings". The first model
+  // call here meets a usage limit, after the checks ran; the review is then
+  // cancelled. The count is put back after, as the test above does.
+  const callsBefore = readFileSync(COUNTER_FILE, "utf8");
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = projects.projects.find((project) => project.name === "app")!;
+  const failing = join(E2E_ROOT, "scripts", "failing-tests.cjs");
+  mkdirSync(join(E2E_ROOT, "scripts"), { recursive: true });
+  writeFileSync(failing, 'console.log("2 failing: totals, refunds"); process.exit(1);\n');
+  const checks = (testCommand: string | null) => ({
+    enabled: testCommand !== null,
+    installCommand: null,
+    testCommand,
+    e2eCommand: null,
+    screenshotDir: null,
+    designStandardPath: null,
+  });
+  let reviewId = "";
+  let cancelled = false;
+  try {
+    const on = await page.request.put(`/api/projects/${app.id}/checks`, {
+      data: checks(`"${process.execPath}" "${failing}"`),
+    });
+    expect(on.status()).toBe(200);
+    armLimit();
+    await startAReview(page);
+    reviewId = page.url().split("/").pop()!;
+    await expect(page.getByText("paused limit")).toBeVisible({ timeout: 60_000 });
+
+    const section = page.getByRole("region", { name: "Tests and design" });
+    await expect(section).toContainText("The tests fail on this branch.");
+    await expect(section.getByRole("group", { name: "Where it failed" })).toContainText(
+      "2 failing: totals, refunds",
+    );
+    await expect(section).toContainText(
+      "What the project's own checks found on this branch. You decide it with the code " +
+        "findings once the review has run to its end, and a run that resumes runs the " +
+        "checks again.",
+    );
+    // Read, not decided: nothing here to press.
+    await expect(section.getByRole("button")).toHaveCount(0);
+    const none = page.getByText("No code findings", { exact: true }).locator("..");
+    await expect(none).toContainText(
+      "None were reported before the review stopped. What the project's own checks found " +
+        "is above.",
+    );
+    // What the reviews list counts for it is what the page shows.
+    const listed = (await (await page.request.get("/api/reviews")).json()) as {
+      reviews: { id: string; findings: { total: number } }[];
+    };
+    expect(listed.reviews.find((review) => review.id === reviewId)!.findings.total).toBe(1);
+    await expect(section.getByRole("listitem")).toHaveCount(1);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, section, "checks-stopped");
+    await shootAll(page, none, "no-code-findings-stopped");
+
+    const stopped = await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
+    expect(stopped.status()).toBe(200);
+    cancelled = true;
+    await page.reload();
+    await expect(section).toContainText(
+      "What the project's own checks found on this branch before the review was cancelled. " +
+        "A cancelled review is not decided and has no report.",
+      { timeout: 30_000 },
+    );
+    await expect(section.getByRole("listitem")).toHaveCount(1);
+    await expect(section.getByRole("button")).toHaveCount(0);
+    await shootAll(page, section, "checks-cancelled");
+  } finally {
+    rmSync(LIMIT_TRIGGER, { force: true });
+    const off = await page.request.put(`/api/projects/${app.id}/checks`, { data: checks(null) });
+    expect.soft(off.status(), "the checks turned off again").toBe(200);
+    if (reviewId !== "" && !cancelled) {
+      const ended = await page.request.post(`/api/reviews/${reviewId}/cancel`, { data: {} });
+      expect.soft(ended.status(), "the review cancelled").toBe(200);
+    }
+    writeFileSync(COUNTER_FILE, callsBefore, "utf8");
+  }
+});
+
 test("a project's screens are graded: one proven D confirmed, one open question left out (WP-I)", async ({
   page,
 }) => {

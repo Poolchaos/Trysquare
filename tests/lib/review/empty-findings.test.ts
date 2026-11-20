@@ -46,6 +46,31 @@ describe("an empty findings list", () => {
     }
   });
 
+  it("says code findings, and where the checks' are, once the project's checks found something", () => {
+    // A failed command is recorded before any stage, and the lists count
+    // it: "No findings" beside it was false (the seventeenth grade, AE15).
+    for (const status of ["paused_limit", "interrupted", "failed", "cancelled"] as const) {
+      expect(emptyFindings(status, false, false, true)).toEqual({
+        title: "No code findings",
+        text:
+          "None were reported before the review stopped. What the project's own checks " +
+          "found is above.",
+      });
+    }
+    expect(emptyFindings("running", true, false, true)).toEqual({
+      title: "No code findings yet",
+      text:
+        "Code findings appear once the adversarial pass has run and each one has been " +
+        "checked against the file. What the project's own checks found is above.",
+    });
+    expect(emptyFindings("paused_limit", false, true, true)).toEqual({
+      title: "No code findings yet",
+      text:
+        "Code findings appear once the review has run on. What the project's own checks " +
+        "found is above.",
+    });
+  });
+
   it("has a sentence for every status", () => {
     for (const status of REVIEW_STATUSES) {
       expect(emptyFindings(status, false, false).text).not.toBe("");

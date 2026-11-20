@@ -1003,6 +1003,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     snapshot.review.status as ReviewStatus,
     snapshot.running,
     snapshot.queued,
+    checkRows.length > 0,
   );
   /**
    * The findings as a list you can only read.
@@ -1365,7 +1366,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {review.status === "awaiting_confirmation" ? (
               <>
                 {checkRows.length > 0 ? (
-                  <CheckFindings rows={checkRows} deciding onChanged={() => void reload()} />
+                  <CheckFindings rows={checkRows} when="deciding" onChanged={() => void reload()} />
                 ) : null}
                 <ConfirmationQueue
                   reviewId={id}
@@ -1386,11 +1387,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   <p className="mb-4 text-sm text-[var(--color-ink-muted)]">{checkoutLeft}</p>
                 ) : null}
                 {checkRows.length > 0 ? (
-                  <CheckFindings
-                    rows={checkRows}
-                    deciding={false}
-                    onChanged={() => void reload()}
-                  />
+                  <CheckFindings rows={checkRows} when="complete" onChanged={() => void reload()} />
                 ) : null}
                 <ReportPanel
                   reviewId={id}
@@ -1404,6 +1401,15 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             ) : (
               <>
                 <RunDetail snapshot={snapshot} done={done} executing={executing} folded={false} />
+                {/* Recorded before any stage, and counted by the lists: a
+                    review that stopped short shows them too. */}
+                {checkRows.length > 0 ? (
+                  <CheckFindings
+                    rows={checkRows}
+                    when={review.status === "cancelled" ? "cancelled" : "pending"}
+                    onChanged={() => void reload()}
+                  />
+                ) : null}
                 <h2 className="mb-3 text-heading font-semibold">
                   Findings{reported.length > 0 ? ` (${reported.length})` : ""}
                 </h2>

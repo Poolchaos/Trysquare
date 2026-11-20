@@ -254,7 +254,11 @@ Dismiss with a reason. A screen the second grader passed is an open
 question, as in the code queue: said so, with no Confirm, and left out
 with a reason (D-190). Counted with the code
 findings in n of m decided and in what is left to decide, and Complete
-review waits on them too. Read only once the review is complete.
+review waits on them too. Read only once the review is complete, and
+while it has not run to its end: running, paused, interrupted, failed or
+cancelled, the section is shown beside the run's detail, saying that they
+are decided once the review has run to its end and that a resume runs the
+checks again, or, of a cancelled review, that it is not decided.
 
 Above the queue, and above the report once complete, the finished review in
 its five steps (WP-G; at phone width, while findings wait to be decided, it

@@ -54,11 +54,15 @@ from 2026-11-03.
   verifier's refutation apart from a proof the quotation check failed.
   AE24 is two lines: Rule yield says when it lists eight of more rules
   cited, and a run note carries its day with its time.
-  `./verify.sh --e2e` exits 0 with 1547 unit tests passing, 8 skipped, and
-  152 browser tests. Four of the twenty-four are open (AE5, AE6, AE14,
-  AE15) and are the next work, and an eighteenth grade after them. AE14
-  is read in the code and holds, and is a question for the maintainer in
-  the inbox.
+  AE15 was a fault: a paused, failed or cancelled review's page drew
+  nothing of what the project's own checks found and said "No findings",
+  while the lists counted it. It draws them now, read only, and says when
+  they are decided.
+  `./verify.sh --e2e` exits 0 with 1548 unit tests passing, 8 skipped, and
+  153 browser tests. Three of the twenty-four are open (AE5, AE6, AE14)
+  and are the next work, and an eighteenth grade after them. AE14 is read
+  in the code and holds, and is a question for the maintainer in the
+  inbox.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,

@@ -227,14 +227,21 @@ function CheckFindingCard({
   );
 }
 
+/**
+ * Where the review stands, for what the section says of deciding: waiting on
+ * a person, complete, not yet run to its end (running, paused, interrupted
+ * or failed, each of which a run can still finish), or cancelled.
+ */
+export type ChecksWhen = "deciding" | "complete" | "pending" | "cancelled";
+
 export function CheckFindings({
   rows,
-  deciding,
+  when,
   onChanged,
 }: {
   rows: CheckFindingRow[];
-  /** While the review waits on a person; otherwise only read. */
-  deciding: boolean;
+  /** Decided only while the review waits on a person; otherwise only read. */
+  when: ChecksWhen;
   onChanged: () => void | Promise<void>;
 }) {
   return (
@@ -242,14 +249,22 @@ export function CheckFindings({
     <section aria-label="Tests and design" data-check-findings className="mb-6">
       <h2 className="mb-1 text-heading font-semibold">Tests and design</h2>
       <p className="mb-3 text-sm text-[var(--color-ink-muted)]">
-        What the project&apos;s own checks found on this branch, decided as code findings are: a
-        confirmed one is a finding in the report, and one dismissed or left out is listed there with
-        your reason.
+        {when === "pending"
+          ? // Each run deletes what the last one's checks found and runs them again.
+            "What the project's own checks found on this branch. You decide it with the code " +
+            "findings once the review has run to its end, and a run that resumes runs the " +
+            "checks again."
+          : when === "cancelled"
+            ? "What the project's own checks found on this branch before the review was " +
+              "cancelled. A cancelled review is not decided and has no report."
+            : "What the project's own checks found on this branch, decided as code findings " +
+              "are: a confirmed one is a finding in the report, and one dismissed or left " +
+              "out is listed there with your reason."}
       </p>
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {rows.map((row) => (
           <li key={row.id}>
-            <CheckFindingCard row={row} deciding={deciding} onChanged={onChanged} />
+            <CheckFindingCard row={row} deciding={when === "deciding"} onChanged={onChanged} />
           </li>
         ))}
       </ul>
