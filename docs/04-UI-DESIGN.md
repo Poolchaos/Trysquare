@@ -320,9 +320,11 @@ names, D-243), danger zone (delete all data, two-step).
 ## 4. Accessibility
 
 Full keyboard operability, visible focus, WCAG AA contrast in both themes
-(checked in e2e via axe), prefers-reduced-motion honoured, hit targets
-
-> = 40px. Screen-reader labels on all icon buttons.
+(checked in e2e via axe), prefers-reduced-motion honoured. Buttons and
+form fields are at least 40px tall (the `--hit-target` token); the top
+bar's links and the underlined text buttons and links are shorter, the
+height of their text and padding. Screen-reader labels on all icon
+buttons.
 
 ## 5. Proof
 

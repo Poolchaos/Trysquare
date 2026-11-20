@@ -189,6 +189,14 @@ pulled deliberately.
   waiting on a Resume belongs there is the maintainer's. Seen grading
   `dashboard-paused-at-limit-light.png`, where the pause is said only by
   the status chips and the bar.
+- 2026-11-20: the audit stage asks no model, and two tables still carry an
+  entry for it that is never read: its output shape
+  (`lib/review/stage-schemas.ts`) and its instruction, "Summarise what was
+  reviewed and what was found, for the report" (`lib/rulesets/compose.ts`).
+  Typing both by `ModelStage` would drop them.
+- 2026-11-20: the top bar's links and the underlined text buttons are
+  shorter than the 40px the other controls keep (04 section 4 says so now;
+  the seventeenth grade, AE22). Whether they should be taller is open.
 - 2026-11-20: two shots of the Stages card sit low on it,
   `stages-two-requests-light.png` by 3 pixels and `-phone.png` by 10, the
   card's top border on row 3 and row 10 and its lower border cut, on two

@@ -187,8 +187,8 @@ const STAGE_SCHEMAS = {
   s5b_second_verification: verificationStageSchema,
   s4b_design_grading: designGradesSchema,
   s5c_design_second: designGradesSchema,
-  // The audit stage produces prose for the report rather than structured
-  // findings, so it reuses the simplest shape; nothing reads its output.
+  // The audit asks no model, so no answer is ever held to this entry: the
+  // type wants one for every stage.
   s6_audit: riskStageSchema,
 } as const satisfies Record<ReviewStage, z.ZodType>;
 

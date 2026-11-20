@@ -202,8 +202,10 @@ Probe press in step 4, a real but tiny paid call.
    is itself a finding. An Advanced fold offers a deliberate profile
    downgrade with the per-profile request counts beside it.
 5. **Read the pre-flight.** It appears once the branches, ruleset and model
-   are chosen, and costs nothing: the commits it would pin (when their refs
-   were fetched is on the branch card above), file and hunk counts, sweep hits, changed exported symbols,
+   are chosen, and costs nothing: the commits it would pin, after a fetch of
+   its own (the time on the branch card above is when the branch list was
+   read, not this fetch), file and hunk counts, sweep hits, changed
+   exported symbols,
    about how many tokens the rules and the change come to as one prompt
    (one prompt's size, not what the review will use: every stage sends a
    prompt of its own), and the number of model requests over every

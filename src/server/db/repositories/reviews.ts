@@ -176,9 +176,8 @@ export function transitionReview(
   // its checkpoint for free and what remains is the work actually being done.
   // When the review was created is a separate fact and `createdAt` keeps it.
   if (to === "running") patch.startedAt = now;
-  // A review that is running again has not finished, whatever the failure that
-  // stopped it recorded. Leaving the old completion would make the report's
-  // duration describe a run that ended and then kept going.
+  // A review that is running again has not ended, whatever the failure that
+  // stopped it recorded, and `completedAt` is read as when it did.
   if (to === "running") patch.completedAt = null;
   if (to === "complete" || to === "failed" || to === "cancelled") patch.completedAt = now;
 

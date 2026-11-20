@@ -369,7 +369,9 @@ splits the work instead and records the split in the run log.
   stages already answered replay for free from their checkpoints and only
   the failed one runs live, which is the same mechanism as a limit pause.
 - CLI limit/429: review `paused_limit`, CLI message shown verbatim, manual
-  resume re-invokes the stage with `--resume <sessionId>`.
+  resume asks the stage again: one of S1 to S4 rejoins the session those
+  stages share, with `--resume <sessionId>`, and any other starts a fresh
+  one, as it always does.
 - Cancel: kills the subprocess and marks the review cancelled; the stage
   that was running is recorded as failed, with the error class
   `cancelled` (`src/server/review/checkpointing-runner.ts`). The

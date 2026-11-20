@@ -27,10 +27,8 @@ export function spanMs(startedAt: string | null, endedAt: string | null): number
 }
 
 /**
- * A time in words, the same on every screen and in the report: whole
- * seconds passed, never rounded up to one not reached, and hours past the
- * sixtieth minute. The report had a formatter of its own, which rounded
- * and counted minutes without end.
+ * A time in words, the same on every screen and in the report (D-249):
+ * whole seconds passed, never rounded up to one not reached.
  */
 export function runTimeWords(ms: number): string {
   const seconds = Math.max(0, Math.floor(ms / 1000));

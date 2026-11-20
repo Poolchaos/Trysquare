@@ -109,8 +109,9 @@ Layering laws:
   only `server/projectrun` spawns a project's own commands, and only in a
   throwaway copy (D-196). `tests/architecture/spawners.test.ts` holds it:
   no other source file may import `child_process`.
-- UI components never import from `server/`; they consume API payloads typed
-  by shared zod schemas in `lib/`.
+- UI components never import from `server/`. Each screen types the API
+  payloads it reads with interfaces of its own, which nothing holds to
+  what the routes answer; the routes validate what they are sent with zod.
 
 ## 5. Data directory (user machine)
 

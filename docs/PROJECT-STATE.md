@@ -44,9 +44,10 @@ from 2026-11-03.
   a run's time with a formatter of its own, so "Took" could disagree with
   the screens for the same run, and one function words it everywhere now
   (D-249). `./verify.sh --e2e` exits 0 with 1546 unit tests passing, 8
-  skipped, and 149 browser tests. Two stale lines of the records are put
-  right too, so sixteen of the twenty-four are open and are the next
-  work, and an eighteenth grade after them.
+  skipped, and 149 browser tests. Six lines of the records and two
+  comments are put right too (AE8 to AE10, AE20 to AE23), so eleven of the
+  twenty-four are open and are the next work, and an eighteenth grade
+  after them.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the
   completion plan is finished for a person on Linux before any work only
   macOS needs. A failure only the macOS CI job shows is parked meanwhile,
