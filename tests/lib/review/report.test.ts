@@ -42,6 +42,7 @@ const BASE: ReportInput = {
     totalSweepHits: 0,
     refutedOnlyHunks: 0,
     refutedOnlySweepHits: 0,
+    excludedPairs: 0,
   },
   chainFilesRead: 3,
   rulesetName: "Example protocol",
@@ -53,6 +54,7 @@ const BASE: ReportInput = {
     inputTokens: 500,
     outputTokens: 100,
     cacheReadTokens: 10_000,
+    cacheCreationTokens: 2_000,
     costEquivalentUsd: 0.021,
   },
   startedAt: "2026-07-31T10:00:00.000Z",
@@ -234,8 +236,26 @@ describe("the footer that makes a report reproducible", () => {
     expect(report).toContain(`Reviewed: ${"a".repeat(40)} against merge base ${"b".repeat(40)}`);
   });
 
-  it("separates cached tokens from fresh ones", () => {
-    expect(renderReport(BASE)).toContain("500 fresh input, 10000 cached read, 100 output");
+  it("separates cached tokens from fresh ones, cache writes too", () => {
+    // The review's page shows cache writes; the report left them out (D-257).
+    expect(renderReport(BASE)).toContain(
+      "500 fresh input, 10000 cached read, 2000 cache write, 100 output",
+    );
+  });
+
+  it("says how many rule and file pairs a decomposed profile left out (D-255)", () => {
+    // It said each hunk was accounted for and named the profile, and nothing
+    // of the pairs no request asked about.
+    const report = renderReport({
+      ...BASE,
+      profile: "decomposed",
+      coverage: { ...BASE.coverage, excludedPairs: 14 },
+    });
+    expect(report).toContain(
+      "The decomposed profile left 14 rule and file pair(s) out, where a file's path suggests " +
+        "none of a rule's themes: those rules were not put to the model for those files.",
+    );
+    expect(renderReport(BASE)).not.toContain("pair(s) out");
   });
 
   it("names the dependency when two repositories were reviewed together", () => {

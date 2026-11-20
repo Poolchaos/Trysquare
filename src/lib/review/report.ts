@@ -116,6 +116,8 @@ export interface ReportInput {
     totalSweepHits: number;
     refutedOnlyHunks: number;
     refutedOnlySweepHits: number;
+    /** Rule and file pairs the profile asked no request about (D-255). */
+    excludedPairs: number;
   };
   chainFilesRead: number;
 
@@ -129,6 +131,7 @@ export interface ReportInput {
     inputTokens: number;
     outputTokens: number;
     cacheReadTokens: number;
+    cacheCreationTokens: number;
     costEquivalentUsd: number;
   };
   startedAt: string | null;
@@ -369,7 +372,9 @@ export function checksRan(input: Pick<ReportInput, "checks">): string | null {
  * Exported for the page's typeset report, so the two cannot say different
  * things about what was examined.
  */
-export function completeness(input: Pick<ReportInput, "coverage" | "chainFilesRead">): string {
+export function completeness(
+  input: Pick<ReportInput, "coverage" | "chainFilesRead" | "profile">,
+): string {
   const refuted = refutedOnlySentence(input.coverage);
   const sweep =
     input.coverage.totalSweepHits === 0
@@ -380,6 +385,11 @@ export function completeness(input: Pick<ReportInput, "coverage" | "chainFilesRe
     `${input.coverage.totalFiles} changed file(s) and ${input.coverage.totalHunks} hunk(s) were ` +
     `put to the model, and each hunk was either given a finding or cleared with a reason. ${sweep} ` +
     (refuted ? `${refuted} ` : "") +
+    (input.coverage.excludedPairs > 0
+      ? `The ${input.profile} profile left ${input.coverage.excludedPairs} rule and file pair(s) ` +
+        "out, where a file's path suggests none of a rule's themes: those rules were not put to " +
+        "the model for those files. "
+      : "") +
     `By the model's own account it read ${input.chainFilesRead} file(s) outside the change set ` +
     "to follow what the change calls into."
   );
@@ -450,7 +460,7 @@ function footer(input: ReportInput): string[] {
 
   rows.push(
     `- Tokens: ${input.usage.inputTokens} fresh input, ${input.usage.cacheReadTokens} cached ` +
-      `read, ${input.usage.outputTokens} output`,
+      `read, ${input.usage.cacheCreationTokens} cache write, ${input.usage.outputTokens} output`,
     `- Cost equivalent: ${input.usage.costEquivalentUsd.toFixed(4)} USD`,
   );
 

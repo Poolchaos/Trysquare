@@ -19,6 +19,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { parseUnifiedDiff, type ParsedFile } from "@/lib/git/diff";
 import { changedExportedSymbols } from "@/lib/git/symbols";
+import { excludedPairCount } from "@/lib/rulesets/compose";
 import { importProtocol } from "@/lib/rulesets/import";
 import type { Db } from "@/server/db/client";
 import { listFindings, statusOf } from "@/server/db/repositories/findings";
@@ -489,5 +490,13 @@ describe("what a narrower profile costs", () => {
     );
     expect(note?.message).toContain(`${decomposed.excludedPairs} rule/file pair(s)`);
     expect(note?.message).toContain("README.md");
+    // The report counts the same pairs, from the frozen rules and the changed
+    // files as the ledger keeps them, so it cannot claim more was checked than
+    // the run did (D-255).
+    const paths = listLedgerFiles(db, reviewId).map((file) => file.path);
+    expect(excludedPairCount(PROTOCOL.ruleset.rules, paths, "decomposed")).toBe(
+      decomposed.excludedPairs,
+    );
+    expect(excludedPairCount(PROTOCOL.ruleset.rules, paths, "full-context")).toBe(0);
   }, 120_000);
 });

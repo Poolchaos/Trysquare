@@ -276,6 +276,19 @@ export function planRuleBatches(
   return { profile, batches, excluded };
 }
 
+/**
+ * How many rule and file pairs a profile leaves out, counted as a run plans
+ * them, so the report can say it of a finished review without a column of
+ * its own: the rules are frozen and the changed files kept (D-255).
+ */
+export function excludedPairCount(
+  rules: readonly ImportedRule[],
+  filePaths: readonly string[],
+  profile: ReviewProfile,
+): number {
+  return planRuleBatches(rules, filePaths, profile).excluded.length;
+}
+
 export class IncompleteRuleCoverageError extends Error {
   constructor(readonly missing: { rule: string; file: string }[]) {
     const shown = missing

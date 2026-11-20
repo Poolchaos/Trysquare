@@ -226,7 +226,8 @@ Probe press in step 4, a real but tiny paid call.
    it first, because the review will not finish on an incomplete sweep.
 6. **Start the review.** This is the step that spends usage. The run screen
    shows which stages have finished, a live activity log, and a running tally
-   of fresh input tokens, cached reads, output tokens and cost equivalent.
+   of fresh input tokens, cached reads, cache writes, output tokens and cost
+   equivalent, which the report gives too.
 7. **Decide every finding.** When the run reaches awaiting confirmation, the
    findings become a queue grouped by severity, worst first. Keyboard: `j` and
    `k` to move, Shift+C to confirm (a bare `c` does nothing, D-132), `d` to

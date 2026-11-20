@@ -258,6 +258,7 @@ interface ReportData {
     totalSweepHits: number;
     refutedOnlyHunks: number;
     refutedOnlySweepHits: number;
+    excludedPairs: number;
   };
   chainFilesRead: number;
   rulesetName: string;

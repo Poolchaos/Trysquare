@@ -164,7 +164,8 @@ pulled deliberately.
   accounted for and names the profile, and nothing of the rule and file
   pairs left out; the pre-flight and a run note carry their count (the
   thirteenth grader, for Complete). Should the report say it too?
-  DECIDED 2026-11-20 (D-255): yes, to build.
+  DECIDED 2026-11-20 (D-255): yes. BUILT the same day, beside the line
+  that each hunk was accounted for.
 - 2026-11-19: the report's count of files read outside the change is the
   model's own list (D-247). Count it from the Read calls the engine sees
   in a headless session instead, and say which it is for an interactive
@@ -172,7 +173,7 @@ pulled deliberately.
 - 2026-11-19: the report's token line gives fresh input, cached read and
   output, and leaves out cache-write tokens, which the review page shows
   (the fifteenth grader). Add them to the line? DECIDED 2026-11-20
-  (D-257): yes, to build.
+  (D-257): yes. BUILT the same day.
 - 2026-11-19: the dashboard's Needs you says "waiting 2m ago" and "waiting
   just now" (`src/app/page.tsx`, seen in `light-dashboard.png`); "waiting
   2m" would read right. A browser test holds the present words.
@@ -195,6 +196,11 @@ pulled deliberately.
   touch that test. The runs before and after it, 44795459803 at d9c3baa
   and 44792451743 at b830c0e, passed on Windows. Recorded and left
   (D-246); cause not looked at.
+- 2026-11-20: only the Windows job failed in CI run 44811014735 at 8b889a2
+  (Ubuntu and macOS passed), on a commit that changed records alone:
+  `e2e/failure-paths.spec.ts`, "a new review starts on the model used
+  last, while a probe vouches for it", a click that met the test's 120
+  seconds. Recorded and left (D-246); cause not looked at.
 - 2026-11-20: the reviews list says "0 of 10 confirmed" of a review whose
   page says "0 of 9 decided": the list's ten counts a finding verification
   refuted, which nobody can confirm (`findingTallies`,

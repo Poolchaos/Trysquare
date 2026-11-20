@@ -16,7 +16,9 @@ import { requireProject } from "../db/repositories/projects";
 import { requireReview } from "../db/repositories/reviews";
 import { firstStageStarts } from "../db/repositories/stage-executions";
 import { ranBefore } from "@/lib/review/run-time";
-import { readReviewSnapshotMeta } from "../db/repositories/rulesets";
+import { readReviewSnapshot, readReviewSnapshotMeta } from "../db/repositories/rulesets";
+import { reviewProfileSchema } from "@/lib/domain/enums";
+import { excludedPairCount } from "@/lib/rulesets/compose";
 import type { Db } from "../db/client";
 import type {
   DesignChecked,
@@ -215,6 +217,13 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
       totalSweepHits: coverage.totalSweepHits,
       refutedOnlyHunks: coverage.refutedOnlyHunks,
       refutedOnlySweepHits: coverage.refutedOnlySweepHits,
+      // Counted as the run planned them, from its frozen rules and the
+      // changed files, so the report cannot say more was asked (D-255).
+      excludedPairs: excludedPairCount(
+        readReviewSnapshot(db, reviewId).rules,
+        [...changed],
+        reviewProfileSchema.parse(review.profileId),
+      ),
     },
     chainFilesRead,
 
@@ -228,6 +237,7 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
       inputTokens: review.usageInputTokens,
       outputTokens: review.usageOutputTokens,
       cacheReadTokens: review.usageCacheReadTokens,
+      cacheCreationTokens: review.usageCacheCreationTokens,
       costEquivalentUsd: review.costEquivalentUsd,
     },
     startedAt: review.startedAt,

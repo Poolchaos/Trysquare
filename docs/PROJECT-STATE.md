@@ -22,9 +22,9 @@ from 2026-11-03.
   `./verify.sh --e2e` exits 0 with 1552 unit tests passing, 8 skipped, and
   154 browser tests. The reviews list and the dashboard's Recent and
   Projects count a review's findings as its queue holds them, the killed
-  apart (D-253). To build: a `decomposed` review's report saying the pairs
-  its profile left out, and its token line giving cache-write tokens;
-  Needs you listing a review that waits on a Resume; and two unread table
+  apart (D-253). A `decomposed` review's report says how many rule and
+  file pairs its profile left out (D-255), and the report's token line
+  gives cache-write tokens (D-257). To build: Needs you listing a review that waits on a Resume; and two unread table
   entries dropped. A paid fixture run's evidence is committed under
   `docs/evidence/` from the next run on (D-261). The handover hooks are
   left to the maintainer (D-262).
