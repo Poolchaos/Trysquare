@@ -34,8 +34,10 @@ from 2026-11-03.
   first, with a fault found beside it (a review left paused hid one
   running after it, from the top bar and the dashboard), and AE16, the
   dashboard's Projects saying "no findings" of a review that had not run
-  to any. `./verify.sh --e2e` exits 0 with 1540 unit tests passing, 8
-  skipped, and 147 browser tests. The other twenty are the next work, bar
+  to any; and the second, the Stages card now giving a stage's requests
+  and their time, tokens and cost summed. `./verify.sh --e2e` exits 0 with
+  1542 unit tests passing, 8 skipped, and 147 browser tests. The other
+  nineteen are the next work, bar
   two stale lines of the records already put right, and an eighteenth
   grade after them.
 - 2026-11-19: Linux first, then macOS (D-245, the maintainer's word): the

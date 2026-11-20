@@ -61,6 +61,7 @@ import {
   STEPS,
   designTallies,
   findingTallies,
+  stageUsage,
   stepCount,
   stepResult,
   stepStates,
@@ -363,10 +364,7 @@ function elapsedSince(startedAt: string, now: number): string {
   return elapsedBetween(new Date(startedAt).getTime(), now);
 }
 
-function formatDuration(startedAt: string, endedAt: string | null): string | null {
-  if (!endedAt) return null;
-  const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
-  if (!Number.isFinite(ms) || ms < 0) return null;
+function formatMs(ms: number): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
@@ -1811,8 +1809,13 @@ function RunDetail({
         <h2 className="mb-3 text-heading font-medium">Stages</h2>
         <ol className="grid grid-cols-[minmax(0,1fr)] gap-1">
           {STAGES.map(([stage, label, description]) => {
-            const attempts = snapshot.stages.filter((row) => row.stage === stage);
-            const last = attempts[attempts.length - 1];
+            // A row is one request. A stage that splits its work sends
+            // several, so the line's time, tokens and cost are all of them
+            // summed: it gave the last request's as the stage's, and called
+            // the requests attempts (the seventeenth grade, AE2).
+            const requests = snapshot.stages.filter((row) => row.stage === stage);
+            const last = requests[requests.length - 1];
+            const spent = stageUsage(requests);
             // A stage aborted by the user is recorded as failed with its
             // own error class; painting it critical-red would dress a
             // decision up as a fault.
@@ -1844,9 +1847,9 @@ function RunDetail({
                   <span className={succeeded || failed ? "" : "text-[var(--color-ink-muted)]"}>
                     {label}
                   </span>
-                  {attempts.length > 1 ? (
+                  {spent.requests > 1 ? (
                     <span className="text-xs text-[var(--color-ink-muted)]">
-                      {attempts.length} attempts
+                      {spent.requests} requests
                     </span>
                   ) : null}
                   <span className="ml-auto shrink-0 text-xs text-[var(--color-ink-muted)]">
@@ -1856,7 +1859,9 @@ function RunDetail({
                         stage has been timed enough times for a median to
                         mean something. */}
                     {last
-                      ? formatDuration(last.startedAt, last.endedAt)
+                      ? spent.ms === null
+                        ? null
+                        : formatMs(spent.ms)
                       : current && usualFor(stage) !== null
                         ? `usually ${usualFor(stage)}`
                         : null}
@@ -1865,10 +1870,10 @@ function RunDetail({
 
                 {last && !DETERMINISTIC_STAGES.has(stage) ? (
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
-                    {last.inputTokens.toLocaleString("en-US")} fresh,{" "}
-                    {last.cacheReadTokens.toLocaleString("en-US")} cached,{" "}
-                    {last.outputTokens.toLocaleString("en-US")} out, $
-                    {last.costEquivalentUsd.toFixed(4)}
+                    {spent.inputTokens.toLocaleString("en-US")} fresh,{" "}
+                    {spent.cacheReadTokens.toLocaleString("en-US")} cached,{" "}
+                    {spent.outputTokens.toLocaleString("en-US")} out, $
+                    {spent.costEquivalentUsd.toFixed(4)}
                   </p>
                 ) : (
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">

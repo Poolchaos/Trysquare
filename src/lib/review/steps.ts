@@ -146,18 +146,59 @@ export function stepUsage(
 ): StepUsage[] {
   return STEPS.map((step) => {
     const mine = rows.filter((row) => (step.stages as readonly string[]).includes(row.stage));
-    const calls = new Map<string, number>();
-    for (const row of mine) {
-      if (row.endedAt === null) continue;
-      const key = `${row.stage} ${row.startedAt}`;
-      const ms = Math.max(0, Date.parse(row.endedAt) - Date.parse(row.startedAt));
-      calls.set(key, Math.max(calls.get(key) ?? 0, ms));
-    }
-    return {
-      requests: mine.length,
-      ms: [...calls.values()].reduce((sum, ms) => sum + ms, 0),
-    };
+    return { requests: mine.length, ms: callsMs(mine) ?? 0 };
   });
+}
+
+/** The time the calls behind these rows took, each timed once; null while none has ended. */
+function callsMs(
+  rows: readonly { stage?: string; startedAt: string; endedAt: string | null }[],
+): number | null {
+  const calls = new Map<string, number>();
+  for (const row of rows) {
+    if (row.endedAt === null) continue;
+    const key = `${row.stage ?? ""} ${row.startedAt}`;
+    const ms = Math.max(0, Date.parse(row.endedAt) - Date.parse(row.startedAt));
+    calls.set(key, Math.max(calls.get(key) ?? 0, ms));
+  }
+  return calls.size === 0 ? null : [...calls.values()].reduce((sum, ms) => sum + ms, 0);
+}
+
+export interface StageUsage {
+  requests: number;
+  /** Null while no request of the stage has ended. */
+  ms: number | null;
+  inputTokens: number;
+  cacheReadTokens: number;
+  outputTokens: number;
+  costEquivalentUsd: number;
+}
+
+/**
+ * What one stage's requests came to, summed. The Stages card gave the last
+ * row's time, tokens and cost as the stage's, and a stage that splits its
+ * work sends several (the seventeenth grade, AE2).
+ */
+export function stageUsage(
+  rows: readonly {
+    startedAt: string;
+    endedAt: string | null;
+    inputTokens: number;
+    cacheReadTokens: number;
+    outputTokens: number;
+    costEquivalentUsd: number;
+  }[],
+): StageUsage {
+  const sum = (pick: (row: (typeof rows)[number]) => number) =>
+    rows.reduce((total, row) => total + pick(row), 0);
+  return {
+    requests: rows.length,
+    ms: callsMs(rows),
+    inputTokens: sum((row) => row.inputTokens),
+    cacheReadTokens: sum((row) => row.cacheReadTokens),
+    outputTokens: sum((row) => row.outputTokens),
+    costEquivalentUsd: sum((row) => row.costEquivalentUsd),
+  };
 }
 
 const counted = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;

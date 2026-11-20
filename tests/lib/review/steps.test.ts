@@ -9,6 +9,7 @@ import {
   STEPS,
   designTallies,
   findingTallies,
+  stageUsage,
   stepCount,
   stepResult,
   stepStates,
@@ -343,5 +344,39 @@ describe("what grading the screens came to (WP-I step 5)", () => {
     expect(stepResult(3, { ...empty, design: { raised: 1, proven: 1, open: 0 } })).toBe(
       "Nothing to prove in the code. The second grader agreed on 1 of 1 screen graded C or D.",
     );
+  });
+});
+
+describe("what one stage spent", () => {
+  const at = (s: number) => new Date(Date.UTC(2026, 10, 20, 10, 0, s)).toISOString();
+  const row = (startedAt: string, endedAt: string | null, tokens: number, cost: number) => ({
+    startedAt,
+    endedAt,
+    inputTokens: tokens,
+    cacheReadTokens: tokens * 10,
+    outputTokens: tokens * 2,
+    costEquivalentUsd: cost,
+  });
+
+  it("sums every request of the stage, where the last one's figures stood as the stage's", () => {
+    // The seventeenth grade, AE2: three requests in two calls, as a chunked
+    // adversarial stage sends them. The rows one call writes share its
+    // start, and the call is timed once, to its last row.
+    const usage = stageUsage([
+      row(at(0), at(20), 100, 0.01),
+      row(at(0), at(30), 200, 0.02),
+      row(at(30), at(45), 300, 0.04),
+    ]);
+    expect(usage.requests).toBe(3);
+    expect(usage.ms).toBe(45_000);
+    expect(usage.inputTokens).toBe(600);
+    expect(usage.cacheReadTokens).toBe(6000);
+    expect(usage.outputTokens).toBe(1200);
+    expect(usage.costEquivalentUsd).toBeCloseTo(0.07, 10);
+  });
+
+  it("gives no time while no request of the stage has ended", () => {
+    expect(stageUsage([row(at(0), null, 0, 0)])).toMatchObject({ requests: 1, ms: null });
+    expect(stageUsage([])).toMatchObject({ requests: 0, ms: null });
   });
 });

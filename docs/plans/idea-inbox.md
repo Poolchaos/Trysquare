@@ -189,6 +189,16 @@ pulled deliberately.
   waiting on a Resume belongs there is the maintainer's. Seen grading
   `dashboard-paused-at-limit-light.png`, where the pause is said only by
   the status chips and the bar.
+- 2026-11-20: two shots of the Stages card sit low on it,
+  `stages-two-requests-light.png` by 3 pixels and `-phone.png` by 10, the
+  card's top border on row 3 and row 10 and its lower border cut, on two
+  runs alike; `-dark.png` between them, and `stages-not-asked` in all
+  three, have the border on row 0 (`shootAll`, `e2e/failure-paths.spec.ts`,
+  which measures the card and then clips the whole page). The card moved
+  between the measure and the shot, after a scroll to the top and after
+  the phone's resize, on a review waiting on a person. NOT root-caused:
+  whether the page shifts there or the helper measures too soon is not
+  known.
 - 2026-11-19: two shots show figures that do not agree, seen while grading
   and not yet traced to the page or to how the test stages its data.
   `verify-again-light.png`: "0 of 9 decided" beside 9 proven by both and 6

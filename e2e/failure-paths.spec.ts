@@ -1788,6 +1788,34 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   // The pause is over, so the banner is gone rather than lingering as a
   // warning about something that has already been dealt with.
   await expect(page.getByText(/The limit clears at/)).toBeHidden();
+
+  // Run detail's Stages (the seventeenth grade, AE2). The stage that met the
+  // limit was asked twice, and its line said "2 attempts" beside the second
+  // request's time alone. It says two requests, and the time of both.
+  const id = page.url().split("/").pop()!;
+  const read = (await (await page.request.get(`/api/reviews/${id}`)).json()) as {
+    stages: { stage: string; startedAt: string; endedAt: string }[];
+  };
+  const perStage = new Map<string, typeof read.stages>();
+  for (const row of read.stages) {
+    perStage.set(row.stage, [...(perStage.get(row.stage) ?? []), row]);
+  }
+  const askedTwice = [...perStage.values()].filter((rows) => rows.length === 2);
+  expect(askedTwice).toHaveLength(1);
+  const [first, second] = askedTwice[0]!.map(
+    (row) => Date.parse(row.endedAt) - Date.parse(row.startedAt),
+  );
+  expect(first).toBeGreaterThan(0);
+  const both = first! + second!;
+  await page.getByText("Run detail", { exact: true }).click();
+  const stages = page.getByRole("heading", { name: "Stages" }).locator("..");
+  const line = stages.getByRole("listitem").filter({ hasText: "2 requests" });
+  await expect(line).toHaveCount(1);
+  await expect(
+    line.getByText(both < 1000 ? `${both}ms` : `${(both / 1000).toFixed(1)}s`, { exact: true }),
+  ).toBeVisible();
+  expect(await stages.getByText(/attempts/).count()).toBe(0);
+  await shootAll(page, stages, "stages-two-requests");
 });
 
 test("a decision that moves onto an open question leaves the focus on its title", async ({
