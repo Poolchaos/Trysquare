@@ -159,20 +159,24 @@ pulled deliberately.
   vouches for. `POST /api/reviews` takes any full model id, and Start does
   not ask either; the second verifier alone is refused on the server
   (D-244). Should the server refuse the review's own model too?
+  DECIDED 2026-11-20 (D-254): no, a probe is a paid request.
 - 2026-11-19: the report of a `decomposed` review says each hunk was
   accounted for and names the profile, and nothing of the rule and file
   pairs left out; the pre-flight and a run note carry their count (the
   thirteenth grader, for Complete). Should the report say it too?
+  DECIDED 2026-11-20 (D-255): yes, to build.
 - 2026-11-19: the report's count of files read outside the change is the
   model's own list (D-247). Count it from the Read calls the engine sees
   in a headless session instead, and say which it is for an interactive
-  review?
+  review? DECIDED 2026-11-20 (D-256): no, it stays the model's account.
 - 2026-11-19: the report's token line gives fresh input, cached read and
   output, and leaves out cache-write tokens, which the review page shows
-  (the fifteenth grader). Add them to the line?
+  (the fifteenth grader). Add them to the line? DECIDED 2026-11-20
+  (D-257): yes, to build.
 - 2026-11-19: the dashboard's Needs you says "waiting 2m ago" and "waiting
   just now" (`src/app/page.tsx`, seen in `light-dashboard.png`); "waiting
   2m" would read right. A browser test holds the present words.
+  DECIDED 2026-11-20 (D-258): "waiting 2m", to build.
 - 2026-11-20: only the Windows job failed in CI run 44684645272 at eedc356
   (Ubuntu and macOS passed): `tests/server/projectrun/run.test.ts`, "is
   stopped at its time limit, with everything it started", "expected true to
@@ -196,35 +200,42 @@ pulled deliberately.
   refuted, which nobody can confirm (`findingTallies`,
   `server/db/repositories/findings.ts`), and the dashboard's Recent the
   same. Seen grading `last-run-list-light.png`. Not fixed: should the
-  lists count what the queue holds?
+  lists count what the queue holds? DECIDED 2026-11-20 (D-253): yes, to
+  build.
 - 2026-11-20: at 390px the dashboard's Recent table breaks the status
   badge over three lines ("AWAITING / YOUR / DECISION"), in a table that
   scrolls sideways anyway. Seen grading `last-run-recent-phone.png`.
+  DECIDED 2026-11-20 (D-258): one line, to build.
 - 2026-11-20: a run of under a second reads "took 0s", and 0s in the
   Duration tile and the lists, where a step of the same length says "under
   a second" (`src/app/reviews/[id]/page.tsx`, `elapsedBetween`). Only the
   fake engine is that fast; a waiting review shows it since D-248.
+  DECIDED 2026-11-20 (D-258): "under a second", to build.
 - 2026-11-20: the dashboard's Needs you says "Nothing is waiting on you"
   while a review is paused at the usage limit, interrupted or failed, each
   of which goes on only when a person presses Resume. 04 has Needs you list
   reviews awaiting a decision, so the line is as designed; whether a review
   waiting on a Resume belongs there is the maintainer's. Seen grading
   `dashboard-paused-at-limit-light.png`, where the pause is said only by
-  the status chips and the bar.
+  the status chips and the bar. DECIDED 2026-11-20 (D-259): it belongs
+  there, to build.
 - 2026-11-20, a question for the maintainer: the dashboard's "Invention
   rate" counts every finding the quotation check killed, and that check
   also kills a proof that quotes true code off the lines the finding
   cites, which is not an invention (the seventeenth grade, AE14). Rename
   the tile, or count only a quotation that matched nothing? The name is
-  D-68's, so it is left.
+  D-68's, so it is left. DECIDED 2026-11-20 (D-252): renamed "Proofs
+  discarded", the count unchanged, to build.
 - 2026-11-20: the audit stage asks no model, and two tables still carry an
   entry for it that is never read: its output shape
   (`lib/review/stage-schemas.ts`) and its instruction, "Summarise what was
   reviewed and what was found, for the report" (`lib/rulesets/compose.ts`).
-  Typing both by `ModelStage` would drop them.
+  Typing both by `ModelStage` would drop them. DECIDED 2026-11-20
+  (D-260): yes, to build.
 - 2026-11-20: the top bar's links and the underlined text buttons are
   shorter than the 40px the other controls keep (04 section 4 says so now;
-  the seventeenth grade, AE22). Whether they should be taller is open.
+  the seventeenth grade, AE22). Whether they should be taller is open,
+  and the session's to decide once their heights are measured (D-251).
 - 2026-11-20: two shots of the Stages card sit low on it,
   `stages-two-requests-light.png` by 3 pixels and `-phone.png` by 10, the
   card's top border on row 3 and row 10 and its lower border cut, on two

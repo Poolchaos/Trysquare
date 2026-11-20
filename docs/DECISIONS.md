@@ -6350,3 +6350,90 @@ verified evidence, in writing, here.
      which is planned in a plan file of its own before it is built. Open
      for that plan: whether the email goes once a person has completed the
      review, or as the run ends, for a review started to run unattended.
+- 2026-11-20 D-252 The dashboard's "Invention rate" tile is named for what
+  it counts: "Proofs discarded", by the quotation check, of the findings
+  raised. Taken by the session under D-251, as D-253 to D-263 are; the
+  maintainer reverses what he does not want. The quotation check kills
+  three ways (`checkProof`, `server/review/verification.ts`): a proof that
+  never passes through the cited file, one whose steps in that file sit
+  off the cited lines, and a step that is not the code at its lines. The
+  first two can quote true code, so the count was never of inventions
+  alone (the seventeenth grade, AE14). The count does not change; the
+  name, D-68's, does, with the README's and 04's. Rejected: counting only
+  a step that matched nothing, which needs the kind of kill stored (a row
+  says `quote_check` for all three) and would still count a true line
+  given under the wrong line numbers, so no count the app can make is of
+  invention alone.
+- 2026-11-20 D-253 The reviews list and the dashboard's Recent and
+  Projects count a review's findings as its queue holds them: confirmed,
+  of those a person can decide. A finding verification killed is left out,
+  as Needs you and the review's page leave it out. The lists counted it,
+  so one review read "0 of 10 confirmed" on the list and "0 of 9 decided"
+  on its page (the inbox, 2026-11-20). The killed stay listed on the
+  review's page (D-97) and counted in the tile (D-252). Rejected: the
+  total kept and the killed said beside it on every row, a third figure
+  the row's reader can do nothing with.
+- 2026-11-20 D-254 The server goes on taking any full model id for a
+  review, probed or not (the inbox, 2026-11-19). A probe is a paid request,
+  and asking one of a model that works buys nothing (D-251: no token spent
+  that buys nothing); the API is this machine's own (D-215), and the
+  picker, the door a person uses, keeps to probed models and says so
+  truly since D-244. Rejected: refusing an unprobed model on the server.
+- 2026-11-20 D-255 The report of a `decomposed` review says how many rule
+  and file pairs the profile left out, where it says each hunk was
+  accounted for (the thirteenth grader; the inbox, 2026-11-19). The
+  pre-flight and a run note carry the count already, and a report that
+  claims coverage and is silent on what was not asked overstates it
+  (D-251: no finding missed comes first). To build.
+- 2026-11-20 D-256 The report's count of files read outside the change
+  stays the model's own account, said as that (D-247). Rejected again:
+  counting the Read calls the engine sees, which an interactive review's
+  terminal does not show it and a replayed answer does not repeat, so the
+  figure would mean two things by how a review ran.
+- 2026-11-20 D-257 The report's token line gives cache-write tokens too,
+  as the review's page does (the fifteenth grader; the inbox, 2026-11-19).
+  To build.
+- 2026-11-20 D-258 Three lines on screens, each to build. Needs you says
+  "waiting 2m", not "waiting 2m ago". A run of under a second is said as
+  "under a second", as a step of that length is, not "0s". The status
+  badge in the dashboard's Recent stays on one line at phone width, where
+  it broke over three.
+- 2026-11-20 D-259 Needs you lists a review that goes on only when a
+  person presses Resume (paused at the usage limit, interrupted, failed:
+  `RESUMABLE_REVIEW_STATUSES`), beside the reviews awaiting a decision,
+  each row saying which it is. It said "Nothing is waiting on you" over a
+  review stopped at the limit (the inbox, 2026-11-20). 04 defined the
+  widget as reviews awaiting a decision and changes with it. A person who
+  starts a review and leaves it to do its thing (D-251) reads this widget
+  to learn it stopped. Rejected: leaving it to the status chips in Recent,
+  which is where it was missed. To build.
+- 2026-11-20 D-260 The audit stage's two table entries that nothing reads,
+  its output shape and its instruction, go, by typing both tables by
+  `ModelStage` (the inbox, 2026-11-20). To build.
+- 2026-11-20 D-261 CG-2, where evidence lives. The two fixtures are in
+  this repository and public, so the evidence of a paid fixture run (its
+  scored result, its findings with their proofs, the run's summary) is
+  committed under `docs/evidence/`, a folder per run, and `GATES.md` cites
+  it there; the transcripts and logs stay under `review/`. Evidence from a
+  review of the maintainer's own code (G2) stays under `review/` on his
+  machine, with its scored summary in this log, since it quotes private
+  code. Screenshots the browser suite saves stay ignored: the suite makes
+  them again. Rejected: (a) of the plan, losing a gate's evidence with a
+  machine a second time; and the plan's (b) as written, private storage
+  only the maintainer can name. It takes effect with CP-7's runs, which
+  are his to start.
+- 2026-11-20 D-262 CG-4, the handover hooks. Not taken up by the session:
+  installing them changes `~/.claude/settings.json`, which an AI session
+  is refused by the workspace's policy, and is outside this repository.
+  Read on 2026-11-20: that file has no line naming a handover and
+  `~/.claude/skills/hooks/` holds no handover hook; a `handover` skill is
+  listed to the session. So the limit goes on being kept by the meter a
+  session runs (`scripts/session-context.mjs`, D-230), and CP-14 is the
+  maintainer's own if he wants it.
+- 2026-11-20 D-263 Four things told to the maintainer in the handovers of
+  2026-11-20 and not answered stand as they are: a review cancelled,
+  paused or interrupted before `runEndedAt` existed shows no duration
+  (D-248); section 10 of this repository's `CLAUDE.md` keeps the handover
+  rule beside his global file's; the README's opening stays as reworded on
+  2026-11-19. The fourth, an update review his `~/.claude/skills/VENDORED.md`
+  records as due by 2026-11-09, is outside this repository and his.
