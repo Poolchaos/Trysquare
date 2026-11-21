@@ -6585,3 +6585,36 @@ verified evidence, in writing, here.
   frozen review another ruleset; and keeping the copy without storing it,
   a second answer to which rules a review runs with beside the ruleset's
   own.
+- 2026-11-21 Review round 18, over RA-1 to RA-4 (687191c, a8bd216,
+  133d8af, 9ad5ab2, c534d24, 25d34b3, 1b4fb08): six findings, the first
+  five run on the code before they were believed. 1: a review in line
+  stored its copy of the rules over the ruleset as it started; fixed,
+  D-270. 2: a severity line written into a rule's text that had none was
+  read by its value alone, so one saying WARNING, which a text with no line
+  is taken to say, left a rule promoted in the app at CRITICAL under a text
+  saying WARNING. A line written in or reworded is now the text's word
+  (`replaceRuleText`); a line taken out states nothing, and the app's
+  severity stays unless the text then reads as another. 3: a rule saved as
+  its heading alone shows that heading as its text when opened, the route
+  taking everything after the first line break and finding none. 4: a save
+  or an add refused because the page was behind the ruleset leaves a text
+  that cannot be saved without reloading the page, which loses it; RA-2's
+  row had it as not built for a save, and an add has it too. A removal
+  already reads the ruleset again. 5, read in the code and not run: the
+  section a new rule goes to stays chosen after its last rule is removed,
+  so the rule goes after the ruleset's last rule while the page names the
+  section. 3 to 5 are on the ruleset's page and are fixed with its next
+  change, before RA-5: a change there is shot and graded, which this
+  session's context had no room for. 6, for RA-5: a table row in a rule's
+  text whose first cell holds a pattern in backticks is a sweep row to an
+  import, for every rule its second cell names. Saved into rule 4 of the
+  example protocol, a row naming rule 5 left rule 5 with the one pattern
+  stored, and the exported document read back with two.
+- 2026-11-21 CI run 44885044012 at d8da262, a records-only commit over
+  1b4fb08, ended cancelled on Ubuntu: the job met its 30 minute limit in
+  the browser tests. Read in its log, the runner was slow throughout and
+  nothing hung: the unit tests took 337.67s where the run before
+  (44884171559, the same code) took 76.78s on Ubuntu, they began nine
+  minutes into the job, and the browser tests, 5.6 minutes in that run, had
+  13 minutes before the limit. The job was run again rather than the limit
+  raised: one slow runner is not the suite's time.

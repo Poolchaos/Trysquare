@@ -149,6 +149,38 @@ describe("saving a rule's text", () => {
     expect((await ruleOf("5")).severity).toBe("NITPICK");
   });
 
+  it("takes a severity line written into a text that had none, and keeps the app's when one is taken out", async () => {
+    // A text with no severity line reads as WARNING. A line written into it
+    // is the person's word even when it says WARNING too: read by its value
+    // alone, it changed nothing and the rule stayed as promoted, its text
+    // saying one severity and its row another (review round 18).
+    const { PATCH } = await import("@/app/api/rulesets/[id]/rules/[code]/route");
+    const promote = async () =>
+      PATCH(
+        new Request("http://local/x", {
+          method: "PATCH",
+          body: JSON.stringify({ severity: "CRITICAL" }),
+        }),
+        { params: Promise.resolve({ id, code: "10" }) },
+      );
+    const version = async () => (await detail()).ruleset.version;
+
+    const stated = (await ruleOf("10")).raw;
+    expect(stated).toContain("**Severity:** WARNING\n");
+    const unstated = stated.replace("**Severity:** WARNING\n", "");
+    expect((await save("10", unstated, await version())).status).toBe(200);
+    expect((await promote()).status).toBe(200);
+    expect((await ruleOf("10")).severity).toBe("CRITICAL");
+
+    expect((await save("10", stated, await version())).status).toBe(200);
+    expect((await ruleOf("10")).severity).toBe("WARNING");
+
+    // Taken out again, the text states nothing new, so the app's stays.
+    expect((await promote()).status).toBe(200);
+    expect((await save("10", unstated, await version())).status).toBe(200);
+    expect((await ruleOf("10")).severity).toBe("CRITICAL");
+  });
+
   it("refuses a block that is not exactly one rule, in the parser's words, saving nothing", async () => {
     const before = await detail();
     const rule = before.rules.find((entry) => entry.code === "4")!;

@@ -107,9 +107,13 @@ const SEVERITY_ALIASES: Record<string, Severity> = {
   NIT: "NITPICK",
 };
 
+/** The word a text's severity line gives, upper-cased, or null where it has no such line. */
+export function severityWord(body: string): string | null {
+  return /\*\*Severity:\*\*\s*([A-Za-z]+)/.exec(body)?.[1]?.toUpperCase() ?? null;
+}
+
 export function parseSeverity(body: string): Severity {
-  const match = /\*\*Severity:\*\*\s*([A-Za-z]+)/.exec(body);
-  const token = match?.[1]?.toUpperCase();
+  const token = severityWord(body);
   if (token && SEVERITY_ALIASES[token]) return SEVERITY_ALIASES[token];
   // An unlabelled rule is treated as a warning rather than dropped or
   // promoted: dropping loses a rule, promoting inflates every report.

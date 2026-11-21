@@ -47,8 +47,17 @@ from 2026-11-03.
   it in the document move up to where it started, a page behind the
   ruleset is refused and reads it again, and a ruleset left with no rule
   says a review will not start on it. `./verify.sh --e2e` exits 0 with
-  1595 unit tests passing, 8 skipped, and 159 browser tests. A review pass
-  over RA-1 to RA-4 is next, then RA-5.
+  1595 unit tests passing, 8 skipped, and 159 browser tests.
+  The review pass over RA-1 to RA-4 (round 18, in DECISIONS) found a fault
+  older than they are: a review that waited in line stored the rules as
+  they were when Start was pressed over the ruleset as it started, so a
+  rule edited or switched off meanwhile was set back, in the ruleset and
+  in the review. A review in line now holds its ruleset's id and runs with
+  the ruleset as it stands when its turn comes (D-270). A severity line
+  written into a rule's text that had none is taken as the text's word.
+  Three findings on the ruleset's page are open and come before RA-5
+  (`plans/RULES-IN-APP-PLAN.md` section 5). `./verify.sh --e2e` exits 0
+  with 1598 unit tests passing, 8 skipped, and 159 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the

@@ -23,6 +23,7 @@ import {
   importProtocol,
   inferTags,
   parseSeverity,
+  severityWord,
   unclosedFenceLine,
 } from "@/lib/rulesets/import";
 import type { ImportedRule, ImportedRuleset, SourceSpan } from "@/lib/rulesets/model";
@@ -508,9 +509,9 @@ export class RuleCodeHeldError extends Error {
  * What the document around a rule gave it stays the rule's: its place, its
  * group's tags, and the sweep patterns the table lists under its code, which
  * is why a rule with patterns keeps its code until an export can carry the
- * table along. A severity changed in the app stays too, unless the text's
- * own severity line changed: the text of a promoted rule still says what it
- * was imported as, and an edit elsewhere in it would have demoted the rule.
+ * table along. A severity changed in the app stays too, unless the text
+ * states one anew: the text of a promoted rule still says what it was
+ * imported as, and an edit elsewhere in it would have demoted the rule.
  * The save carries the version it was made from, so two tabs cannot undo
  * each other without a word.
  */
@@ -545,15 +546,21 @@ export function replaceRuleText(
     if (other) throw new RuleCodeTakenError(row.name, edited.code);
   }
 
+  // The text states a severity anew when its line reads as another one, or
+  // is written in or reworded: a line that says what the text was taken to
+  // say without one is still the person's word over the picker's.
   const bodyOf = (raw: string) => raw.slice(raw.indexOf("\n") + 1);
-  const saidBefore = parseSeverity(bodyOf(rule.rawMarkdown));
+  const before = bodyOf(rule.rawMarkdown);
+  const word = severityWord(bodyOf(edited.raw));
+  const statedAnew =
+    edited.severity !== parseSeverity(before) || (word !== null && word !== severityWord(before));
   const version = row.version + 1;
   db.transaction((tx) => {
     tx.update(rules)
       .set({
         code: edited.code,
         title: edited.title,
-        ...(edited.severity === saidBefore ? {} : { severity: edited.severity }),
+        ...(statedAnew ? { severity: edited.severity } : {}),
         tags: serialiseJsonColumn(inferTags(rule.groupHeading, edited.title)),
         ruleText: edited.ruleText,
         violationExample: edited.violationExample,
