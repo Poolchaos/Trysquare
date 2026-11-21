@@ -149,10 +149,9 @@ describe("removing a rule", () => {
   });
 
   it("keeps the document's order when the rule was saved longer than it was imported", async () => {
-    // A saved rule's later blocks keep their old line numbers until RA-5, so
-    // the rule's stored end runs past where the next block starts. Moved up
-    // by the rule's own lines, the blocks after it would land above the
-    // blocks before it, and the export would come out in another order.
+    // Before RA-5 a save moved no later block, so the rule's stored end ran
+    // past where the next block starts: moved up by the rule's own lines,
+    // the blocks after it landed above the blocks before it.
     const other = await imported("Example protocol, edited", EXAMPLE);
     const before = await detail(other);
     const grown = before.rules.find((rule) => rule.code === "2a")!;

@@ -176,7 +176,7 @@ export const ERROR_STATUSES: readonly (readonly [name: string, status: 404 | 409
   ["VerifyAgainUnavailableError", 409],
   // A rule's text saved in the app (RA-2) or a rule added there (RA-3):
   // from a version since replaced, under a code it cannot take, or after a
-  // rule whose open code fence it would be read into.
+  // block whose open code fence it would be read into.
   ["RulesetChangedError", 409],
   ["RuleCodeTakenError", 409],
   ["RuleCodeHeldError", 409],

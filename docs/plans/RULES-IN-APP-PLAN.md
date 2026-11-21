@@ -79,8 +79,9 @@ and change" figure already shows. Evidence: the code lines above.
 | RA-2 | Edit a rule's text. The rule's page opens its markdown in a text area; save parses the block with `importProtocol`, refuses anything that is not exactly one rule with every line kept, keeps the rule's place in the ruleset, and raises the version. Changing the code is allowed and refused if another rule has it. States: unchanged (save off), refused (the importer's words beside the field), saved. A preview of the text as rendered. | RA-1 | DONE 2026-11-21 (D-267), the save in a8bd216 and the editor in the commit after it, its shots graded there. The save: `parseRuleBlock` (`lib/rulesets/rule-edit.ts`), `replaceRuleText` and `PUT /api/rulesets/[id]/rules/[code]`, which takes the markdown and the version it was read at. A rule keeps its place, its group's tags and its sweep patterns; a severity changed in the app stays unless the text's own severity line changed; a rule with sweep patterns keeps its code until RA-5. The editor: Edit text on an opened rule, one field, the text as it will read under it. A refusal for a version since replaced left the person to reload the page by hand, losing what they typed; built in review round 18 (section 5). |
 | RA-3 | Add a rule. "Add a rule" opens the same editor on a starting block that shows the protocol's shape (heading with a code, the rule, a violation, the correct pattern, detection, severity), each part a line the person replaces; nothing of it is saved until they do. The new rule goes to the end of its group, or of the ruleset. | RA-2 | DONE 2026-11-21, c534d24 (D-268), its shots graded there. As built: `POST /api/rulesets/[id]/rules` takes the markdown, the version it was written at and the rule it follows; `addRule` puts the block into the ruleset's document there, moves every later block down by its lines, and reads the document back with the importer, taking the rule's section, tags and sweep patterns from that reading and saving nothing unless the other rules read back as stored. The screen picks the section (the last one unless another is chosen) and sends that section's last rule. A block still holding a line of the starting text is refused by that line (`parseNewRuleBlock`). A ruleset with no rule takes one too, which RA-6 needs. Not built: the rules table says nothing while a ruleset has no rule, a state no screen reaches until RA-4. |
 | RA-4 | Remove a rule. A control on the rule, asked once, saying that reviews already run keep it. Removing the last rule is allowed and the pre-flight already refuses a ruleset with none on (AE4). | RA-2 | DONE 2026-11-21, 1b4fb08 (D-269), its shots graded there. Found on the way and fixed in 25d34b3: a switched-off rule's row, drawn at 55% opacity, fell under AA contrast in both themes. As built: `DELETE /api/rulesets/[id]/rules/[code]?version=N` and `removeRule`: the rule goes, the blocks after it move up to where it started, the version rises. The screen: Remove rule beside Edit text in an opened rule, asked once with what a removal is against switching the rule off, the focus on Keep it; a note where the rule was; a page behind the ruleset is refused, reads it again and says so. A ruleset left with no rule says a review will not start on it, and a rule is added to it from there, the state RA-3 built and no screen reached. |
-| RA-5 | The round trip held by a test: a ruleset edited, added to and removed from in the app exports (`exportProtocol`) to a document that imports back to the same rules with every line accounted for. The sweep table follows a rule whose patterns changed. | RA-2 to RA-4 | TODO. Measured 2026-11-21, to fix here: after a rule's text is saved with a line more (RA-2), the ruleset's export imports as a different document from what is stored, since the blocks after the rule keep their old line numbers, so importing one's own export asks to replace and moves the version. An added rule moves them (RA-3's `addRule`), and a removed rule moves them up to where it started (RA-4's `removeRule`), which also puts them right after a rule saved longer; a save is to move them the same way. Also here: a removed rule's rows stay in the sweep table, and a rule added later under that code takes them (D-268). And, from review round 18: a table row in a rule's text with a pattern in backticks is a sweep row to an import, for every rule its second cell names, so a rule saved or added with one leaves the export reading back with patterns the stored rules do not have (measured: rule 5 stored with one pattern, read back with two). |
-| RA-6 | A new ruleset with no document: "New ruleset" asks a name and a tier and starts empty, so rules can be written in the app from nothing. | RA-3 | TODO |
+| RA-5 | The round trip held by a test: a ruleset edited, added to and removed from in the app exports (`exportProtocol`) to a document that imports back to the same rules with every line accounted for. The sweep table follows a rule whose patterns changed. | RA-2 to RA-4 | DONE 2026-11-21 (D-271). As built: a save, an add and a removal each read the ruleset's document back with the importer and store that reading (`readDocument`): where every block stands, and each rule's section, tags and sweep patterns. Measured before it: a rule saved three lines longer left the export differing from what was stored. `tests/server/api/rule-round-trip.test.ts` holds the round trip through a rule saved longer, one saved shorter, an add, a removal and a save after them, and a ruleset whose line numbers an earlier save left untrue is put right by its next change. Settled, not built as first written: a table row in a rule's text is a sweep row for the rule it names, as an import reads it (round 18's sixth finding), so stored and exported agree; a rule's code stays held while a row outside its own text names it, and a removed rule's rows stay in the sweep table, since the table is a directive and directives are not edited in the app. No screen changed. |
+| RA-5b | The ruleset's page says when a save, an add or a removal moved another rule's sweep patterns (D-271): the answer names the rules and their patterns, and the note the page already shows says it. The held code's refusal says how a code is changed, where it says "cannot yet". Shot and graded. | RA-5 | TODO |
+| RA-6 | A new ruleset with no document: "New ruleset" asks a name and a tier and starts empty, so rules can be written in the app from nothing. | RA-3 | TODO. To hold here: a ruleset with no block exports an empty document, which the importer reads as one directive, so its export does not read back as what is stored (`readDocument` reads no block as nothing). |
 | RA-7 | Records: README (what a person can change in the app), RUNBOOK, 02 (the ruleset's version), 04 (the rule's page), `PROJECT-STATE.md` Not built. | RA-1 to RA-6 | TODO |
 
 ## 3. What can go wrong, and what holds it
@@ -90,11 +91,19 @@ and change" figure already shows. Evidence: the code lines above.
   report unchanged.
 - An edit quietly weakens a rule: a line dropped, a severity lost. Held by
   the importer's line accounting, on every save.
-- A sweep pattern that no longer compiles or never ends. Read in RA-2: a
-  rule's patterns come from the document's sweep table, not from the
-  rule's own block, so an edit of the block cannot change one, and the
-  save keeps them as stored. A pattern is changed by importing the
-  document until RA-5.
+- A sweep pattern that no longer compiles or never ends. A rule's patterns
+  come from the table rows that name its code, read from the whole
+  document after every change (RA-5, D-271), so a row written into a
+  rule's text can give one, as it can in an imported document. One that
+  does not compile runs as the text it is, and the run says so
+  (`lib/review/sweep.ts`); one that never ends is not guarded against, in
+  the app or in an import.
+- A change that moves another rule's sweep patterns without a word: a row
+  in rule 4's text that names rule 5, or rule 4 removed with it. Stored
+  and exported agree (RA-5); the page saying so is RA-5b.
+- A rule that loses its sweeps by a change of code. Held: the code is
+  refused while a row outside the rule's own text names it
+  (`RuleCodeHeldError`, D-271).
 - A code fence opened in a rule and never closed. Read alone the block is
   one rule; in the ruleset's document every heading after it reads as
   code, and the example protocol with one such rule exported and read back
@@ -109,10 +118,11 @@ and change" figure already shows. Evidence: the code lines above.
   back as what is stored, line numbers too (`tests/server/api/rule-add.test.ts`).
 - The starting text saved as a rule and put to a model. Refused while any
   line of it is left.
-- A removal that puts the document in another order. The blocks after a
-  removed rule move up to where it started, which holds the export's order
-  whatever the stored line numbers say
-  (`tests/server/api/rule-remove.test.ts`).
+- A change that leaves the export unlike what is stored: line numbers a
+  save did not move, an order a removal changed. Every change reads the
+  document back and stores the reading, and one that would not read back
+  as its blocks saves nothing (`tests/server/api/rule-round-trip.test.ts`,
+  `tests/server/api/rule-remove.test.ts`).
 - A rule removed from a page that is behind the ruleset. The removal
   carries the version the page read, a stale one is refused, and the page
   reads the ruleset again before it is asked a second time.
@@ -151,4 +161,4 @@ shot and graded (the commit after the round's record):
   removed (`NewRule`), run in the browser test before it was fixed: the
   page went on naming the section and its tags.
 
-The sixth is RA-5's, in its row.
+The sixth was settled with RA-5 (D-271, its row).

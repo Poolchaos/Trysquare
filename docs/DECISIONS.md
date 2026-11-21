@@ -6634,3 +6634,44 @@ verified evidence, in writing, here.
   holds only while it has a rule to follow; the fifth finding, read in the
   code before, ran: with the section's last rule removed the page went on
   naming it and its tags.
+- 2026-11-21 D-271 After any change made to a ruleset in the app, its
+  document is read back with the importer, and what is stored is that
+  reading (RA-5). A save, an add and a removal each put the blocks in their
+  order, read them as one document, and store from the reading where every
+  block stands and each rule's section, tags and sweep patterns
+  (`readDocument`, `src/server/db/repositories/rulesets.ts`); a document
+  that does not read back as those blocks saves nothing. An export so
+  reads back as what is stored after every change, which a test holds
+  through a rule saved longer, one saved shorter, an add, a removal and a
+  save after them (`tests/server/api/rule-round-trip.test.ts`). Measured
+  on the code before: a rule saved three lines longer left the export
+  differing from what was stored, the blocks after it keeping their line
+  numbers. Three things follow, each decided here. First, a table row in
+  a rule's text with a pattern in backticks is a sweep row for every rule
+  its second cell names, as it is to an import (round 18's sixth finding):
+  saved into rule 4, a row naming rule 5 gives rule 5 the pattern, and
+  removing rule 4 takes it back. It is also the one way to give a rule a
+  sweep pattern without importing a document. The page does not yet say
+  when a change moved another rule's patterns, which is the next change
+  (RA-5b). Second, a rule's code stays held while the rule would lose a
+  sweep pattern under the new one, which is whenever a row naming it is
+  outside its own text; a row in its own text can change with the heading.
+  D-267 had RA-5 lift the hold. It stays because the sweep table is a
+  directive, a directive is not edited in the app (the plan's non-goals),
+  and rewriting a cell of it would put the app's wording into what the
+  model is given. A code is changed in the exported document, where the
+  table can follow it. Third, a removed rule's rows stay in the sweep
+  table for the same reason, and a rule later added under that code takes
+  them (D-268 stands). Also: a rule is not added after a directive that
+  leaves a code fence open, said in words (`RuleFenceOpenError`), where
+  the read-back alone answered with a server error. Rejected: moving the
+  later blocks by the saved rule's change in lines, a third piece of line
+  arithmetic beside the add's and the removal's that would still leave
+  the sweep patterns as stored; refusing a rule's text that holds a sweep
+  row, which refuses a text an import takes; and reading sweep rows only
+  outside rules' blocks, which changes what an imported document means and
+  was not checked against the maintainer's own protocol. A ruleset whose
+  line numbers an earlier save left untrue is put right by the next change
+  made to it in the app, its blocks' order still holding, which the same
+  test file holds. Not checked: whether the database on this machine holds
+  such a ruleset; the guard hook refuses a script that opens it.

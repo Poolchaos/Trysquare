@@ -61,7 +61,16 @@ from 2026-11-03.
   that is its heading alone says it has no text, and a section whose last
   rule was removed is no longer where a new rule goes. `./verify.sh --e2e`
   exits 0 with 1598 unit tests passing, 8 skipped, and 160 browser tests.
-  RA-5 is next.
+  A ruleset changed in the app exports a document that reads back as what
+  is stored (RA-5, D-271): a save, an add and a removal each read the
+  document back with the importer and store where every block stands and
+  each rule's section, tags and sweep patterns from that reading. A rule
+  saved longer had left the blocks after it at their old line numbers, so
+  importing one's own export asked to replace the ruleset. A table row in
+  a rule's text is a sweep row for the rule it names, as an import reads
+  it; the page does not yet say when that moved another rule's patterns
+  (RA-5b, next). `./verify.sh --e2e` exits 0 with 1604 unit tests passing,
+  8 skipped, and 160 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the

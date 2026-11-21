@@ -351,3 +351,10 @@ the line entirely would lose the trail.
   is pressed and again at Keep it, the button pressed being taken off the
   page. Remove rule (RA-4) puts the focus on Keep it and back on the
   control; the card could do the same.
+- 2026-11-21: a sweep row is any table row whose first cell holds a
+  pattern in backticks, and every number in its second cell is taken as a
+  rule's code (`parseSweepTable`), so a row reading "radix 10" gives rule
+  10 a pattern. Narrowing it changes what an imported document means:
+  check the maintainer's protocol first.
+- 2026-11-21: the sweep table edited in the app, so a rule's code can
+  change and a removed rule's rows go with it (D-271 holds both back).

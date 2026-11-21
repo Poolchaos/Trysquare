@@ -9,7 +9,7 @@
  * review.
  */
 
-import { and, asc, eq, gt, gte, sql } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { newId, nowIso } from "@/lib/ids";
 import {
@@ -19,14 +19,12 @@ import {
   directiveSectionSchema,
 } from "@/lib/domain/enums";
 import {
-  exportProtocol,
   importProtocol,
-  inferTags,
   parseSeverity,
   severityWord,
   unclosedFenceLine,
 } from "@/lib/rulesets/import";
-import type { ImportedRule, ImportedRuleset, SourceSpan } from "@/lib/rulesets/model";
+import type { ImportedDirective, ImportedRule, ImportedRuleset } from "@/lib/rulesets/model";
 import type { Db } from "../client";
 import { processDirectives, reviewRulesets, rules, rulesets } from "../schema";
 import { parseJsonColumn, serialiseJsonColumn } from "./json";
@@ -502,18 +500,125 @@ export class RuleCodeHeldError extends Error {
   }
 }
 
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+/** A block of a ruleset's document as stored: a rule's row, or a directive's with no code. */
+interface StoredBlock {
+  id: string;
+  code: string | null;
+  raw: string;
+}
+
+const isRuleBlock = (block: StoredBlock): block is StoredBlock & { code: string } =>
+  block.code !== null;
+
+/** A ruleset's rules and directives in the order its document holds them. */
+function storedBlocks(db: Db, rulesetId: string): StoredBlock[] {
+  const ruleRows = db
+    .select({
+      id: rules.id,
+      code: rules.code,
+      raw: rules.rawMarkdown,
+      start: rules.sourceStartLine,
+    })
+    .from(rules)
+    .where(eq(rules.rulesetId, rulesetId))
+    .all();
+  const directiveRows = db
+    .select({
+      id: processDirectives.id,
+      raw: processDirectives.rawMarkdown,
+      start: processDirectives.sourceStartLine,
+    })
+    .from(processDirectives)
+    .where(eq(processDirectives.rulesetId, rulesetId))
+    .all();
+  return [...ruleRows, ...directiveRows.map((row) => ({ ...row, code: null }))]
+    .sort((a, b) => a.start - b.start)
+    .map(({ id, code, raw }) => ({ id, code, raw }));
+}
+
+/** What the importer read for each block, by its row's id, in the document's order. */
+interface DocumentReading {
+  rules: Map<string, ImportedRule>;
+  directives: Map<string, ImportedDirective>;
+}
+
+/**
+ * Reads a ruleset's document as a change made in the app leaves it: these
+ * blocks in this order (RA-5, D-271).
+ *
+ * What the importer reads there is what gets stored, so an export always
+ * reads back as what is stored: where each block stands, and each rule's
+ * section, tags and sweep patterns, which a table row anywhere in the
+ * document can give it. A document that does not read back as these blocks
+ * is refused, and `what` names the change that was not made.
+ */
+function readDocument(name: string, blocks: readonly StoredBlock[], what: string): DocumentReading {
+  const reading: DocumentReading = { rules: new Map(), directives: new Map() };
+  // No block is an empty document, which the importer reads as one directive.
+  if (blocks.length === 0) return reading;
+
+  const { ruleset } = importProtocol(blocks.map((block) => block.raw).join("\n"));
+  const read = [...ruleset.rules, ...ruleset.directives].sort((a, b) => a.startLine - b.startLine);
+  const codeOf = (entry: ImportedRule | ImportedDirective) => ("code" in entry ? entry.code : null);
+  const asStored =
+    read.length === blocks.length &&
+    read.every((entry, at) => entry.raw === blocks[at]!.raw && codeOf(entry) === blocks[at]!.code);
+  if (!asStored) {
+    const codes = (list: readonly (string | null)[]) =>
+      list.filter((code) => code !== null).join(", ") || "none";
+    throw new Error(
+      `${what}: the ruleset's document would read back as ${read.length} blocks ` +
+        `(rules ${codes(read.map(codeOf))}), where ${blocks.length} ` +
+        `(rules ${codes(blocks.map((block) => block.code))}) are expected.`,
+    );
+  }
+
+  read.forEach((entry, at) => {
+    const { id } = blocks[at]!;
+    if ("code" in entry) reading.rules.set(id, entry);
+    else reading.directives.set(id, entry);
+  });
+  return reading;
+}
+
+/** Stores what the document gives every block: `readDocument`'s reading, whole. */
+function storeReading(tx: Tx, reading: DocumentReading): void {
+  [...reading.rules].forEach(([id, rule], sortOrder) => {
+    tx.update(rules)
+      .set({
+        sourceStartLine: rule.startLine,
+        sourceEndLine: rule.endLine,
+        groupHeading: rule.group,
+        tags: serialiseJsonColumn(rule.tags),
+        sweepPatterns: serialiseJsonColumn(rule.sweepPatterns),
+        sortOrder,
+      })
+      .where(eq(rules.id, id))
+      .run();
+  });
+  for (const [id, directive] of reading.directives) {
+    tx.update(processDirectives)
+      .set({ sourceStartLine: directive.startLine, sourceEndLine: directive.endLine })
+      .where(eq(processDirectives.id, id))
+      .run();
+  }
+}
+
 /**
  * Saves a rule's text as edited in the app (RA-2): `edited` is the block as
  * `parseRuleBlock` read it, alone.
  *
- * What the document around a rule gave it stays the rule's: its place, its
- * group's tags, and the sweep patterns the table lists under its code, which
- * is why a rule with patterns keeps its code until an export can carry the
- * table along. A severity changed in the app stays too, unless the text
- * states one anew: the text of a promoted rule still says what it was
- * imported as, and an edit elsewhere in it would have demoted the rule.
- * The save carries the version it was made from, so two tabs cannot undo
- * each other without a word.
+ * The rule keeps its place, and what the document around it gives it is read
+ * there again (`readDocument`): its section's tags, and the sweep patterns
+ * that rows list under its code. A code is held while the rule would lose a
+ * pattern under the new one, which it does unless the rows naming it are in
+ * its own text and change with it. A severity changed in the app stays,
+ * unless the text states one anew: the text of a promoted rule still says
+ * what it was imported as, and an edit elsewhere in it would have demoted
+ * the rule. The save carries the version it was made from, so two tabs
+ * cannot undo each other without a word.
  */
 export function replaceRuleText(
   db: Db,
@@ -535,15 +640,27 @@ export function replaceRuleText(
   if (edited.raw === rule.rawMarkdown) return { version: row.version, code };
   if (readVersion !== row.version) throw new RulesetChangedError(row.version, readVersion);
 
-  if (edited.code !== code) {
-    const swept = parseJsonColumn("rules.sweep_patterns", rule.sweepPatterns, stringArraySchema);
-    if (swept.length > 0) throw new RuleCodeHeldError(code);
+  const renamed = edited.code !== code;
+  if (renamed) {
     const other = db
       .select({ id: rules.id })
       .from(rules)
       .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, edited.code)))
       .get();
     if (other) throw new RuleCodeTakenError(row.name, edited.code);
+  }
+
+  const reading = readDocument(
+    row.name,
+    storedBlocks(db, rulesetId).map((block) =>
+      block.id === rule.id ? { id: rule.id, code: edited.code, raw: edited.raw } : block,
+    ),
+    `Rule ${code} was not saved in "${row.name}"`,
+  );
+  const swept = parseJsonColumn("rules.sweep_patterns", rule.sweepPatterns, stringArraySchema);
+  const kept = reading.rules.get(rule.id)!.sweepPatterns;
+  if (renamed && swept.some((pattern) => !kept.includes(pattern))) {
+    throw new RuleCodeHeldError(code);
   }
 
   // The text states a severity anew when its line reads as another one, or
@@ -561,17 +678,16 @@ export function replaceRuleText(
         code: edited.code,
         title: edited.title,
         ...(statedAnew ? { severity: edited.severity } : {}),
-        tags: serialiseJsonColumn(inferTags(rule.groupHeading, edited.title)),
         ruleText: edited.ruleText,
         violationExample: edited.violationExample,
         correctPattern: edited.correctPattern,
         detection: edited.detection,
         notes: edited.notes,
         rawMarkdown: edited.raw,
-        sourceEndLine: rule.sourceStartLine + edited.endLine - edited.startLine,
       })
       .where(eq(rules.id, rule.id))
       .run();
+    storeReading(tx, reading);
     tx.update(rulesets)
       .set({ version, updatedAt: nowIso() })
       .where(eq(rulesets.id, rulesetId))
@@ -581,10 +697,14 @@ export function replaceRuleText(
 }
 
 export class RuleFenceOpenError extends Error {
-  constructor(readonly code: string) {
+  /** The rule that leaves the fence open, or null where the document ends on a directive that does. */
+  constructor(readonly code: string | null) {
     super(
-      `Rule ${code} leaves a code fence open, so a rule put after it would read as code in the ` +
-        `ruleset's document. Close the fence in rule ${code}'s text first.`,
+      code === null
+        ? "The ruleset's document ends on a code fence left open, so a rule put after it would " +
+            "read as code. Close the fence in the document and import it again."
+        : `Rule ${code} leaves a code fence open, so a rule put after it would read as code in ` +
+            `the ruleset's document. Close the fence in rule ${code}'s text first.`,
     );
     this.name = "RuleFenceOpenError";
   }
@@ -595,12 +715,10 @@ export class RuleFenceOpenError extends Error {
  * `parseNewRuleBlock` read it, alone.
  *
  * It goes into the ruleset's document after the rule named, or after the
- * last rule, and is read there by the importer: the section it sits under,
- * the tags that gives it and the sweep patterns the table lists under its
- * code are the document's, as an import of the exported document would have
- * them. Every block after it moves down by its lines, so the export keeps
- * its order and its line numbers. The document must read back as the rules
- * stored with this one among them, or nothing is saved.
+ * last rule, and is read there by the importer (`readDocument`): the section
+ * it sits under, the tags that gives it and the sweep patterns rows list
+ * under its code are the document's, as an import of the exported document
+ * would have them.
  */
 export function addRule(
   db: Db,
@@ -613,105 +731,51 @@ export function addRule(
   if (!row) throw new RulesetNotFoundError(rulesetId);
   if (readVersion !== row.version) throw new RulesetChangedError(row.version, readVersion);
 
-  const stored = loadRuleset(db, rulesetId);
+  const blocks = storedBlocks(db, rulesetId);
+  const ruleBlocks = blocks.filter(isRuleBlock);
   const anchor =
-    after === undefined ? stored.rules.at(-1) : stored.rules.find((rule) => rule.code === after);
+    after === undefined ? ruleBlocks.at(-1) : ruleBlocks.find((block) => block.code === after);
   if (after !== undefined && !anchor) throw new RuleNotFoundError(row.name, after);
-  if (stored.rules.some((rule) => rule.code === added.code)) {
+  if (ruleBlocks.some((block) => block.code === added.code)) {
     throw new RuleCodeTakenError(row.name, added.code);
   }
-  if (anchor && unclosedFenceLine(anchor.raw) !== null) throw new RuleFenceOpenError(anchor.code);
 
-  // Where the block after the anchor starts, or past everything.
-  const blocks = [...stored.rules, ...stored.directives].sort((a, b) => a.startLine - b.startLine);
-  const next = anchor ? blocks[blocks.indexOf(anchor) + 1] : undefined;
-  const at = next?.startLine ?? Math.max(0, ...blocks.map((block) => block.endLine)) + 1;
-  const lines = added.raw.split("\n").length;
-  const moved = <Block extends SourceSpan>(block: Block): Block =>
-    block.startLine >= at
-      ? { ...block, startLine: block.startLine + lines, endLine: block.endLine + lines }
-      : block;
-
-  const index = anchor ? stored.rules.indexOf(anchor) + 1 : 0;
-  const withAdded = [
-    ...stored.rules.slice(0, index).map(moved),
-    { ...added, startLine: at, endLine: at + lines - 1 },
-    ...stored.rules.slice(index).map(moved),
-  ];
-  const read = importProtocol(
-    exportProtocol({
-      title: stored.title,
-      rules: withAdded,
-      directives: stored.directives.map(moved),
-    }),
-  );
-  const placed = read.ruleset.rules[index];
-  const codes = (list: readonly ImportedRule[]) => list.map((rule) => rule.code).join(", ");
-  if (
-    placed?.raw !== added.raw ||
-    codes(read.ruleset.rules) !== codes(withAdded) ||
-    read.ruleset.directives.length !== stored.directives.length ||
-    read.coverage.unmapped.some((entry) => entry.text.trim() !== "")
-  ) {
-    throw new Error(
-      `Rule ${added.code} was not added to "${row.name}": with it in place the ruleset's ` +
-        `document reads back as rules ${codes(read.ruleset.rules) || "none"}, where ` +
-        `${codes(withAdded)} are expected.`,
-    );
+  // After the anchor, or past everything in a ruleset with no rule.
+  const at = anchor ? blocks.indexOf(anchor) + 1 : blocks.length;
+  const preceding = blocks[at - 1];
+  if (preceding && unclosedFenceLine(preceding.raw) !== null) {
+    throw new RuleFenceOpenError(preceding.code);
   }
 
-  const anchorRow = anchor
-    ? db
-        .select({ sortOrder: rules.sortOrder })
-        .from(rules)
-        .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, anchor.code)))
-        .get()
-    : undefined;
-  const sortOrder = anchorRow ? anchorRow.sortOrder + 1 : 0;
+  const id = newId();
+  const reading = readDocument(
+    row.name,
+    [...blocks.slice(0, at), { id, code: added.code, raw: added.raw }, ...blocks.slice(at)],
+    `Rule ${added.code} was not added to "${row.name}"`,
+  );
+
   const version = row.version + 1;
   db.transaction((tx) => {
-    tx.update(rules)
-      .set({
-        sourceStartLine: sql`${rules.sourceStartLine} + ${lines}`,
-        sourceEndLine: sql`${rules.sourceEndLine} + ${lines}`,
-      })
-      .where(and(eq(rules.rulesetId, rulesetId), gte(rules.sourceStartLine, at)))
-      .run();
-    tx.update(processDirectives)
-      .set({
-        sourceStartLine: sql`${processDirectives.sourceStartLine} + ${lines}`,
-        sourceEndLine: sql`${processDirectives.sourceEndLine} + ${lines}`,
-      })
-      .where(
-        and(eq(processDirectives.rulesetId, rulesetId), gte(processDirectives.sourceStartLine, at)),
-      )
-      .run();
-    tx.update(rules)
-      .set({ sortOrder: sql`${rules.sortOrder} + 1` })
-      .where(and(eq(rules.rulesetId, rulesetId), gte(rules.sortOrder, sortOrder)))
-      .run();
+    // Its place, section, tags and sweep patterns are the reading's, stored
+    // with every other block's below.
     tx.insert(rules)
       .values({
-        id: newId(),
+        id,
         rulesetId,
         code: added.code,
         title: added.title,
         severity: added.severity,
-        tags: serialiseJsonColumn(placed.tags),
         ruleText: added.ruleText,
         violationExample: added.violationExample,
         correctPattern: added.correctPattern,
         detection: added.detection,
         notes: added.notes,
-        sweepPatterns: serialiseJsonColumn(placed.sweepPatterns),
-        groupHeading: placed.group,
         rawMarkdown: added.raw,
-        sourceStartLine: at,
-        sourceEndLine: at + lines - 1,
         enabled: true,
-        sortOrder,
+        sortOrder: 0,
       })
       .run();
+    storeReading(tx, reading);
     tx.update(rulesets)
       .set({ version, updatedAt: nowIso() })
       .where(eq(rulesets.id, rulesetId))
@@ -723,12 +787,9 @@ export function addRule(
 /**
  * Removes a rule from its ruleset and from the ruleset's document (RA-4).
  *
- * The blocks after it move up to where it started, so the export keeps its
- * order. That is the rule's own line count in a document whose line numbers
- * are true, and it holds the order in one where they are not: a rule saved
- * longer than it was imported ends past where the next block starts (RA-5),
- * and moved up by its lines the blocks after it would land above the blocks
- * before it. A review already started keeps the rule in its own copy.
+ * The blocks after it move up, and a sweep pattern a row in its text gave
+ * another rule goes with the row (`readDocument`). A review already started
+ * keeps the rule in its own copy.
  */
 export function removeRule(
   db: Db,
@@ -740,42 +801,23 @@ export function removeRule(
   if (!row) throw new RulesetNotFoundError(rulesetId);
 
   const rule = db
-    .select()
+    .select({ id: rules.id })
     .from(rules)
     .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, code)))
     .get();
   if (!rule) throw new RuleNotFoundError(row.name, code);
   if (readVersion !== row.version) throw new RulesetChangedError(row.version, readVersion);
 
-  const stored = loadRuleset(db, rulesetId);
-  const next = [...stored.rules, ...stored.directives]
-    .map((block) => block.startLine)
-    .filter((start) => start > rule.sourceStartLine)
-    .reduce((first, start) => Math.min(first, start), Infinity);
-  const up = Number.isFinite(next) ? next - rule.sourceStartLine : 0;
+  const reading = readDocument(
+    row.name,
+    storedBlocks(db, rulesetId).filter((block) => block.id !== rule.id),
+    `Rule ${code} was not removed from "${row.name}"`,
+  );
 
   const version = row.version + 1;
   db.transaction((tx) => {
     tx.delete(rules).where(eq(rules.id, rule.id)).run();
-    tx.update(rules)
-      .set({
-        sourceStartLine: sql`${rules.sourceStartLine} - ${up}`,
-        sourceEndLine: sql`${rules.sourceEndLine} - ${up}`,
-      })
-      .where(and(eq(rules.rulesetId, rulesetId), gt(rules.sourceStartLine, rule.sourceStartLine)))
-      .run();
-    tx.update(processDirectives)
-      .set({
-        sourceStartLine: sql`${processDirectives.sourceStartLine} - ${up}`,
-        sourceEndLine: sql`${processDirectives.sourceEndLine} - ${up}`,
-      })
-      .where(
-        and(
-          eq(processDirectives.rulesetId, rulesetId),
-          gt(processDirectives.sourceStartLine, rule.sourceStartLine),
-        ),
-      )
-      .run();
+    storeReading(tx, reading);
     tx.update(rulesets)
       .set({ version, updatedAt: nowIso() })
       .where(eq(rulesets.id, rulesetId))
