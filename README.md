@@ -154,9 +154,15 @@ requests it expects to make.
 
 Rulesets are imported by pasting a markdown protocol document, which becomes
 numbered rules and process directives; the import is refused if it produces no
-rules. Each ruleset carries a tier, meaning rules for any code, rules for a
-technology, or rules for one project. Choosing several rulesets so the tiers
-compose in one review is designed but not built: today a review uses one.
+rules. A ruleset can also be started with no document and its rules written in
+the app. On a ruleset's page a rule is switched off, given another severity,
+edited as the markdown it is, added or removed, and the ruleset exports as a
+document that imports back as what is stored. Process directives come only
+with an imported document. A review keeps the rules it started with, so a
+later change never alters a past review. Each ruleset carries a tier, meaning
+rules for any code, rules for a technology, or rules for one project. Choosing
+several rulesets so the tiers compose in one review is designed but not built:
+today a review uses one.
 
 The review then runs as a sequence of stages, mirroring a rigorous manual
 review: build the change inventory, classify risk, understand the code
@@ -336,7 +342,8 @@ platform. Run `npm run doctor` on its own if that step fails.
 ### Seeding your company's rules
 
 A fresh install has no rulesets, and a review is judged against one. Import
-the protocol on the Rulesets screen by pasting it, or seed it from a file:
+the protocol on the Rulesets screen by pasting it, start a ruleset there with
+no document and write its rules in the app, or seed the protocol from a file:
 
 ```bash
 npm run rules:seed -- /path/to/REVIEW_PROTOCOL.md --name "Company base rules"

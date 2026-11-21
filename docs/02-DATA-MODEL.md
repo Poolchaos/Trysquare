@@ -112,7 +112,7 @@ review prepares, as code findings are from the stages' answers.
 | tier                 | text      | global, tech, project                      |
 | description          | text      |                                            |
 | sourceDoc            | text null | provenance, e.g. REVIEW_PROTOCOL.md import |
-| version              | int       | moves when a rule's severity or switch changes, or an import replaces the rules |
+| version              | int       | moves when a rule's severity or switch changes, a rule's text is saved, a rule is added or removed, or an import replaces the rules; 1 for a ruleset started with no document |
 | createdAt, updatedAt | text      |                                            |
 
 ### rules

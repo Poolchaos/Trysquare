@@ -71,9 +71,9 @@ It first runs `npm run doctor` (the `predev` script, D-226): Node, git, the
 SQLite driver, the CLI and its sign-in (the installed CLI or the one
 `TRYSQUARE_CLAUDE_PATH` names, not a path kept on Settings), the data
 directory, and whether a ruleset is stored. A FAIL stops the start; a WARN is said and the app starts.
-A fresh data directory has no ruleset: import one on the Rulesets screen, or
-seed it from a file with `npm run rules:seed` (README, Seeding your company's
-rules).
+A fresh data directory has no ruleset: import one on the Rulesets screen,
+start one there with no document, or seed it from a file with
+`npm run rules:seed` (README, Seeding your company's rules).
 
 Serves on <http://localhost:3000> and opens on the dashboard. `dev` and
 `start` both bind to 127.0.0.1, so the app is unreachable from any other
@@ -186,6 +186,14 @@ Probe press in step 4, a real but tiny paid call.
    because it replaces that ruleset's rules and undoes any rule switched off
    or re-graded since: Replace goes ahead, Keep it leaves the ruleset as it
    was. The same document again changes nothing and is not asked about.
+   Or start one with no document: under Start from choose No document, give
+   a name and a tier, Create ruleset. Its page opens with no rules, and a
+   review will not start on it until it has one. On any ruleset's page a
+   rule is switched off, given another severity, edited as its markdown
+   (Edit text), added (Add a rule) or removed (Remove rule). Each change
+   moves the ruleset's version, and a review already started keeps the rules
+   it was frozen with. Process directives come only with an imported
+   document.
 4. **Set up the review.** Open the project, pick a branch, and press Review on
    its row, or go to New review. Choose the branch to compare against, the
    ruleset, the model, and the effort. The CLI's top effort tier is

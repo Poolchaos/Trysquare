@@ -77,7 +77,10 @@ from 2026-11-03.
   and no directive it has no document, so its export is refused in words
   and the control is off, where it gave a file of no bytes.
   `./verify.sh --e2e` exits 0 with 1608 unit tests passing, 8 skipped, and
-  162 browser tests. RA-7 is next.
+  162 browser tests. The plan's records are brought up too (RA-7): README
+  and RUNBOOK say what a person changes in the app. Every package of
+  `plans/RULES-IN-APP-PLAN.md` is built; its review pass after RA-7 is
+  owed, and `plans/RULESET-TEMPLATES-PLAN.md` RT-1 follows it.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the
