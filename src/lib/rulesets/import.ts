@@ -161,12 +161,39 @@ export function fieldAfterLabel(body: string, label: string): string | null {
   return text === "" ? null : text;
 }
 
+/**
+ * A table row's cells. A pipe ends a cell unless it is escaped, as a table
+ * asks of a pipe that is content, or sits inside a code span. Split on every
+ * pipe, a sweep pattern with an alternation in it was cut in two, its row
+ * gave no pattern, and the import still counted every line as kept.
+ */
+function tableCells(row: string): string[] {
+  const cells: string[] = [];
+  let cell = "";
+  let inCode = false;
+  for (let at = 0; at < row.length; at += 1) {
+    const char = row[at]!;
+    if (char === "\\" && row[at + 1] === "|") {
+      cell += "|";
+      at += 1;
+    } else if (char === "|" && !inCode) {
+      cells.push(cell.trim());
+      cell = "";
+    } else {
+      if (char === "`") inCode = !inCode;
+      cell += char;
+    }
+  }
+  cells.push(cell.trim());
+  return cells;
+}
+
 /** Parses the mechanical sweep table into patterns keyed by rule code. */
 export function parseSweepTable(markdown: string): Map<string, string[]> {
   const byRule = new Map<string, string[]>();
   for (const line of markdown.split("\n")) {
     if (!line.trimStart().startsWith("|")) continue;
-    const cells = line.split("|").map((cell) => cell.trim());
+    const cells = tableCells(line);
     if (cells.length < 3) continue;
 
     const patternCell = cells[1] ?? "";

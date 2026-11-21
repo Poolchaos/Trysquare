@@ -130,7 +130,7 @@ review prepares, as code findings are from the stages' answers.
 | correctPattern   | text null | verbatim fenced code                                |
 | detection        | text null | verbatim detection hints                            |
 | notes            | text null | why-it-matters, real examples, exceptions           |
-| sweepPatterns    | text JSON | regexes derived from the protocol sweep table       |
+| sweepPatterns    | text JSON | regexes derived from the protocol sweep table, a pipe in one written `\|` or bare inside its backticks |
 | groupHeading     | text      | the section heading the rule sat under, which tags it |
 | rawMarkdown      | text      | the rule as the author wrote it: what proves an import dropped nothing, and what an export writes |
 | sourceStartLine, sourceEndLine | int | where in the document it came from |

@@ -228,6 +228,47 @@ describe("parsing helpers", () => {
     expect(parsed.get("3")).toEqual(["bar"]);
   });
 
+  it("reads a sweep pattern that holds a pipe, escaped as a table cell asks or bare inside its backticks", () => {
+    // Split on every pipe, each of the first two rows gave its rule no
+    // pattern, and no line of the document was counted as lost.
+    const parsed = parseSweepTable(
+      [
+        "| `\\b(TODO\\|FIXME)\\b` | Rule 1: work marked as not done |",
+        "| `only|skip` | Rule 2 |",
+        "| `plain` | Rule 2, where `x|y` is no pattern of its own |",
+      ].join("\n"),
+    );
+    // The escape is the table's, not the expression's: every other
+    // backslash is the pattern's own.
+    expect(parsed.get("1")).toEqual(["\\b(TODO|FIXME)\\b"]);
+    expect(parsed.get("2")).toEqual(["only|skip", "plain"]);
+    expect([...parsed.keys()]).toEqual(["1", "2"]);
+  });
+
+  it("gives a rule the pattern of a row with a pipe in it when the document is imported", () => {
+    const document = [
+      "# Title",
+      "",
+      "## Sweeps",
+      "",
+      "| Sweep for | What a hit means |",
+      "| --- | --- |",
+      "| `\\.(only\\|skip)\\(` | Rule 1 |",
+      "",
+      "## Proof",
+      "",
+      "### 1. Test switched off",
+      "",
+      "**Rule:** Flag it.",
+      "",
+    ].join("\n");
+    const { ruleset, coverage } = importProtocol(document);
+    expect(ruleset.rules[0]!.sweepPatterns).toEqual(["\\.(only|skip)\\("]);
+    expect(coverage.unmapped).toEqual([]);
+    // The document is kept as written, escape and all.
+    expect(exportProtocol(ruleset)).toBe(document);
+  });
+
   it("falls back to a general tag when no technology is recognisable", () => {
     // Safe direction: the rule reaches every file rather than none.
     expect(inferTags("Miscellaneous", "Something")).toEqual(["general"]);

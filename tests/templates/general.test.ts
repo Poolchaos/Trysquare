@@ -45,7 +45,7 @@ describe("the General template", () => {
     expect(themesForPath("tests/pricing/discount.test.ts")).toContain("testing");
   });
 
-  it("gives each rule the sweep patterns its table names, none of them holding a pipe", () => {
+  it("gives each rule the sweep patterns its table names", () => {
     expect(
       Object.fromEntries(
         ruleset.rules
@@ -53,10 +53,6 @@ describe("the General template", () => {
           .map((rule) => [rule.code, rule.sweepPatterns.length]),
       ),
     ).toEqual({ 1: 1, 5: 4, 6: 2, 9: 2, 10: 2, 11: 2 });
-    // A table cell cannot hold one: the row would give its rule no pattern.
-    expect(
-      ruleset.rules.flatMap((rule) => rule.sweepPatterns).filter((p) => p.includes("|")),
-    ).toEqual([]);
   });
 
   it("says its scope, its severities and its sweeps where the app looks for them", () => {

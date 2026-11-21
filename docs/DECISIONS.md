@@ -6820,3 +6820,22 @@ verified evidence, in writing, here.
   put right: `PROJECT-STATE.md` said the one build warning was traced to
   the engine's log paths, and the build names the line that resolves a
   CLI path the person gives.
+- 2026-11-21 D-275 A sweep row whose pattern holds a pipe gives its rule
+  that pattern. The importer split a table row on every pipe, so a pattern
+  with an alternation in it was cut in two: escaped as a table asks
+  (`\|`) or written bare inside its backticks, the row gave its rule no
+  pattern, the sweep the document states never ran, and the import still
+  reported every line kept. Measured before the fix: both spellings gave
+  an empty list and no unmapped line. A pipe now ends a cell unless it is
+  escaped or inside a code span, and the escape is taken off the pattern;
+  every other backslash is the expression's own (`tableCells`,
+  `lib/rulesets/import.ts`). The document is stored and exported as
+  written. What it changes for a ruleset already stored: nothing until its
+  document is read again, by an import or by a rule saved, added or
+  removed in the app (D-271), and then a row that gave nothing gives its
+  pattern, which the page says with the change (RA-5b). Not checked:
+  whether the maintainer's own protocol has such a row; it is not in this
+  repository. Rejected: reporting such a row as a line lost, which refuses
+  a document for a spelling the table's own rules ask for. The General
+  template keeps one alternative to a row all the same, each row saying
+  what its hit means.

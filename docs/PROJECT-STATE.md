@@ -96,7 +96,12 @@ from 2026-11-03.
   now asks of every rule. No screen shows the shelf yet (RT-1b, next),
   and the template has not been run against a model: its fixture is
   RT-2b and the run is the maintainer's to start (RT-6).
-  `./verify.sh --e2e` exits 0 with 1629 unit tests passing, 8 skipped,
+  A sweep row whose pattern holds a pipe gives its rule the pattern
+  (D-275): escaped as a table asks, or bare inside its backticks, it was
+  cut in two and the rule got none, with every line still counted as
+  kept. A stored ruleset reads its document again at its next change in
+  the app, and the page says which rules' patterns that moved.
+  `./verify.sh --e2e` exits 0 with 1631 unit tests passing, 8 skipped,
   and 163 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
