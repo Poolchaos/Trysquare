@@ -9,7 +9,7 @@
  */
 
 import { useRouter } from "next/navigation";
-import { Fragment, use, useCallback, useEffect, useState } from "react";
+import { Fragment, use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { MarkdownText } from "@/components/markdown";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import {
@@ -25,6 +25,8 @@ import {
 } from "@/components/ui";
 import { send } from "@/components/request";
 import type { DirectiveSection } from "@/lib/domain/enums";
+import { inferTags } from "@/lib/rulesets/import";
+import { parseRuleBlock, startingRuleBlock } from "@/lib/rulesets/rule-edit";
 import { directiveSectionLabel } from "@/lib/rulesets/sections";
 
 interface Detail {
@@ -44,6 +46,8 @@ interface Detail {
     title: string;
     severity: string;
     tags: string[];
+    /** The section of the document the rule sits under. */
+    group: string;
     sweepPatterns: string[];
     enabled: boolean;
     text: string;
@@ -55,45 +59,44 @@ const SEVERITIES = ["CRITICAL", "WARNING", "NITPICK"];
 const TIERS = ["global", "tech", "project"];
 
 /**
- * A rule's text, edited as the markdown it is, heading line and all (RA-2).
+ * A rule's text, written as the markdown it is, heading line and all: an
+ * existing rule's (RA-2), or a new one's from its starting block (RA-3).
  *
  * One field and no form: the server reads the block with the importer's own
  * parser, so what the model is given stays the person's words (D-265). Save
- * is off while nothing changed, and a refusal is the server's, beside the
- * field, with the text kept as typed.
+ * is off while the text is what the field opened on, and a refusal is the
+ * server's, beside the field, with the text kept as typed.
  */
 function RuleEditor({
-  rulesetId,
-  version,
-  rule,
-  onSaved,
+  field,
+  label,
+  opensOn,
+  hint,
+  saveLabel,
+  place,
+  onSave,
   onCancel,
 }: {
-  rulesetId: string;
-  version: number;
-  rule: Detail["rules"][number];
-  onSaved: (code: string) => Promise<void>;
+  field: string;
+  label: string;
+  opensOn: string;
+  hint: string;
+  saveLabel: string;
+  /** Where the text as it stands will go, for a rule that has no place yet. */
+  place?: (markdown: string) => ReactNode;
+  /** Sends the text, answering with the server's refusal, or "" once saved. */
+  onSave: (markdown: string) => Promise<string>;
   onCancel: () => void;
 }) {
-  const [value, setValue] = useState(rule.raw);
+  const [value, setValue] = useState(opensOn);
   const [refusal, setRefusal] = useState("");
   const [saving, setSaving] = useState(false);
-  const field = `rule-markdown-${rule.code}`;
 
   async function save() {
     setRefusal("");
     setSaving(true);
     try {
-      const sent = await send<{ code: string }>(
-        `/api/rulesets/${rulesetId}/rules/${encodeURIComponent(rule.code)}`,
-        { method: "PUT", body: JSON.stringify({ markdown: value, version }) },
-        "The rule could not be saved",
-      );
-      if (!sent.ok) {
-        setRefusal(sent.error);
-        return;
-      }
-      await onSaved(sent.body.code);
+      setRefusal(await onSave(value));
     } finally {
       setSaving(false);
     }
@@ -103,21 +106,24 @@ function RuleEditor({
     <div className="grid gap-3">
       <div>
         <label className="mb-1.5 block text-sm font-medium" htmlFor={field}>
-          Rule {rule.code} as markdown
+          {label}
         </label>
         <Textarea
           id={field}
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            setValue(event.target.value);
+            // It was about the text as sent, which this is no longer: left
+            // up, it named a line since rewritten.
+            setRefusal("");
+          }}
           rows={Math.min(Math.max(value.split("\n").length + 1, 8), 30)}
           spellCheck={false}
           className="w-full font-[family-name:var(--font-mono)] text-xs"
         />
-        <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-          The heading line carries the rule&apos;s code and title. Reviews already run keep the text
-          they ran with.
-        </p>
+        <p className="mt-1 text-xs text-[var(--color-ink-muted)]">{hint}</p>
       </div>
+      {place ? place(value) : null}
       <div>
         <p className="mb-1 text-xs font-medium text-[var(--color-ink-muted)]">As it will read</p>
         <div className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
@@ -133,16 +139,105 @@ function RuleEditor({
       <div className="flex flex-wrap gap-2">
         <Button
           variant="primary"
-          disabled={saving || value === rule.raw}
+          disabled={saving || value === opensOn}
           onClick={() => void save()}
         >
-          {saving ? "Saving..." : "Save rule"}
+          {saving ? "Saving..." : saveLabel}
         </Button>
         <Button variant="quiet" disabled={saving} onClick={onCancel}>
           Cancel
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * A new rule, written from a starting block in the protocol's shape (RA-3).
+ *
+ * It goes to the end of a section of the ruleset's document, the last one
+ * unless another is picked: a rule takes its tags from the section it sits
+ * under and from its title, so where it goes is said, with the tags the text
+ * as it stands would get, before anything is saved.
+ */
+function NewRule({
+  rulesetId,
+  version,
+  rules,
+  onAdded,
+  onCancel,
+}: {
+  rulesetId: string;
+  version: number;
+  rules: Detail["rules"];
+  onAdded: (code: string, section: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  // Each section once, in the document's order, with the rule it ends on.
+  const sections = [...new Map(rules.map((rule) => [rule.group, rule.code]))];
+  const [section, setSection] = useState(sections.at(-1)?.[0] ?? "");
+  const after = sections.find(([name]) => name === section)?.[1];
+
+  return (
+    <RuleEditor
+      field="new-rule-markdown"
+      label="New rule as markdown"
+      opensOn={startingRuleBlock(rules.map((rule) => rule.code))}
+      hint="The heading line carries the rule's code and title. Replace each line of the starting text, or take that part out."
+      saveLabel="Add rule"
+      onCancel={onCancel}
+      place={(markdown) => {
+        const read = parseRuleBlock(markdown);
+        return (
+          <div>
+            {sections.length > 1 ? (
+              <>
+                <label className="mb-1.5 block text-sm font-medium" htmlFor="new-rule-section">
+                  Section
+                </label>
+                <Select
+                  id="new-rule-section"
+                  value={section}
+                  onChange={(event) => setSection(event.target.value)}
+                  className="sm:w-auto"
+                >
+                  {sections.map(([name]) => (
+                    <option key={name} value={name}>
+                      {name === "" ? "Before the first section" : name}
+                    </option>
+                  ))}
+                </Select>
+              </>
+            ) : null}
+            <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+              {sections.length > 1
+                ? "The rule goes to the end of this section of the ruleset's document."
+                : sections.length === 1
+                  ? "The rule goes after the last rule of the ruleset's document."
+                  : "The rule goes to the end of the ruleset's document."}
+              {/* With no rule yet, the section is the server's to read from
+                  the document, so no tags are promised here. */}
+              {"refusal" in read || sections.length === 0
+                ? ""
+                : ` Tagged ${inferTags(section, read.rule.title).join(", ")}, from the section's name and the rule's title.`}
+            </p>
+          </div>
+        );
+      }}
+      onSave={async (markdown) => {
+        const sent = await send<{ code: string }>(
+          `/api/rulesets/${rulesetId}/rules`,
+          {
+            method: "POST",
+            body: JSON.stringify({ markdown, version, ...(after === undefined ? {} : { after }) }),
+          },
+          "The rule could not be added",
+        );
+        if (!sent.ok) return sent.error;
+        await onAdded(sent.body.code, section);
+        return "";
+      }}
+    />
   );
 }
 
@@ -165,6 +260,8 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   const [duplicateName, setDuplicateName] = useState("");
   const [duplicated, setDuplicated] = useState("");
   const [editingRule, setEditingRule] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState<{ code: string; section: string } | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const router = useRouter();
@@ -540,14 +637,29 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                         >
                           {editingRule === rule.code ? (
                             <RuleEditor
-                              rulesetId={id}
-                              version={detail.ruleset.version}
-                              rule={rule}
+                              field={`rule-markdown-${rule.code}`}
+                              label={`Rule ${rule.code} as markdown`}
+                              opensOn={rule.raw}
+                              hint="The heading line carries the rule's code and title. Reviews already run keep the text they ran with."
+                              saveLabel="Save rule"
                               onCancel={() => setEditingRule("")}
-                              onSaved={async (code) => {
+                              onSave={async (markdown) => {
+                                const sent = await send<{ code: string }>(
+                                  `/api/rulesets/${id}/rules/${encodeURIComponent(rule.code)}`,
+                                  {
+                                    method: "PUT",
+                                    body: JSON.stringify({
+                                      markdown,
+                                      version: detail.ruleset.version,
+                                    }),
+                                  },
+                                  "The rule could not be saved",
+                                );
+                                if (!sent.ok) return sent.error;
                                 setEditingRule("");
-                                setOpenRule(code);
+                                setOpenRule(sent.body.code);
                                 await load();
+                                return "";
                               }}
                             />
                           ) : (
@@ -567,6 +679,46 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
             </tbody>
           </table>
         </Card>
+
+        {adding ? (
+          <div className="mt-3" data-testid="new-rule">
+            <Card className="p-4">
+              <NewRule
+                rulesetId={id}
+                version={detail.ruleset.version}
+                rules={detail.rules}
+                onCancel={() => setAdding(false)}
+                onAdded={async (code, section) => {
+                  setAdding(false);
+                  setAdded({ code, section });
+                  setOpenRule(code);
+                  await load();
+                }}
+              />
+            </Card>
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-wrap items-center gap-3" data-testid="new-rule">
+            <Button
+              onClick={() => {
+                setAdded(null);
+                setAdding(true);
+              }}
+            >
+              Add a rule
+            </Button>
+            {/* Where it went, since its row may be a screen above. */}
+            {added ? (
+              <p
+                role="status"
+                className="rounded-md border border-[var(--color-good)] bg-[var(--color-good-soft)] px-3 py-2 text-sm text-[var(--color-good)]"
+              >
+                Rule {added.code} added{added.section === "" ? "" : ` to ${added.section}`}, and
+                opened above.
+              </p>
+            ) : null}
+          </div>
+        )}
 
         <button
           type="button"

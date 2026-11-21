@@ -1,5 +1,5 @@
 /**
- * A rule edited in the app, read exactly as an import reads it.
+ * A rule edited or written in the app, read exactly as an import reads it.
  *
  * The rule is edited as the markdown it is, heading line and all, and the
  * block goes through the importer's own parser as a document of one rule. A
@@ -14,6 +14,62 @@ import type { ImportedRule } from "./model";
 
 const SHAPE =
   'A rule is one heading of three or more #, a code and a title, for example "### 3. Unchecked Cast", and the text under it.';
+
+/**
+ * What a new rule's editor opens on (RA-3) is made of these: the protocol's
+ * shape, each part a line to replace. A block still holding one is refused,
+ * so none of it reaches a model as a rule.
+ */
+const STARTING_TEXT = {
+  title: "Title of the rule",
+  rule: "What a change must not do, in one sentence.",
+  violation: "code that breaks the rule",
+  correct: "the same code, done right",
+  detection: "What to look for in the change.",
+};
+
+/** The block a new rule starts from, under the next code after the highest in use. */
+export function startingRuleBlock(codes: readonly string[]): string {
+  const highest = Math.max(0, ...codes.map((code) => Number.parseInt(code, 10)));
+  return [
+    `### ${highest + 1}. ${STARTING_TEXT.title}`,
+    "",
+    `**Rule:** ${STARTING_TEXT.rule}`,
+    "",
+    "**Violation Example:**",
+    "",
+    "```",
+    STARTING_TEXT.violation,
+    "```",
+    "",
+    "**Correct Pattern:**",
+    "",
+    "```",
+    STARTING_TEXT.correct,
+    "```",
+    "",
+    `**Detection:** ${STARTING_TEXT.detection}`,
+    "",
+    "**Severity:** WARNING",
+    "",
+  ].join("\n");
+}
+
+/** A new rule's block: one rule as `parseRuleBlock` reads it, none of it the starting text. */
+export function parseNewRuleBlock(markdown: string): { rule: ImportedRule } | { refusal: string } {
+  const read = parseRuleBlock(markdown);
+  if ("refusal" in read) return read;
+  const starting = Object.values(STARTING_TEXT);
+  const left = read.rule.raw
+    .split("\n")
+    .findIndex((line) => starting.some((text) => line.includes(text)));
+  if (left !== -1) {
+    return {
+      refusal: `Line ${left + 1} still holds the starting text. Write the rule's own there, or take that part out.`,
+    };
+  }
+  return read;
+}
 
 export function parseRuleBlock(markdown: string): { rule: ImportedRule } | { refusal: string } {
   let read;

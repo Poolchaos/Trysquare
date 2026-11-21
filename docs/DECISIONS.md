@@ -6512,3 +6512,28 @@ verified evidence, in writing, here.
   names the version it was made from and a stale one is refused. Rejected:
   taking the severity from the text on every save, and letting a code
   change drop the patterns.
+- 2026-11-21 D-268 Where a rule added in the app goes, and what it is
+  given (RA-3). The plan had "the end of its group, or of the ruleset" and
+  one field holding the rule's block, which says nothing of a group. A
+  rule's section decides its tags, its code decides its sweep patterns,
+  and both are the document's to say, so the block is put into the
+  ruleset's document after a rule the request names (the last rule when it
+  names none), every later block moved down by its lines, and the document
+  read back with the importer: the new rule's section, tags and sweep
+  patterns are that reading's, and nothing is saved unless every other
+  rule reads back as stored. An export then imports back as exactly what
+  is stored, line numbers too, which is the round trip RA-5 is to hold.
+  The screen offers the sections that have rules and sends the last rule
+  of the one picked, saying the tags the text would get there before it
+  is saved. A new rule whose code the sweep table already lists takes
+  those patterns, as an import would give them, and the row shows the
+  count. A block still holding a line of the starting text is refused by
+  that line, so the placeholder is never put to a model as a rule (no
+  token spent that buys nothing, D-251). Found on the way and fixed in
+  9ad5ab2: RA-2 saved a rule whose code fence was left open, and in the
+  exported document every rule after it read as code (3 rules of 15 read
+  back); such a block is refused, and a rule is not added after a stored
+  rule that leaves one open. Rejected: tags worked out in the app from a
+  section the request names, which would be a second reading of the
+  document beside the importer's; and a new rule always at the document's
+  end, where it would sit under whatever section the document ends on.

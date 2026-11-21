@@ -50,6 +50,9 @@ export async function GET(
         title: rule.title,
         severity: rule.severity,
         tags: rule.tags,
+        // The section of the document the rule sits under, which a new rule
+        // is put at the end of (RA-3).
+        group: rule.group,
         sweepPatterns: rule.sweepPatterns,
         enabled: enabled.has(rule.code),
         // The rule as the document has it, less the heading the row already

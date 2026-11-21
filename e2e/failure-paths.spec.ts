@@ -5306,6 +5306,9 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "POST rulesets/[id]/duplicate": { data: { tier: "global", name: "Swept" } },
     "PUT rulesets/[id]/default": {},
     "DELETE rulesets/[id]/default": {},
+    "POST rulesets/[id]/rules": {
+      data: { markdown: "### 99. Swept\n\n**Rule:** None.\n", version: 1 },
+    },
     "PATCH rulesets/[id]/rules/[code]": { data: { enabled: true } },
     "PUT rulesets/[id]/rules/[code]": {
       data: { markdown: "### 99. Swept\n\n**Rule:** None.\n", version: 1 },
@@ -6477,6 +6480,8 @@ test("a rule's text is edited as its markdown: Save off until it changes, a refu
     const edited = `${raw.replace("### 2a. Silent Fallback", "### 2a. Silent Fallback Value")}\nA line added in the app.\n`;
     await field.fill(edited);
     await expect(panel.locator("p").filter({ hasText: "A line added in the app." })).toBeVisible();
+    // The refusal goes with the text it was about.
+    await expect(panel.getByText(/comes before the rule's heading/)).toHaveCount(0);
     await save.click();
     // Saved: the row's title, the ruleset's version, and the rule left open
     // on what it now says, the editor closed.
@@ -6488,6 +6493,112 @@ test("a rule's text is edited as its markdown: Save off until it changes, a refu
     await expect(panel).toContainText("A line added in the app.");
     await shootAll(page, panel, "rule-edit-saved");
   } finally {
+    expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
+  }
+});
+
+test("a rule is added from a starting block: Add off until it is written, a refusal beside the field, then placed in its section (RA-3)", async ({
+  page,
+}) => {
+  // A copy made for this and deleted after, so the rulesets the suites
+  // after this use stay as they are.
+  const listed = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string }[];
+  };
+  const copied = await page.request.post(`/api/rulesets/${listed.rulesets[0]!.id}/duplicate`, {
+    data: { tier: "global", name: "A copy to add to" },
+  });
+  expect(copied.status()).toBe(201);
+  const { rulesetId } = (await copied.json()) as { rulesetId: string };
+  const bothThemes = async () => {
+    for (const scheme of ["dark", "light"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      expect(await accessibilityViolations(page), scheme).toEqual([]);
+    }
+  };
+  try {
+    await page.goto(`/rulesets/${rulesetId}`);
+    await expect(page.getByText("version 1", { exact: true })).toBeVisible();
+    const region = page.getByTestId("new-rule");
+    await region.getByRole("button", { name: "Add a rule" }).click();
+    const field = region.getByLabel("New rule as markdown");
+    const add = region.getByRole("button", { name: "Add rule" });
+    const starting = await field.inputValue();
+    expect(starting.startsWith("### 15. Title of the rule\n")).toBe(true);
+    // The starting block is nobody's rule: nothing to add yet.
+    await expect(add).toBeDisabled();
+    // The document's last section, unless another is picked, and the tags
+    // the text as it stands would get there.
+    const section = region.getByLabel("Section");
+    await expect(section).toHaveValue("Dependency Anti-Patterns");
+    await expect(region).toContainText(
+      "The rule goes to the end of this section of the ruleset's document. Tagged general, from the section's name and the rule's title.",
+    );
+    await bothThemes();
+    await shootAll(page, region, "rule-add-starting");
+
+    // Refused in the server's words while a line of the starting text is
+    // left, beside the field, the text kept as typed.
+    const titled = starting.replace("Title of the rule", "Unchecked Index");
+    await field.fill(titled);
+    await add.click();
+    await expect(
+      region.getByText(
+        "Line 3 still holds the starting text. Write the rule's own there, or take that part out.",
+      ),
+    ).toBeVisible();
+    expect(await field.inputValue()).toBe(titled);
+    await shootAll(page, region, "rule-add-refused");
+
+    // Written whole and sent to another section: what it will be tagged
+    // there is said before anything is saved.
+    await field.fill(
+      "### 15. Unchecked Index\n\n**Rule:** Flag an index read with no check that the entry is there.\n\n**Severity:** CRITICAL\n",
+    );
+    await section.selectOption("Typing Anti-Patterns");
+    await expect(region).toContainText(
+      "Tagged typescript, from the section's name and the rule's title.",
+    );
+    // The refusal was about the text as sent: it goes once that changes,
+    // where it stayed up naming a line since rewritten.
+    await expect(region.getByText(/still holds the starting text/)).toHaveCount(0);
+    await shootAll(page, region, "rule-add-written");
+    await add.click();
+
+    // Added: where it went is said, its row is open on what it says, and
+    // the version moved.
+    await expect(region.getByRole("status")).toHaveText(
+      "Rule 15 added to Typing Anti-Patterns, and opened above.",
+    );
+    await expect(page.getByText("version 2", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Unchecked Index", exact: true }),
+    ).toHaveAttribute("aria-expanded", "true");
+    const panel = page.getByTestId("rule-text");
+    await expect(panel).toContainText("Flag an index read with no check that the entry is there.");
+    // After the last rule of the section it was sent to, tagged as said.
+    const detail = (await (await page.request.get(`/api/rulesets/${rulesetId}`)).json()) as {
+      rules: { code: string; tags: string[]; severity: string; enabled: boolean }[];
+    };
+    const codes = detail.rules.map((rule) => rule.code);
+    expect(codes.slice(codes.indexOf("4"), codes.indexOf("4") + 3)).toEqual(["4", "15", "5"]);
+    expect(detail.rules.find((rule) => rule.code === "15")).toMatchObject({
+      tags: ["typescript"],
+      severity: "CRITICAL",
+      enabled: true,
+    });
+    await bothThemes();
+    await shootAll(page, region, "rule-add-added");
+    await shootAll(page, panel, "rule-add-opened");
+
+    // Asked again, the field opens on the next code, the note put away.
+    await region.getByRole("button", { name: "Add a rule" }).click();
+    expect((await field.inputValue()).startsWith("### 16. Title of the rule\n")).toBe(true);
+    await expect(region.getByRole("status")).toHaveCount(0);
+    await region.getByRole("button", { name: "Cancel" }).click();
+    await expect(field).toHaveCount(0);
+  } finally {
+    await page.emulateMedia({ colorScheme: "light" });
     expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
   }
 });

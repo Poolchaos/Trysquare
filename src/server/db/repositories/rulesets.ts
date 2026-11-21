@@ -9,7 +9,7 @@
  * review.
  */
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { newId, nowIso } from "@/lib/ids";
 import {
@@ -18,8 +18,14 @@ import {
   type Severity,
   directiveSectionSchema,
 } from "@/lib/domain/enums";
-import { inferTags, parseSeverity } from "@/lib/rulesets/import";
-import type { ImportedRule, ImportedRuleset } from "@/lib/rulesets/model";
+import {
+  exportProtocol,
+  importProtocol,
+  inferTags,
+  parseSeverity,
+  unclosedFenceLine,
+} from "@/lib/rulesets/import";
+import type { ImportedRule, ImportedRuleset, SourceSpan } from "@/lib/rulesets/model";
 import type { Db } from "../client";
 import { processDirectives, reviewRulesets, rules, rulesets } from "../schema";
 import { parseJsonColumn, serialiseJsonColumn } from "./json";
@@ -565,6 +571,146 @@ export function replaceRuleText(
       .run();
   });
   return { version, code: edited.code };
+}
+
+export class RuleFenceOpenError extends Error {
+  constructor(readonly code: string) {
+    super(
+      `Rule ${code} leaves a code fence open, so a rule put after it would read as code in the ` +
+        `ruleset's document. Close the fence in rule ${code}'s text first.`,
+    );
+    this.name = "RuleFenceOpenError";
+  }
+}
+
+/**
+ * Adds a rule written in the app (RA-3): `added` is the block as
+ * `parseNewRuleBlock` read it, alone.
+ *
+ * It goes into the ruleset's document after the rule named, or after the
+ * last rule, and is read there by the importer: the section it sits under,
+ * the tags that gives it and the sweep patterns the table lists under its
+ * code are the document's, as an import of the exported document would have
+ * them. Every block after it moves down by its lines, so the export keeps
+ * its order and its line numbers. The document must read back as the rules
+ * stored with this one among them, or nothing is saved.
+ */
+export function addRule(
+  db: Db,
+  rulesetId: string,
+  added: ImportedRule,
+  after: string | undefined,
+  readVersion: number,
+): { version: number; code: string } {
+  const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
+  if (!row) throw new RulesetNotFoundError(rulesetId);
+  if (readVersion !== row.version) throw new RulesetChangedError(row.version, readVersion);
+
+  const stored = loadRuleset(db, rulesetId);
+  const anchor =
+    after === undefined ? stored.rules.at(-1) : stored.rules.find((rule) => rule.code === after);
+  if (after !== undefined && !anchor) throw new RuleNotFoundError(row.name, after);
+  if (stored.rules.some((rule) => rule.code === added.code)) {
+    throw new RuleCodeTakenError(row.name, added.code);
+  }
+  if (anchor && unclosedFenceLine(anchor.raw) !== null) throw new RuleFenceOpenError(anchor.code);
+
+  // Where the block after the anchor starts, or past everything.
+  const blocks = [...stored.rules, ...stored.directives].sort((a, b) => a.startLine - b.startLine);
+  const next = anchor ? blocks[blocks.indexOf(anchor) + 1] : undefined;
+  const at = next?.startLine ?? Math.max(0, ...blocks.map((block) => block.endLine)) + 1;
+  const lines = added.raw.split("\n").length;
+  const moved = <Block extends SourceSpan>(block: Block): Block =>
+    block.startLine >= at
+      ? { ...block, startLine: block.startLine + lines, endLine: block.endLine + lines }
+      : block;
+
+  const index = anchor ? stored.rules.indexOf(anchor) + 1 : 0;
+  const withAdded = [
+    ...stored.rules.slice(0, index).map(moved),
+    { ...added, startLine: at, endLine: at + lines - 1 },
+    ...stored.rules.slice(index).map(moved),
+  ];
+  const read = importProtocol(
+    exportProtocol({
+      title: stored.title,
+      rules: withAdded,
+      directives: stored.directives.map(moved),
+    }),
+  );
+  const placed = read.ruleset.rules[index];
+  const codes = (list: readonly ImportedRule[]) => list.map((rule) => rule.code).join(", ");
+  if (
+    placed?.raw !== added.raw ||
+    codes(read.ruleset.rules) !== codes(withAdded) ||
+    read.ruleset.directives.length !== stored.directives.length ||
+    read.coverage.unmapped.some((entry) => entry.text.trim() !== "")
+  ) {
+    throw new Error(
+      `Rule ${added.code} was not added to "${row.name}": with it in place the ruleset's ` +
+        `document reads back as rules ${codes(read.ruleset.rules) || "none"}, where ` +
+        `${codes(withAdded)} are expected.`,
+    );
+  }
+
+  const anchorRow = anchor
+    ? db
+        .select({ sortOrder: rules.sortOrder })
+        .from(rules)
+        .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, anchor.code)))
+        .get()
+    : undefined;
+  const sortOrder = anchorRow ? anchorRow.sortOrder + 1 : 0;
+  const version = row.version + 1;
+  db.transaction((tx) => {
+    tx.update(rules)
+      .set({
+        sourceStartLine: sql`${rules.sourceStartLine} + ${lines}`,
+        sourceEndLine: sql`${rules.sourceEndLine} + ${lines}`,
+      })
+      .where(and(eq(rules.rulesetId, rulesetId), gte(rules.sourceStartLine, at)))
+      .run();
+    tx.update(processDirectives)
+      .set({
+        sourceStartLine: sql`${processDirectives.sourceStartLine} + ${lines}`,
+        sourceEndLine: sql`${processDirectives.sourceEndLine} + ${lines}`,
+      })
+      .where(
+        and(eq(processDirectives.rulesetId, rulesetId), gte(processDirectives.sourceStartLine, at)),
+      )
+      .run();
+    tx.update(rules)
+      .set({ sortOrder: sql`${rules.sortOrder} + 1` })
+      .where(and(eq(rules.rulesetId, rulesetId), gte(rules.sortOrder, sortOrder)))
+      .run();
+    tx.insert(rules)
+      .values({
+        id: newId(),
+        rulesetId,
+        code: added.code,
+        title: added.title,
+        severity: added.severity,
+        tags: serialiseJsonColumn(placed.tags),
+        ruleText: added.ruleText,
+        violationExample: added.violationExample,
+        correctPattern: added.correctPattern,
+        detection: added.detection,
+        notes: added.notes,
+        sweepPatterns: serialiseJsonColumn(placed.sweepPatterns),
+        groupHeading: placed.group,
+        rawMarkdown: added.raw,
+        sourceStartLine: at,
+        sourceEndLine: at + lines - 1,
+        enabled: true,
+        sortOrder,
+      })
+      .run();
+    tx.update(rulesets)
+      .set({ version, updatedAt: nowIso() })
+      .where(eq(rulesets.id, rulesetId))
+      .run();
+  });
+  return { version, code: added.code };
 }
 
 /**

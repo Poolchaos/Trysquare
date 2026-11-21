@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { exportProtocol, importProtocol } from "@/lib/rulesets/import";
-import { parseRuleBlock } from "@/lib/rulesets/rule-edit";
+import { parseNewRuleBlock, parseRuleBlock, startingRuleBlock } from "@/lib/rulesets/rule-edit";
 
 const PROTOCOL = importProtocol(
   readFileSync(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8"),
@@ -94,5 +94,54 @@ describe("a rule edited in the app", () => {
     expect(refusalOf(`${FALLBACK.raw}\n${FALLBACK.raw}`)).toBe(
       "This holds rule 2a more than once. One rule is saved at a time.",
     );
+  });
+});
+
+describe("a rule written in the app", () => {
+  const codes = PROTOCOL.rules.map((rule) => rule.code);
+
+  it("starts from the protocol's shape, under the code after the highest in use", () => {
+    const block = startingRuleBlock(codes);
+    expect(block.split("\n")[0]).toBe("### 15. Title of the rule");
+    // "2a" counts as 2, and a ruleset with no rule starts at 1.
+    expect(startingRuleBlock(["1", "2a"]).startsWith("### 3. ")).toBe(true);
+    expect(startingRuleBlock([]).startsWith("### 1. ")).toBe(true);
+
+    // One rule as an import reads it, every part of the shape filled.
+    const read = parseRuleBlock(block);
+    if ("refusal" in read) throw new Error(read.refusal);
+    expect(read.rule).toMatchObject({
+      code: "15",
+      severity: "WARNING",
+      ruleText: "What a change must not do, in one sentence.",
+      violationExample: "```\ncode that breaks the rule\n```",
+      correctPattern: "```\nthe same code, done right\n```",
+      detection: "What to look for in the change.",
+      raw: block,
+    });
+  });
+
+  it("is refused while a line of the starting text is left, by that line", () => {
+    const block = startingRuleBlock(codes);
+    const refusal = (markdown: string) => {
+      const read = parseNewRuleBlock(markdown);
+      return "refusal" in read ? read.refusal : null;
+    };
+    expect(refusal(block)).toBe(
+      "Line 1 still holds the starting text. Write the rule's own there, or take that part out.",
+    );
+    const titled = block.replace("Title of the rule", "Debugger Left In");
+    expect(refusal(titled)).toMatch(/^Line 3 still holds the starting text\./);
+    // The example's line inside its fence counts too.
+    const ruled = titled.replace("What a change must not do, in one sentence.", "Flag it.");
+    expect(refusal(ruled)).toMatch(/^Line 8 still holds the starting text\./);
+
+    // Each part written, or taken out: a rule, read as any other.
+    const written = "### 15. Debugger Left In\n\n**Rule:** Flag it.\n\n**Severity:** WARNING\n";
+    const read = parseNewRuleBlock(written);
+    if ("refusal" in read) throw new Error(read.refusal);
+    expect(read.rule).toMatchObject({ code: "15", title: "Debugger Left In", raw: written });
+    // What `parseRuleBlock` refuses is refused here in its words.
+    expect(refusal("Flag it.")).toMatch(/^No rule heading was found\./);
   });
 });

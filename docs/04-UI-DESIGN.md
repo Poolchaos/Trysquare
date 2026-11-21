@@ -27,11 +27,12 @@ chosen per review in the advanced fold.
   refusal designed with it. The preview drawer per ruleset that section 3
   describes is not built either: the screen has one select and a link to
   the chosen ruleset's page.
-- Rulesets: adding a rule and removing one (`plans/RULES-IN-APP-PLAN.md`,
-  RA-3 and RA-4). A rule's text is edited in place since 2026-11-21 (RA-2,
-  section 3), its severity and its on/off switch can be changed, sweep
-  patterns and directive bodies are shown, and duplicate-to-tier and
-  deleting a ruleset are built.
+- Rulesets: removing a rule (`plans/RULES-IN-APP-PLAN.md`, RA-4), and a
+  new ruleset with no document (RA-6). A rule's text is edited in place
+  and a rule is added since 2026-11-21 (RA-2, RA-3, section 3), its
+  severity and its on/off switch can be changed, sweep patterns and
+  directive bodies are shown, and duplicate-to-tier and deleting a ruleset
+  are built.
 - Settings: opening the data directory in a file manager (it is displayed).
 - Of the 2026-08-17 UX audit, one item is still partly owed, my branches
   (WP-L): the emails that count as the person's are on Settings and a
@@ -314,7 +315,16 @@ badge once its branch is found merged; delete per 02 rules.
   markdown, heading line and all, in one field with the text as it will
   read under it; Save rule is off until it changes, and a block that is
   not exactly one rule is refused beside the field in the parser's words,
-  the text kept as typed (RA-2, D-265, D-267);
+  the text kept as typed and the refusal put away once the text changes
+  (RA-2, D-265, D-267);
+  Add a rule, under the rules, opens the same field on a starting block in
+  the protocol's shape, under the next code; Add rule is off until it
+  changes, and a block still holding a line of the starting text is
+  refused by that line. A Section select, shown when the document has more
+  than one section with rules, says where it goes (the end of that
+  section, the last one unless another is picked), with the tags the text
+  as it stands would get there; once added, a note says where it went and
+  its row is opened (RA-3, D-268);
   versioning bumps on edit (snapshots keep old reviews stable).
 - Import: from markdown (REVIEW_PROTOCOL.md shape); shows the fidelity
   report (mapped headings, unmapped lines = import blocked). A different
