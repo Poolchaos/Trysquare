@@ -6432,3 +6432,62 @@ test("one ruleset is deleted from its page, asked once, a refusal said beside th
     expect(back.status()).toBe(200);
   }
 });
+
+test("a rule's text is edited as its markdown: Save off until it changes, a refusal beside the field, then saved (RA-2)", async ({
+  page,
+}) => {
+  // A copy made for this and deleted after, so the rulesets the suites
+  // after this use stay as they are.
+  const listed = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string }[];
+  };
+  const copied = await page.request.post(`/api/rulesets/${listed.rulesets[0]!.id}/duplicate`, {
+    data: { tier: "global", name: "A copy to edit" },
+  });
+  expect(copied.status()).toBe(201);
+  const { rulesetId } = (await copied.json()) as { rulesetId: string };
+  try {
+    await page.goto(`/rulesets/${rulesetId}`);
+    await expect(page.getByText("version 1", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Silent Fallback", exact: true }).click();
+    const panel = page.getByTestId("rule-text");
+    await panel.getByRole("button", { name: "Edit text" }).click();
+    const field = panel.getByLabel("Rule 2a as markdown");
+    const save = panel.getByRole("button", { name: "Save rule" });
+    const raw = await field.inputValue();
+    expect(raw.startsWith("### 2a. Silent Fallback\n")).toBe(true);
+    // Nothing changed, so nothing to save.
+    await expect(save).toBeDisabled();
+    await shootAll(page, panel, "rule-edit-unchanged");
+
+    // Refused in the parser's words, beside the field, the text kept as typed.
+    await field.fill(`A note to self.\n${raw}`);
+    await save.click();
+    await expect(
+      panel.getByText(
+        "Line 1 comes before the rule's heading, so it would belong to no rule. Start with the heading.",
+      ),
+    ).toBeVisible();
+    expect(await field.inputValue()).toBe(`A note to self.\n${raw}`);
+    // And shown in what will read, not left out of it.
+    await expect(panel.locator("p").filter({ hasText: "A note to self." })).toBeVisible();
+    await shootAll(page, panel, "rule-edit-refused");
+
+    // A title changed and a line added: the preview reads it before a save.
+    const edited = `${raw.replace("### 2a. Silent Fallback", "### 2a. Silent Fallback Value")}\nA line added in the app.\n`;
+    await field.fill(edited);
+    await expect(panel.locator("p").filter({ hasText: "A line added in the app." })).toBeVisible();
+    await save.click();
+    // Saved: the row's title, the ruleset's version, and the rule left open
+    // on what it now says, the editor closed.
+    await expect(
+      page.getByRole("button", { name: "Silent Fallback Value", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText("version 2", { exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Edit text" })).toBeVisible();
+    await expect(panel).toContainText("A line added in the app.");
+    await shootAll(page, panel, "rule-edit-saved");
+  } finally {
+    expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
+  }
+});

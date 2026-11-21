@@ -27,10 +27,11 @@ chosen per review in the advanced fold.
   refusal designed with it. The preview drawer per ruleset that section 3
   describes is not built either: the screen has one select and a link to
   the chosen ruleset's page.
-- Rulesets: editing a rule's text in place with markdown preview. A rule's
-  severity and its on/off switch can be changed, sweep patterns and
-  directive bodies are shown, and duplicate-to-tier is built; free-text
-  rule editing is not.
+- Rulesets: adding a rule and removing one (`plans/RULES-IN-APP-PLAN.md`,
+  RA-3 and RA-4). A rule's text is edited in place since 2026-11-21 (RA-2,
+  section 3), its severity and its on/off switch can be changed, sweep
+  patterns and directive bodies are shown, and duplicate-to-tier and
+  deleting a ruleset are built.
 - Settings: opening the data directory in a file manager (it is displayed).
 - Of the 2026-08-17 UX audit, one item is still partly owed, my branches
   (WP-L): the emails that count as the person's are on Settings and a
@@ -309,7 +310,11 @@ badge once its branch is found merged; delete per 02 rules.
 - Ruleset detail: ordered rules (code, title, severity, tags, enabled
   toggle), each opening to its text from the document, formatted (rule,
   examples, detection, why it matters; 2026-11-03), process directives,
-  edit in place with markdown preview;
+  edit in place with markdown preview: Edit text opens the rule's whole
+  markdown, heading line and all, in one field with the text as it will
+  read under it; Save rule is off until it changes, and a block that is
+  not exactly one rule is refused beside the field in the parser's words,
+  the text kept as typed (RA-2, D-265, D-267);
   versioning bumps on edit (snapshots keep old reviews stable).
 - Import: from markdown (REVIEW_PROTOCOL.md shape); shows the fidelity
   report (mapped headings, unmapped lines = import blocked). A different

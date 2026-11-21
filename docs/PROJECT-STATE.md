@@ -25,6 +25,12 @@ from 2026-11-03.
   copy held its ruleset in place. With it, `./verify.sh --e2e` exits 0
   with 1564 unit tests passing, 8 skipped, and 155 browser tests. The
   email plan's size spike is measured (S4, in the plan).
+  And a rule's text is edited on its ruleset's page, as the markdown it
+  is (RA-2, D-267): read by the importer's parser, refused unless it is
+  exactly one rule, the rule keeping its place, tags, sweep patterns and
+  a severity changed in the app. `./verify.sh --e2e` exits 0 with 1578
+  unit tests passing, 8 skipped, and 156 browser tests. Adding and
+  removing a rule (RA-3, RA-4) are next.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the
@@ -513,11 +519,11 @@ own now (D-75, D-81).
 - Emailing a review's result: in scope since D-251, planned in
   `plans/EMAIL-REPORT-PLAN.md` (D-264). Its sender waits on the
   maintainer's mailbox; where a result goes is set in the app.
-- Rules added, edited or removed in the app, and ruleset templates shipped
-  with it: in scope since D-251, planned in `plans/RULES-IN-APP-PLAN.md`
-  and `plans/RULESET-TEMPLATES-PLAN.md` (D-265). A rule can be switched off
-  and its severity changed, and one ruleset deleted (RA-1, D-266); a
-  rule's text comes only from an imported file.
+- Rules added or removed in the app, and ruleset templates shipped with
+  it: in scope since D-251, planned in `plans/RULES-IN-APP-PLAN.md` and
+  `plans/RULESET-TEMPLATES-PLAN.md` (D-265). A rule can be switched off,
+  its severity changed and its text edited (RA-2, D-267), and one ruleset
+  deleted (RA-1, D-266); a new rule comes only from an imported file.
 - A viewer for a failed stage's transcript: the review page names the file
   and renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
 - The live output of git while a project clones: a failure's stderr is

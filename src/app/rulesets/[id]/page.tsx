@@ -12,7 +12,17 @@ import { useRouter } from "next/navigation";
 import { Fragment, use, useCallback, useEffect, useState } from "react";
 import { MarkdownText } from "@/components/markdown";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
-import { Badge, Button, Card, Input, Mono, Problem, Select, severityTone } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Input,
+  Mono,
+  Problem,
+  Select,
+  Textarea,
+  severityTone,
+} from "@/components/ui";
 import { send } from "@/components/request";
 import type { DirectiveSection } from "@/lib/domain/enums";
 import { directiveSectionLabel } from "@/lib/rulesets/sections";
@@ -37,11 +47,104 @@ interface Detail {
     sweepPatterns: string[];
     enabled: boolean;
     text: string;
+    raw: string;
   }[];
 }
 
 const SEVERITIES = ["CRITICAL", "WARNING", "NITPICK"];
 const TIERS = ["global", "tech", "project"];
+
+/**
+ * A rule's text, edited as the markdown it is, heading line and all (RA-2).
+ *
+ * One field and no form: the server reads the block with the importer's own
+ * parser, so what the model is given stays the person's words (D-265). Save
+ * is off while nothing changed, and a refusal is the server's, beside the
+ * field, with the text kept as typed.
+ */
+function RuleEditor({
+  rulesetId,
+  version,
+  rule,
+  onSaved,
+  onCancel,
+}: {
+  rulesetId: string;
+  version: number;
+  rule: Detail["rules"][number];
+  onSaved: (code: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(rule.raw);
+  const [refusal, setRefusal] = useState("");
+  const [saving, setSaving] = useState(false);
+  const field = `rule-markdown-${rule.code}`;
+
+  async function save() {
+    setRefusal("");
+    setSaving(true);
+    try {
+      const sent = await send<{ code: string }>(
+        `/api/rulesets/${rulesetId}/rules/${encodeURIComponent(rule.code)}`,
+        { method: "PUT", body: JSON.stringify({ markdown: value, version }) },
+        "The rule could not be saved",
+      );
+      if (!sent.ok) {
+        setRefusal(sent.error);
+        return;
+      }
+      await onSaved(sent.body.code);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-3">
+      <div>
+        <label className="mb-1.5 block text-sm font-medium" htmlFor={field}>
+          Rule {rule.code} as markdown
+        </label>
+        <Textarea
+          id={field}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          rows={Math.min(Math.max(value.split("\n").length + 1, 8), 30)}
+          spellCheck={false}
+          className="w-full font-[family-name:var(--font-mono)] text-xs"
+        />
+        <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+          The heading line carries the rule&apos;s code and title. Reviews already run keep the text
+          they ran with.
+        </p>
+      </div>
+      <div>
+        <p className="mb-1 text-xs font-medium text-[var(--color-ink-muted)]">As it will read</p>
+        <div className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+          {/* Less the heading line, which the row above carries, and only
+              that: a line typed before the heading was left out of what
+              "will read" while the refusal under it named that line. */}
+          <MarkdownText
+            text={(/^#{1,6}\s/.test(value) ? value.slice(value.indexOf("\n") + 1) : value).trim()}
+          />
+        </div>
+      </div>
+      {refusal ? <Problem>{refusal}</Problem> : null}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="primary"
+          disabled={saving || value === rule.raw}
+          onClick={() => void save()}
+        >
+          {saving ? "Saving..." : "Save rule"}
+        </Button>
+        <Button variant="quiet" disabled={saving} onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function RulesetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -61,6 +164,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   const [duplicateTier, setDuplicateTier] = useState("global");
   const [duplicateName, setDuplicateName] = useState("");
   const [duplicated, setDuplicated] = useState("");
+  const [editingRule, setEditingRule] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const router = useRouter();
@@ -434,7 +538,26 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                           data-testid="rule-text"
                           className="sticky left-3 max-w-[min(48rem,calc(100vw-5.5rem))] rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3"
                         >
-                          <MarkdownText text={rule.text} />
+                          {editingRule === rule.code ? (
+                            <RuleEditor
+                              rulesetId={id}
+                              version={detail.ruleset.version}
+                              rule={rule}
+                              onCancel={() => setEditingRule("")}
+                              onSaved={async (code) => {
+                                setEditingRule("");
+                                setOpenRule(code);
+                                await load();
+                              }}
+                            />
+                          ) : (
+                            <>
+                              <MarkdownText text={rule.text} />
+                              <div className="mt-3">
+                                <Button onClick={() => setEditingRule(rule.code)}>Edit text</Button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
