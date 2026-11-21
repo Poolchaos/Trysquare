@@ -44,7 +44,7 @@ import route refuses a document that loses a line.
 (`patchRule`), and a ruleset's version rises with a change. A review
 freezes its rules as it starts (`writeReviewSnapshot`), so an edit never
 reaches a review that has run. `deleteRuleset` and `duplicateRuleset`
-exist in the repository; no route deletes one ruleset.
+exist in the repository; no route deleted one ruleset until RA-1.
 `exportProtocol` writes a ruleset back out as a document.
 
 **The design, in one paragraph.** A rule is edited as the markdown it is:
@@ -75,7 +75,7 @@ and change" figure already shows. Evidence: the code lines above.
 
 | WP   | Scope | Blocked on | Status |
 | ---- | ----- | ---------- | ------ |
-| RA-1 | Delete one ruleset: a route over `deleteRuleset`, a control on the ruleset's page that says what goes (the rules, never a review that used them: its snapshot stays) and asks once. Refused while it is the default ruleset or a review in flight has not yet frozen it, each in words. | - | TODO |
+| RA-1 | Delete one ruleset: a route over `deleteRuleset`, a control on the ruleset's page that says what goes (the rules, never a review that used them: its snapshot stays) and asks once. Refused while it is the default ruleset or a review in flight has not yet frozen it, each in words. | - | DONE 2026-11-21 (D-266). As built: the default is deleted too, the page saying first that new reviews then start with none chosen; refused only while a review in line is to start on it. A review that ran with it keeps its copy, which took migration 0019: the snapshot held its ruleset in place by a key. Shots graded in the commit. |
 | RA-2 | Edit a rule's text. The rule's page opens its markdown in a text area; save parses the block with `importProtocol`, refuses anything that is not exactly one rule with every line kept, keeps the rule's place in the ruleset, and raises the version. Changing the code is allowed and refused if another rule has it. States: unchanged (save off), refused (the importer's words beside the field), saved. A preview of the text as rendered. | RA-1 | TODO |
 | RA-3 | Add a rule. "Add a rule" opens the same editor on a starting block that shows the protocol's shape (heading with a code, the rule, a violation, the correct pattern, detection, severity), each part a line the person replaces; nothing of it is saved until they do. The new rule goes to the end of its group, or of the ruleset. | RA-2 | TODO |
 | RA-4 | Remove a rule. A control on the rule, asked once, saying that reviews already run keep it. Removing the last rule is allowed and the pre-flight already refuses a ruleset with none on (AE4). | RA-2 | TODO |

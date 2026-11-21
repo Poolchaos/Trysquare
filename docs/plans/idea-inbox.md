@@ -107,7 +107,8 @@ pulled deliberately.
   text, and delete a single ruleset. Today only on/off and severity change in
   the app, the rest by re-importing the document with replace, and a
   ruleset is deleted only by Settings' delete-everything (maintainer asked).
-  `COMPLETION-PLAN.md` CG-5.
+  `COMPLETION-PLAN.md` CG-5. Planned in `plans/RULES-IN-APP-PLAN.md`;
+  deleting one ruleset BUILT 2026-11-21 (RA-1, D-266).
 - 2026-11-03: a memory guard for a project's own commands. Only a 20-minute
   limit bounds them now; one large project's e2e, measured at 20.7 GB on the
   maintainer's machine, could exhaust a colleague's laptop. Needs a free-memory reading

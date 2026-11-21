@@ -8,6 +8,7 @@
  * it was judged against and two different rule sets must never share one.
  */
 
+import { useRouter } from "next/navigation";
 import { Fragment, use, useCallback, useEffect, useState } from "react";
 import { MarkdownText } from "@/components/markdown";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
@@ -60,6 +61,9 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   const [duplicateTier, setDuplicateTier] = useState("global");
   const [duplicateName, setDuplicateName] = useState("");
   const [duplicated, setDuplicated] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const router = useRouter();
 
   // Read again after a change; one that fails says so, where it used to
   // leave the page showing the ruleset as it was before (audit finding U2).
@@ -149,6 +153,27 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
       }
       setDuplicating(false);
       setDuplicated(sent.body.rulesetId);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  /** One ruleset, asked once (RA-1). Its page is gone after, so the list it is. */
+  async function remove() {
+    setDeleteError("");
+    setBusy("delete");
+    try {
+      const sent = await send(
+        `/api/rulesets/${id}`,
+        { method: "DELETE" },
+        "The ruleset could not be deleted",
+      );
+      if (sent.ok) {
+        router.push("/rulesets");
+        return;
+      }
+      setDeleteError(sent.error);
+      setConfirmingDelete(false);
     } finally {
       setBusy("");
     }
@@ -456,6 +481,36 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
             })}
           </ul>
         ) : null}
+
+        <Card className="mt-6 p-4">
+          <h2 className="mb-1 text-heading font-semibold">Delete ruleset</h2>
+          <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
+            Removes this ruleset&apos;s rules and directives. A review already run keeps the rules
+            it ran with.
+            {detail.ruleset.isDefault
+              ? " It is the default for new reviews, which will then start with no ruleset chosen."
+              : ""}
+          </p>
+          {/* Said here, beside the control that was refused: the page's own
+              error is a screen above. */}
+          {deleteError ? (
+            <div className="mb-3">
+              <Problem>{deleteError}</Problem>
+            </div>
+          ) : null}
+          {confirmingDelete ? (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" disabled={busy !== ""} onClick={() => void remove()}>
+                {busy === "delete" ? "Deleting..." : `Yes, delete ${detail.ruleset.name}`}
+              </Button>
+              <Button variant="quiet" onClick={() => setConfirmingDelete(false)}>
+                Keep it
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => setConfirmingDelete(true)}>Delete</Button>
+          )}
+        </Card>
       </PageBody>
     </>
   );

@@ -6477,3 +6477,22 @@ verified evidence, in writing, here.
   With the plans written, CP-12 is no longer behind CP-9: the maintainer's
   own review is his to drive when he likes, and the work he asked for in
   D-251 does not wait on its verdict.
+- 2026-11-21 D-266 One ruleset is deleted from its page (RA-1 of
+  `plans/RULES-IN-APP-PLAN.md`), and two things the plan had are settled
+  by what the code holds. First, a review keeps the copy of the rules it
+  ran with: `review_rulesets.ruleset_id` was a key onto the ruleset with
+  ON DELETE RESTRICT, so the database refused to delete a ruleset any
+  review had run with, and the plan's "its snapshot stays" could not be
+  kept without changing it. Migration 0019 rebuilds the table with the id
+  as a plain column; nothing read it to reach the live ruleset (the report
+  names the ruleset from the name and version kept beside the snapshot).
+  Rejected: refusing the delete while a review had used the ruleset, which
+  makes a person delete their reviews, and with them the scoreboard's
+  figures, to drop rules they no longer use. Second, the default ruleset
+  is deleted too, and the page says first that new reviews will then
+  start with none chosen. The plan had it refused; the repository already
+  cleared a default with its ruleset (D-225), a refusal is one more trip
+  for the same result, and a review that starts with no ruleset chosen
+  cannot run on the wrong one. Still refused: a ruleset a review in line
+  is about to start on, by its name, since that review stores its rules
+  under the name as it starts and the ruleset would come back.

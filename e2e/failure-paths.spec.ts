@@ -5301,6 +5301,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "GET reviews/[id]/rules": {},
     "POST reviews/[id]/start": { data: {} },
     "GET rulesets/[id]": {},
+    "DELETE rulesets/[id]": {},
     "GET rulesets/[id]/export": {},
     "POST rulesets/[id]/duplicate": { data: { tier: "global", name: "Swept" } },
     "PUT rulesets/[id]/default": {},
@@ -6359,4 +6360,72 @@ test("a sign-in billing per token that a page had not shown is refused, shown, t
   await stopStarts();
   // Not left for the suites after this to find.
   expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
+});
+
+test("one ruleset is deleted from its page, asked once, a refusal said beside the control (RA-1)", async ({
+  page,
+}) => {
+  // A copy made for this, so the rulesets the suites after this use stay.
+  const before = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string; name: string }[];
+    defaultRulesetId: string | null;
+  };
+  const copied = await page.request.post(`/api/rulesets/${before.rulesets[0]!.id}/duplicate`, {
+    data: { tier: "global", name: "A copy to delete" },
+  });
+  expect(copied.status()).toBe(201);
+  const { rulesetId } = (await copied.json()) as { rulesetId: string };
+
+  await page.goto(`/rulesets/${rulesetId}`);
+  await expect(page.getByRole("heading", { name: "A copy to delete", level: 1 })).toBeVisible();
+  const card = page.getByRole("heading", { name: "Delete ruleset" }).locator("..");
+  await expect(card).toContainText("A review already run keeps the rules it ran with.");
+  // Not the default, so nothing is said of new reviews.
+  expect(await card.getByText(/default for new reviews/).count()).toBe(0);
+
+  await card.getByRole("button", { name: "Delete", exact: true }).click();
+  const yes = card.getByRole("button", { name: "Yes, delete A copy to delete" });
+  await expect(yes).toBeVisible();
+  await shootAll(page, card, "ruleset-delete-asked");
+  await card.getByRole("button", { name: "Keep it" }).click();
+  await expect(yes).toHaveCount(0);
+  expect((await page.request.get(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
+
+  // Refused as the server refuses it while a review in line is to start on
+  // it, which takes a second review waiting behind a running one to reach.
+  const refusal =
+    'A review waiting for a place will start on "A copy to delete" and has not taken its copy of the rules yet. Delete the ruleset once that review has started, or take the review out of the line first.';
+  await card.getByRole("button", { name: "Delete", exact: true }).click();
+  const stop = await answerOnce(page, `**/api/rulesets/${rulesetId}`, (route) =>
+    route.fulfill({ status: 409, json: { error: refusal, code: "RulesetAwaited" } }),
+  );
+  await yes.click();
+  await expect(card.getByText(refusal)).toBeVisible();
+  await stop();
+  // The question is put away with the refusal: asked again, not left armed.
+  await expect(yes).toHaveCount(0);
+  await shootAll(page, card, "ruleset-delete-refused");
+
+  // The default goes too, and the card says first what a new review will
+  // then start on (D-266).
+  expect((await page.request.put(`/api/rulesets/${rulesetId}/default`)).status()).toBe(200);
+  await page.reload();
+  await expect(card).toContainText(
+    "It is the default for new reviews, which will then start with no ruleset chosen.",
+  );
+  await shootAll(page, card, "ruleset-delete-default");
+
+  await card.getByRole("button", { name: "Delete", exact: true }).click();
+  await yes.click();
+  await expect(page).toHaveURL(/\/rulesets$/);
+  await expect(page.getByRole("heading", { name: "Rulesets", level: 1 })).toBeVisible();
+  expect(await page.getByText("A copy to delete").count()).toBe(0);
+  const after = (await (await page.request.get("/api/rulesets")).json()) as typeof before;
+  expect(after.rulesets.map((row) => row.id)).toEqual(before.rulesets.map((row) => row.id));
+  expect(after.defaultRulesetId).toBeNull();
+  // The default the suites after this found is put back.
+  if (before.defaultRulesetId !== null) {
+    const back = await page.request.put(`/api/rulesets/${before.defaultRulesetId}/default`);
+    expect(back.status()).toBe(200);
+  }
 });

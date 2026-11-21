@@ -256,6 +256,15 @@ export class JobManager {
   }
 
   /**
+   * Whether a review in line will start on the ruleset of this name. It
+   * carries its rules with it and stores them under that name as it starts,
+   * so a ruleset deleted meanwhile would come back with that start (RA-1).
+   */
+  startsOn(rulesetName: string): boolean {
+    return this.queue.some((entry) => entry.options.ruleset?.name === rulesetName);
+  }
+
+  /**
    * Starts a review, or puts it in line.
    *
    * The queue is in memory only. On a restart it is empty and the reviews that

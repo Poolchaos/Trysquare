@@ -4,11 +4,14 @@ import { exportProtocol, importProtocol } from "@/lib/rulesets/import";
 import type { Db } from "@/server/db/client";
 import {
   RulesetNameTakenError,
+  deleteRuleset,
   duplicateRuleset,
   hasReviewSnapshot,
+  listRulesets,
   loadRuleset,
   patchRule,
   readReviewSnapshot,
+  readReviewSnapshotMeta,
   saveImportedRuleset,
   setRuleEnabled,
   writeReviewSnapshot,
@@ -190,6 +193,25 @@ describe("storing an imported protocol", () => {
 });
 
 describe("the ruleset a review is judged against", () => {
+  it("stays with its review when the ruleset is deleted", () => {
+    // The snapshot is the review's own copy, and it named the ruleset with a
+    // key that refused the delete while any review had run with it: one
+    // ruleset could only go with every review it was used in.
+    const { rulesetId } = save();
+    writeReviewSnapshot(db, reviewId, rulesetId);
+
+    deleteRuleset(db, rulesetId);
+
+    expect(listRulesets(db)).toEqual([]);
+    expect(readReviewSnapshot(db, reviewId).rules.map((rule) => rule.code)).toEqual(
+      PROTOCOL.rules.map((rule) => rule.code),
+    );
+    expect(readReviewSnapshotMeta(db, reviewId)).toEqual({
+      rulesetName: "Example protocol",
+      rulesetVersion: 1,
+    });
+  });
+
   it("is frozen at the review, not read live", () => {
     const { rulesetId } = save();
     writeReviewSnapshot(db, reviewId, rulesetId);

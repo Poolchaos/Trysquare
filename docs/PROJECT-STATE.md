@@ -19,6 +19,12 @@ from 2026-11-03.
   (D-259). It said "Nothing is waiting on you" over one stopped at the
   limit. `./verify.sh --e2e` exits 0 with 1559 unit tests passing, 8
   skipped, and 154 browser tests.
+  The same day, one ruleset can be deleted from its page (RA-1, the first
+  package of `plans/RULES-IN-APP-PLAN.md`, D-266): a review that ran with
+  it keeps its copy of the rules, which took migration 0019, since the
+  copy held its ruleset in place. With it, `./verify.sh --e2e` exits 0
+  with 1564 unit tests passing, 8 skipped, and 155 browser tests. The
+  email plan's size spike is measured (S4, in the plan).
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the
@@ -395,7 +401,7 @@ are accepted; anything else is refused by name.
   `settings` (the CLI path, the emails that count as the person's); and
   paths, ids and matching an error by the
   name its class sets.
-- `src/server/db/` - schema (16 tables), client, migrations 0000 to 0018, and
+- `src/server/db/` - schema (16 tables), client, migrations 0000 to 0019, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings, stage executions, the scoreboard, a project's checks and what
   they found.
@@ -441,7 +447,7 @@ are accepted; anything else is refused by name.
 - `tests/` - unit and integration tests. `e2e/` - the browser journey, the
   failure paths, the theme and screenshot pass with the axe accessibility
   pass, and the shutdown pass.
-  `drizzle/` - nineteen committed migrations.
+  `drizzle/` - twenty committed migrations.
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and
@@ -510,7 +516,8 @@ own now (D-75, D-81).
 - Rules added, edited or removed in the app, and ruleset templates shipped
   with it: in scope since D-251, planned in `plans/RULES-IN-APP-PLAN.md`
   and `plans/RULESET-TEMPLATES-PLAN.md` (D-265). A rule can be switched off
-  and its severity changed; its text comes only from an imported file.
+  and its severity changed, and one ruleset deleted (RA-1, D-266); a
+  rule's text comes only from an imported file.
 - A viewer for a failed stage's transcript: the review page names the file
   and renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
 - The live output of git while a project clones: a failure's stderr is

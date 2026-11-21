@@ -134,6 +134,13 @@
       "when": 1795153374311,
       "tag": "0018_naive_wong",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1795234348516,
+      "tag": "0019_rare_rogue",
+      "breakpoints": true
     }
   ]
 }

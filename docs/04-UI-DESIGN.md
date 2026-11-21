@@ -320,6 +320,12 @@ badge once its branch is found merged; delete per 02 rules.
 - Use by default for new reviews, on a ruleset's page (Stop using by
   default undoes it); the list marks the default, and a new review, or a
   draft's Start, begins on it rather than on the first by name (D-225).
+- Delete ruleset, a card at the foot of a ruleset's page (D-266): it says
+  what goes (the rules and directives, never the rules a review already
+  ran with) and, of the default, that new reviews will then start with
+  none chosen. Asked once (Yes, delete, or Keep it), then the list. A
+  refusal, a review in line being about to start on it, is said in the
+  card.
 
 ### Settings
 

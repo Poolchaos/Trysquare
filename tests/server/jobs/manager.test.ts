@@ -208,11 +208,16 @@ describe("deciding what runs now", () => {
     expect(manager.judge(second)).toBe("queued");
     expect(() => manager.judge(second, { ruleset: RULESET })).toThrow(ReviewAlreadyStartedError);
     expect(manager.queueDepth()).toBe(1);
+    // One in line has not taken its copy of the rules, so the ruleset it
+    // will start on is known by name and kept from a delete (RA-1).
+    expect(manager.startsOn(RULESET.name)).toBe(true);
+    expect(manager.startsOn("Another protocol")).toBe(false);
     const cancelled = seedReview();
     transitionReview(db, cancelled, "cancelled");
     expect(() => manager.judge(cancelled)).toThrow(ReviewNotStartableError);
     await manager.settled(first);
     await manager.settled(second);
+    expect(manager.startsOn(RULESET.name)).toBe(false);
   }, 240_000);
 
   it("lets a delete claim only what it does not hold, and starts nothing claimed", async () => {

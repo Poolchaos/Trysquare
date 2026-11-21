@@ -1,6 +1,11 @@
 /** One ruleset: what it checks, and which of those checks are switched on. */
 
-import { defaultRulesetId, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
+import {
+  defaultRulesetId,
+  deleteRuleset,
+  loadRuleset,
+  requireRuleset,
+} from "@/server/db/repositories/rulesets";
 import { handler, ok } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -52,5 +57,32 @@ export async function GET(
         text: rule.raw.slice(rule.raw.indexOf("\n") + 1).trim(),
       })),
     });
+  });
+}
+
+/**
+ * Deletes one ruleset: its rules and directives, and the default if it was
+ * that. A review that ran with it keeps its own copy (D-266). Until this
+ * route, a ruleset went only with everything else, from Settings.
+ */
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  return handler(async () => {
+    const { db, manager } = runtime();
+    const { id } = await context.params;
+    const row = requireRuleset(db, id);
+    if (manager.startsOn(row.name)) {
+      throw Response.json(
+        {
+          error: `A review waiting for a place will start on "${row.name}" and has not taken its copy of the rules yet. Delete the ruleset once that review has started, or take the review out of the line first.`,
+          code: "RulesetAwaited",
+        },
+        { status: 409 },
+      );
+    }
+    deleteRuleset(db, id);
+    return ok({ deleted: id });
   });
 }

@@ -236,7 +236,9 @@ export const reviews = sqliteTable(
 
 /**
  * The composed ruleset content frozen at review start. Editing a ruleset later
- * must never change what a past review was judged against.
+ * must never change what a past review was judged against, and nor does
+ * deleting it: `rulesetId` is the id the ruleset had and no key onto it, so
+ * the copy outlives the ruleset it was made from (RA-1, D-266).
  */
 export const reviewRulesets = sqliteTable(
   "review_rulesets",
@@ -244,9 +246,7 @@ export const reviewRulesets = sqliteTable(
     reviewId: text("review_id")
       .notNull()
       .references(() => reviews.id, { onDelete: "cascade" }),
-    rulesetId: text("ruleset_id")
-      .notNull()
-      .references(() => rulesets.id, { onDelete: "restrict" }),
+    rulesetId: text("ruleset_id").notNull(),
     rulesetName: text("ruleset_name").notNull(),
     rulesetVersion: integer("ruleset_version").notNull(),
     snapshotJson: text("snapshot_json").notNull(),

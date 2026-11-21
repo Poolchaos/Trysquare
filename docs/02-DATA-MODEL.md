@@ -196,7 +196,9 @@ are enforced in one repository function, unit-tested; no ad hoc writes.
 snapshotJson freezes the composed ruleset content at start time so later
 ruleset edits never change what a past review was judged against; the name
 and version are kept beside it, so a report says which ruleset and version
-that was.
+that was. The row goes with its review. `rulesetId` is the id the ruleset
+had and no key onto it (migration 0019, D-266): a ruleset deleted leaves
+the copy with every review that ran with it.
 
 ### stage_executions
 
