@@ -6717,3 +6717,35 @@ verified evidence, in writing, here.
   inbox: no `color-scheme` is declared, so a native control is drawn for
   the light theme on the dark one; the two radios this adds declare their
   own.
+- 2026-11-21 Review round 19, over RA-5 to RA-7 (2ffa046, c6de091,
+  7f8655e, 001b04d): two findings, both run before they were believed, and
+  three states looked at in a browser that RA-6's session had not driven.
+  1: a document imported under the name of a ruleset that holds no rule
+  and no directive was asked about as a replacement, in words about rules
+  replaced and switches and severities undone, of which such a ruleset has
+  none. It is not asked about now and fills the ruleset
+  (`rulesetAnImportWouldReplace`), on the Rulesets screen and in
+  `npm run rules:seed`; the ruleset goes to version 2 and takes the tier
+  the import gives. Rejected: a second wording of the question for an
+  empty ruleset, which asks with nothing to lose behind it (D-136 dropped
+  the question for the same reason where the document changes nothing).
+  2: README said a ruleset "exports as a document that imports back as
+  what is stored". Run: after a severity is changed with the picker the
+  export is byte for byte what it was, and importing it is asked about as
+  a replacement, which would undo the change; and a ruleset left with
+  directives and no rule exports a document the import refuses for having
+  no rules. README and 04 now say what the export holds, every rule's text
+  and every directive, and what it does not, a rule switched off and a
+  severity set beside the text; `tests/server/api/rule-round-trip.test.ts`
+  holds the severity case. D-271's sentence stands for what it was about,
+  a rule saved, added or removed. Looked at and left as they are: a copy
+  made of a ruleset with no rule is a ruleset with no rule at version 1,
+  which takes a rule; Use by default is taken by a ruleset with no rule,
+  whose page says under the badge that a review will not start on it, and
+  a new review opens on it with "0 rules" in the picker (the pre-flight
+  refuses a ruleset with no rule switched on, `loadEnabledRuleset`, read
+  in the code for one with no rule at all and not run); two names that
+  differ only by case are two rulesets, as an import has always had it.
+  In the inbox: the ruleset's page does not say that a severity changed
+  there is left out of the export, and three screens name importing as the
+  one way to a first ruleset.

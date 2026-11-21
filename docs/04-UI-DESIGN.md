@@ -346,7 +346,11 @@ badge once its branch is found merged; delete per 02 rules.
   report (mapped headings, unmapped lines = import blocked). A different
   document under a name already in use is asked about (Replace / Keep it),
   since the import replaces its rules and undoes its edits; the same
-  document is not. Export to markdown (round-trip clean).
+  document is not, nor is one under the name of a ruleset that holds no
+  rule and no directive (review round 19). Export to markdown: every
+  rule's text and every directive, byte for byte, and not what is set
+  beside the text, a rule switched off or a severity changed with the
+  picker.
 - A ruleset with no document (RA-6, D-272): the same form, Name and Tier,
   then Start from, A document (the paste) or No document. The second shows
   no field, says the ruleset starts with no rules and that a review will

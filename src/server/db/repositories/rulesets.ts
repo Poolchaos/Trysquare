@@ -343,6 +343,8 @@ export function deleteRuleset(db: Db, rulesetId: string): void {
  * a new name, and for a document that matches what is stored, which an import
  * leaves as it is. The import route asks before replacing, and asking about a
  * document that changes nothing warned of a loss that did not happen (D-136).
+ * So did asking about a ruleset that holds no rule and no directive, one
+ * started with no document (RA-6): an import fills it and replaces nothing.
  */
 export function rulesetAnImportWouldReplace(
   db: Db,
@@ -350,7 +352,10 @@ export function rulesetAnImportWouldReplace(
   imported: ImportedRuleset,
 ): RulesetRow | undefined {
   const existing = findRulesetByName(db, name);
-  return existing && differsFromStored(db, existing, imported) ? existing : undefined;
+  if (!existing) return undefined;
+  const stored = loadRuleset(db, existing.id);
+  if (stored.rules.length === 0 && stored.directives.length === 0) return undefined;
+  return differsFromStored(db, existing, imported) ? existing : undefined;
 }
 
 function differsFromStored(db: Db, existing: RulesetRow, imported: ImportedRuleset): boolean {

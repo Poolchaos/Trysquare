@@ -156,8 +156,11 @@ Rulesets are imported by pasting a markdown protocol document, which becomes
 numbered rules and process directives; the import is refused if it produces no
 rules. A ruleset can also be started with no document and its rules written in
 the app. On a ruleset's page a rule is switched off, given another severity,
-edited as the markdown it is, added or removed, and the ruleset exports as a
-document that imports back as what is stored. Process directives come only
+edited as the markdown it is, added or removed. A ruleset that has a rule
+exports as the document it holds, every rule's text and every directive, and
+that document imports back as the same text. What is set beside the text is
+not in it: a rule switched off, and a severity changed with the picker and not
+in the rule's own text. Process directives come only
 with an imported document. A review keeps the rules it started with, so a
 later change never alters a past review. Each ruleset carries a tier, meaning
 rules for any code, rules for a technology, or rules for one project. Choosing
@@ -351,7 +354,8 @@ npm run rules:seed -- /path/to/REVIEW_PROTOCOL.md --name "Company base rules"
 
 `--tier` is `global` by default, for rules that apply to any code; `tech` and
 `project` are the other two. Add `--replace` to replace a ruleset of that name
-whose rules differ. A file that has no rules, or has lines the importer cannot
+whose rules differ; one that holds nothing yet is filled without it. A file
+that has no rules, or has lines the importer cannot
 place, is refused, and the reason is printed. Running it again with the same
 file changes nothing. Stop the app first: the seed takes the same lock the app
 holds, and refuses while it is running.

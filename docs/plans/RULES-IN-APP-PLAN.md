@@ -1,6 +1,6 @@
 # Rules in the app plan
 
-Status: BUILT 2026-11-21, RA-1 to RA-7. The review pass after RA-7 is owed
+Status: BUILT 2026-11-21, RA-1 to RA-7, both review passes run
 (section 5). Written 2026-11-20, for D-251's scope (CP-12): "use or add
 config rules". Decided by the session; the maintainer reverses what he
 does not want.
@@ -166,3 +166,14 @@ shot and graded (the commit after the round's record):
   page went on naming the section and its tags.
 
 The sixth was settled with RA-5 (D-271, its row).
+
+The pass after RA-7 ran on 2026-11-21 (review round 19, in DECISIONS),
+over RA-5 to RA-7. Two findings, both fixed in one change:
+
+- A document imported under the name of a ruleset that holds no rule and
+  no directive was asked about as a replacement, with nothing to replace.
+  It fills the ruleset now, unasked (`rulesetAnImportWouldReplace`).
+- README said an export imports back as what is stored. It does not carry
+  a severity changed with the picker, and a ruleset left with directives
+  alone exports a document the import refuses. README and 04 say what the
+  export holds.

@@ -62,6 +62,11 @@ async function remove(id: string, code: string, version: number): Promise<Respon
   });
 }
 
+async function importing(body: unknown): Promise<Response> {
+  const { POST } = await import("@/app/api/rulesets/import/route");
+  return POST(new Request("http://local/x", { method: "POST", body: JSON.stringify(body) }));
+}
+
 async function exported(id: string): Promise<Response> {
   const { GET } = await import("@/app/api/rulesets/[id]/export/route");
   return GET(new Request("http://local/x"), at(id));
@@ -164,5 +169,48 @@ describe("a ruleset started with no document", () => {
     const emptied = await exported(rulesetId);
     expect(emptied.status).toBe(409);
     expect(await emptied.json()).toEqual(nothing);
+  });
+
+  it("takes a document imported under its name without asking, while it holds nothing to replace", async () => {
+    const name = "Filled by import";
+    const made = await started({ name, tier: "project" });
+    const { rulesetId } = (await made.json()) as { rulesetId: string };
+
+    // The question warns of rules replaced and of switches and severities
+    // undone, and a ruleset with no rule and no directive has none of them.
+    const filled = await importing({
+      name,
+      tier: "tech",
+      markdown: `# Team rules\n\n## Hygiene\n\n${FIRST}`,
+    });
+    expect(filled.status).toBe(201);
+    expect(await filled.json()).toMatchObject({
+      rulesetId,
+      version: 2,
+      changed: true,
+      rules: 1,
+      directives: 2,
+    });
+    expect(await detail(rulesetId)).toMatchObject({
+      ruleset: { name, tier: "tech", version: 2 },
+      rules: [{ code: "1", group: "Hygiene" }],
+    });
+
+    // It holds a rule now, so another document under its name is asked about.
+    const other = await importing({
+      name,
+      tier: "tech",
+      markdown: `# Team rules\n\n## Hygiene\n\n${SECOND}`,
+    });
+    expect(other.status).toBe(409);
+    expect(await other.json()).toEqual({
+      error:
+        `A ruleset called "${name}" already exists, at version 2, and this document differs ` +
+        "from it. Importing replaces its rules with the document's, and undoes any rule " +
+        "switched off or re-graded since.",
+      code: "RulesetExists",
+      rulesetId,
+    });
+    expect((await detail(rulesetId)).rules.map((rule) => rule.code)).toEqual(["1"]);
   });
 });

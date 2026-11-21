@@ -79,8 +79,14 @@ from 2026-11-03.
   `./verify.sh --e2e` exits 0 with 1608 unit tests passing, 8 skipped, and
   162 browser tests. The plan's records are brought up too (RA-7): README
   and RUNBOOK say what a person changes in the app. Every package of
-  `plans/RULES-IN-APP-PLAN.md` is built; its review pass after RA-7 is
-  owed, and `plans/RULESET-TEMPLATES-PLAN.md` RT-1 follows it.
+  `plans/RULES-IN-APP-PLAN.md` is built. Its review pass after RA-7
+  (round 19, in DECISIONS) found two things, both fixed: a document
+  imported under the name of a ruleset that holds nothing was asked about
+  as a replacement, and fills it now unasked; and README said an export
+  imports back as what is stored, where a severity changed with the picker
+  is not in the document. `./verify.sh --e2e` exits 0 with 1610 unit tests
+  passing, 8 skipped, and 162 browser tests.
+  `plans/RULESET-TEMPLATES-PLAN.md` RT-1 is next.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the

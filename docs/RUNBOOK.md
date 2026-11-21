@@ -185,7 +185,9 @@ Probe press in step 4, a real but tiny paid call.
    Importing a different document under a name already in use asks first,
    because it replaces that ruleset's rules and undoes any rule switched off
    or re-graded since: Replace goes ahead, Keep it leaves the ruleset as it
-   was. The same document again changes nothing and is not asked about.
+   was. The same document again changes nothing and is not asked about, and
+   neither is a document under the name of a ruleset that holds no rule and
+   no directive, which it fills.
    Or start one with no document: under Start from choose No document, give
    a name and a tier, Create ruleset. Its page opens with no rules, and a
    review will not start on it until it has one. On any ruleset's page a

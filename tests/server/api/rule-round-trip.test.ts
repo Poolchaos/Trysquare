@@ -22,7 +22,7 @@ let dataDir: string;
 
 interface Detail {
   ruleset: { version: number };
-  rules: { code: string; sweepPatterns: string[]; raw: string }[];
+  rules: { code: string; severity: string; sweepPatterns: string[]; raw: string }[];
 }
 
 async function detail(id: string): Promise<Detail> {
@@ -247,6 +247,29 @@ describe("a ruleset changed in the app", () => {
         () => `${grown.rawMarkdown}One more line.\nAnd another.\n\n`,
       ).replace(last, () => `${last}A closing line.\n`),
     );
+  });
+
+  it("leaves a severity changed with the picker out of the document, so importing the export is asked about", async () => {
+    const name = "Example protocol, re-graded";
+    const id = await imported(name, EXAMPLE);
+    const before = await exported(id, name);
+    expect(before.differs).toBe(false);
+
+    // The picker changes the rule beside its text, and the text is the
+    // document: README says the export does not carry it (review round 19).
+    const rule = await ruleOf(id, "1");
+    const severity = rule.severity === "CRITICAL" ? "NITPICK" : "CRITICAL";
+    const { PATCH } = await import("@/app/api/rulesets/[id]/rules/[code]/route");
+    const regraded = await PATCH(
+      new Request("http://local/x", { method: "PATCH", body: JSON.stringify({ severity }) }),
+      { params: Promise.resolve({ id, code: "1" }) },
+    );
+    expect(regraded.status).toBe(200);
+    expect((await ruleOf(id, "1")).severity).toBe(severity);
+
+    const after = await exported(id, name);
+    expect(after.document).toBe(before.document);
+    expect(after.differs).toBe(true);
   });
 
   it("removes a rule that is the whole of its document", async () => {

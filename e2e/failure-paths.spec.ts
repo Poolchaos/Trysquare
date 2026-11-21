@@ -7166,6 +7166,24 @@ test("a ruleset is started with no document: a name and a tier, nothing to expor
     await expect(refusal).toHaveCount(0);
     await withDocument.check();
     await expect(form.getByLabel("Protocol document")).toBeVisible();
+
+    // A document imported under the name of a ruleset that holds nothing is
+    // not asked about: the question warns of rules replaced and switches
+    // undone, and there are none (review round 19).
+    const blank = `${name}, blank`;
+    const started = await page.request.post("/api/rulesets", {
+      data: { name: blank, tier: "global" },
+    });
+    expect(started.status()).toBe(201);
+    await form.getByLabel("Name").fill(blank);
+    await form.getByLabel("Protocol document").fill(`# Team rules\n\n## Hygiene\n\n${block}`);
+    await form.getByRole("button", { name: "Import" }).click();
+    await expect(
+      form.getByText(
+        "Imported 1 rule(s) and 2 directive(s) as version 2. All 8 lines of the document are accounted for.",
+      ),
+    ).toBeVisible();
+    expect(await form.getByRole("button", { name: /^Replace/ }).count()).toBe(0);
   } finally {
     await page.emulateMedia({ colorScheme: "light" });
     const listed = (await (await page.request.get("/api/rulesets")).json()) as {
