@@ -7249,3 +7249,21 @@ verified evidence, in writing, here.
   schema's own message said the field was missing. RS-3 is split: the
   directives of several rulesets going to the model under each one's name
   (RS-3b) changes what a stage is sent and is its own change.
+- 2026-11-21 D-293 A review on several rulesets gives the model each
+  ruleset's directives under that ruleset's name (RS-3b). Every template
+  brings a "Review scope", a "Severity levels" and a "Mechanical sweeps",
+  so two templates sent two of each under the same heading. A directive
+  now holds the name of its ruleset where the review has more than one,
+  and the heading the model reads is "General: Review scope". With one
+  ruleset nothing is added and the prompt is byte for byte what it was:
+  a prefix there would change every review's prompt for no reader. The
+  rulesets are put together in one function, used by the pre-flight and
+  by the snapshot's reader, so what is sized carries the same headings.
+  Proven: the compose test and the service test failed before; the
+  service test runs a review on two rulesets with the fake engine and
+  reads the system prompt its first stage was sent. Not proven: that a
+  model reads the named sections better. No review on two rulesets has
+  run against a real model, and that run spends the maintainer's usage.
+  Left as it is: two severity tables are both sent. They say the same in
+  the templates; in a person's own protocol they may not, and which wins
+  is not the app's to choose.

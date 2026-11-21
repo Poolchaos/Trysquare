@@ -46,6 +46,33 @@ describe("what a stage is told", () => {
     expect(prompt).toContain("Read every file in the execution chain");
   });
 
+  it("says which ruleset a directive is from, when the review has several", () => {
+    // Two rulesets each bring a "Review scope" and a "Severity levels", and
+    // they were sent one after another under the same headings, so the
+    // model could not tell whose scope was whose (RS-3b).
+    const [scope] = ruleset.directives;
+    if (scope === undefined) throw new Error("The example protocol has no directive.");
+    const composed = (directives: typeof ruleset.directives) =>
+      composeSystemPrompt({
+        directives,
+        rules: ruleset.rules,
+        stage: "s3_adversarial",
+        includeFullRules: true,
+        outputContract: "Answer with JSON.",
+      });
+
+    const several = composed([
+      { ...scope, ruleset: "General" },
+      { ...scope, ruleset: "A team's own" },
+    ]);
+    expect(several).toContain(`## General: ${scope.title}\n\n${scope.contentMd}`);
+    expect(several).toContain(`## A team's own: ${scope.title}\n\n${scope.contentMd}`);
+
+    // One ruleset reads as it always has: the heading is the directive's own.
+    expect(composed([scope])).toContain(`## ${scope.title}\n\n${scope.contentMd}`);
+    expect(composed([scope])).not.toContain(`: ${scope.title}\n`);
+  });
+
   it("sends only an index when the stage does not apply the rules", () => {
     const prompt = composeSystemPrompt({
       directives: ruleset.directives,

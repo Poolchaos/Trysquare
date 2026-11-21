@@ -211,6 +211,10 @@ describe("the ruleset a review is judged against", () => {
     expect(readReviewSnapshotMeta(db, reviewId)).toEqual([
       { name: "Example protocol", version: 1 },
     ]);
+    // One ruleset: its directives carry no name, and go out under their own headings.
+    expect(
+      readReviewSnapshot(db, reviewId).directives.filter((directive) => "ruleset" in directive),
+    ).toEqual([]);
   });
 
   it("names every ruleset frozen onto the review, in the order their rules are read in", () => {
@@ -250,6 +254,11 @@ describe("the ruleset a review is judged against", () => {
 
     expect(readReviewSnapshot(db, reviewId)).toEqual(sized);
     expect(sized.title).toBe("A team's own + Example protocol");
+    // Each directive says whose it is, since there are two rulesets
+    // (RS-3b): the team's own first, as the rules are.
+    const whose = sized.directives.map((directive) => directive.ruleset);
+    expect(new Set(whose)).toEqual(new Set(["A team's own", "Example protocol"]));
+    expect(whose).toEqual([...whose].sort());
     expect(sized.rules.map((rule) => rule.code)).not.toContain("1");
     expect(sized.rules[0]?.code).toBe("90");
   });

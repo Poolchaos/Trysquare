@@ -1181,6 +1181,10 @@ describe("what a review is judged against", () => {
       ...PROTOCOL.rules.map((rule) => rule.code),
       "90",
     ]);
+    // What the first stage was sent: the protocol's directives under its
+    // name, since the review has two rulesets (RS-3b).
+    const [directive] = PROTOCOL.directives;
+    expect(recordedSystemPrompts()[0]).toContain(`## Kept apart: ${directive?.title}\n`);
   }, 120_000);
 });
 

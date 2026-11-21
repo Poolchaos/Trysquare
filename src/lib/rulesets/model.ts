@@ -42,6 +42,12 @@ export interface ImportedDirective extends SourceSpan {
   title: string;
   contentMd: string;
   raw: string;
+  /**
+   * The ruleset it is from, set only where a review is judged against
+   * several: two rulesets each bring a "Review scope", and the model is
+   * told whose is whose (RS-3b).
+   */
+  ruleset?: string;
 }
 
 export interface ImportedRuleset {

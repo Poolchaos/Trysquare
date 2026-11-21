@@ -152,9 +152,11 @@ from 2026-11-03.
   is put in line and again as its rules are frozen. The pre-flight
   sizes a set the same way (RS-3a, D-292): `rulesetIds` or `rulesetId`,
   the rules and directives put together as a run's frozen copy is read,
-  the same refusal. No screen sends more than one yet. Next: the
-  directives of several rulesets given under each one's name (RS-3b),
-  then the picker (RS-4).
+  the same refusal. A review on several gives the model each ruleset's
+  directives under that ruleset's name, "General: Review scope" (RS-3b,
+  D-293); on one, the headings are the document's own, as before. No
+  screen sends more than one yet: the picker (RS-4) is next. No review
+  on two rulesets has been run against a real model.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -162,7 +164,7 @@ from 2026-11-03.
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1685 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1686 unit tests passing, 8 skipped,
   and 168 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the

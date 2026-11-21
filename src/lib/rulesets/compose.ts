@@ -105,7 +105,10 @@ export function renderRule(rule: ImportedRule): string {
 
 export function renderDirectives(directives: readonly ImportedDirective[]): string {
   return directives
-    .map((directive) => `## ${directive.title}\n\n${directive.contentMd}`)
+    .map(
+      (directive) =>
+        `## ${directive.ruleset === undefined ? "" : `${directive.ruleset}: `}${directive.title}\n\n${directive.contentMd}`,
+    )
     .join("\n\n");
 }
 

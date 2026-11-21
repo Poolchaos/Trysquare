@@ -442,10 +442,24 @@ export function loadEnabledRulesets(db: Db, rulesetIds: readonly string[]): Impo
     .map((rulesetId) => loadEnabledRuleset(db, rulesetId))
     .sort((a, b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : 0));
   refuseSharedCodes(db, rulesetIds);
+  return together(loaded);
+}
+
+/**
+ * Several rulesets as the one a review is judged against: the rules of each
+ * in turn, and the directives of each, named for their ruleset when there
+ * is more than one. The one place they are put together, for the pre-flight
+ * and for a run.
+ */
+function together(parts: readonly ImportedRuleset[]): ImportedRuleset {
   return {
-    title: loaded.map((ruleset) => ruleset.title).join(" + "),
-    rules: loaded.flatMap((ruleset) => ruleset.rules),
-    directives: loaded.flatMap((ruleset) => ruleset.directives),
+    title: parts.map((part) => part.title).join(" + "),
+    rules: parts.flatMap((part) => part.rules),
+    directives: parts.flatMap((part) =>
+      parts.length === 1
+        ? part.directives
+        : part.directives.map((directive) => ({ ...directive, ruleset: part.title })),
+    ),
   };
 }
 
@@ -1042,11 +1056,11 @@ export function readReviewSnapshot(db: Db, reviewId: string): ImportedRuleset {
     parseJsonColumn(`review_rulesets.snapshot_json`, row.snapshotJson, snapshotSchema),
   );
 
-  return {
-    title: snapshots.map((snapshot) => snapshot.name).join(" + "),
-    rules: snapshots.flatMap((snapshot) =>
-      snapshot.rules.map((rule) => ({ ...rule, severity: rule.severity })),
-    ),
-    directives: snapshots.flatMap((snapshot) => snapshot.directives),
-  };
+  return together(
+    snapshots.map((snapshot) => ({
+      title: snapshot.name,
+      rules: snapshot.rules,
+      directives: snapshot.directives,
+    })),
+  );
 }
