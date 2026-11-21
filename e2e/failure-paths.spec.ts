@@ -6822,3 +6822,135 @@ test("a rule is removed on its ruleset's page: asked once, a page behind the rul
     }
   }
 });
+
+test("a save or an add made behind the ruleset keeps the text and reads the ruleset again, and a rule with no text says so (review round 18)", async ({
+  page,
+}) => {
+  // Imported for this and deleted after, as the removal's test does. The
+  // last rule is its heading alone, with no line break after it.
+  const made = await page.request.post("/api/rulesets/import", {
+    data: {
+      name: "A ruleset changed behind its page",
+      tier: "global",
+      markdown:
+        "# Behind\n\n## Hygiene\n\n### 1. Left-In Logging\n\n**Rule:** Flag a console call left in.\n\n## Typing\n\n### 2. Unchecked Cast\n\n**Rule:** Flag a cast nothing checks.\n\n### 3. Heading Alone",
+    },
+  });
+  expect(made.status(), await made.text()).toBe(201);
+  const rulesetId = ((await made.json()) as { rulesetId: string }).rulesetId;
+  const bothThemes = async () => {
+    for (const scheme of ["dark", "light"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      expect(await accessibilityViolations(page), scheme).toEqual([]);
+    }
+  };
+  const panel = page.getByTestId("rule-text");
+  const adder = page.getByTestId("new-rule");
+  const toggled = async (enabled: boolean) => {
+    const changed = await page.request.patch(`/api/rulesets/${rulesetId}/rules/1`, {
+      data: { enabled },
+    });
+    expect(changed.status()).toBe(200);
+  };
+  try {
+    await page.goto(`/rulesets/${rulesetId}`);
+    await expect(page.getByText("version 1", { exact: true })).toBeVisible();
+
+    // A rule that is its heading alone: the row carries the heading, and
+    // the opened rule says there is nothing under it, where it drew the
+    // heading again as the rule's text.
+    await page.getByRole("button", { name: "Heading Alone", exact: true }).click();
+    await expect(panel).toContainText(
+      "This rule has no text under its heading. Edit text to write what it asks.",
+    );
+    await expect(panel.getByRole("heading")).toHaveCount(0);
+    await bothThemes();
+    await shootAll(page, panel, "rule-no-text");
+
+    // A rule's text is edited, and the ruleset changes behind the page as
+    // another tab would change it. The save is refused, and the page reads
+    // the ruleset again with the text kept as typed, where the text could
+    // only be saved after a reload that lost it.
+    await page.getByRole("button", { name: "Unchecked Cast", exact: true }).click();
+    await panel.getByRole("button", { name: "Edit text" }).click();
+    const field = panel.getByLabel("Rule 2 as markdown");
+    const typed =
+      "### 2. Unchecked Cast\n\n**Rule:** Flag a cast nothing checks.\n\nCasts in tests count too.\n";
+    await field.fill(typed);
+    await toggled(false);
+    await panel.getByRole("button", { name: "Save rule" }).click();
+    await expect(
+      panel.getByText(
+        "Not saved yet. The ruleset was changed since this page read it, though not rule 2's text. The page now shows the ruleset as it stands, at version 2, and your text is kept: press Save rule again.",
+      ),
+    ).toBeVisible();
+    await expect(field).toHaveValue(typed);
+    await expect(page.getByText("version 2", { exact: true })).toBeVisible();
+    await expect(page.getByText("3 rules, 1 switched off", { exact: true })).toBeVisible();
+    await bothThemes();
+    await shootAll(page, panel, "rule-save-behind");
+    await panel.getByRole("button", { name: "Save rule" }).click();
+    await expect(page.getByText("version 3", { exact: true })).toBeVisible();
+    await expect(panel).toContainText("Casts in tests count too.");
+    await expect(field).toHaveCount(0);
+
+    // The rule's own text changed behind the page: saving would put this
+    // text in place of that change, so the page says which it is first.
+    await panel.getByRole("button", { name: "Edit text" }).click();
+    await field.fill(`${typed}\nAnd in fixtures.\n`);
+    const elsewhere = await page.request.put(`/api/rulesets/${rulesetId}/rules/2`, {
+      data: {
+        markdown: "### 2. Unchecked Cast\n\n**Rule:** Flag a cast with no check before it.\n",
+        version: 3,
+      },
+    });
+    expect(elsewhere.status()).toBe(200);
+    await panel.getByRole("button", { name: "Save rule" }).click();
+    await expect(
+      panel.getByText(
+        "Not saved yet. Rule 2's text was changed since this page read it. The page now shows the ruleset as it stands, at version 4, and your text is kept: press Save rule again to put it in place of that change, or Cancel to see the rule as it now reads.",
+      ),
+    ).toBeVisible();
+    await expect(field).toHaveValue(`${typed}\nAnd in fixtures.\n`);
+    await shootAll(page, panel, "rule-save-behind-own-text");
+    await panel.getByRole("button", { name: "Cancel" }).click();
+    await expect(panel).toContainText("Flag a cast with no check before it.");
+
+    // A new rule written while the ruleset changes behind the page: kept as
+    // typed, and added on the next press.
+    await adder.getByRole("button", { name: "Add a rule" }).click();
+    const fresh = adder.getByLabel("New rule as markdown");
+    await fresh.fill("### 4. Fresh Four\n\n**Rule:** Flag it.\n");
+    await toggled(true);
+    await adder.getByRole("button", { name: "Add rule" }).click();
+    await expect(
+      adder.getByText(
+        "Not added yet. The ruleset was changed since this page read it. The page now shows it as it stands, at version 5, and your text is kept: press Add rule again.",
+      ),
+    ).toBeVisible();
+    await expect(fresh).toHaveValue("### 4. Fresh Four\n\n**Rule:** Flag it.\n");
+    await bothThemes();
+    await shootAll(page, adder, "rule-add-behind");
+    await adder.getByRole("button", { name: "Add rule" }).click();
+    await expect(adder.getByRole("status")).toHaveText("Rule 4 added to Typing, and opened above.");
+
+    // The section picked for a new rule loses its last rule: the rule can
+    // no longer go there, and the page stops naming it and its tags.
+    await adder.getByRole("button", { name: "Add a rule" }).click();
+    await fresh.fill("### 5. Fresh Five\n\n**Rule:** Flag it.\n");
+    await adder.getByLabel("Section").selectOption("Hygiene");
+    await expect(adder).toContainText("Tagged organisation, from the section's name");
+    await page.getByRole("button", { name: "Left-In Logging", exact: true }).click();
+    await panel.getByRole("button", { name: "Remove rule" }).click();
+    await panel.getByRole("button", { name: "Yes, remove rule 1" }).click();
+    await expect(page.getByText("3 rules", { exact: true })).toBeVisible();
+    await expect(adder.getByLabel("Section")).toHaveCount(0);
+    await expect(adder).toContainText(
+      "The rule goes after the last rule of the ruleset's document. Tagged typescript, from the section's name",
+    );
+    await expect(fresh).toHaveValue("### 5. Fresh Five\n\n**Rule:** Flag it.\n");
+  } finally {
+    await page.emulateMedia({ colorScheme: "light" });
+    expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
+  }
+});

@@ -56,8 +56,10 @@ export async function GET(
         sweepPatterns: rule.sweepPatterns,
         enabled: enabled.has(rule.code),
         // The rule as the document has it, less the heading the row already
-        // shows: its text, examples, detection and why it matters.
-        text: rule.raw.slice(rule.raw.indexOf("\n") + 1).trim(),
+        // shows: its text, examples, detection and why it matters. Empty for
+        // a rule that is its heading alone, which with no line break after
+        // it came out as the heading again.
+        text: rule.raw.split("\n").slice(1).join("\n").trim(),
         // Whole, heading line and all: what the rule's editor opens on, and
         // what a save is compared with (RA-2).
         raw: rule.raw,

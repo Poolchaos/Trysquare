@@ -55,9 +55,13 @@ from 2026-11-03.
   in the review. A review in line now holds its ruleset's id and runs with
   the ruleset as it stands when its turn comes (D-270). A severity line
   written into a rule's text that had none is taken as the text's word.
-  Three findings on the ruleset's page are open and come before RA-5
-  (`plans/RULES-IN-APP-PLAN.md` section 5). `./verify.sh --e2e` exits 0
-  with 1598 unit tests passing, 8 skipped, and 159 browser tests.
+  Three findings on the ruleset's page are fixed too
+  (`plans/RULES-IN-APP-PLAN.md` section 5): a save or an add from a page
+  behind the ruleset reads it again and keeps the text as typed, a rule
+  that is its heading alone says it has no text, and a section whose last
+  rule was removed is no longer where a new rule goes. `./verify.sh --e2e`
+  exits 0 with 1598 unit tests passing, 8 skipped, and 160 browser tests.
+  RA-5 is next.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the

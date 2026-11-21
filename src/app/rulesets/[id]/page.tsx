@@ -164,18 +164,27 @@ function NewRule({
   rulesetId,
   version,
   rules,
+  reload,
   onAdded,
   onCancel,
 }: {
   rulesetId: string;
   version: number;
   rules: Detail["rules"];
+  /** Reads the ruleset again, answering with its version, or null when it could not be read. */
+  reload: () => Promise<number | null>;
   onAdded: (code: string, section: string) => Promise<void>;
   onCancel: () => void;
 }) {
   // Each section once, in the document's order, with the rule it ends on.
   const sections = [...new Map(rules.map((rule) => [rule.group, rule.code]))];
-  const [section, setSection] = useState(sections.at(-1)?.[0] ?? "");
+  // The one picked while it still has a rule to follow, else the last: a
+  // section whose last rule was removed meanwhile stayed named here, with
+  // its tags, while the rule went after the ruleset's last rule.
+  const [picked, setSection] = useState<string | null>(null);
+  const section = sections.some(([name]) => name === picked)
+    ? (picked ?? "")
+    : (sections.at(-1)?.[0] ?? "");
   const after = sections.find(([name]) => name === section)?.[1];
 
   return (
@@ -233,7 +242,14 @@ function NewRule({
           },
           "The rule could not be added",
         );
-        if (!sent.ok) return sent.error;
+        if (!sent.ok) {
+          // Behind the ruleset: read again with the text kept, as a save is.
+          if (sent.body.code !== "RulesetChangedError") return sent.error;
+          const stands = await reload();
+          return stands === null
+            ? sent.error
+            : `Not added yet. The ruleset was changed since this page read it. The page now shows it as it stands, at version ${stands}, and your text is kept: press Add rule again.`;
+        }
         await onAdded(sent.body.code, section);
         return "";
       }}
@@ -310,6 +326,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
     );
     if (sent.ok) setDetail(sent.body);
     else setError(sent.error);
+    return sent.ok ? sent.body : null;
   }, [id]);
 
   useEffect(() => {
@@ -792,7 +809,25 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                                       },
                                       "The rule could not be saved",
                                     );
-                                    if (!sent.ok) return sent.error;
+                                    if (!sent.ok) {
+                                      // Behind the ruleset: read again with
+                                      // the text kept, so the next press is
+                                      // made of the ruleset as it stands. A
+                                      // reload was the only way, and lost
+                                      // what was typed.
+                                      if (sent.body.code !== "RulesetChangedError") {
+                                        return sent.error;
+                                      }
+                                      const fresh = await load();
+                                      if (fresh === null) return sent.error;
+                                      const stands = `The page now shows the ruleset as it stands, at version ${fresh.ruleset.version}, and your text is kept`;
+                                      const now = fresh.rules.find(
+                                        (entry) => entry.code === rule.code,
+                                      );
+                                      return now !== undefined && now.raw !== rule.raw
+                                        ? `Not saved yet. Rule ${rule.code}'s text was changed since this page read it. ${stands}: press Save rule again to put it in place of that change, or Cancel to see the rule as it now reads.`
+                                        : `Not saved yet. The ruleset was changed since this page read it, though not rule ${rule.code}'s text. ${stands}: press Save rule again.`;
+                                    }
                                     setEditingRule("");
                                     setRemoved(null);
                                     setOpenRule(sent.body.code);
@@ -802,7 +837,14 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                                 />
                               ) : (
                                 <>
-                                  <MarkdownText text={rule.text} />
+                                  {rule.text === "" ? (
+                                    <p className="text-sm text-[var(--color-ink-muted)]">
+                                      This rule has no text under its heading. Edit text to write
+                                      what it asks.
+                                    </p>
+                                  ) : (
+                                    <MarkdownText text={rule.text} />
+                                  )}
                                   {confirmingRemove === rule.code ? (
                                     <div className="mt-3 grid gap-3">
                                       {/* What a removal is, against the switch in
@@ -886,6 +928,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                 rulesetId={id}
                 version={detail.ruleset.version}
                 rules={detail.rules}
+                reload={async () => (await load())?.ruleset.version ?? null}
                 onCancel={() => setAdding(false)}
                 onAdded={async (code, section) => {
                   setAdding(false);

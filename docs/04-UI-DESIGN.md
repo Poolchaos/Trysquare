@@ -332,7 +332,13 @@ badge once its branch is found merged; delete per 02 rules.
   the rule was says so. A removal from a page behind the ruleset is
   refused: the page reads the ruleset again and says so beside the
   control, or above the rules when the rule had already gone. A ruleset
-  with no rule says a review will not start on it (RA-4, D-269);
+  with no rule says a review will not start on it (RA-4, D-269). A save or
+  an add from a page behind the ruleset is answered the same way: the page
+  reads the ruleset again, keeps the text as typed and says so beside the
+  field, and a save says when the rule's own text was changed meanwhile,
+  since the next press puts the typed text in its place. A rule that is
+  its heading alone says it has no text, and a section whose last rule
+  was removed is no longer the one a new rule goes to (review round 18);
   versioning bumps on edit (snapshots keep old reviews stable).
 - Import: from markdown (REVIEW_PROTOCOL.md shape); shows the fidelity
   report (mapped headings, unmapped lines = import blocked). A different

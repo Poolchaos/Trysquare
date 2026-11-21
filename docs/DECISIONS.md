@@ -6618,3 +6618,19 @@ verified evidence, in writing, here.
   minutes into the job, and the browser tests, 5.6 minutes in that run, had
   13 minutes before the limit. The job was run again rather than the limit
   raised: one slow runner is not the suite's time.
+- 2026-11-21 Review round 18, its three findings on the ruleset's page,
+  fixed in one change with a browser test that failed on each in turn. A
+  save or an add refused because the page was behind the ruleset is
+  answered as a removal is (D-269): the page reads the ruleset again, the
+  field keeps the text as typed, and a line beside it says the save was
+  not made, the version the page now shows, and to press again. When the
+  rule's own text was changed meanwhile the line says that instead, with
+  Cancel as the way to see the rule as it now reads: the next press puts
+  the typed text in place of that change, which is the person's to choose
+  and was not to be done without a word. Rejected: saving over the other
+  change at once, and refusing until the text is typed again. A rule that
+  is its heading alone says it has no text under the heading, where the
+  heading was drawn again as its text. The section picked for a new rule
+  holds only while it has a rule to follow; the fifth finding, read in the
+  code before, ran: with the section's last rule removed the page went on
+  naming it and its tags.
