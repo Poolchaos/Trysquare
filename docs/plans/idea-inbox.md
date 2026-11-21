@@ -366,7 +366,8 @@ the line entirely would lose the trail.
   out changes a prompt, so it wants a measured run.
 - 2026-11-21: the ruleset's page says the export holds every rule,
   switched off or not, and not that a severity changed with the picker is
-  left out of it (review round 19; README says it).
+  left out of it (review round 19; README says it). Done 2026-11-21
+  (D-287).
 - 2026-11-21: with no ruleset stored, the new-review picker ("No rulesets
   imported yet", "Import a ruleset first"), a draft review ("import one")
   and the dashboard's first line name importing alone; a ruleset is also

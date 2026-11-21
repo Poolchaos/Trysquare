@@ -7130,3 +7130,13 @@ verified evidence, in writing, here.
   weighed (D-264) and which leaves the first step of setting mail up
   behind the maintainer's answer on his mailbox; and a default picked
   apart from the order, a second control for what the first line says.
+- 2026-11-21 D-287 A ruleset's page says what its export leaves out: "The
+  exported document holds every rule's text, switched off or not: a
+  severity changed with the picker here is not written into it." Review
+  round 19 measured it (after a re-grade the export is byte for byte what
+  it was, and importing it elsewhere gives the text's severity) and put it
+  in README; the page, where a person presses Export, said only that
+  every rule is in the document. Words alone: the export is the document,
+  and D-267 keeps the picker from rewriting a rule's text. A person who
+  wants a severity to travel with the document changes the Severity line
+  in the rule's text, which the page's Edit text does.

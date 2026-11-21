@@ -132,7 +132,8 @@ from 2026-11-03.
   opens on a template, so importing is one way of three.
   The addresses a review's result is to be emailed to are kept on
   Settings (EM-2a, D-286), in a card that says no mail account is set up
-  yet and nothing is sent.
+  yet and nothing is sent. A ruleset's page says that a severity changed
+  with the picker is not written into the exported document (D-287).
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -141,7 +142,7 @@ from 2026-11-03.
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
   `./verify.sh --e2e` exits 0 with 1672 unit tests passing, 8 skipped,
-  and 166 browser tests.
+  and 167 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the

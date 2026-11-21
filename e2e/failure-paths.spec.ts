@@ -7479,3 +7479,23 @@ test("the addresses a result goes to are kept on Settings, which says nothing is
     ).toBe(200);
   }
 });
+
+test("a ruleset's page says what its exported document leaves out: a severity changed with the picker", async ({
+  page,
+}) => {
+  // The export is the document, every rule's text byte for byte. A severity
+  // changed beside the text is not in it, which a unit test holds
+  // (rule-round-trip) and the page did not say (review round 19).
+  await page.goto("/rulesets");
+  await page.getByRole("main").getByRole("link", { name: "Example protocol", exact: true }).click();
+  const said = page.getByText(
+    "The exported document holds every rule's text, switched off or not: a severity changed with the picker here is not written into it.",
+  );
+  await expect(said).toBeVisible();
+  for (const scheme of ["dark", "light"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    expect(await accessibilityViolations(page), scheme).toEqual([]);
+  }
+  await shootAll(page, said, "ruleset-export-leaves-out");
+  await page.emulateMedia({ colorScheme: "light" });
+});

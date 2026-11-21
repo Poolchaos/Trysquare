@@ -660,7 +660,8 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
           A switched-off rule is left out of the rules a new review is judged against, and its
           mechanical sweeps do not run. Changing a severity is a new standard, so it moves the
           version too. Reviews already started keep the rules they were frozen with. The exported
-          document holds every rule the ruleset has, switched off or not.
+          document holds every rule&apos;s text, switched off or not: a severity changed with the
+          picker here is not written into it.
         </p>
         <p className="mb-4 text-xs text-[var(--color-ink-faint)]">
           {detail.ruleset.sourceDoc ? `Imported from ${detail.ruleset.sourceDoc}. ` : ""}
