@@ -265,8 +265,12 @@ export async function prepareAndRun(
   // The ruleset is settled before anything is transitioned or written, so a
   // review that was never going to be able to run does not first look started.
   if (!hasReviewSnapshot(db, reviewId)) {
-    if (!options.ruleset) throw new RulesetRequiredError(reviewId);
     const given = options.ruleset;
+    // A set of none is no ruleset: frozen, it wrote nothing and the run
+    // failed further on, as a review with no snapshot.
+    if (!given || ("ids" in given && given.ids.length === 0)) {
+      throw new RulesetRequiredError(reviewId);
+    }
     const rulesetIds =
       "ids" in given
         ? given.ids

@@ -1160,6 +1160,10 @@ describe("what a review is judged against", () => {
     const apart = own("Numbered apart", "90");
 
     const reviewId = seedReview();
+    // A set of none is no ruleset, and is refused as none is (review round 24).
+    await expect(run(reviewId, { ruleset: { ids: [] } })).rejects.toBeInstanceOf(
+      RulesetRequiredError,
+    );
     await expect(run(reviewId, { ruleset: { ids: [general, clash] } })).rejects.toThrow(
       'rule 1 is in "Kept apart" and "Shares rule 1"',
     );

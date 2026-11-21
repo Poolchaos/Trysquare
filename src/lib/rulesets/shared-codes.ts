@@ -8,7 +8,7 @@
  */
 
 export interface SharedCodes {
-  /** The codes these rulesets all hold, in the order the first holds them. */
+  /** The codes these rulesets all hold, in the order the first of them holds them. */
   codes: string[];
   /** The names of the rulesets that hold them, in the order given. */
   rulesets: string[];

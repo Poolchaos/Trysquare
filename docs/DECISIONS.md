@@ -7267,3 +7267,22 @@ verified evidence, in writing, here.
   Left as it is: two severity tables are both sent. They say the same in
   the templates; in a person's own protocol they may not, and which wins
   is not the app's to choose.
+- 2026-11-21 Review round 24, over RS-1 to RS-3b (a6054b9 to d1fc787),
+  by the session that wrote them, reading the source diff. Four
+  findings, all fixed, each code fault with a test that failed first.
+  1. A start handed a set of no rulesets froze nothing and failed
+  further on as a review with no snapshot. It is refused as no ruleset
+  is (`RulesetRequiredError`). The route already refused an empty list,
+  so only a script could send one. 2. The pre-flight answered an id that
+  names no ruleset with a 500, for one id before today and for a set
+  since RS-3a; the start route answers 404. It is a 404 at both. 3. The
+  pre-flight put rulesets in the order JavaScript compares their names
+  in, and the store orders a snapshot's rows by the names' bytes. The
+  two differ for a name that starts beyond the basic plane, so the test
+  D-292 cites held only for the names it used. The pre-flight orders by
+  bytes, and a test with such a name holds it. 4. Records: 00-BRIEF's
+  unowned line and two sentences of PROJECT-STATE still said a review
+  takes one ruleset and the start route a single id; they say that the
+  screens offer one and the server takes several. Not looked at by
+  anyone but the author. The plan's next pass is RS-5's, over RS-1 to
+  RS-4, after the screens.

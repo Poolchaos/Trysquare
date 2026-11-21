@@ -1245,6 +1245,14 @@ describe("looking before you pay", () => {
       400,
       { error: "Choose a ruleset before sizing this review.", code: "RulesetRequired" },
     ]);
+    // An id that names no ruleset is a 404, as at the start route: it was a
+    // 500, the server's fault in the answer (review round 24).
+    const missing = {
+      error: "Ruleset no-such-ruleset was not found.",
+      code: "RulesetNotFoundError",
+    };
+    expect(await ask({ rulesetIds: [general, "no-such-ruleset"] })).toEqual([404, missing]);
+    expect(await ask({ rulesetId: "no-such-ruleset" })).toEqual([404, missing]);
   }, 120_000);
 
   it("says which branch it could not find, rather than a bare failure", async () => {

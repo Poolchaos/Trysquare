@@ -28,7 +28,7 @@ import { reviewModelSchema } from "@/lib/models/model-id";
 import { getModel } from "@/server/db/repositories/models";
 import { recordFetch, requireClonedProject } from "@/server/db/repositories/projects";
 import { getProjectChecks } from "@/server/db/repositories/project-checks";
-import { loadEnabledRulesets } from "@/server/db/repositories/rulesets";
+import { loadEnabledRulesets, requireRuleset } from "@/server/db/repositories/rulesets";
 import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
 import { git } from "@/server/gitops/run";
 import { renderAdversarialPrompt, type ChangedFileEntry } from "@/server/review/content";
@@ -91,6 +91,8 @@ export function POST(request: Request): Promise<Response> {
     // switched off is not swept for, sized or counted here either. A ruleset
     // with none switched on, or two that share a rule's code, is refused in
     // the run's own words, before anything is fetched.
+    // An id that names nothing is a 404 here as at the start route.
+    for (const rulesetId of named) requireRuleset(db, rulesetId);
     let ruleset;
     try {
       ruleset = loadEnabledRulesets(db, named);

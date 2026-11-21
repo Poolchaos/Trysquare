@@ -136,8 +136,8 @@ from 2026-11-03.
   with the picker is not written into the exported document (D-287).
   The review pass over the three (round 23, in DECISIONS) took two
   sentences about what is not built yet off that card.
-  A review still takes one ruleset, so two templates cannot be used on
-  one review. That is planned (`plans/RULESETS-TOGETHER-PLAN.md`, D-288)
+  From the screens a review still takes one ruleset, so two templates
+  cannot be used on one review. That is planned (`plans/RULESETS-TOGETHER-PLAN.md`, D-288)
   and its first step is built (RS-1, D-289): no two templates share a
   rule number. General keeps 1 to 12, TypeScript is 21 to 29, React 31
   to 38, HTTP API and database 41 to 48, and those three are at version
@@ -156,15 +156,17 @@ from 2026-11-03.
   directives under that ruleset's name, "General: Review scope" (RS-3b,
   D-293); on one, the headings are the document's own, as before. No
   screen sends more than one yet: the picker (RS-4) is next. No review
-  on two rulesets has been run against a real model.
-  A review takes one ruleset, so the two templates cannot yet be used
-  together on one review (Not built, below).
+  on two rulesets has been run against a real model. The review pass
+  over RS-1 to RS-3b (round 24, in DECISIONS) fixed three faults in what
+  was built that day and two records.
+  A person can give a review one ruleset, so the templates cannot yet be
+  used together on one review from the screens (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
   (D-275): escaped as a table asks, or bare inside its backticks, it was
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1686 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1687 unit tests passing, 8 skipped,
   and 168 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
@@ -671,8 +673,9 @@ own now (D-75, D-81).
 - More than one dependency per review: the model and the screens take a
   single linked project.
 - More than one ruleset per review, so templates and a protocol are used
-  together: planned in `plans/RULESETS-TOGETHER-PLAN.md` (D-288), not
-  built.
+  together (`plans/RULESETS-TOGETHER-PLAN.md`, D-288): the server starts,
+  sizes and reports such a review (RS-1 to RS-3b); the screens that let a
+  person pick several (RS-4) are not built.
 - Emailing a review's result: in scope since D-251, planned in
   `plans/EMAIL-REPORT-PLAN.md` (D-264). The addresses a result goes to are
   kept on Settings (EM-2a, D-286), and the card says nothing is sent yet.

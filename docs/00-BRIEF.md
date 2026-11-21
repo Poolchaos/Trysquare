@@ -14,10 +14,11 @@ than being edited away. An item of `plans/M4-FINISH-PLAN.md` named beside
 one owned it while that plan ran; the plan is closed, and what is still
 unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
-- Tiers composing per review. A ruleset carries a tier, but a review uses
-  exactly one ruleset: the start route takes a single id and the screen is a
-  single-select. Composing several per review is planned in
-  `plans/RULESETS-TOGETHER-PLAN.md` (D-288, 2026-11-21) and not built.
+- Tiers composing per review. A ruleset carries a tier, but a person can
+  give a review exactly one ruleset: the screen is a single-select. The
+  server starts and sizes a review on several since 2026-11-21 (RS-2b,
+  RS-3a); the screens are planned in `plans/RULESETS-TOGETHER-PLAN.md`
+  (D-288) and not built.
 
 ## What it is
 

@@ -438,9 +438,11 @@ export function refuseSharedCodes(db: Db, rulesetIds: readonly string[]): void {
  * what is counted before Start is what the run is given (RS-3a).
  */
 export function loadEnabledRulesets(db: Db, rulesetIds: readonly string[]): ImportedRuleset {
+  // By the bytes of the name, as the store orders a snapshot's rows: a
+  // JavaScript comparison orders a name beyond the basic plane differently.
   const loaded = rulesetIds
     .map((rulesetId) => loadEnabledRuleset(db, rulesetId))
-    .sort((a, b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : 0));
+    .sort((a, b) => Buffer.compare(Buffer.from(a.title), Buffer.from(b.title)));
   refuseSharedCodes(db, rulesetIds);
   return together(loaded);
 }

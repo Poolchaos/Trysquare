@@ -263,6 +263,29 @@ describe("the ruleset a review is judged against", () => {
     expect(sized.rules[0]?.code).toBe("90");
   });
 
+  it("is put together before Start in the order the store reads it in, whatever the names", () => {
+    // The store orders names by their bytes and the pre-flight ordered them
+    // as JavaScript compares strings. The two differ for a name that starts
+    // beyond the basic plane, so what was sized was in another order than
+    // what was sent (review round 24).
+    const named = (name: string, code: string) =>
+      saveImportedRuleset(db, {
+        name,
+        tier: "project",
+        imported: importProtocol(
+          `# Own\n\n## Rules\n\n### ${code}. Dates\n\n**Rule:** Dates are UTC.\n`,
+        ).ruleset,
+      }).rulesetId;
+    const beyond = named("\u{10000} beyond the basic plane", "90");
+    const within = named("\uFFFD within it", "91");
+
+    const sized = loadEnabledRulesets(db, [beyond, within]);
+    writeReviewSnapshot(db, reviewId, beyond, within);
+
+    expect(readReviewSnapshot(db, reviewId)).toEqual(sized);
+    expect(sized.rules.map((rule) => rule.code)).toEqual(["91", "90"]);
+  });
+
   it("freezes several rulesets at once, or none when two hold a rule under one number", () => {
     const general = save().rulesetId;
     const clash = saveImportedRuleset(db, {
