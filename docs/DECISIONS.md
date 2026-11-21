@@ -7237,3 +7237,15 @@ verified evidence, in writing, here.
   done, and now written into RS-3's row: the model is given the
   directives of several rulesets one after another without the names
   the plan's section 3 says they go under.
+- 2026-11-21 D-292 The pre-flight sizes a review on one or more rulesets
+  (RS-3a). It reads `rulesetIds` or `rulesetId` through the reader the
+  start route uses (`src/server/api/ruleset-ids.ts`), so the two refuse
+  both-sent and named-twice in the same words; it loads the set with
+  `loadEnabledRulesets`, which puts the rulesets together in name order
+  as `readReviewSnapshot` does, and a test holds that the two are equal,
+  rule for rule, since the pre-flight reads the live tables and a run its
+  frozen copy. A set that shares a code is the same 409. A request that
+  names no ruleset is now a 400 `RulesetRequired` in words, where the
+  schema's own message said the field was missing. RS-3 is split: the
+  directives of several rulesets going to the model under each one's name
+  (RS-3b) changes what a stage is sent and is its own change.

@@ -431,6 +431,25 @@ export function refuseSharedCodes(db: Db, rulesetIds: readonly string[]): void {
 }
 
 /**
+ * What a review on these rulesets would be judged against, as its snapshot
+ * would be read: each one's enabled rules and its directives, the rulesets
+ * in name order. Refused as the snapshot's writer refuses: a ruleset with no
+ * rule switched on, or two that share a code. The pre-flight sizes this, so
+ * what is counted before Start is what the run is given (RS-3a).
+ */
+export function loadEnabledRulesets(db: Db, rulesetIds: readonly string[]): ImportedRuleset {
+  const loaded = rulesetIds
+    .map((rulesetId) => loadEnabledRuleset(db, rulesetId))
+    .sort((a, b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : 0));
+  refuseSharedCodes(db, rulesetIds);
+  return {
+    title: loaded.map((ruleset) => ruleset.title).join(" + "),
+    rules: loaded.flatMap((ruleset) => ruleset.rules),
+    directives: loaded.flatMap((ruleset) => ruleset.directives),
+  };
+}
+
+/**
  * Freezes the rulesets a review is judged against onto it, one or more.
  *
  * Written once, at the review's first start. Everything the run composes

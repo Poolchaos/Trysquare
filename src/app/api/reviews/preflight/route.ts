@@ -28,12 +28,13 @@ import { reviewModelSchema } from "@/lib/models/model-id";
 import { getModel } from "@/server/db/repositories/models";
 import { recordFetch, requireClonedProject } from "@/server/db/repositories/projects";
 import { getProjectChecks } from "@/server/db/repositories/project-checks";
-import { loadEnabledRuleset } from "@/server/db/repositories/rulesets";
+import { loadEnabledRulesets } from "@/server/db/repositories/rulesets";
 import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
 import { git } from "@/server/gitops/run";
 import { renderAdversarialPrompt, type ChangedFileEntry } from "@/server/review/content";
 import { countRequests } from "@/server/review/request-count";
 import { failed, handler, isNamed, ok, readJson } from "@/server/api/respond";
+import { namedRulesetIds, rulesetIdFields } from "@/server/api/ruleset-ids";
 import { runtime } from "@/server/runtime";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,7 @@ const body = z
     projectId: z.string().min(1),
     fromBranch: z.string().min(1),
     intoBranch: z.string().min(1),
-    rulesetId: z.string().min(1),
+    ...rulesetIdFields,
     model: reviewModelSchema,
     profileId: reviewProfileSchema.optional(),
     // In every adversarial prompt, so sized with it (review round 4).
@@ -73,18 +74,26 @@ export function POST(request: Request): Promise<Response> {
   return handler(async () => {
     const { db } = runtime();
     const input = await readJson(request, body);
+    const named = namedRulesetIds(input);
+    if (named === undefined) {
+      throw Response.json(
+        { error: "Choose a ruleset before sizing this review.", code: "RulesetRequired" },
+        { status: 400 },
+      );
+    }
     const project = requireClonedProject(db, input.projectId);
     // Read before the catch below, which answers 400 for what git refuses: a
     // dependency that names nothing is a 404, and one not cloned yet a 409
     // (review of the D-133 fixes).
     const dependency =
       input.linked === undefined ? undefined : requireClonedProject(db, input.linked.projectId);
-    // The rules a run would freeze, so a rule switched off is not swept
-    // for, sized or counted here either. None switched on is refused in the
-    // run's own words, before anything is fetched.
+    // The rules a run would freeze, of every ruleset named, so a rule
+    // switched off is not swept for, sized or counted here either. A ruleset
+    // with none switched on, or two that share a rule's code, is refused in
+    // the run's own words, before anything is fetched.
     let ruleset;
     try {
-      ruleset = loadEnabledRuleset(db, input.rulesetId);
+      ruleset = loadEnabledRulesets(db, named);
     } catch (error) {
       if (isNamed(error, "NoEnabledRulesError")) return failed(error, 400);
       throw error;

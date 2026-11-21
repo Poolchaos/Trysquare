@@ -14,6 +14,7 @@ import {
 import { appendRunNote, requireReview } from "@/server/db/repositories/reviews";
 import { secondVerifierNotReady } from "@/server/db/repositories/models";
 import { handler, ok, readOptionalJson } from "@/server/api/respond";
+import { namedRulesetIds, rulesetIdFields } from "@/server/api/ruleset-ids";
 import { runtime } from "@/server/runtime";
 import {
   billingNote,
@@ -26,9 +27,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const body = z.object({
-  rulesetId: z.string().min(1).optional(),
-  /** One or more, each named once: the review is judged against them all (RS-2b). */
-  rulesetIds: z.array(z.string().min(1)).min(1).optional(),
+  ...rulesetIdFields,
   billingShown: billingShownSchema,
 });
 
@@ -44,22 +43,7 @@ export async function POST(
     // request had named none (5.8, A8).
     const input = await readOptionalJson(request, body);
 
-    // Said one way or the other. Both sent, one of them would be dropped
-    // without a word; a ruleset named twice would share every code with
-    // itself.
-    if (input.rulesetId !== undefined && input.rulesetIds !== undefined) {
-      throw Response.json(
-        { error: "Send rulesetId or rulesetIds, not both.", code: "RulesetsNamedTwoWays" },
-        { status: 400 },
-      );
-    }
-    const named = input.rulesetIds ?? (input.rulesetId ? [input.rulesetId] : undefined);
-    if (named !== undefined && new Set(named).size !== named.length) {
-      throw Response.json(
-        { error: "rulesetIds names a ruleset more than once.", code: "RulesetNamedTwice" },
-        { status: 400 },
-      );
-    }
+    const named = namedRulesetIds(input);
 
     const review = requireReview(db, id);
 

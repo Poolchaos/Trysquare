@@ -149,8 +149,12 @@ from 2026-11-03.
   reads `rulesetIds`, one or more, or the single `rulesetId` as before,
   and a set in which two rulesets hold a rule under one number is refused
   with a 409 that names the numbers and the rulesets, before the review
-  is put in line and again as its rules are frozen. No screen sends more
-  than one yet: the pre-flight (RS-3) and the picker (RS-4) are next.
+  is put in line and again as its rules are frozen. The pre-flight
+  sizes a set the same way (RS-3a, D-292): `rulesetIds` or `rulesetId`,
+  the rules and directives put together as a run's frozen copy is read,
+  the same refusal. No screen sends more than one yet. Next: the
+  directives of several rulesets given under each one's name (RS-3b),
+  then the picker (RS-4).
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -158,7 +162,7 @@ from 2026-11-03.
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1683 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1685 unit tests passing, 8 skipped,
   and 168 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the

@@ -1173,6 +1173,80 @@ describe("looking before you pay", () => {
     });
   }, 120_000);
 
+  it("sizes a review on several rulesets as the run is given them, and refuses a set that shares a rule number", async () => {
+    // The pre-flight took one ruleset, so a review on two could not be
+    // sized before it was paid for (RS-3a).
+    const protocol = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const ruleset = async (name: string, markdown: string) => {
+      const imported = await routes.rulesets.POST(
+        post("http://localhost/x", { name, tier: "global", markdown }),
+      );
+      const { rulesetId } = (await imported.json()) as { rulesetId: string };
+      expect(rulesetId).toBeTypeOf("string");
+      return rulesetId;
+    };
+    const own = (name: string, code: string) =>
+      ruleset(name, `# ${name}\n\n## Rules\n\n### ${code}. Dates\n\n**Rule:** Dates are UTC.\n`);
+    const general = await ruleset("Sized with another", protocol);
+    const beside = await own("Sized beside it", "90");
+    const clash = await own("Shares at the pre-flight", "1");
+    const ask = async (rulesets: object) => {
+      const response = await routes.preflight.POST(
+        post("http://localhost/api/reviews/preflight", {
+          projectId,
+          fromBranch: "feature/rename-prefs",
+          intoBranch: "main",
+          model: "claude-fable-5[1m]",
+          ...rulesets,
+        }),
+      );
+      return [response.status, await response.json()] as [
+        number,
+        { estimatedTokens: number; sweepHits: number },
+      ];
+    };
+
+    const [, alone] = await ask({ rulesetId: general });
+    const [status, both] = await ask({ rulesetIds: [general, beside] });
+    expect(status).toBe(200);
+    // The second ruleset's rule is in the prompt that is sized, and the
+    // first's sweep still runs.
+    expect(both.estimatedTokens).toBeGreaterThan(alone.estimatedTokens);
+    expect(both.sweepHits).toBe(alone.sweepHits);
+    // The order they are named in changes nothing: a run reads them by name.
+    expect((await ask({ rulesetIds: [beside, general] }))[1].estimatedTokens).toBe(
+      both.estimatedTokens,
+    );
+    // A list of one is the one.
+    expect((await ask({ rulesetIds: [general] }))[1].estimatedTokens).toBe(alone.estimatedTokens);
+
+    expect(await ask({ rulesetIds: [general, clash] })).toEqual([
+      409,
+      {
+        error:
+          'These rulesets cannot judge one review together: rule 1 is in "Sized with another" ' +
+          'and "Shares at the pre-flight". A finding names its rule by number alone, so a ' +
+          "number may be in only one of a review's rulesets. Leave one of them out, or change " +
+          "the numbers in one.",
+        code: "RulesetCodesSharedError",
+      },
+    ]);
+    expect(await ask({ rulesetId: general, rulesetIds: [beside] })).toEqual([
+      400,
+      { error: "Send rulesetId or rulesetIds, not both.", code: "RulesetsNamedTwoWays" },
+    ]);
+    expect(await ask({ rulesetIds: [general, general] })).toEqual([
+      400,
+      { error: "rulesetIds names a ruleset more than once.", code: "RulesetNamedTwice" },
+    ]);
+    expect(await ask({})).toEqual([
+      400,
+      { error: "Choose a ruleset before sizing this review.", code: "RulesetRequired" },
+    ]);
+  }, 120_000);
+
   it("says which branch it could not find, rather than a bare failure", async () => {
     const imported = await routes.rulesets.POST(
       post("http://localhost/x", {

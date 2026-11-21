@@ -9,6 +9,7 @@ import {
   duplicateRuleset,
   hasReviewSnapshot,
   listRulesets,
+  loadEnabledRulesets,
   loadRuleset,
   patchRule,
   readReviewSnapshot,
@@ -229,6 +230,28 @@ describe("the ruleset a review is judged against", () => {
       { name: "Example protocol", version: 1 },
     ]);
     expect(readReviewSnapshot(db, reviewId).rules[0]?.code).toBe("90");
+  });
+
+  it("is sized before Start as it is read after: the same rules and directives, in the same order", () => {
+    // The pre-flight reads the live rulesets and a run its frozen copy. Were
+    // the two put together differently, what was sized would not be what
+    // was sent (RS-3a).
+    const general = save().rulesetId;
+    const own = saveImportedRuleset(db, {
+      name: "A team's own",
+      tier: "project",
+      imported: importProtocol("# Own\n\n## Rules\n\n### 90. Dates\n\n**Rule:** Dates are UTC.\n")
+        .ruleset,
+    }).rulesetId;
+    setRuleEnabled(db, general, "1", false);
+
+    const sized = loadEnabledRulesets(db, [general, own]);
+    writeReviewSnapshot(db, reviewId, general, own);
+
+    expect(readReviewSnapshot(db, reviewId)).toEqual(sized);
+    expect(sized.title).toBe("A team's own + Example protocol");
+    expect(sized.rules.map((rule) => rule.code)).not.toContain("1");
+    expect(sized.rules[0]?.code).toBe("90");
   });
 
   it("freezes several rulesets at once, or none when two hold a rule under one number", () => {
