@@ -344,9 +344,11 @@ platform. Run `npm run doctor` on its own if that step fails.
 
 ### Seeding your company's rules
 
-A fresh install has no rulesets, and a review is judged against one. Import
-the protocol on the Rulesets screen by pasting it, start a ruleset there with
-no document and write its rules in the app, or seed the protocol from a file:
+A fresh install has no rulesets, and a review is judged against one. On the
+Rulesets screen, start one from the General template the app ships (twelve
+rules for any change in any language, not yet run against a model), import
+your protocol by pasting it, or start a ruleset with no document and write
+its rules in the app. Or seed the protocol from a file:
 
 ```bash
 npm run rules:seed -- /path/to/REVIEW_PROTOCOL.md --name "Company base rules"

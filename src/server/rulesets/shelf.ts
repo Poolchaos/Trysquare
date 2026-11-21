@@ -13,6 +13,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { importProtocol } from "@/lib/rulesets/import";
+import type { ImportedRuleset } from "@/lib/rulesets/model";
 import { templateBarFailures } from "@/lib/rulesets/template-bar";
 
 // The server runs from the repository root (`npm run start`), as the unit
@@ -38,10 +39,26 @@ const indexSchema = z.strictObject({
   ),
 });
 
-type ShelfTemplate = z.infer<typeof indexSchema>["templates"][number] & { ruleCount: number };
+type ShelfEntry = z.infer<typeof indexSchema>["templates"][number];
+type ShelfTemplate = ShelfEntry & { ruleCount: number };
 
 /** Every template on the shelf, in the index's order. Throws on a shelf that is not whole. */
 export function readShelf(dir: string = SHELF_DIR): ShelfTemplate[] {
+  return shelved(dir).map(({ imported, ...template }) => ({
+    ...template,
+    ruleCount: imported.rules.length,
+  }));
+}
+
+/** One template and its document as the importer reads it, or undefined for one not on the shelf. */
+export function readTemplate(
+  slug: string,
+  dir: string = SHELF_DIR,
+): (ShelfEntry & { imported: ImportedRuleset }) | undefined {
+  return shelved(dir).find((template) => template.slug === slug);
+}
+
+function shelved(dir: string): (ShelfEntry & { imported: ImportedRuleset })[] {
   const indexPath = join(dir, INDEX);
   let text: string;
   try {
@@ -92,6 +109,6 @@ export function readShelf(dir: string = SHELF_DIR): ShelfTemplate[] {
         `Template "${template.slug}" does not meet the bar a template is held to. ${failures.join(" ")}`,
       );
     }
-    return { ...template, ruleCount: importProtocol(markdown).ruleset.rules.length };
+    return { ...template, imported: importProtocol(markdown).ruleset };
   });
 }

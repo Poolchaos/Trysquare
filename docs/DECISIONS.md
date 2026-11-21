@@ -6839,3 +6839,29 @@ verified evidence, in writing, here.
   a document for a spelling the table's own rules ask for. The General
   template keeps one alternative to a row all the same, each row saying
   what its hit means.
+- 2026-11-21 D-276 A ruleset is started from a template in the form that
+  starts the other two kinds (RT-1b; D-272's one form stands), and the
+  form opens on it: Start from is A template, A document, No document, in
+  that order. A person with no protocol of their own has nothing to paste,
+  and the form had opened on an empty field asking for one; a person who
+  imports is one press further. Each template is one choice, the whole
+  block the control: its name, its rule count, what it is for, and "Not
+  yet run against a model." until a run against its fixture is on record
+  (the plan's sixth bar). Name may be left empty and the ruleset takes
+  the template's, said under the field; the tier is the form's. Use this
+  template makes the ruleset and opens its page, as one started with no
+  document opens. The ruleset is the person's own copy: it holds the
+  template's rules and directives as an import of the document would, and
+  says where it came from ("Imported from the General template, version
+  1."), and nothing updates it when the template changes.
+  `POST /api/ruleset-templates/[slug]/use` refuses a name in use (409, in
+  the words a ruleset started with no document gets) and never replaces
+  one, and answers a template not on the shelf with a 404 of its own
+  code. A shelf that cannot be read is said where the templates would be,
+  with Try again, and the other two ways stay open. Rejected: a card of
+  templates apart from the form with one button each, which leaves no
+  place for a name once "General" is taken; and keeping the form opening
+  on a document, the way only a person who already has a protocol uses.
+  Not done here, and in the inbox since round 19: the new-review picker, a
+  draft review and the dashboard's first line still name importing as the
+  way to a first ruleset.

@@ -93,16 +93,18 @@ from 2026-11-03.
   its own rule's examples, fifteen rules at most). The General template
   is on it (RT-2a, D-274): twelve rules for any change in any language,
   each resting on a source read the day it was written, which the bar
-  now asks of every rule. No screen shows the shelf yet (RT-1b, next),
-  and the template has not been run against a model: its fixture is
-  RT-2b and the run is the maintainer's to start (RT-6).
+  now asks of every rule. A ruleset is started from it on the Rulesets
+  screen (RT-1b, D-276): the form opens on A template, and Use this
+  template makes a ruleset the person owns and opens it. The template
+  has not been run against a model, and says so where it is picked: its
+  fixture is RT-2b and the run is the maintainer's to start (RT-6).
   A sweep row whose pattern holds a pipe gives its rule the pattern
   (D-275): escaped as a table asks, or bare inside its backticks, it was
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1631 unit tests passing, 8 skipped,
-  and 163 browser tests.
+  `./verify.sh --e2e` exits 0 with 1635 unit tests passing, 8 skipped,
+  and 164 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the
@@ -508,7 +510,7 @@ are accepted; anything else is refused by name.
   run time.
 - `src/server/api/` - one response shape for every route.
 - `src/proxy.ts` - the request guard in front of every route (MVP WP 2.3).
-- `src/app/api/` - 44 route handlers. `src/app/` - 9 screens, plus a root
+- `src/app/api/` - 45 route handlers. `src/app/` - 9 screens, plus a root
   error boundary, a not-found page, and a metadata layout per segment.
 - `src/components/` - the shared UI vocabulary, the top bar, and the
   confirmation queue.
@@ -600,9 +602,10 @@ own now (D-75, D-81).
   `plans/EMAIL-REPORT-PLAN.md` (D-264). Its sender waits on the
   maintainer's mailbox; where a result goes is set in the app.
 - Ruleset templates shipped with the app: in scope since D-251, planned
-  in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). The shelf is read and
-  listed by the server (RT-1a) and holds the General template (RT-2a); no
-  screen shows it, so a person cannot yet start a ruleset from one. A ruleset is started with
+  in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). Built: the shelf, the General template on it, and a ruleset
+  started from it on the Rulesets screen (RT-1a, RT-2a, RT-1b). Not built:
+  the General template's fixture and its run against a model, and the
+  TypeScript, React, and HTTP and database templates. A ruleset is started with
   no document (RA-6, D-272), and a rule can be switched off, its severity
   changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
   removed (RA-4, D-269), and one ruleset deleted (RA-1, D-266). Process

@@ -4148,6 +4148,8 @@ test("an error page for an answer is said, and the button comes back", async ({ 
       await route.fulfill(gateway);
     });
     await page.goto("/rulesets");
+    // The form opens on a template (RT-1b); a document is the second way.
+    await page.getByRole("radio", { name: "A document", exact: true }).check();
     await page.getByLabel("Name").fill("Gateway sweep");
     await page.getByPlaceholder("Paste the markdown protocol here").fill("# Gateway sweep\n");
     let imports = 0;
@@ -5255,6 +5257,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     reviews: "ReviewNotFoundError",
     rulesets: "RulesetNotFoundError",
     rules: "RuleNotFoundError",
+    "ruleset-templates": "TemplateNotFound",
   };
 
   const asked: Record<string, { data?: object; query?: string }> = {
@@ -5301,6 +5304,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "GET reviews/[id]/report": {},
     "GET reviews/[id]/rules": {},
     "POST reviews/[id]/start": { data: {} },
+    "POST ruleset-templates/[slug]/use": { data: { tier: "global" } },
     "GET rulesets/[id]": {},
     "DELETE rulesets/[id]": {},
     "GET rulesets/[id]/export": {},
@@ -7062,7 +7066,7 @@ test("a ruleset is started with no document: a name and a tier, nothing to expor
     await expect(page.getByText("No rulesets yet", { exact: true })).toBeVisible();
     await expect(
       page.getByText(
-        "Paste a protocol document into the form, or start a ruleset with no document and write its rules on its page. Every review needs a ruleset.",
+        "Start one from a template, paste a protocol document, or start with no document and write its rules on its page. Every review needs a ruleset.",
       ),
     ).toBeVisible();
     await bothThemes();
@@ -7070,17 +7074,19 @@ test("a ruleset is started with no document: a name and a tier, nothing to expor
     await stopEmpty();
 
     await page.goto("/rulesets");
-    // The form opens on the way it always had: a document to paste.
-    await expect(withDocument).toBeChecked();
-    await expect(form.getByLabel("Protocol document")).toBeVisible();
-    await expect(form.getByRole("button", { name: "Import" })).toBeVisible();
-
-    // Chosen from the keyboard: the choice is two radios after the tier.
+    // The form opens on a template (RT-1b). Chosen from the keyboard: the
+    // choice is three radios after the tier, a document the second.
+    const withTemplate = form.getByRole("radio", { name: "A template", exact: true });
+    await expect(withTemplate).toBeChecked();
     await form.getByLabel("Name").fill(name);
     await form.getByLabel("Tier").selectOption("tech");
     await form.getByLabel("Tier").focus();
     await page.keyboard.press("Tab");
-    await expect(withDocument).toBeFocused();
+    await expect(withTemplate).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(withDocument).toBeChecked();
+    await expect(form.getByLabel("Protocol document")).toBeVisible();
+    await expect(form.getByRole("button", { name: "Import" })).toBeVisible();
     await page.keyboard.press("ArrowRight");
     await expect(withNone).toBeChecked();
     await expect(form.getByLabel("Protocol document")).toHaveCount(0);
@@ -7213,4 +7219,92 @@ test("the template shelf is read by the server as built, and holds the General t
       }),
     ],
   });
+});
+
+test("a ruleset is started from a template: the form opens on the shelf, a shelf not read says so, and a name in use is refused beside the form (RT-1b)", async ({
+  page,
+}) => {
+  const form = page.getByTestId("new-ruleset");
+  const fromTemplate = form.getByRole("radio", { name: "A template", exact: true });
+  const general = form.getByRole("radio", { name: /^General/ });
+  const use = form.getByRole("button", { name: "Use this template" });
+  const bothThemes = async () => {
+    for (const scheme of ["dark", "light"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      expect(await accessibilityViolations(page), scheme).toEqual([]);
+    }
+  };
+  try {
+    // The shelf not read: said where the templates would be, the button
+    // off, and a way to ask again.
+    const stopRefusing = await answerOnce(page, "**/api/ruleset-templates", (route) =>
+      route.fulfill({
+        status: 500,
+        json: { error: "Refused for this test: the templates.", code: "Test" },
+      }),
+    );
+    await page.goto("/rulesets");
+    await expect(fromTemplate).toBeChecked();
+    await expect(form.getByText("Refused for this test: the templates.")).toBeVisible();
+    await expect(use).toBeDisabled();
+    await bothThemes();
+    await shootAll(page, form, "ruleset-template-unread");
+    await stopRefusing();
+    await form.getByRole("button", { name: "Try again" }).click();
+
+    // Read: the one template, chosen, with what it is for, how many rules
+    // it holds and that no model has run it.
+    await expect(general).toBeChecked();
+    const entry = form
+      .locator("label")
+      .filter({ has: page.getByRole("radio", { name: /^General/ }) });
+    await expect(entry).toContainText("12 rules");
+    await expect(entry).toContainText("What any change is held to, whatever it is written in");
+    await expect(entry).toContainText("Not yet run against a model.");
+    await expect(form.getByText("Left empty, the ruleset is called General.")).toBeVisible();
+    await expect(form.getByLabel("Protocol document")).toHaveCount(0);
+    await expect(use).toBeEnabled();
+    await bothThemes();
+    await shootAll(page, page.locator("main"), "ruleset-template-chosen");
+
+    // Used with no name given: the ruleset takes the template's, and its
+    // page opens on the rules, saying where they came from.
+    await use.click();
+    await expect(page).toHaveURL(/\/rulesets\/[A-Z0-9]+$/i);
+    await expect(page.getByRole("heading", { name: "General", exact: true })).toBeVisible();
+    await expect(page.getByText("12 rules", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Imported from the General template, version 1\./)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Swallowed error", exact: true })).toBeVisible();
+    await bothThemes();
+    await shootAll(page, page.locator("main"), "ruleset-from-template");
+
+    // Used again: the name is taken, said beside the form, nothing made,
+    // and the answer is a name of the person's own.
+    await page.goto("/rulesets");
+    await expect(general).toBeChecked();
+    await use.click();
+    const refusal = form.getByText(
+      'A ruleset called "General" already exists. Give the new one another name, or open "General" and add rules there.',
+    );
+    await expect(refusal).toBeVisible();
+    await expect(page).toHaveURL(/\/rulesets$/);
+    await bothThemes();
+    await shootAll(page, form, "ruleset-template-name-taken");
+    await form.getByLabel("Name").fill("House rules");
+    expect(await refusal.count()).toBe(0);
+    await form.getByLabel("Tier").selectOption("project");
+    await use.click();
+    await expect(page.getByRole("heading", { name: "House rules", exact: true })).toBeVisible();
+    await expect(page.getByText("12 rules", { exact: true })).toBeVisible();
+  } finally {
+    await page.emulateMedia({ colorScheme: "light" });
+    const listed = (await (await page.request.get("/api/rulesets")).json()) as {
+      rulesets: { id: string; name: string }[];
+    };
+    for (const row of listed.rulesets.filter((ruleset) =>
+      ["General", "House rules"].includes(ruleset.name),
+    )) {
+      expect((await page.request.delete(`/api/rulesets/${row.id}`)).status()).toBe(200);
+    }
+  }
 });

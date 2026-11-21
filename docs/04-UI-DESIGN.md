@@ -351,8 +351,16 @@ badge once its branch is found merged; delete per 02 rules.
   rule's text and every directive, byte for byte, and not what is set
   beside the text, a rule switched off or a severity changed with the
   picker.
+- A ruleset from a template (RT-1b, D-276): the same form opens on A
+  template, the first of three ways to start. Each template on the shelf
+  is one choice: its name, how many rules it holds, what it is for, and
+  "Not yet run against a model." until a run against its fixture is on
+  record. Name may be left empty, and the form says what the ruleset is
+  then called. Use this template makes the ruleset and opens its page.
+  A name in use is refused beside the form; a shelf that cannot be read
+  says so where the templates would be, with Try again.
 - A ruleset with no document (RA-6, D-272): the same form, Name and Tier,
-  then Start from, A document (the paste) or No document. The second shows
+  then Start from, A template, A document (the paste) or No document. The last shows
   no field, says the ruleset starts with no rules and that a review will
   not start on it until it has one, and offers Create ruleset; created,
   its page opens. A name in use is refused beside the form. With no rule

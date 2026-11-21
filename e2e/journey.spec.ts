@@ -85,6 +85,8 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
 
   await test.step("a protocol document becomes a ruleset", async () => {
     await page.goto("/rulesets");
+    // The form opens on a template (RT-1b); a document is the second way.
+    await page.getByRole("radio", { name: "A document", exact: true }).check();
     await page.getByLabel("Name").fill("Example protocol");
     await page
       .getByPlaceholder("Paste the markdown protocol here")

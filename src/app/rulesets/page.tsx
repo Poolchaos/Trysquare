@@ -6,7 +6,9 @@
  * Importing is a paste rather than a file picker, because the document usually
  * already lives in another repository and copying it here is one step fewer
  * than saving it out first. A ruleset can also start with no document, its
- * rules written on its own page (RA-6).
+ * rules written on its own page (RA-6), or from a template the app ships
+ * (RT-1), which is what the form opens on: a person with no protocol of
+ * their own has nothing to paste.
  */
 
 import Link from "next/link";
@@ -39,8 +41,20 @@ interface Ruleset {
 /** Widest reach first: what applies everywhere, then per stack, then per repo. */
 const TIER_ORDER = ["global", "tech", "project"];
 
-/** What a new ruleset starts from: a pasted document, or nothing. */
+/** A template on the shelf, as the server lists it. */
+interface Template {
+  slug: string;
+  name: string;
+  purpose: string;
+  version: number;
+  ruleCount: number;
+  /** The run that proved it on a model, or null while none has been made. */
+  modelRun: { date: string; evidence: string } | null;
+}
+
+/** What a new ruleset starts from: a template, a pasted document, or nothing. */
 const STARTS = [
+  { value: "template", label: "A template" },
   { value: "document", label: "A document" },
   { value: "none", label: "No document" },
 ] as const;
@@ -51,7 +65,11 @@ export default function RulesetsPage() {
   const [rulesets, setRulesets] = useState<Ruleset[] | null>(null);
   const [name, setName] = useState("");
   const [tier, setTier] = useState("global");
-  const [start, setStart] = useState<Start>("document");
+  const [start, setStart] = useState<Start>("template");
+  const [templates, setTemplates] = useState<Template[] | null>(null);
+  const [templatesError, setTemplatesError] = useState("");
+  const [templatesAttempt, setTemplatesAttempt] = useState(0);
+  const [templateSlug, setTemplateSlug] = useState("");
   const [creating, setCreating] = useState(false);
   const [markdown, setMarkdown] = useState("");
   const [error, setError] = useState("");
@@ -101,6 +119,27 @@ export default function RulesetsPage() {
       cancelled = true;
     };
   }, [loadAttempt]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const sent = await send<{ templates: Template[] }>(
+        "/api/ruleset-templates",
+        {},
+        "The templates could not be read",
+      );
+      if (cancelled) return;
+      if (sent.ok) setTemplates(sent.body.templates);
+      else setTemplatesError(sent.error);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [templatesAttempt]);
+
+  // The one picked, or the first while none is: the shelf is short, and the
+  // first is the most general.
+  const template = templates?.find((entry) => entry.slug === templateSlug) ?? templates?.[0];
 
   async function importRuleset(replace: boolean) {
     // One at a time: a second click while the first was out landed as a
@@ -187,6 +226,34 @@ export default function RulesetsPage() {
     router.push(`/rulesets/${sent.body.rulesetId}`);
   }
 
+  async function startFromTemplate() {
+    if (creating || template === undefined) return;
+    setCreating(true);
+    setError("");
+    setResult("");
+    const called = name.trim();
+    const sent = await send<{ rulesetId: string }>(
+      `/api/ruleset-templates/${encodeURIComponent(template.slug)}/use`,
+      {
+        method: "POST",
+        body: JSON.stringify({ tier, ...(called === "" ? {} : { name: called }) }),
+      },
+      "The ruleset could not be started from the template",
+    );
+    if (!sent.ok) {
+      setError(sent.error);
+      setCreating(false);
+      return;
+    }
+    // Opened, as one started with no document is: its rules are there to read.
+    router.push(`/rulesets/${sent.body.rulesetId}`);
+  }
+
+  function submit() {
+    if (start === "template") return startFromTemplate();
+    return start === "document" ? importRuleset(false) : createEmpty();
+  }
+
   return (
     <>
       <PageHeader
@@ -200,19 +267,24 @@ export default function RulesetsPage() {
               data-testid="new-ruleset"
               onSubmit={(event) => {
                 event.preventDefault();
-                void (start === "document" ? importRuleset(false) : createEmpty());
+                void submit();
               }}
               className="grid gap-4"
             >
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Name">
+                <Field
+                  label="Name"
+                  {...(start === "template" && template !== undefined
+                    ? { hint: `Left empty, the ruleset is called ${template.name}.` }
+                    : {})}
+                >
                   <Input
                     value={name}
                     onChange={(event) => {
                       setName(event.target.value);
                       setReplacing("");
                       // A name refused as taken is answered by changing it.
-                      if (start === "none") setError("");
+                      if (start !== "document") setError("");
                     }}
                   />
                 </Field>
@@ -265,6 +337,72 @@ export default function RulesetsPage() {
                   </p>
                 ) : null}
               </fieldset>
+              {start !== "template" ? null : templates === null ? (
+                templatesError ? (
+                  <div className="grid gap-2">
+                    <Problem>{templatesError}</Problem>
+                    <div>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setTemplatesError("");
+                          setTemplatesAttempt((attempt) => attempt + 1);
+                        }}
+                      >
+                        Try again
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--color-ink-muted)]">Reading the templates...</p>
+                )
+              ) : templates.length === 0 ? (
+                <p className="text-sm text-[var(--color-ink-muted)]">
+                  This version of the app ships no template. Start from a document, or from none.
+                </p>
+              ) : (
+                <fieldset>
+                  <legend className="text-sm font-medium">Template</legend>
+                  <div className="mt-1.5 grid gap-2">
+                    {templates.map((entry) => (
+                      // The whole block is the control, so a thumb has more
+                      // than a 13px dot to find. The accent marks the one
+                      // chosen and nothing else here.
+                      <label
+                        key={entry.slug}
+                        className="flex cursor-pointer items-start gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3 has-[:checked]:border-[var(--color-accent)]"
+                      >
+                        <input
+                          type="radio"
+                          name="template"
+                          className="mt-1 scheme-light-dark accent-[var(--color-accent)]"
+                          checked={template?.slug === entry.slug}
+                          onChange={() => setTemplateSlug(entry.slug)}
+                        />
+                        <span className="grid min-w-0 gap-1">
+                          <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+                            <span className="text-sm font-medium">{entry.name}</span>
+                            <span className="text-xs text-[var(--color-ink-muted)] tabular-nums">
+                              {entry.ruleCount} rule{entry.ruleCount === 1 ? "" : "s"}
+                            </span>
+                          </span>
+                          <span className="text-sm text-[var(--color-ink-muted)]">
+                            {entry.purpose}
+                          </span>
+                          {/* Said until a run against its fixture is on
+                              record: a template that reads well may find
+                              nothing. */}
+                          <span className="text-xs text-[var(--color-ink-muted)]">
+                            {entry.modelRun
+                              ? `Run against a model on ${entry.modelRun.date}.`
+                              : "Not yet run against a model."}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
               {start === "document" ? (
                 <Field
                   label="Protocol document"
@@ -307,7 +445,15 @@ export default function RulesetsPage() {
                 </p>
               ) : null}
               <div>
-                {start === "document" ? (
+                {start === "template" ? (
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={creating || template === undefined}
+                  >
+                    {creating ? "Starting..." : "Use this template"}
+                  </Button>
+                ) : start === "document" ? (
                   <Button
                     type="submit"
                     variant="primary"
@@ -340,7 +486,7 @@ export default function RulesetsPage() {
               />
             ) : rulesets.length === 0 ? (
               <Empty title="No rulesets yet">
-                Paste a protocol document into the form, or start a ruleset with no document and
+                Start one from a template, paste a protocol document, or start with no document and
                 write its rules on its page. Every review needs a ruleset.
               </Empty>
             ) : (
