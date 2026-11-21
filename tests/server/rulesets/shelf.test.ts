@@ -103,7 +103,7 @@ describe("the template shelf", () => {
   it("ships with the templates named here, and no other", () => {
     // Hand-kept, so a shelf that reads as empty by mistake fails here: a
     // template is added to this list in the change that puts it on the shelf.
-    expect(readShelf().map((template) => template.slug)).toEqual(["general"]);
+    expect(readShelf().map((template) => template.slug)).toEqual(["general", "typescript"]);
   });
 
   it("says when its index cannot be read, is not JSON, or is not in its shape", () => {

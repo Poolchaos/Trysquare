@@ -106,12 +106,17 @@ from 2026-11-03.
   maintainer's to start (RT-6). The review pass over the six changes
   (round 20, in DECISIONS) found three stale lines in the records and
   none in the code; they are corrected.
+  The TypeScript template is on the shelf beside it (RT-3a, D-279): nine
+  rules on where a change makes the compiler prove less than the code
+  assumes, each on a source read that day. Its fixture is next (RT-3b).
+  A review takes one ruleset, so the two templates cannot yet be used
+  together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
   (D-275): escaped as a table asks, or bare inside its backticks, it was
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1639 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1643 unit tests passing, 8 skipped,
   and 164 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
@@ -545,7 +550,7 @@ are accepted; anything else is refused by name.
   pass, and the shutdown pass.
   `drizzle/` - twenty committed migrations.
 - `templates/` - the template shelf: `shelf.json`, and a protocol document
-  per template (`general.md`).
+  per template (`general.md`, `typescript.md`).
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and
@@ -618,9 +623,10 @@ own now (D-75, D-81).
   in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). Built: the shelf, the General template on it, and a ruleset
   started from it on the Rulesets screen, and the General template's
   fixture and the command that reviews it (RT-1a, RT-2a, RT-1b, RT-2b,
-  RT-6a). Not done: the General template's run against a model, which is
-  the maintainer's to start. Not built: the TypeScript, React, and HTTP
-  and database templates. A ruleset is started with
+  RT-6a), and the TypeScript template (RT-3a). Not done: either template's
+  run against a model, which is the maintainer's to start. Not built: the
+  TypeScript template's fixture, and the React, and HTTP and database
+  templates. A ruleset is started with
   no document (RA-6, D-272), and a rule can be switched off, its severity
   changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
   removed (RA-4, D-269), and one ruleset deleted (RA-1, D-266). Process

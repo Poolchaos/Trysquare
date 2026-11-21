@@ -6929,3 +6929,31 @@ verified evidence, in writing, here.
   rename) lean on objects or functions the fixture only declares, which
   the fixture's README covers by saying nothing in it
   runs. Added to the guide: how a template is put on the shelf.
+- 2026-11-21 D-279 The TypeScript template (`templates/typescript.md`,
+  RT-3a): nine rules on where a change makes the compiler prove less than
+  the code assumes. An explicit `any`; an assertion on a value nothing
+  checked; a non-null assertion on a value that can be null; the checker
+  silenced by a comment; a promise left floating; an async function where
+  nothing waits for it; a switch that does not cover its union; an
+  indexed value taken as present; a type predicate that does not check
+  what it claims. Sources, read 2026-11-21 and linked in each rule: the
+  TypeScript handbook (Everyday Types for any, assertions and the
+  non-null operator; Narrowing for exhaustiveness), the TSConfig reference
+  for noUncheckedIndexedAccess, the 5.5 release notes for predicates
+  ("no safer than a type assertion") and the 2.6 notes for what
+  @ts-ignore hides, and typescript-eslint's pages for ban-ts-comment,
+  no-floating-promises and no-misused-promises, the tool's own
+  documentation of each fault. Decided with it. First, its sections are
+  named so that seven rules are put to TypeScript files and the two on
+  promises to JavaScript files too, held by a test, as D-274 did for the
+  General one. Second, two rules say when to report nothing: where the
+  project's own compiler option or lint rule already refuses the pattern,
+  the finding would be the build's. Third, RT-3 is two changes as RT-2
+  was, the template and then its fixture (RT-3b). Fourth, it does not
+  claim to sit on top of the General template: a review takes one ruleset
+  (several per review is designed and not built), so a person reviewing
+  TypeScript picks one of the two today. That gap is the next thing in the
+  way of templates being used as the plan means them, and is the
+  maintainer's to weigh against the templates still to write. Left out:
+  enums, naming and module style, which are taste; a missing return type,
+  which the compiler infers.

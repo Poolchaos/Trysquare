@@ -194,8 +194,9 @@ Probe press in step 4, a real but tiny paid call.
    against the Design standard, a file in the repository, if you name one.
    The New review pre-flight lists the commands before Start.
 3. **Start a ruleset.** Rulesets screen. The form opens on A template: Use
-   this template starts one from the General template, twelve rules for any
-   change in any language, not yet run against a model. To import your own
+   this template starts one from the template chosen: General, twelve rules
+   for any change in any language, or TypeScript, nine on where a change
+   makes the compiler prove less. Neither is yet run against a model. To import your own
    protocol, choose A document, paste the markdown, give it a name and a
    tier, Import. The document becomes numbered rules and
    process directives. Rules must be headings at level three or deeper whose

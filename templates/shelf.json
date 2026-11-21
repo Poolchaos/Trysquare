@@ -6,6 +6,13 @@
       "purpose": "What any change is held to, whatever it is written in: a failure hidden, input trusted, a credential or personal data exposed, a resource left open, behaviour changed with nothing to prove it, work left unfinished.",
       "version": 1,
       "modelRun": null
+    },
+    {
+      "slug": "typescript",
+      "name": "TypeScript",
+      "purpose": "Where a change makes the compiler prove less than the code assumes: a value declared or asserted past the type checker, a check silenced, a promise nobody waits for, a union or a lookup the code does not cover.",
+      "version": 1,
+      "modelRun": null
     }
   ]
 }

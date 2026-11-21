@@ -28,8 +28,8 @@ chosen per review in the advanced fold.
   describes is not built either: the screen has one select and a link to
   the chosen ruleset's page.
 - Rulesets: process directives written or edited in the app (they come
-  with an imported document or a template), and the templates after the
-  General one (`plans/RULESET-TEMPLATES-PLAN.md`). A ruleset is started
+  with an imported document or a template), and the templates after
+  General and TypeScript (`plans/RULESET-TEMPLATES-PLAN.md`). A ruleset is started
   from a template (RT-1b) or with no document (RA-6), a rule's text is edited in place, a rule is added and a
   rule is removed since 2026-11-21 (RA-2 to RA-4, section 3), its
   severity and its on/off switch can be changed, sweep patterns and

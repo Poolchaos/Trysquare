@@ -45,7 +45,7 @@ async function stored(): Promise<{ name: string }[]> {
 }
 
 describe("GET /api/ruleset-templates", () => {
-  it("lists the shelf this repository ships: the General template, not yet run against a model", async () => {
+  it("lists the shelf this repository ships, each template not yet run against a model", async () => {
     const listed = await GET();
     expect(listed.status).toBe(200);
     expect(await listed.json()).toEqual({
@@ -60,6 +60,17 @@ describe("GET /api/ruleset-templates", () => {
           version: 1,
           modelRun: null,
           ruleCount: 12,
+        },
+        {
+          slug: "typescript",
+          name: "TypeScript",
+          purpose:
+            "Where a change makes the compiler prove less than the code assumes: a value " +
+            "declared or asserted past the type checker, a check silenced, a promise nobody " +
+            "waits for, a union or a lookup the code does not cover.",
+          version: 1,
+          modelRun: null,
+          ruleCount: 9,
         },
       ],
     });
