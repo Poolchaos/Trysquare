@@ -6906,3 +6906,26 @@ verified evidence, in writing, here.
   made (D-261). Not run: the real model. It spends the maintainer's usage
   and is his to start, and until it is on record the template's entry
   says it has not been run.
+- 2026-11-21 Review round 20, over the six changes of the templates plan
+  (a770477, c5ae9e9, 1c10e84, d0fde6f, 0eeb45d, cc0fa57): three findings,
+  each read in the file before it was believed, all in the records. 1:
+  04's Not built yet still listed "templates shipped with it"; it names
+  the templates after the General one now. 2: the RUNBOOK's third step
+  said to paste a document into the Rulesets form, which opens on a
+  template since RT-1b and shows no field to paste into until A document
+  is chosen; the step now starts from the template and says how to import.
+  3: README's account of how a ruleset is made began with importing and
+  left the template out. Read again in the code and left as it is: the
+  sweep row's cells, where a pipe inside backticks or escaped is content
+  and every other pipe ends a cell; the shelf, read and held to the bar
+  on every listing and every use, which a handful of files makes cheap;
+  the use route, which looks the template up by name among the shelf's
+  entries and never builds a path from what it is sent; the form, where a
+  name of spaces takes the template's and a shelf not read leaves the
+  other two ways open. Known and not settled by reading: the fixture's
+  look-alikes are right as code is read, and whether a model leaves all
+  23 alone is what the real run answers. One thing a sharp reader may
+  raise there: five look-alike tests (archive, teams, refunds, logout,
+  rename) lean on objects or functions the fixture only declares, which
+  the fixture's README covers by saying nothing in it
+  runs. Added to the guide: how a template is put on the shelf.

@@ -103,7 +103,9 @@ from 2026-11-03.
   scores the run (RT-6a, D-278): 12/12 plants and no finding in a clean
   file on the fake engine, which proves the plumbing. The run on a real
   model, which is what says whether the template works, is the
-  maintainer's to start (RT-6).
+  maintainer's to start (RT-6). The review pass over the six changes
+  (round 20, in DECISIONS) found three stale lines in the records and
+  none in the code; they are corrected.
   A sweep row whose pattern holds a pipe gives its rule the pattern
   (D-275): escaped as a table asks, or bare inside its backticks, it was
   cut in two and the rule got none, with every line still counted as

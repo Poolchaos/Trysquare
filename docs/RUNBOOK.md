@@ -193,8 +193,11 @@ Probe press in step 4, a real but tiny paid call.
    the repository; the screenshots there, up to 200, are graded A to D,
    against the Design standard, a file in the repository, if you name one.
    The New review pre-flight lists the commands before Start.
-3. **Import a ruleset.** Rulesets screen. Paste a markdown protocol document,
-   give it a name and a tier, Import. The document becomes numbered rules and
+3. **Start a ruleset.** Rulesets screen. The form opens on A template: Use
+   this template starts one from the General template, twelve rules for any
+   change in any language, not yet run against a model. To import your own
+   protocol, choose A document, paste the markdown, give it a name and a
+   tier, Import. The document becomes numbered rules and
    process directives. Rules must be headings at level three or deeper whose
    text starts with a number and a dot, like `### 1. Unawaited promise`. A
    document that yields no rules is refused outright, because a review judged

@@ -152,10 +152,10 @@ anything is spent, a pre-flight tells you what would be examined: the commits
 it would pin, the file and hunk counts, the sweep hits, and how many model
 requests it expects to make.
 
-Rulesets are imported by pasting a markdown protocol document, which becomes
-numbered rules and process directives; the import is refused if it produces no
-rules. A ruleset can also be started with no document and its rules written in
-the app. On a ruleset's page a rule is switched off, given another severity,
+A ruleset is started from the General template the app ships, or imported by
+pasting a markdown protocol document, which becomes numbered rules and process
+directives; the import is refused if it produces no rules. A ruleset can also
+be started with no document and its rules written in the app. On a ruleset's page a rule is switched off, given another severity,
 edited as the markdown it is, added or removed. A ruleset that has a rule
 exports as the document it holds, every rule's text and every directive, and
 that document imports back as the same text. What is set beside the text is

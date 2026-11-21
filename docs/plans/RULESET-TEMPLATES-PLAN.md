@@ -135,3 +135,10 @@ named first.
 ## 5. Review cadence
 
 A structured review pass after RT-1b and after each template.
+
+The pass after RT-1b and the General template ran on 2026-11-21 (review
+round 20, in DECISIONS), over RT-1a, RT-2a, D-275, RT-1b, RT-2b and RT-6a.
+Three findings, all in the records and fixed in one change: 04 still
+listed templates as not built, the RUNBOOK's third step told a person to
+paste into a form that now opens on a template, and README's account of
+how a ruleset is made left the template out.

@@ -113,6 +113,15 @@ list is in `PROJECT-STATE.md`, Structure.
   without fails, and so does one no review can run without (the CLI
   missing or unable to run); a lack the app itself says on a screen, such
   as a sign-in missing or billing per token, is a warning.
+- **A ruleset template.** Put the protocol document at
+  `templates/<slug>.md` and its entry in `templates/shelf.json`; the shelf's
+  reader refuses one under the bar (`lib/rulesets/template-bar.ts`). Add
+  the slug to the list in `tests/server/rulesets/shelf.test.ts`, hold what
+  the importer reads from it in `tests/templates/<slug>.test.ts` (the tags
+  decide which files a rule is put to), and build its fixture as
+  `tests/fixtures/build-<slug>-fixture.mjs`, exporting `buildFixture`, with
+  a test beside the General one's. `npm run demo:template -- <slug> --fake`
+  then reviews it. Every rule cites a source read that day.
 - **Seeing it run.** `npm run demo:fixture -- --fake` reviews a seeded
   fixture end to end with the fake CLI and spends nothing.
   `npm run dev` serves on 127.0.0.1:3000, after the doctor.
