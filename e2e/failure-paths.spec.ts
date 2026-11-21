@@ -7037,3 +7037,142 @@ test("a change that moves another rule's sweep patterns says so, and a code that
     expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
   }
 });
+
+test("a ruleset is started with no document: a name and a tier, nothing to export until it has a rule, and a name in use refused beside the form (RA-6)", async ({
+  page,
+}) => {
+  const name = "Rules written here";
+  const form = page.getByTestId("new-ruleset");
+  const withDocument = form.getByRole("radio", { name: "A document", exact: true });
+  const withNone = form.getByRole("radio", { name: "No document" });
+  const create = form.getByRole("button", { name: "Create ruleset" });
+  const bothThemes = async () => {
+    for (const scheme of ["dark", "light"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      expect(await accessibilityViolations(page), scheme).toEqual([]);
+    }
+  };
+  try {
+    // With no ruleset yet, the list names both ways to start one. Staged as
+    // the server answers an empty app: the journey has left its rulesets.
+    const stopEmpty = await answerOnce(page, "**/api/rulesets", (route) =>
+      route.fulfill({ json: { rulesets: [], defaultRulesetId: null } }),
+    );
+    await page.goto("/rulesets");
+    await expect(page.getByText("No rulesets yet", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(
+        "Paste a protocol document into the form, or start a ruleset with no document and write its rules on its page. Every review needs a ruleset.",
+      ),
+    ).toBeVisible();
+    await bothThemes();
+    await shootAll(page, page.locator("main"), "ruleset-new-none-yet");
+    await stopEmpty();
+
+    await page.goto("/rulesets");
+    // The form opens on the way it always had: a document to paste.
+    await expect(withDocument).toBeChecked();
+    await expect(form.getByLabel("Protocol document")).toBeVisible();
+    await expect(form.getByRole("button", { name: "Import" })).toBeVisible();
+
+    // Chosen from the keyboard: the choice is two radios after the tier.
+    await form.getByLabel("Name").fill(name);
+    await form.getByLabel("Tier").selectOption("tech");
+    await form.getByLabel("Tier").focus();
+    await page.keyboard.press("Tab");
+    await expect(withDocument).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(withNone).toBeChecked();
+    await expect(form.getByLabel("Protocol document")).toHaveCount(0);
+    await expect(form.getByRole("button", { name: "Import" })).toHaveCount(0);
+    await expect(form).toContainText(
+      "The ruleset starts with no rules. You write them on its page, and a review will not start on it until it has one.",
+    );
+    await bothThemes();
+    await shootAll(page, form, "ruleset-new-no-document");
+
+    // Made, and opened: the next thing to do is write its first rule.
+    await create.click();
+    await expect(page).toHaveURL(/\/rulesets\/[A-Z0-9]+$/i);
+    const rulesetId = new URL(page.url()).pathname.split("/").at(-1)!;
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+    await expect(page.getByText("version 1", { exact: true })).toBeVisible();
+    await expect(page.getByText("0 rules", { exact: true })).toBeVisible();
+    const rulesCard = page.getByTestId("rules");
+    await expect(rulesCard).toContainText(
+      "This ruleset has no rules, so a review will not start on it. Add a rule below.",
+    );
+    // With no rule and no directive there is no document, and the control
+    // says so where an empty file would have been downloaded.
+    const exportOff = page.getByRole("button", { name: "Export document" });
+    await expect(exportOff).toBeDisabled();
+    await expect(exportOff).toHaveAccessibleDescription(
+      "It has no document to export until a rule is written into it.",
+    );
+    await expect(rulesCard).toContainText(
+      "It has no document to export until a rule is written into it.",
+    );
+    await expect(page.getByRole("link", { name: "Export document" })).toHaveCount(0);
+    // It has no directive either, and says what a review is given without
+    // one, where it offered to show "the 0 process directive(s)".
+    await expect(
+      page.getByText(
+        "No process directives: the parts of a protocol that are not rules come with an imported document and are not written here. A review on this ruleset is given its rules and the app's own instructions.",
+      ),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /process directive/ })).toHaveCount(0);
+    const none = await page.request.get(`/api/rulesets/${rulesetId}/export`);
+    expect(none.status()).toBe(409);
+    expect(await none.json()).toEqual({
+      error: `"${name}" has no rules and no directives, so it has no document to export. Write a rule into it first.`,
+      code: "NothingToExport",
+    });
+    await bothThemes();
+    await shootAll(page, page.locator("main"), "ruleset-new-empty");
+
+    // Its first rule, written here. The document is then that rule.
+    const block = "### 1. Left-In Logging\n\n**Rule:** Flag a console call left in.\n";
+    const region = page.getByTestId("new-rule");
+    await region.getByRole("button", { name: "Add a rule" }).click();
+    await region.getByLabel("New rule as markdown").fill(block);
+    await region.getByRole("button", { name: "Add rule" }).click();
+    await expect(region.getByRole("status")).toHaveText("Rule 1 added, and opened above.");
+    await expect(page.getByText("1 rule", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Export document" })).toBeVisible();
+    await expect(page.getByText(/no document to export/)).toHaveCount(0);
+    const document = await page.request.get(`/api/rulesets/${rulesetId}/export`);
+    expect(document.status()).toBe(200);
+    expect(await document.text()).toBe(block);
+
+    // Listed under its tier, and its name is then taken: a second one under
+    // it is refused beside the form, nothing made, the name left to change.
+    await page.goto("/rulesets");
+    await expect(page.getByRole("link", { name, exact: true })).toBeVisible();
+    await form.getByText("No document", { exact: true }).click();
+    await expect(withNone).toBeChecked();
+    await expect(create).toBeDisabled();
+    await form.getByLabel("Name").fill(name);
+    await create.click();
+    const refusal = form.getByText(
+      `A ruleset called "${name}" already exists. Give the new one another name, or open "${name}" and add rules there.`,
+    );
+    await expect(refusal).toBeVisible();
+    await expect(page).toHaveURL(/\/rulesets$/);
+    await expect(form.getByLabel("Name")).toHaveValue(name);
+    await bothThemes();
+    await shootAll(page, form, "ruleset-new-name-taken");
+    // The refusal was about that name, and goes when the name changes.
+    await form.getByLabel("Name").fill(`${name}, again`);
+    await expect(refusal).toHaveCount(0);
+    await withDocument.check();
+    await expect(form.getByLabel("Protocol document")).toBeVisible();
+  } finally {
+    await page.emulateMedia({ colorScheme: "light" });
+    const listed = (await (await page.request.get("/api/rulesets")).json()) as {
+      rulesets: { id: string; name: string }[];
+    };
+    for (const row of listed.rulesets.filter((ruleset) => ruleset.name.startsWith(name))) {
+      expect((await page.request.delete(`/api/rulesets/${row.id}`)).status()).toBe(200);
+    }
+  }
+});

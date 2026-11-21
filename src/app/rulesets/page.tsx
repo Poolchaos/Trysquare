@@ -5,10 +5,12 @@
  *
  * Importing is a paste rather than a file picker, because the document usually
  * already lives in another repository and copying it here is one step fewer
- * than saving it out first.
+ * than saving it out first. A ruleset can also start with no document, its
+ * rules written on its own page (RA-6).
  */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Loading, PageBody, PageHeader } from "@/components/page";
 import {
@@ -37,10 +39,20 @@ interface Ruleset {
 /** Widest reach first: what applies everywhere, then per stack, then per repo. */
 const TIER_ORDER = ["global", "tech", "project"];
 
+/** What a new ruleset starts from: a pasted document, or nothing. */
+const STARTS = [
+  { value: "document", label: "A document" },
+  { value: "none", label: "No document" },
+] as const;
+type Start = (typeof STARTS)[number]["value"];
+
 export default function RulesetsPage() {
+  const router = useRouter();
   const [rulesets, setRulesets] = useState<Ruleset[] | null>(null);
   const [name, setName] = useState("");
   const [tier, setTier] = useState("global");
+  const [start, setStart] = useState<Start>("document");
+  const [creating, setCreating] = useState(false);
   const [markdown, setMarkdown] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
@@ -155,6 +167,26 @@ export default function RulesetsPage() {
     await load();
   }
 
+  async function createEmpty() {
+    if (creating) return;
+    setCreating(true);
+    setError("");
+    setResult("");
+    const sent = await send<{ rulesetId: string }>(
+      "/api/rulesets",
+      { method: "POST", body: JSON.stringify({ name, tier }) },
+      "The ruleset could not be created",
+    );
+    if (!sent.ok) {
+      setError(sent.error);
+      setCreating(false);
+      return;
+    }
+    // Opened, and `creating` left on until the page goes: what comes next is
+    // writing its first rule, and a second press would ask for the name twice.
+    router.push(`/rulesets/${sent.body.rulesetId}`);
+  }
+
   return (
     <>
       <PageHeader
@@ -165,9 +197,10 @@ export default function RulesetsPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="p-4">
             <form
+              data-testid="new-ruleset"
               onSubmit={(event) => {
                 event.preventDefault();
-                void importRuleset(false);
+                void (start === "document" ? importRuleset(false) : createEmpty());
               }}
               className="grid gap-4"
             >
@@ -178,6 +211,8 @@ export default function RulesetsPage() {
                     onChange={(event) => {
                       setName(event.target.value);
                       setReplacing("");
+                      // A name refused as taken is answered by changing it.
+                      if (start === "none") setError("");
                     }}
                   />
                 </Field>
@@ -195,21 +230,58 @@ export default function RulesetsPage() {
                   </Select>
                 </Field>
               </div>
-              <Field
-                label="Protocol document"
-                hint="Rejected if it produces no rules, because a review judged against nothing comes back clean."
-              >
-                <Textarea
-                  rows={12}
-                  value={markdown}
-                  onChange={(event) => {
-                    setMarkdown(event.target.value);
-                    setReplacing("");
-                  }}
-                  placeholder="Paste the markdown protocol here"
-                  className="font-[family-name:var(--font-mono)] text-xs"
-                />
-              </Field>
+              <fieldset>
+                <legend className="text-sm font-medium">Start from</legend>
+                <div className="flex flex-wrap gap-x-6">
+                  {STARTS.map((option) => (
+                    <label
+                      key={option.value}
+                      className="flex min-h-11 cursor-pointer items-center gap-2 text-sm"
+                    >
+                      {/* Drawn in the app's accent and for the theme in use: left
+                          alone, the dot is the browser's blue beside a teal
+                          button, and a white disc on the dark theme. */}
+                      <input
+                        type="radio"
+                        name="start"
+                        className="scheme-light-dark accent-[var(--color-accent)]"
+                        checked={start === option.value}
+                        onChange={() => {
+                          setStart(option.value);
+                          // What was said was about the other way of starting.
+                          setError("");
+                          setResult("");
+                          setReplacing("");
+                        }}
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+                {start === "none" ? (
+                  <p className="text-sm text-[var(--color-ink-muted)]">
+                    The ruleset starts with no rules. You write them on its page, and a review will
+                    not start on it until it has one.
+                  </p>
+                ) : null}
+              </fieldset>
+              {start === "document" ? (
+                <Field
+                  label="Protocol document"
+                  hint="Rejected if it produces no rules, because a review judged against nothing comes back clean."
+                >
+                  <Textarea
+                    rows={12}
+                    value={markdown}
+                    onChange={(event) => {
+                      setMarkdown(event.target.value);
+                      setReplacing("");
+                    }}
+                    placeholder="Paste the markdown protocol here"
+                    className="font-[family-name:var(--font-mono)] text-xs"
+                  />
+                </Field>
+              ) : null}
               {error ? <Problem>{error}</Problem> : null}
               {replacing ? (
                 <div className="grid gap-2">
@@ -235,13 +307,19 @@ export default function RulesetsPage() {
                 </p>
               ) : null}
               <div>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={importing || name === "" || markdown === ""}
-                >
-                  {importing ? "Importing..." : "Import"}
-                </Button>
+                {start === "document" ? (
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={importing || name === "" || markdown === ""}
+                  >
+                    {importing ? "Importing..." : "Import"}
+                  </Button>
+                ) : (
+                  <Button type="submit" variant="primary" disabled={creating || name.trim() === ""}>
+                    {creating ? "Creating..." : "Create ruleset"}
+                  </Button>
+                )}
               </div>
             </form>
           </Card>
@@ -262,7 +340,8 @@ export default function RulesetsPage() {
               />
             ) : rulesets.length === 0 ? (
               <Empty title="No rulesets yet">
-                Paste a protocol document to the left. Every review needs one.
+                Paste a protocol document into the form, or start a ruleset with no document and
+                write its rules on its page. Every review needs a ruleset.
               </Empty>
             ) : (
               TIER_ORDER.filter((tier) => rulesets.some((ruleset) => ruleset.tier === tier)).map(

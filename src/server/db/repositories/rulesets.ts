@@ -290,13 +290,38 @@ export class RuleNotFoundError extends Error {
 }
 
 export class RulesetNameTakenError extends Error {
-  constructor(readonly rulesetName: string) {
+  constructor(
+    readonly rulesetName: string,
+    /** What wanted the name: a copy of a ruleset, or one started with no document. */
+    wanted: "copy" | "new" = "copy",
+  ) {
     super(
-      `A ruleset called "${rulesetName}" already exists. Copying onto it would replace its ` +
-        `rules and reset its version, so the copy needs a name of its own.`,
+      wanted === "copy"
+        ? `A ruleset called "${rulesetName}" already exists. Copying onto it would replace its ` +
+            `rules and reset its version, so the copy needs a name of its own.`
+        : `A ruleset called "${rulesetName}" already exists. Give the new one another name, ` +
+            `or open "${rulesetName}" and add rules there.`,
     );
     this.name = "RulesetNameTakenError";
   }
+}
+
+/**
+ * Starts a ruleset with no document (RA-6): a name and a tier, and no rule
+ * or directive until one is written on its page. A name in use is refused:
+ * an import finds the ruleset it replaces by its name.
+ */
+export function createRuleset(
+  db: Db,
+  input: { name: string; tier: RulesetTier },
+): { rulesetId: string; version: number } {
+  if (findRulesetByName(db, input.name)) throw new RulesetNameTakenError(input.name, "new");
+  const now = nowIso();
+  const rulesetId = newId();
+  db.insert(rulesets)
+    .values({ id: rulesetId, name: input.name, tier: input.tier, createdAt: now, updatedAt: now })
+    .run();
+  return { rulesetId, version: 1 };
 }
 
 /**

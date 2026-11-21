@@ -6689,3 +6689,31 @@ verified evidence, in writing, here.
   on, a row in the rule's own text changed with the heading, or the code
   changed in the exported document. Rejected: a count beside the row
   alone, which D-268 had and nobody reads after saving another rule.
+- 2026-11-21 D-272 A ruleset is started in the app with no document
+  (RA-6): a name and a tier, at version 1, holding no rule and no directive
+  until a rule is written on its page. `POST /api/rulesets` makes it
+  (`createRuleset`), and a name another ruleset has is refused in words,
+  since an import finds the ruleset it replaces by its name. Three things
+  are decided here. First, a ruleset with no rule and no directive has no
+  document: its export is refused (409, `NothingToExport`), and on its page
+  Export document is off and the empty rules card says why. Its export was
+  a file of no bytes, which the importer reads as one directive, so it did
+  not read back as what is stored (D-271), and the import route takes no
+  empty document. The same holds for a ruleset with no directive whose last
+  rule is removed, a state RA-4 already reached. Rejected: storing a title
+  directive (`# <name>`) so that the document is never empty, which puts a
+  line the person did not write into what the model is given and files the
+  ruleset's name under a directive section by its keywords. Second, the
+  Rulesets screen's one form starts both kinds: Name and Tier, then "Start
+  from", with "A document" (the paste, as before) or "No document", which
+  shows no field, says the ruleset starts with no rules, and offers Create
+  ruleset. Created, its page opens, where the first rule is written.
+  Rejected: a second form or a dialog for two fields the import form
+  already has. Third, a ruleset with no directive says so on its page, and
+  that a review on it is given its rules and the app's own instructions,
+  where the page offered to "Show the 0 process directive(s)". Directives
+  are still not written in the app (the plan's non-goals), so a ruleset
+  written here from nothing holds rules only. Found on the way, in the
+  inbox: no `color-scheme` is declared, so a native control is drawn for
+  the light theme on the dark one; the two radios this adds declare their
+  own.

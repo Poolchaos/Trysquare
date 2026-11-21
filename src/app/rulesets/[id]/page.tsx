@@ -537,6 +537,9 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   }
 
   const off = detail.rules.filter((rule) => !rule.enabled).length;
+  // With no rule and no directive there is nothing an export could hold: the
+  // server refuses one, and the control says so and stays off (RA-6).
+  const noDocument = detail.rules.length === 0 && detail.directives.length === 0;
   // Before the rule that came after it, or at the end when that was the
   // last rule or is no longer here.
   const removedBefore =
@@ -584,9 +587,15 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                 : "Use by default for new reviews"}
             </Button>
             <Button onClick={() => setDuplicating((open) => !open)}>Duplicate to tier</Button>
-            <a href={`/api/rulesets/${id}/export`} download>
-              <Button>Export document</Button>
-            </a>
+            {noDocument ? (
+              <Button disabled aria-describedby="no-document">
+                Export document
+              </Button>
+            ) : (
+              <a href={`/api/rulesets/${id}/export`} download>
+                <Button>Export document</Button>
+              </a>
+            )}
           </span>
         }
       />
@@ -667,6 +676,14 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
               ) : null}
               <p className="text-sm text-[var(--color-ink-muted)]">
                 This ruleset has no rules, so a review will not start on it. Add a rule below.
+                {noDocument ? (
+                  <>
+                    {" "}
+                    <span id="no-document">
+                      It has no document to export until a rule is written into it.
+                    </span>
+                  </>
+                ) : null}
               </p>
             </Card>
           ) : (
@@ -1010,13 +1027,24 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
           </div>
         )}
 
-        <button
-          type="button"
-          className="mt-6 text-sm text-[var(--color-accent)] hover:underline"
-          onClick={() => setShowDirectives((shown) => !shown)}
-        >
-          {showDirectives ? "Hide" : "Show"} the {detail.directives.length} process directive(s)
-        </button>
+        {detail.directives.length === 0 ? (
+          // A ruleset started in the app has none (RA-6), and a control to
+          // show nothing said nothing of what a review is then given.
+          <p className="mt-6 max-w-2xl text-sm text-[var(--color-ink-muted)]">
+            No process directives: the parts of a protocol that are not rules come with an imported
+            document and are not written here. A review on this ruleset is given its rules and the
+            app&apos;s own instructions.
+          </p>
+        ) : (
+          <button
+            type="button"
+            className="mt-6 text-sm text-[var(--color-accent)] hover:underline"
+            onClick={() => setShowDirectives((shown) => !shown)}
+          >
+            {showDirectives ? "Hide" : "Show"} the {detail.directives.length} process directive
+            {detail.directives.length === 1 ? "" : "s"}
+          </button>
+        )}
         {showDirectives ? (
           <ul className="mt-2 grid gap-1 text-sm">
             {detail.directives.map((directive) => {

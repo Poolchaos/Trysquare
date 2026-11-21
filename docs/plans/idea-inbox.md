@@ -358,3 +358,9 @@ the line entirely would lose the trail.
   check the maintainer's protocol first.
 - 2026-11-21: the sweep table edited in the app, so a rule's code can
   change and a removed rule's rows go with it (D-271 holds both back).
+- 2026-11-21: no `color-scheme` is declared, so native checkboxes, selects
+  and scrollbars are drawn for the light theme on the dark one. Declaring
+  it changes every screen's dark shots. RA-6's two radios declare their own.
+- 2026-11-21: a ruleset with no directive is given to a model with an
+  empty `# Protocol` section (`composeSystemPrompt`). Leaving the heading
+  out changes a prompt, so it wants a measured run.

@@ -253,7 +253,17 @@ describe("a ruleset changed in the app", () => {
     const id = await imported("Only", "### 1. Only\n\n**Rule:** Flag it.\n");
     expect((await remove(id, "1")).status).toBe(200);
     expect((await detail(id)).rules).toEqual([]);
-    expect((await exported(id, "Only")).document).toBe("");
+    // Nothing is left to export, said in words: an empty file would read
+    // back as a directive this ruleset does not hold (RA-6).
+    const { GET } = await import("@/app/api/rulesets/[id]/export/route");
+    const none = await GET(new Request("http://local/x"), { params: Promise.resolve({ id }) });
+    expect(none.status).toBe(409);
+    expect(await none.json()).toEqual({
+      error:
+        '"Only" has no rules and no directives, so it has no document to export. ' +
+        "Write a rule into it first.",
+      code: "NothingToExport",
+    });
   });
 
   it("refuses a rule put after a directive that leaves a code fence open, saving nothing", async () => {

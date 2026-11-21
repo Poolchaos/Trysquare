@@ -72,7 +72,12 @@ from 2026-11-03.
   the opened rule or where a removed rule was (RA-5b). A code that sweep
   rows name is refused with the two ways to change it. `./verify.sh --e2e`
   exits 0 with 1604 unit tests passing, 8 skipped, and 161 browser tests.
-  RA-6 is next.
+  A ruleset is started with no document on the Rulesets screen (RA-6,
+  D-272): a name and a tier, its rules written on its page. With no rule
+  and no directive it has no document, so its export is refused in words
+  and the control is off, where it gave a file of no bytes.
+  `./verify.sh --e2e` exits 0 with 1608 unit tests passing, 8 skipped, and
+  162 browser tests. RA-7 is next.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the
@@ -561,12 +566,13 @@ own now (D-75, D-81).
 - Emailing a review's result: in scope since D-251, planned in
   `plans/EMAIL-REPORT-PLAN.md` (D-264). Its sender waits on the
   maintainer's mailbox; where a result goes is set in the app.
-- A ruleset started with no document, and ruleset templates shipped with
-  the app: in scope since D-251, planned in `plans/RULES-IN-APP-PLAN.md`
-  and `plans/RULESET-TEMPLATES-PLAN.md` (D-265). A rule can be switched
-  off, its severity changed, its text edited (RA-2, D-267), a rule added
-  (RA-3, D-268) and removed (RA-4, D-269), and one ruleset deleted (RA-1,
-  D-266); a new ruleset comes only from an imported file.
+- Ruleset templates shipped with the app: in scope since D-251, planned
+  in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). A ruleset is started with
+  no document (RA-6, D-272), and a rule can be switched off, its severity
+  changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
+  removed (RA-4, D-269), and one ruleset deleted (RA-1, D-266). Process
+  directives are not written in the app: they come with an imported
+  document.
 - A viewer for a failed stage's transcript: the review page names the file
   and renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
 - The live output of git while a project clones: a failure's stderr is

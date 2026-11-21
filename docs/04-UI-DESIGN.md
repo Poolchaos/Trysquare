@@ -27,9 +27,11 @@ chosen per review in the advanced fold.
   refusal designed with it. The preview drawer per ruleset that section 3
   describes is not built either: the screen has one select and a link to
   the chosen ruleset's page.
-- Rulesets: a new ruleset with no document (`plans/RULES-IN-APP-PLAN.md`,
-  RA-6). A rule's text is edited in place, a rule is added and a rule is
-  removed since 2026-11-21 (RA-2 to RA-4, section 3), its
+- Rulesets: process directives written or edited in the app (they come
+  with an imported document), and templates shipped with it
+  (`plans/RULESET-TEMPLATES-PLAN.md`). A ruleset is started with no
+  document (RA-6), a rule's text is edited in place, a rule is added and a
+  rule is removed since 2026-11-21 (RA-2 to RA-4, section 3), its
   severity and its on/off switch can be changed, sweep patterns and
   directive bodies are shown, and duplicate-to-tier and deleting a ruleset
   are built.
@@ -345,6 +347,15 @@ badge once its branch is found merged; delete per 02 rules.
   document under a name already in use is asked about (Replace / Keep it),
   since the import replaces its rules and undoes its edits; the same
   document is not. Export to markdown (round-trip clean).
+- A ruleset with no document (RA-6, D-272): the same form, Name and Tier,
+  then Start from, A document (the paste) or No document. The second shows
+  no field, says the ruleset starts with no rules and that a review will
+  not start on it until it has one, and offers Create ruleset; created,
+  its page opens. A name in use is refused beside the form. With no rule
+  and no directive a ruleset has no document: Export document is off, and
+  the empty rules card says why. With no directive, the page says so and
+  that a review is given the rules and the app's own instructions, where a
+  ruleset with directives offers to show them.
 - Duplicate-to-tier action (e.g. copy a project rule into global).
 - Use by default for new reviews, on a ruleset's page (Stop using by
   default undoes it); the list marks the default, and a new review, or a
