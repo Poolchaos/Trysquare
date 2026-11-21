@@ -16,8 +16,8 @@ unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
 - Tiers composing per review. A ruleset carries a tier, but a review uses
   exactly one ruleset: the start route takes a single id and the screen is a
-  single-select. Composing several per review is unowned by any current work
-  item and needs a decision before it is built.
+  single-select. Composing several per review is planned in
+  `plans/RULESETS-TOGETHER-PLAN.md` (D-288, 2026-11-21) and not built.
 
 ## What it is
 

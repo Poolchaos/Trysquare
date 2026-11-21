@@ -22,9 +22,10 @@ chosen per review in the advanced fold.
 
 - Add project: the live git output tail while a clone runs. Failure stderr
   is shown verbatim; the running tail is not.
-- New review: choosing more than one ruleset at once. Deferred by decision
-  (2026-08-04 DEFERRED in DECISIONS.md); needs a rule-code collision
-  refusal designed with it. The preview drawer per ruleset that section 3
+- New review: choosing more than one ruleset at once. Deferred on
+  2026-08-04 for want of a design for colliding rule codes, and planned
+  since in `plans/RULESETS-TOGETHER-PLAN.md` (D-288): a set that shares a
+  code is refused. The preview drawer per ruleset that section 3
   describes is not built either: the screen has one select and a link to
   the chosen ruleset's page.
 - Rulesets: process directives written or edited in the app (they come

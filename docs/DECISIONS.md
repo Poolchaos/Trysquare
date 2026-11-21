@@ -7159,3 +7159,28 @@ verified evidence, in writing, here.
   be seen. Not changed: `themes.spec.ts` waits the old way, on the
   promise, and never switches theme within a test, which is when
   Chromium left it unsettled.
+- 2026-11-21 D-288 A review is to be judged against one or more rulesets,
+  and the way is planned (`plans/RULESETS-TOGETHER-PLAN.md`). The four
+  templates made the want concrete: each is for one thing, and a person
+  reviewing TypeScript picks General or TypeScript and goes without the
+  other. Decided. First, the rulesets of one review may not share a rule
+  code, and a set that does is refused before anything is written, in
+  words that name the codes and the rulesets: the refusal the entry of
+  2026-08-04 asked to be designed. Second, codes are not qualified by
+  their ruleset. A finding, a sweep hit and the coverage of a rule
+  against a file are each keyed by the bare code, and a qualified code
+  would change all three and what the model is shown, for a case the
+  refusal already handles. Third, so that the shelf composes, the
+  templates' codes are made disjoint: General 1 to 12, TypeScript 21 to
+  29, React 31 to 38, HTTP API and database 41 to 48. They number from 1
+  today, all four. Read in the code before it was planned: the snapshot
+  table is keyed by review and ruleset and its reader already joins every
+  row, so the store holds several now, and everything that chooses or
+  writes takes one (the start route, the pre-flight, the service, the
+  line of waiting reviews, the screen's select, the report's meta).
+  Rejected: adding a template's rules into an existing ruleset under new
+  numbers, which rewrites headings and sweep rows of a document the person
+  owns; and a tier that brings its rulesets with it, which chooses for a
+  person what they did not pick. Not decided here and left to the plan's
+  own packages: how the picker reads with many rulesets, and what the
+  report's header says of three.

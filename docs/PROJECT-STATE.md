@@ -136,6 +136,9 @@ from 2026-11-03.
   with the picker is not written into the exported document (D-287).
   The review pass over the three (round 23, in DECISIONS) took two
   sentences about what is not built yet off that card.
+  A review still takes one ruleset, so two templates cannot be used on
+  one review. That is planned (`plans/RULESETS-TOGETHER-PLAN.md`, D-288)
+  and is the next thing to build.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -649,7 +652,9 @@ own now (D-75, D-81).
 
 - More than one dependency per review: the model and the screens take a
   single linked project.
-- More than one ruleset per review, so tiers compose: designed, not built.
+- More than one ruleset per review, so templates and a protocol are used
+  together: planned in `plans/RULESETS-TOGETHER-PLAN.md` (D-288), not
+  built.
 - Emailing a review's result: in scope since D-251, planned in
   `plans/EMAIL-REPORT-PLAN.md` (D-264). The addresses a result goes to are
   kept on Settings (EM-2a, D-286), and the card says nothing is sent yet.
