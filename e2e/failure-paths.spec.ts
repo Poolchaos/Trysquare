@@ -3825,12 +3825,12 @@ test("the new review screen says why a read failed, not that a repository is emp
     timeout: 30_000,
   });
   // Each said on its own, not run together into one sentence, and an unread
-  // list is not an empty one: "No rulesets imported yet" and "Import a
-  // ruleset first" were untrue then (D-137).
+  // list is not an empty one: "No rulesets yet" and "Start a ruleset
+  // first" would be untrue then (D-137).
   // Each named by its read, and keyed by it (D-138).
   await expect(page.getByText("Rulesets: Refused for this test: the rulesets.")).toBeVisible();
   await expect(page.getByText("Models: Refused for this test: the models.")).toBeVisible();
-  await expect(page.getByText(/No rulesets imported yet|Import a ruleset first/)).toHaveCount(0);
+  await expect(page.getByText(/No rulesets yet|Start a ruleset first/)).toHaveCount(0);
   await expect(page.getByText(/Nothing has been pushed/)).toHaveCount(0);
   await expect(page.getByText(/Fetched from the remote at/)).toHaveCount(0);
   await stopBranches();
@@ -5040,6 +5040,21 @@ test("a review left as a draft can be started from its own screen", async ({ pag
   const { review } = (await (await creation).json()) as { review: { id: string } };
   await expect(page.getByText("Refused for this test.")).toBeVisible();
   await stopRefusing();
+
+  // With no ruleset at all, the draft says so and where one is made. It said
+  // "import one", one of three ways since the form there opens on a
+  // template. Staged as the server answers an app with none.
+  const stopNone = await answerOnce(page, "**/api/rulesets", (route) =>
+    route.fulfill({ json: { rulesets: [], defaultRulesetId: null } }),
+  );
+  await page.goto(`/reviews/${review.id}`);
+  await expect(page.getByText("No ruleset to start it with yet:")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByRole("link", { name: "make one" })).toHaveAttribute("href", "/rulesets");
+  await expect(page.getByRole("button", { name: "Start review" })).toHaveCount(0);
+  await shootAll(page, page.locator("main"), "draft-no-ruleset");
+  await stopNone();
 
   // A ruleset read that fails says so, with Try again, rather than leaving a
   // disabled picker and no word why (D-137).
@@ -7328,4 +7343,69 @@ test("a ruleset is started from a template: the form opens on the shelf, a shelf
       expect((await page.request.delete(`/api/rulesets/${row.id}`)).status()).toBe(200);
     }
   }
+});
+
+test("with no ruleset yet, a new review and the dashboard say to start one, where they said to import one", async ({
+  page,
+}) => {
+  // The Rulesets form opens on a template (RT-1b), so importing is one way
+  // of three. Each answer is staged as the server gives it for an app with
+  // nothing in it: no ruleset, and a scoreboard of nothing, which a unit
+  // test holds to what the server answers.
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = projects.projects.find((project) => project.name === "app")!;
+  const stopNone = await answerOnce(page, "**/api/rulesets", (route) =>
+    route.fulfill({ json: { rulesets: [], defaultRulesetId: null } }),
+  );
+  await page.goto(`/reviews/new?projectId=${app.id}`);
+  // The picker holds one choice, which says there is none to pick.
+  await expect(page.locator("option", { hasText: "No rulesets yet" })).toHaveCount(1, {
+    timeout: 30_000,
+  });
+  await expect(page.getByText("Start a ruleset first:")).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("link", { name: "Rulesets", exact: true }),
+  ).toHaveAttribute("href", "/rulesets");
+  await expect(page.getByRole("button", { name: "Start review" })).toBeDisabled();
+  for (const scheme of ["dark", "light"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    expect(await accessibilityViolations(page), scheme).toEqual([]);
+  }
+  await shootAll(page, page.locator("main"), "new-review-no-ruleset");
+  await stopNone();
+
+  const stopEmpty = await answerOnce(page, "**/api/scoreboard", (route) =>
+    route.fulfill({
+      json: {
+        spendUsd: 0,
+        reviewsCompleted: 0,
+        reviewsTotal: 0,
+        precision: null,
+        proofsDiscardedRate: null,
+        awaiting: 0,
+        awaitingReviews: [],
+        spendHistory: [],
+        recent: [],
+        ruleYield: [],
+        projects: [],
+      },
+    }),
+  );
+  await page.goto("/");
+  await expect(page.getByText("Nothing has been reviewed yet", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(
+      "Add a project, start a ruleset from a template or from your own protocol, then pick two branches and run a review.",
+      { exact: false },
+    ),
+  ).toBeVisible();
+  for (const scheme of ["dark", "light"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    expect(await accessibilityViolations(page), scheme).toEqual([]);
+  }
+  await shootAll(page, page.locator("main"), "dashboard-nothing-reviewed");
+  await stopEmpty();
+  await page.emulateMedia({ colorScheme: "light" });
 });

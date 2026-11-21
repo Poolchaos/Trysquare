@@ -171,8 +171,8 @@ function NewReview() {
   // One per read that failed, each its own line: joined, a dropped
   // connection's three messages ran together into one sentence (D-137).
   const [readProblems, setReadProblems] = useState<{ read: string; error: string }[]>([]);
-  // Not read is not empty: an unread list claimed "No rulesets imported yet"
-  // and "Import a ruleset first" (D-137).
+  // Not read is not empty: an unread list claimed there were no rulesets
+  // and said to make one first (D-137).
   const [rulesetReadFailed, setRulesetReadFailed] = useState(false);
   // No such project, from a stale bookmark or one deleted in another tab:
   // the way back, not a Try again that could never work (D-139).
@@ -911,9 +911,7 @@ function NewReview() {
               <Select value={rulesetId} onChange={(event) => setRulesetId(event.target.value)}>
                 {rulesets.length === 0 ? (
                   <option value="">
-                    {rulesetReadFailed
-                      ? "The rulesets could not be read"
-                      : "No rulesets imported yet"}
+                    {rulesetReadFailed ? "The rulesets could not be read" : "No rulesets yet"}
                   </option>
                 ) : null}
                 {[...new Set(rulesets.map((ruleset) => ruleset.tier))].map((tier) => (
@@ -1423,7 +1421,7 @@ function NewReview() {
             </Button>
             {rulesets.length === 0 && !rulesetReadFailed ? (
               <span className="text-sm text-[var(--color-ink-muted)]">
-                Import a ruleset first:{" "}
+                Start a ruleset first:{" "}
                 <Link href="/rulesets" className="underline">
                   Rulesets
                 </Link>

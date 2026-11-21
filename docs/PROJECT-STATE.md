@@ -127,6 +127,9 @@ from 2026-11-03.
   on a Firebase template (RT-7). The review pass over the fourth template
   (round 22, in DECISIONS) took one sentence out of it; it is at version
   2.
+  With no ruleset yet, a new review, a draft and the dashboard say to
+  start one, where each said to import one (D-285): the Rulesets form
+  opens on a template, so importing is one way of three.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -134,8 +137,8 @@ from 2026-11-03.
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1663 unit tests passing, 8 skipped,
-  and 164 browser tests.
+  `./verify.sh --e2e` exits 0 with 1664 unit tests passing, 8 skipped,
+  and 165 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the

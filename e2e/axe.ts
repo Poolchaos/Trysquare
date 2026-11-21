@@ -6,15 +6,20 @@ import type { Page } from "@playwright/test";
  * themes.spec holds every screen to, each named with the elements it is on.
  * Waits first for the transitions that end, as themes.spec does: a control
  * caught mid-fade measures as low contrast.
+ *
+ * Each is asked whether it has ended, not awaited by its `finished` promise:
+ * after a theme switch on the new-review screen, Chromium reported a
+ * select's colour transitions as finished and never settled that promise,
+ * and the wait held the test until it timed out (measured 2026-11-21: 54
+ * waited on, the select's left unsettled after four seconds, each with
+ * playState "finished").
  */
 export async function accessibilityViolations(page: Page): Promise<string[]> {
-  await page.evaluate(() =>
-    Promise.all(
-      document
-        .getAnimations()
-        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
-        .map((animation) => animation.finished.catch(() => undefined)),
-    ),
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+      .every((animation) => animation.playState === "finished" || animation.playState === "idle"),
   );
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

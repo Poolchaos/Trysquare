@@ -7092,3 +7092,23 @@ verified evidence, in writing, here.
   Read again and left: the other seven rules against the CWE entries they
   cite; the fixture's eight look-alikes, each the planted endpoint done
   right; the one-line descriptions, each true of its template.
+- 2026-11-21 D-285 With no ruleset stored, the screens a person meets
+  before the Rulesets screen say to start one, where each said to import
+  one: the new-review picker ("No rulesets yet") and the line beside its
+  Start ("Start a ruleset first: Rulesets"), a draft review ("No ruleset
+  to start it with yet: make one.") and the dashboard's first-run text
+  ("start a ruleset from a template or from your own protocol"). The form
+  they point to opens on a template since D-276, so "import" named one
+  way of three, and the one a person with no protocol cannot take. Each
+  state is driven in the browser with the answers the server gives an app
+  with nothing in it; the scoreboard's is held by a unit test to what
+  `readScoreboard` answers on an empty database, so the staged answer is
+  the server's. Found on the way, in the test's own helper and not in a
+  page: after a theme switch on the new-review screen Chromium reported a
+  select's colour transitions as finished and never settled their
+  `finished` promise, which `accessibilityViolations` awaited, so the
+  check never ran (54 animations waited on, the select's still unsettled
+  four seconds later, each with playState "finished"). The helper now
+  waits until every animation that ends reports itself finished or idle.
+  What it asserts is unchanged: axe finds nothing, measured after the
+  fades have ended.

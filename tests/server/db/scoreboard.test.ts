@@ -61,6 +61,33 @@ function candidate(overrides: Partial<Parameters<typeof createCandidate>[1]> = {
 
 const evidence = { quotedCode: "code", lineStart: 4, lineEnd: 4 };
 
+const EMPTY_BOARD = {
+  spendUsd: 0,
+  reviewsCompleted: 0,
+  reviewsTotal: 0,
+  precision: null,
+  proofsDiscardedRate: null,
+  awaiting: 0,
+  awaitingReviews: [],
+  spendHistory: [],
+  recent: [],
+  ruleYield: [],
+  projects: [],
+};
+
+describe("the scoreboard of an app nothing has been done in", () => {
+  it("is every figure at nothing, which is what the first-run screens are staged with", () => {
+    // The browser test of the first-run wording stages this answer. Held
+    // here so that test shows an answer the server gives.
+    const fresh = makeTestDb();
+    try {
+      expect(readScoreboard(fresh.db)).toEqual(EMPTY_BOARD);
+    } finally {
+      fresh.cleanup();
+    }
+  });
+});
+
 describe("a scoreboard with nothing to report", () => {
   it("says nothing rather than zero for a rate with no denominator", () => {
     // Zero percent precision is a claim about findings that were judged. With

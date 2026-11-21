@@ -370,4 +370,4 @@ the line entirely would lose the trail.
 - 2026-11-21: with no ruleset stored, the new-review picker ("No rulesets
   imported yet", "Import a ruleset first"), a draft review ("import one")
   and the dashboard's first line name importing alone; a ruleset is also
-  started with no document (RA-6).
+  started with no document (RA-6). Done 2026-11-21 (D-285).

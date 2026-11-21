@@ -334,8 +334,9 @@ export default function HomePage() {
           />
         ) : board.reviewsTotal === 0 ? (
           <Empty title="Nothing has been reviewed yet">
-            Add a project, import a protocol as a ruleset, then pick two branches and run a review.
-            What it finds, what it costs and which rules earn their place all appear here.
+            Add a project, start a ruleset from a template or from your own protocol, then pick two
+            branches and run a review. What it finds, what it costs and which rules earn their place
+            all appear here.
           </Empty>
         ) : (
           <div className="grid gap-6">

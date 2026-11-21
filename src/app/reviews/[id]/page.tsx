@@ -1171,7 +1171,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               <span className="text-sm text-[var(--color-ink-muted)]">
                 No ruleset to start it with yet:{" "}
                 <Link href="/rulesets" className="text-[var(--color-accent)] hover:underline">
-                  import one
+                  make one
                 </Link>
                 .
               </span>
