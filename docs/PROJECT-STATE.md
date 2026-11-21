@@ -37,8 +37,11 @@ from 2026-11-03.
   section of the ruleset's document, and its section, tags and sweep
   patterns are what the importer reads there, so an export imports back
   as what is stored. `./verify.sh --e2e` exits 0 with 1590 unit tests
-  passing, 8 skipped, and 157 browser tests. Removing a rule (RA-4) is
-  next.
+  passing, 8 skipped, and 157 browser tests.
+  A rule switched off is set back by its title's colour and its badge's:
+  its row was drawn at 55% opacity, which put its tags, its badge and
+  "off" under AA contrast in both themes, found by the first axe pass over
+  a ruleset with a rule off. Removing a rule (RA-4) is next.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the

@@ -533,15 +533,19 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                 <Fragment key={rule.code}>
                   <tr
                     role="row"
-                    className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 border-b border-[var(--color-border)] px-3 py-2 last:border-0 sm:table-row sm:p-0 ${
-                      rule.enabled ? "" : "opacity-55"
-                    }`}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 border-b border-[var(--color-border)] px-3 py-2 last:border-0 sm:table-row sm:p-0"
                   >
                     <td role="cell" className="sm:px-3 sm:py-2">
                       <Mono className="text-xs text-[var(--color-ink-muted)]">{rule.code}</Mono>
+                      {/* A rule switched off is set back by its title's
+                          colour and its badge's, never by the row's
+                          opacity: at 55% its tags, its badge and "off"
+                          fell under AA contrast in both themes. */}
                       <button
                         type="button"
-                        className="ml-2 text-left underline-offset-2 hover:underline"
+                        className={`ml-2 text-left underline-offset-2 hover:underline ${
+                          rule.enabled ? "" : "text-[var(--color-ink-muted)]"
+                        }`}
                         aria-expanded={openRule === rule.code}
                         onClick={() => setOpenRule((open) => (open === rule.code ? "" : rule.code))}
                       >
@@ -551,7 +555,9 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                     <td role="cell" className="col-span-2 sm:px-3 sm:py-2">
                       <label className="inline-flex items-center gap-2">
                         <span className="sr-only">Severity of rule {rule.code}</span>
-                        <Badge tone={severityTone(rule.severity)}>{rule.severity}</Badge>
+                        <Badge tone={rule.enabled ? severityTone(rule.severity) : "neutral"}>
+                          {rule.severity}
+                        </Badge>
                         <Select
                           value={rule.severity}
                           disabled={busy !== ""}

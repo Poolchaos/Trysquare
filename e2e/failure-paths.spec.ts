@@ -25,6 +25,7 @@ import {
   COUNTER_FILE,
   E2E_ROOT,
   LIMIT_TRIGGER,
+  PROTOCOL_PATH,
   STALL_TRIGGER,
 } from "./setup";
 
@@ -6597,6 +6598,40 @@ test("a rule is added from a starting block: Add off until it is written, a refu
     await expect(region.getByRole("status")).toHaveCount(0);
     await region.getByRole("button", { name: "Cancel" }).click();
     await expect(field).toHaveCount(0);
+  } finally {
+    await page.emulateMedia({ colorScheme: "light" });
+    expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
+  }
+});
+
+test("a rule switched off is set back by colour, its row readable in both themes", async ({
+  page,
+}) => {
+  // The row was drawn at 55% opacity, which put its tags, its badge and
+  // "off" under AA contrast in both themes. No test had asked axe of a
+  // ruleset with a rule off.
+  const made = await page.request.post("/api/rulesets/import", {
+    data: {
+      name: "A ruleset with a rule off",
+      tier: "global",
+      markdown: readFileSync(PROTOCOL_PATH, "utf8"),
+    },
+  });
+  expect(made.status(), await made.text()).toBe(201);
+  const { rulesetId } = (await made.json()) as { rulesetId: string };
+  try {
+    await page.goto(`/rulesets/${rulesetId}`);
+    await expect(page.getByText("version 1", { exact: true })).toBeVisible();
+    const row = page.getByRole("row").filter({ hasText: "Unchecked Cast" });
+    await row.getByRole("checkbox").click();
+    await expect(page.getByText("version 2", { exact: true })).toBeVisible();
+    await expect(row.getByText("off", { exact: true })).toBeVisible();
+    for (const scheme of ["dark", "light"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      expect(await accessibilityViolations(page), scheme).toEqual([]);
+    }
+    expect(await row.evaluate((node) => getComputedStyle(node).opacity)).toBe("1");
+    await shootAll(page, page.getByRole("table"), "rule-switched-off");
   } finally {
     await page.emulateMedia({ colorScheme: "light" });
     expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
