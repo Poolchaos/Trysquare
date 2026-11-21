@@ -7201,3 +7201,17 @@ verified evidence, in writing, here.
   ten codes and the bar allows a template 15 rules, so a template that
   grows past the end of its range takes a new range, and the test fails
   until it does.
+- 2026-11-21 D-290 A report names every ruleset its review ran with
+  (RS-2a). RS-2 of `plans/RULESETS-TOGETHER-PLAN.md` is built in two
+  steps, this one first: built the other way round, one commit would
+  hold a server that starts a review with two rulesets and a report that
+  names one of them. `readReviewSnapshotMeta` answers with every row,
+  in the name order the rules are read in; the report's input holds a
+  list; the markdown says "Ruleset: X version 2" for one, as before, and
+  "Rulesets: X version 1, Y version 3" for more; the HTML report's last
+  line and the review page's say "against X v1, Y v3". Proven: the
+  repository's test failed on the old code, which answered with the
+  first by name; the journey reads the page's line for a review with
+  one and keeps its picture. Not provable in the browser yet: the line
+  with two, since nothing starts such a review until RS-2b. It is held
+  by the report's unit test, and its picture is owed with RS-2b.

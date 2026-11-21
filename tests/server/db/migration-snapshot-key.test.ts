@@ -86,10 +86,9 @@ describe("a snapshot written before a ruleset could be deleted (migration 0019)"
     expect(db.$client.prepare("SELECT * FROM review_rulesets").all()).toEqual(before);
     deleteRuleset(db, rulesetId);
     expect(db.$client.prepare("SELECT count(*) AS n FROM rulesets").get()).toEqual({ n: 0 });
-    expect(readReviewSnapshotMeta(db, reviewId)).toEqual({
-      rulesetName: "Example protocol",
-      rulesetVersion: 1,
-    });
+    expect(readReviewSnapshotMeta(db, reviewId)).toEqual([
+      { name: "Example protocol", version: 1 },
+    ]);
     // A review deleted still takes its snapshot with it.
     db.$client.prepare("DELETE FROM reviews WHERE id = ?").run(reviewId);
     expect(db.$client.prepare("SELECT count(*) AS n FROM review_rulesets").get()).toEqual({ n: 0 });

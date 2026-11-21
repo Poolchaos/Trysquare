@@ -1134,10 +1134,9 @@ describe("what a review is judged against", () => {
     const frozen = rulesets.readReviewSnapshot(db, reviewId).rules;
     expect(frozen.map((entry) => entry.code)).toEqual(live.map((entry) => entry.code));
     expect(frozen.find((entry) => entry.code === "4")?.raw).toBe(edited.rule.raw);
-    expect(rulesets.readReviewSnapshotMeta(db, reviewId)).toEqual({
-      rulesetName: "Kept in line",
-      rulesetVersion: version,
-    });
+    expect(rulesets.readReviewSnapshotMeta(db, reviewId)).toEqual([
+      { name: "Kept in line", version },
+    ]);
   }, 120_000);
 });
 

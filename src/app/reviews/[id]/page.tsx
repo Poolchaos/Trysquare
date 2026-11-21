@@ -261,8 +261,7 @@ interface ReportData {
     excludedPairs: number;
   };
   chainFilesRead: number;
-  rulesetName: string;
-  rulesetVersion: number;
+  rulesets: { name: string; version: number }[];
   model: string;
   effort: string;
   profile: string;
@@ -2258,9 +2257,9 @@ function RenderedReport({ data }: { data: ReportData }) {
 
       <footer className="mt-6 border-t border-[var(--color-border)] pt-3 text-aside text-[var(--color-ink-faint)]">
         <Mono>{data.model}</Mono> at effort {data.effort}, {data.profile} profile, against{" "}
-        {data.rulesetName} v{data.rulesetVersion}. Commit <Sha value={data.fromCommit} />, merge
-        base <Sha value={data.mergeBaseCommit} />. Cost equivalent $
-        {data.usage.costEquivalentUsd.toFixed(4)}.
+        {data.rulesets.map((ruleset) => `${ruleset.name} v${ruleset.version}`).join(", ")}. Commit{" "}
+        <Sha value={data.fromCommit} />, merge base <Sha value={data.mergeBaseCommit} />. Cost
+        equivalent ${data.usage.costEquivalentUsd.toFixed(4)}.
       </footer>
     </Card>
   );

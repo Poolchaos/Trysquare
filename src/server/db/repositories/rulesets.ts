@@ -947,7 +947,8 @@ export function hasReviewSnapshot(db: Db, reviewId: string): boolean {
  * directives are concatenated in a stable order.
  */
 /**
- * What the review was judged against, by name and version.
+ * What the review was judged against, by name and version: every ruleset
+ * frozen onto it, in the order their rules are read in.
  *
  * The report names these so a reader can tell which edition of a ruleset
  * produced the findings, without having to parse the frozen snapshot itself.
@@ -955,20 +956,20 @@ export function hasReviewSnapshot(db: Db, reviewId: string): boolean {
 export function readReviewSnapshotMeta(
   db: Db,
   reviewId: string,
-): { rulesetName: string; rulesetVersion: number } {
-  const row = db
+): { name: string; version: number }[] {
+  const rows = db
     .select()
     .from(reviewRulesets)
     .where(eq(reviewRulesets.reviewId, reviewId))
     .orderBy(asc(reviewRulesets.rulesetName))
-    .get();
+    .all();
 
-  if (!row) {
+  if (rows.length === 0) {
     throw new Error(
       `Review "${reviewId}" has no frozen ruleset, so there is nothing to report it against.`,
     );
   }
-  return { rulesetName: row.rulesetName, rulesetVersion: row.rulesetVersion };
+  return rows.map((row) => ({ name: row.rulesetName, version: row.rulesetVersion }));
 }
 
 export function readReviewSnapshot(db: Db, reviewId: string): ImportedRuleset {

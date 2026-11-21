@@ -947,6 +947,11 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     );
     await expect(examined).toBeVisible();
     await shootInThree(page, examined, "report-examined");
+    // The report's last line names what the review ran with: every ruleset,
+    // each with its version (RS-2a). This review ran with one.
+    const ranWith = page.locator("footer").filter({ hasText: "profile, against" });
+    await expect(ranWith).toContainText(/profile, against Example protocol v\d+\. Commit /);
+    await shootInThree(page, ranWith, "report-ran-with");
     await expect(page.getByText(/confirmed finding/)).toBeVisible();
     await expect(page.getByText(/app\/src\//).first()).toBeVisible();
     await expect(page.getByText(EDITED_COMMENT)).toBeVisible();

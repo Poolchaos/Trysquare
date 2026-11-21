@@ -227,8 +227,7 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
     },
     chainFilesRead,
 
-    rulesetName: meta.rulesetName,
-    rulesetVersion: meta.rulesetVersion,
+    rulesets: meta,
     model: review.model,
     effort: review.effort,
     profile: review.profileId,

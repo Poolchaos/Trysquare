@@ -142,8 +142,11 @@ from 2026-11-03.
   rule number. General keeps 1 to 12, TypeScript is 21 to 29, React 31
   to 38, HTTP API and database 41 to 48, and those three are at version
   3. A ruleset started from one of them before today keeps the numbers
-  it was started with. The server taking several rulesets (RS-2) is
-  next.
+  it was started with. A report names every ruleset its review ran
+  with, each with its version (RS-2a, D-290): the store could already
+  hold several for one review, and the report named the first by name.
+  The server taking several rulesets (RS-2b) is next: until it does,
+  nothing the app offers starts a review with more than one.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -151,7 +154,7 @@ from 2026-11-03.
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1674 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1676 unit tests passing, 8 skipped,
   and 167 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the

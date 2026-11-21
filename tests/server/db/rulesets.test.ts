@@ -206,10 +206,28 @@ describe("the ruleset a review is judged against", () => {
     expect(readReviewSnapshot(db, reviewId).rules.map((rule) => rule.code)).toEqual(
       PROTOCOL.rules.map((rule) => rule.code),
     );
-    expect(readReviewSnapshotMeta(db, reviewId)).toEqual({
-      rulesetName: "Example protocol",
-      rulesetVersion: 1,
+    expect(readReviewSnapshotMeta(db, reviewId)).toEqual([
+      { name: "Example protocol", version: 1 },
+    ]);
+  });
+
+  it("names every ruleset frozen onto the review, in the order their rules are read in", () => {
+    // A review judged against two was reported as judged against the first
+    // by name, so the report left a ruleset out (RS-2a).
+    const own = saveImportedRuleset(db, {
+      name: "A team's own",
+      tier: "project",
+      imported: importProtocol("# Own\n\n## Rules\n\n### 90. Dates\n\n**Rule:** Dates are UTC.\n")
+        .ruleset,
     });
+    writeReviewSnapshot(db, reviewId, save().rulesetId);
+    writeReviewSnapshot(db, reviewId, own.rulesetId);
+
+    expect(readReviewSnapshotMeta(db, reviewId)).toEqual([
+      { name: "A team's own", version: 1 },
+      { name: "Example protocol", version: 1 },
+    ]);
+    expect(readReviewSnapshot(db, reviewId).rules[0]?.code).toBe("90");
   });
 
   it("is frozen at the review, not read live", () => {

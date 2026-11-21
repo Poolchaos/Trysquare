@@ -45,8 +45,7 @@ const BASE: ReportInput = {
     excludedPairs: 0,
   },
   chainFilesRead: 3,
-  rulesetName: "Example protocol",
-  rulesetVersion: 2,
+  rulesets: [{ name: "Example protocol", version: 2 }],
   model: "claude-fable-5[1m]",
   effort: "high",
   profile: "full-context",
@@ -234,6 +233,23 @@ describe("the footer that makes a report reproducible", () => {
     expect(report).toContain("Ruleset: Example protocol version 2");
     expect(report).toContain("Model: claude-fable-5[1m], effort high, profile full-context");
     expect(report).toContain(`Reviewed: ${"a".repeat(40)} against merge base ${"b".repeat(40)}`);
+  });
+
+  it("names every ruleset the review ran with, each with its version", () => {
+    // One was named whatever the review ran with (RS-2a).
+    const two = {
+      ...BASE,
+      rulesets: [
+        { name: "General", version: 1 },
+        { name: "Type<Script>", version: 3 },
+      ],
+    };
+    expect(renderReport(two)).toContain(
+      "- Rulesets: General version 1, Type\\<Script\\> version 3",
+    );
+    expect(renderReport(two)).not.toContain("- Ruleset:");
+    expect(renderReportHtml(two)).toContain("against General v1, Type&lt;Script&gt; v3.");
+    expect(renderReportHtml(BASE)).toContain("against Example protocol v2.");
   });
 
   it("separates cached tokens from fresh ones, cache writes too", () => {
