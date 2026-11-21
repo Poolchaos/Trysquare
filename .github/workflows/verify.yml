@@ -64,6 +64,7 @@ jobs:
       # ruleset, its twelve plants and their look-alikes as the change.
       - run: npm run demo:template -- general --fake
       - run: npm run demo:template -- typescript --fake
+      - run: npm run demo:template -- react --fake
 
       # Windows once refused a loopback connect with WSAENOBUFS, Chromium's
       # ERR_NO_BUFFER_SPACE (D-100), while the suite's own peak was 267

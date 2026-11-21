@@ -6999,3 +6999,21 @@ verified evidence, in writing, here.
   to matter; prop naming and file layout, which are taste; the rest of
   WCAG, which is the design check's to grade from a screenshot and not a
   code rule's.
+- 2026-11-21 D-282 The React template's fixture
+  (`tests/fixtures/build-react-fixture.mjs`, RT-4b): the screens of a
+  small shop, eight plants and eight look-alikes each with its test, 24
+  files changed, counted by the demo. Data over the shared builder and
+  held by the shared checks, as D-280 set out; nothing new was decided
+  for it. Each look-alike makes the planted change the right way: the
+  same early return with the hooks moved into a component of their own,
+  an effect that names what it reads, an interval stopped, a late reply
+  ignored, a value worked out while rendering, a list replaced through
+  its setter, rows keyed by their order, a row opened by a button. Run on
+  the fake engine: 8/8 plants, nothing in a clean file. Not run: a real
+  model.
+- 2026-11-21 CI run 44912567460 at 310a955 failed on Windows alone, in a
+  browser test older than this session's work: `page.goto` of the
+  projects screen was refused with net::ERR_NO_BUFFER_SPACE, the loopback
+  fault Windows CI has shown before (D-104, D-105). Ubuntu and macOS
+  passed, and Windows had passed the three runs before it. Recorded and
+  left (D-246).

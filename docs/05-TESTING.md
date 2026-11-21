@@ -197,8 +197,10 @@ with `--real` it asks a model (RT-6a, RUNBOOK). CI runs the fake form.
 
 The TypeScript template's fixture is built the same way
 (`build-typescript-fixture.mjs`, RT-3b): an orders service in strict
-TypeScript, nine plants and nine look-alikes. Both builders are data over
-one helper, `tests/fixtures/template-fixture.mjs`, and both are held by
+TypeScript, nine plants and nine look-alikes. So is the React template's
+(`build-react-fixture.mjs`, RT-4b): the screens of a small shop, eight
+plants and eight look-alikes. The builders are data over
+one helper, `tests/fixtures/template-fixture.mjs`, and all are held by
 `tests/templates/fixture-checks.ts`. A key also carries what its change
 says it is for, a truthful account that names no fault: the review is
 told it, and holds the code against it.
