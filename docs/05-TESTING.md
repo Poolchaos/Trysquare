@@ -173,6 +173,26 @@ a clean screen failed by both graders, or by one);
 `tests/scripts/design-demo.test.ts` runs that on the fake engine, and
 `npm run demo:design -- --real` runs it on a real model (WP-J).
 
+## 4c. A template's fixture (RT-2b)
+
+Each template on the shelf has a fixture that says whether it finds what
+it claims to. `tests/fixtures/build-general-fixture.mjs` builds the
+General template's: a small storefront service whose
+`feature/checkout-fixes` branch breaks each of the template's twelve rules
+once and, beside each plant, makes a change of the same shape that is
+right, with the test that proves it. The key names each plant's file,
+line, rule and severity, and the look-alikes as files a finding must not
+land in; lines are found by marker text in the files as built.
+
+`tests/templates/general-fixture.test.ts` holds the fixture without a
+model: one plant per rule at the rule's severity, each on a line the
+change adds (the removed guard keyed to where it stood), no file changed
+that is neither a plant nor a look-alike, and the template's own sweep
+patterns hitting the plants of the rules that have one and no other added
+line. The plants carry no tests, so a finding under rule 8 in a planted
+file is the rule working; a run is scored by file and line, as the seeded
+fixture's is. The command that reviews it is not built (RT-6a).
+
 ## 5. Numbers or silence
 
 Any claim about review runtime, token usage, or app performance ships with

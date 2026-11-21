@@ -96,14 +96,17 @@ from 2026-11-03.
   now asks of every rule. A ruleset is started from it on the Rulesets
   screen (RT-1b, D-276): the form opens on A template, and Use this
   template makes a ruleset the person owns and opens it. The template
-  has not been run against a model, and says so where it is picked: its
-  fixture is RT-2b and the run is the maintainer's to start (RT-6).
+  has not been run against a model, and says so where it is picked. Its
+  fixture is built (RT-2b, D-277): a repository with one plant per rule
+  and a clean look-alike beside each, its key held by a test. The command
+  that reviews it is next (RT-6a), and the run on a real model is the
+  maintainer's to start (RT-6).
   A sweep row whose pattern holds a pipe gives its rule the pattern
   (D-275): escaped as a table asks, or bare inside its backticks, it was
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1635 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1639 unit tests passing, 8 skipped,
   and 164 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
@@ -524,6 +527,9 @@ are accepted; anything else is refused by name.
   fidelity gate runs against.
 - `tests/fixtures/fake-claude.mjs` - stand-in CLI, so tests are hermetic and
   cost nothing.
+- `tests/fixtures/build-general-fixture.mjs` - the General template's
+  fixture: one plant per rule, a clean look-alike beside each, and a key
+  (RT-2b, 05-TESTING section 4c).
 - `tests/fixtures/build-design-fixture.mjs` - the design fixture, screens
   with planted design defects and a key proven by measurement (WP-I
   step 6, 05-TESTING section 4b).
@@ -603,9 +609,10 @@ own now (D-75, D-81).
   maintainer's mailbox; where a result goes is set in the app.
 - Ruleset templates shipped with the app: in scope since D-251, planned
   in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). Built: the shelf, the General template on it, and a ruleset
-  started from it on the Rulesets screen (RT-1a, RT-2a, RT-1b). Not built:
-  the General template's fixture and its run against a model, and the
-  TypeScript, React, and HTTP and database templates. A ruleset is started with
+  started from it on the Rulesets screen, and the General template's
+  fixture (RT-1a, RT-2a, RT-1b, RT-2b). Not built: the command that
+  reviews that fixture and its run against a model, and the TypeScript,
+  React, and HTTP and database templates. A ruleset is started with
   no document (RA-6, D-272), and a rule can be switched off, its severity
   changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
   removed (RA-4, D-269), and one ruleset deleted (RA-1, D-266). Process

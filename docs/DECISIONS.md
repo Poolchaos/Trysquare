@@ -6865,3 +6865,24 @@ verified evidence, in writing, here.
   Not done here, and in the inbox since round 19: the new-review picker, a
   draft review and the dashboard's first line still name importing as the
   way to a first ruleset.
+- 2026-11-21 D-277 The General template's fixture
+  (`tests/fixtures/build-general-fixture.mjs`, RT-2b): a storefront
+  service whose feature branch breaks each of the twelve rules once, and
+  beside each plant makes a change of the same shape that is right. 35
+  files change, 12 planted and 23 clean, counted by the test. Decided with
+  it. First, a look-alike that is code carries a test in the same change:
+  without one it is itself a finding under rule 8, and a clean file a
+  correct reviewer flags scores the template down for being right. The
+  plants carry none, so rule 8 may be cited in any planted file, and the
+  key counts a finding by file and line as the seeded fixture's does,
+  never by the rule named. Second, the key's lines come from marker text
+  in the files as built. The removed guard has no line of its own left,
+  and is keyed to the call it guarded, one line below. Third, the fixture
+  is held without a model: every rule planted at its own severity, nothing
+  changed outside plants and look-alikes, and the template's sweep
+  patterns hitting the six plants whose rules have one and no other added
+  line, so a sweep hit in a run on this fixture is a plant. Fourth, the
+  command that reviews it is a row of its own (RT-6a), before the runs it
+  serves. Not known until a model has run it: whether a model finds the
+  twelve and leaves the 23 alone. That is what the fixture is for, and the
+  run is the maintainer's to start.
