@@ -7429,7 +7429,7 @@ test("the addresses a result goes to are kept on Settings, which says nothing is
     // Said before the field, on a line of its own: an address typed here
     // does nothing yet.
     await expect(card).toContainText(
-      "A review's result will be emailed to the first address here.",
+      "The addresses a review's result is to be emailed to. The first is the default.",
     );
     await expect(
       card.getByText(

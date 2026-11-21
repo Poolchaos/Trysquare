@@ -623,17 +623,14 @@ export default function SettingsPage() {
             {/* Said before the field, and in the page's own ink, not the grey of a
                 description: an address typed here does nothing yet. */}
             <p className="mb-1 text-xs text-[var(--color-ink-muted)]">
-              A review&apos;s result will be emailed to the first address here.
+              The addresses a review&apos;s result is to be emailed to. The first is the default.
             </p>
             <p className="mb-3 text-sm">
               No mail account is set up yet, so nothing is sent. Addresses are kept for later.
             </p>
             {settings === null ? null : (
               <div className="grid gap-1">
-                <Field
-                  label="Addresses, one per line"
-                  hint="The first is the one a review is offered. Saved when you leave the field."
-                >
+                <Field label="Addresses, one per line" hint="Saved when you leave the field.">
                   <Textarea
                     rows={3}
                     defaultValue={settings.resultAddresses.join("\n")}

@@ -72,7 +72,7 @@ SQLite driver, the CLI and its sign-in (the installed CLI or the one
 `TRYSQUARE_CLAUDE_PATH` names, not a path kept on Settings), the data
 directory, and whether a ruleset is stored. A FAIL stops the start; a WARN is said and the app starts.
 A fresh data directory has no ruleset: on the Rulesets screen start one
-from the General template, import one, or start one with no document, or
+from a template, import one, or start one with no document, or
 seed it from a file with
 `npm run rules:seed` (README, Seeding your company's rules).
 

@@ -134,6 +134,8 @@ from 2026-11-03.
   Settings (EM-2a, D-286), in a card that says no mail account is set up
   yet and nothing is sent. A ruleset's page says that a severity changed
   with the picker is not written into the exported document (D-287).
+  The review pass over the three (round 23, in DECISIONS) took two
+  sentences about what is not built yet off that card.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern

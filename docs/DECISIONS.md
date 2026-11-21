@@ -7140,3 +7140,22 @@ verified evidence, in writing, here.
   and D-267 keeps the picker from rewriting a rule's text. A person who
   wants a severity to travel with the document changes the Severity line
   in the rule's text, which the page's Edit text does.
+- 2026-11-21 Review round 23, over the first-run wording, the addresses
+  card and the export sentence (31805cf, 95eb272, 890260d): two findings.
+  1: the card on Settings said a result "will be emailed to the first
+  address here" and that the first "is the one a review is offered".
+  Nothing emails a result and no review offers an address: both are EM-3
+  and EM-4, not built, and this repository makes no claim about code that
+  does not exist. The card now says what the list is ("The addresses a
+  review's result is to be emailed to. The first is the default.") beside
+  the line that nothing is sent yet, and the field's hint says only when
+  it is saved. 2: the RUNBOOK's note on a fresh data directory named the
+  General template where four stand on the shelf; it says a template.
+  Read again and left: the address check, which refuses a name, a second
+  address, a comma, a line break and a host with no dot before any of
+  them could reach a header; the four first-run sentences against the
+  form they point to; the accessibility helper's wait, which a paused
+  animation would hold until the test's own time ran out, where it would
+  be seen. Not changed: `themes.spec.ts` waits the old way, on the
+  promise, and never switches theme within a test, which is when
+  Chromium left it unsettled.
