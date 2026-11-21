@@ -72,6 +72,18 @@ describe("GET /api/ruleset-templates", () => {
           modelRun: null,
           ruleCount: 9,
         },
+        {
+          slug: "react",
+          name: "React",
+          purpose:
+            "Where a change tells React less than is true, or leaves a person unable to use " +
+            "what was drawn: a hook called out of order, an effect gone stale or left running, " +
+            "state that disagrees with itself, a list keyed by position, a control the keyboard " +
+            "cannot reach.",
+          version: 1,
+          modelRun: null,
+          ruleCount: 8,
+        },
       ],
     });
   });

@@ -152,7 +152,7 @@ anything is spent, a pre-flight tells you what would be examined: the commits
 it would pin, the file and hunk counts, the sweep hits, and how many model
 requests it expects to make.
 
-A ruleset is started from a template the app ships (General or TypeScript), or imported by
+A ruleset is started from a template the app ships (General, TypeScript or React), or imported by
 pasting a markdown protocol document, which becomes numbered rules and process
 directives; the import is refused if it produces no rules. A ruleset can also
 be started with no document and its rules written in the app. On a ruleset's page a rule is switched off, given another severity,
@@ -346,8 +346,9 @@ platform. Run `npm run doctor` on its own if that step fails.
 
 A fresh install has no rulesets, and a review is judged against one. On the
 Rulesets screen, start one from a template the app ships (General, twelve
-rules for any change in any language, or TypeScript, nine on where a change
-makes the compiler prove less; neither yet run against a model), import
+rules for any change in any language; TypeScript, nine on where a change
+makes the compiler prove less; React, eight on hooks, state and what people
+can reach; none yet run against a model), import
 your protocol by pasting it, or start a ruleset with no document and write
 its rules in the app. Or seed the protocol from a file:
 

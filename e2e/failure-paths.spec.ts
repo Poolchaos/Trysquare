@@ -7201,7 +7201,7 @@ test("a ruleset is started with no document: a name and a tier, nothing to expor
   }
 });
 
-test("the template shelf is read by the server as built, and holds its two templates (RT-1 to RT-3)", async ({
+test("the template shelf is read by the server as built, and holds its three templates (RT-1 to RT-4)", async ({
   page,
 }) => {
   // The shelf is a folder outside `src/`, read at run time: a build that
@@ -7222,6 +7222,13 @@ test("the template shelf is read by the server as built, and holds its two templ
         name: "TypeScript",
         version: 1,
         ruleCount: 9,
+        modelRun: null,
+      }),
+      expect.objectContaining({
+        slug: "react",
+        name: "React",
+        version: 1,
+        ruleCount: 8,
         modelRun: null,
       }),
     ],

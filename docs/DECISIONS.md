@@ -6977,3 +6977,25 @@ verified evidence, in writing, here.
   model was asked. The account is truthful and names no fault. Run on the
   fake engine after both: 9/9 and 12/12 plants, nothing in a clean file,
   and the seeded demo 11/11. Not run: a real model, on either fixture.
+- 2026-11-21 D-281 The React template (`templates/react.md`, RT-4a):
+  eight rules. A hook called where React cannot count on it; an effect
+  that reads what it does not declare; an effect that leaves something
+  running; an effect that takes a late reply for the current one; a
+  derived value kept in state; state changed in place; a key that does
+  not name the item; a control a keyboard cannot reach. Sources, read
+  2026-11-21 and linked in each rule: react.dev's Rules of Hooks, State:
+  A Component's Memory, useEffect, useState, You Might Not Need an
+  Effect, Updating Objects in State and Rendering Lists, and for the last
+  rule W3C's Understanding Success Criterion 2.1.1 (Keyboard, Level A).
+  Two reasons were first written from what is commonly said and were put
+  right before the text was used: why a hook after an early return breaks
+  (the stable call order, said on the page about state and not on the
+  rules page) and why a setter handed the same object draws nothing (the
+  Object.is comparison, said on the useState page). Its sections are
+  named so every rule is put to component files and to no other, held by
+  a test. As the TypeScript template does, it says to report nothing
+  where the project's lint rules already fail the build on the pattern.
+  Left out: memoisation and re-render counts, which a diff cannot prove
+  to matter; prop naming and file layout, which are taste; the rest of
+  WCAG, which is the design check's to grade from a screenshot and not a
+  code rule's.
