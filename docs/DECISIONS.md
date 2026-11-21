@@ -6749,3 +6749,35 @@ verified evidence, in writing, here.
   In the inbox: the ruleset's page does not say that a severity changed
   there is left out of the export, and three screens name importing as the
   one way to a first ruleset.
+- 2026-11-21 D-273 The template shelf is a folder of the repository,
+  `templates/`: a protocol document per template, `<slug>.md`, and
+  `shelf.json` beside them with each one's name, what it is for, its
+  version and the model run that proved it, or none
+  (`plans/RULESET-TEMPLATES-PLAN.md`, RT-1). The server reads it at run
+  time from the directory it is started in, as it finds the installed CLI,
+  and a browser test asks the built server for the list, which settles
+  the plan's spike. What a template is for is kept beside the document and
+  not in it: a line at the head of a protocol document is a directive, and
+  would be given to the model. The bar's checkable parts (1, 3 and 5) are
+  one function, and the reader runs it over every document each time the
+  shelf is read, so a template under the bar is not listed and the answer
+  says why; the plan had them as tests alone. RT-1 is split, and its
+  order changed. The plan had the shelf built against the example protocol
+  as its first entry and the bar's tests run over every file on the
+  shelf, and both cannot hold: measured, the example protocol falls short
+  of the bar in 15 ways (eight rules with no correct pattern, two with no
+  violation example, two with no detection, three sweep patterns that
+  match no line of their own rule's violation example). It is the
+  importer's fixture, exact figures of it are asserted across the suite,
+  and it is not offered as a template. So RT-1a is the server half, proven
+  on shelves made in the tests, and the shelf ships empty; RT-2, the
+  General template, comes next; RT-1b, the shelf on the Rulesets screen
+  and "Use this template", follows it, built and shot against a real
+  template. Rejected: listing the example protocol as a template exempt
+  from the bar, which offers a person the thing the bar exists to keep
+  from them; bringing the example protocol up to the bar, which rewrites a
+  fixture that 29 files of the tests and scripts read; and an environment
+  variable naming another shelf so the screen could be shot against a
+  stand-in, a setting nobody asked for. A severity the importer would take as another (ERROR,
+  or a word it does not know) is under the bar: a template names the one
+  of the three it means.

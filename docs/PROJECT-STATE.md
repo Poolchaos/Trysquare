@@ -86,7 +86,15 @@ from 2026-11-03.
   imports back as what is stored, where a severity changed with the picker
   is not in the document. `./verify.sh --e2e` exits 0 with 1610 unit tests
   passing, 8 skipped, and 162 browser tests.
-  `plans/RULESET-TEMPLATES-PLAN.md` RT-1 is next.
+  The template shelf's server half is built (RT-1a, D-273): template
+  documents live in the repository's `templates/` folder, listed by
+  `GET /api/ruleset-templates`, and each is held to the plan's bar as it
+  is read (every part of every rule, every sweep pattern borne out by
+  its own rule's examples, fifteen rules at most). The shelf holds no
+  template yet and no screen shows it; the General template is next
+  (RT-2), then the shelf on the Rulesets screen (RT-1b).
+  `./verify.sh --e2e` exits 0 with 1624 unit tests passing, 8 skipped,
+  and 163 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the
@@ -459,7 +467,8 @@ are accepted; anything else is refused by name.
   findings list says while it is empty, when a run's ending is said, which
   reviews Needs you lists and what each row says); `rulesets`
   (the ruleset's shape, import with a fidelity gate, prompt composition and
-  batch planning, a directive section's name in words);
+  batch planning, a directive section's name in words, the bar a template
+  is held to);
   `settings` (the CLI path, the emails that count as the person's); and
   paths, ids and matching an error by the
   name its class sets.
@@ -487,9 +496,11 @@ are accepted; anything else is refused by name.
   `cli-path.ts` and `cli-readiness.ts` - which CLI reviews use and whether
   it can run one; `identities.ts` - which emails count as the person's;
   `real-path.ts` - a path resolved through its links.
+- `src/server/rulesets/` - the template shelf, read from `templates/` at
+  run time.
 - `src/server/api/` - one response shape for every route.
 - `src/proxy.ts` - the request guard in front of every route (MVP WP 2.3).
-- `src/app/api/` - 43 route handlers. `src/app/` - 9 screens, plus a root
+- `src/app/api/` - 44 route handlers. `src/app/` - 9 screens, plus a root
   error boundary, a not-found page, and a metadata layout per segment.
 - `src/components/` - the shared UI vocabulary, the top bar, and the
   confirmation queue.
@@ -510,6 +521,8 @@ are accepted; anything else is refused by name.
   failure paths, the theme and screenshot pass with the axe accessibility
   pass, and the shutdown pass.
   `drizzle/` - twenty committed migrations.
+- `templates/` - the template shelf: `shelf.json`, and a protocol document
+  per template once there is one.
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and
@@ -576,7 +589,9 @@ own now (D-75, D-81).
   `plans/EMAIL-REPORT-PLAN.md` (D-264). Its sender waits on the
   maintainer's mailbox; where a result goes is set in the app.
 - Ruleset templates shipped with the app: in scope since D-251, planned
-  in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). A ruleset is started with
+  in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). The shelf is read and
+  listed by the server (RT-1a); it holds no template and no screen shows
+  it. A ruleset is started with
   no document (RA-6, D-272), and a rule can be switched off, its severity
   changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
   removed (RA-4, D-269), and one ruleset deleted (RA-1, D-266). Process

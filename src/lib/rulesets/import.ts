@@ -121,7 +121,7 @@ export function parseSeverity(body: string): Severity {
 }
 
 /** A line that opens or closes a code fence, as every reader here takes it. */
-const isFenceLine = (line: string): boolean => line.trimStart().startsWith("```");
+export const isFenceLine = (line: string): boolean => line.trimStart().startsWith("```");
 
 /**
  * The line of a code fence that is opened and never closed, 1-indexed. Every

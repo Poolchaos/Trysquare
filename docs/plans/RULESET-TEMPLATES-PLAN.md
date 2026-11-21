@@ -1,7 +1,8 @@
 # Ruleset templates plan
 
-Status: DRAFT. Written 2026-11-20, for D-251's scope (CP-12): "best
-quality and world class templates". Decided by the session; the maintainer
+Status: IN BUILD. RT-1a DONE 2026-11-21; RT-2 is next (D-273). Written
+2026-11-20, for D-251's scope (CP-12): "best quality and world class
+templates". Decided by the session; the maintainer
 reverses what he does not want.
 
 ## 0. How to work this plan (non-negotiable)
@@ -93,14 +94,15 @@ bounded by the fifteen. Evidence: each rule's cited source.
 
 | WP   | Scope | Blocked on | Status |
 | ---- | ----- | ---------- | ------ |
-| RT-1 | The shelf. Where template files live and how the server reads them from a build (a short spike: a file outside `src/` read at run time under `npm run start`, with the build's tracing warning in `PROJECT-STATE.md` in mind). The Rulesets screen lists the templates with a name, what each is for, its rule count and whether it has been run against a model; "Use this template" imports it as a new ruleset the person owns. Built against the example protocol as the first entry, so the path is proven before any content is written. The tests of bar 1, 3 and 5 run over every file on the shelf. | - | TODO |
-| RT-2 | The General template, to the bar. Its fixture: one planted violation per rule and a clean look-alike beside each, with a key. | RT-1 | TODO |
+| RT-1a | The shelf, its server half (D-273). Template documents live in the repository's `templates/` folder, `<slug>.md` each, with `shelf.json` beside them saying what each is for, its version and the model run that proved it, if one has. The server reads the folder at run time and lists it; the tests of bar 1, 3 and 5 are one function the reader runs over every document, so a template that falls short is never listed. | - | DONE 2026-11-21, the commit after cf10ce4 (D-273). As built: `templateBarFailures` (`lib/rulesets/template-bar.ts`), `readShelf` (`server/rulesets/shelf.ts`) and `GET /api/ruleset-templates`. A shelf that is not whole answers with the reason: an index that cannot be read or is not in its shape, a template listed twice or with no document, a document the index does not list, a document under the bar. The shelf ships with no template, and a test names the templates it holds so one that reads as empty by mistake fails. A browser test asks the built server for the list: the folder is found under `npm run start`. Not as first written: the example protocol is not the first entry. Measured against the bar it falls short in 15 ways (eight rules with no correct pattern, two with no violation example, two with no detection, and three sweep patterns that match no line of their rule's violation example), and it stays the importer's fixture. |
+| RT-1b | The shelf on the Rulesets screen: the templates listed with a name, what each is for, its rule count and whether it has been run against a model; "Use this template" imports it as a new ruleset the person owns, the template's name and version in its description. | RT-2, so the screen is built and shot against a real template | TODO |
+| RT-2 | The General template, to the bar. Its fixture: one planted violation per rule and a clean look-alike beside each, with a key. | RT-1a | TODO |
 | RT-3 | The TypeScript template and its fixture. | RT-2 | TODO |
 | RT-4 | The React template and its fixture. | RT-3 | TODO |
 | RT-5 | The HTTP API and database template and its fixture. | RT-4 | TODO |
 | RT-6 | The model runs: each template's fixture reviewed once on the recommended pair, scored against its key, the evidence committed under `docs/evidence/` (D-261). A rule the model misses or raises on the clean look-alike is rewritten and run again. | RT-2 to RT-5, the maintainer's go per run | TODO (maintainer starts each) |
 | RT-7 | The Firebase template. | RT-6, the maintainer's word | TODO |
-| RT-8 | Records: README (first steps start from a template), RUNBOOK, 04, `PROJECT-STATE.md`. | RT-1 to RT-5 | TODO |
+| RT-8 | Records: README (first steps start from a template), RUNBOOK, 04, `PROJECT-STATE.md`. | RT-1a to RT-5 | TODO |
 
 ## 3. What can go wrong, and what holds it
 
@@ -128,4 +130,4 @@ named first.
 
 ## 5. Review cadence
 
-A structured review pass after RT-1 and after each template.
+A structured review pass after RT-1b and after each template.
