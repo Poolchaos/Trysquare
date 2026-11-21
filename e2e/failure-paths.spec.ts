@@ -1883,6 +1883,14 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
     .filter({ has: page.getByRole("link", { name: "app", exact: true }) });
   await expect(project).toContainText("paused limit");
   expect(await project.getByText("no findings").count()).toBe(0);
+  // Needs you lists it (D-259): it goes on only when a person presses
+  // Resume, and the widget said nothing was waiting on them.
+  const paused = dashboard
+    .getByRole("list", { name: "Needs you" })
+    .locator(`a[href="${new URL(pausedAt).pathname}"]`);
+  await expect(paused).toContainText("paused at the usage limit: Resume once it clears");
+  await expect(paused).toContainText(/waiting (under a minute|\d+[mhd])/);
+  expect(await dashboard.getByText("Nothing is waiting on you.").count()).toBe(0);
   await shootAll(page, dashboard, "dashboard-paused-at-limit");
   await page.goto(pausedAt);
   await expect(page.getByText("paused limit")).toBeVisible({ timeout: 30_000 });

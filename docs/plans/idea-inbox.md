@@ -227,7 +227,9 @@ pulled deliberately.
   waiting on a Resume belongs there is the maintainer's. Seen grading
   `dashboard-paused-at-limit-light.png`, where the pause is said only by
   the status chips and the bar. DECIDED 2026-11-20 (D-259): it belongs
-  there, to build.
+  there, to build. BUILT 2026-11-21: each such row says the stop and the
+  button, "paused at the usage limit: Resume once it clears" for a pause,
+  since a Resume pressed before the limit clears pauses again.
 - 2026-11-20, a question for the maintainer: the dashboard's "Invention
   rate" counts every finding the quotation check killed, and that check
   also kills a proof that quotes true code off the lines the finding

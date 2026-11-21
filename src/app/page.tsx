@@ -30,6 +30,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
+import { needsYouLine, type NeedsYouStatus } from "@/lib/review/needs-you";
 import { runTimeParts } from "@/lib/review/run-time";
 
 interface Row {
@@ -49,6 +50,7 @@ interface Row {
 
 interface AwaitingRow {
   id: string;
+  status: NeedsYouStatus;
   projectName: string;
   fromBranch: string;
   intoBranch: string;
@@ -439,7 +441,7 @@ export default function HomePage() {
                   Nothing is waiting on you.
                 </p>
               ) : (
-                <ul className="grid gap-1">
+                <ul className="grid gap-1" aria-label="Needs you">
                   {board.awaitingReviews.map((row) => (
                     <li key={row.id}>
                       <Link
@@ -454,9 +456,13 @@ export default function HomePage() {
                             {row.projectName}
                           </span>
                         </span>
-                        <span className="text-dense tabular-nums">
-                          {row.total > 0 ? `${row.decided} of ${row.total} decided` : "no findings"}
-                          <span className="ml-3 text-[var(--color-ink-muted)]">
+                        {/* A row waiting on a Resume says more than a phone's
+                            width holds: the wait goes under the line whole,
+                            and the line is balanced, where it left its last
+                            word alone on a second one (D-259). */}
+                        <span className="flex flex-wrap gap-x-3 text-dense tabular-nums">
+                          <span className="text-balance">{needsYouLine(row)}</span>
+                          <span className="text-[var(--color-ink-muted)]">
                             {/* A wait is a span, so "waiting 2m", as a run's
                                 elapsed time is said, not "waiting 2m ago". */}
                             {row.since === null ? "waiting" : `waiting ${elapsed(row.since, now)}`}

@@ -117,11 +117,15 @@ precision is a claim about findings somebody judged.
   dismissed, a finding left out unproven counting as neither, D-190) and proofs discarded (the quotation check's kills, of the findings raised; named "Invention rate" until D-252), in large tabular
   numerals. The cost equivalent alone has a sparkline, from this machine's own
   history; it needs two points to be a line and draws nothing below that.
-- **Needs you:** every review awaiting a decision, oldest wait first, each
-  row carrying its branch pair, project, decided-of-total and age, and
-  linking straight into that queue. The count in the bar says there is work;
-  this says where it is. Empty, it says so in one line and takes no more
-  room than that.
+- **Needs you:** every review that goes on only when a person acts, oldest
+  wait first: one awaiting a decision, and one waiting on a Resume (paused
+  at the usage limit, interrupted, failed; D-259). Each row carries its
+  branch pair, project and age, and says which it is: decided-of-total, or
+  the stop and the button to press. A row links straight into its review.
+  The count in the bar is of decisions alone; this says where the work is.
+  Empty, it says so in one line and takes no more room than that. A failed
+  review cannot be cancelled, so one never resumed is listed until it is
+  deleted.
 - **Live scan:** while a review runs, its stage gauge, current stage,
   elapsed, spend so far, and a way into the scan theater. When nothing runs
   it is absent, not empty: a panel labelled live with nothing in it is the

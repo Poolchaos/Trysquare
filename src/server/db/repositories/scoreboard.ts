@@ -18,6 +18,7 @@
  */
 
 import { desc, eq } from "drizzle-orm";
+import { needsAPerson, type NeedsYouStatus } from "@/lib/review/needs-you";
 import { ranBefore, runTimeMs } from "@/lib/review/run-time";
 import type { Db } from "../client";
 import { checkFindings, findings, projects, reviews } from "../schema";
@@ -49,6 +50,8 @@ export interface RuleYield {
 
 export interface AwaitingReview {
   id: string;
+  /** What it waits on a person for: a decision, or a Resume (D-259). */
+  status: NeedsYouStatus;
   projectName: string;
   fromBranch: string;
   intoBranch: string;
@@ -66,7 +69,8 @@ export interface AwaitingReview {
   total: number;
   /**
    * When the run ended, so when the wait began. Null on a review from before
-   * that was recorded whose rows do not say (D-248).
+   * that was recorded whose rows do not say (D-248), and on one a restart
+   * interrupted, whose end nobody saw.
    */
   since: string | null;
 }
@@ -88,7 +92,7 @@ export interface Scoreboard {
   /** Killed by the quotation check over everything raised. Null until then. */
   proofsDiscardedRate: number | null;
   awaiting: number;
-  /** The reviews behind that count, so the screen can list them. */
+  /** The reviews behind that count and those waiting on a Resume, for the screen to list. */
   awaitingReviews: AwaitingReview[];
   /** Cost of each completed review, oldest first, for a shape over time. */
   spendHistory: number[];
@@ -223,16 +227,22 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     // Oldest wait first: the review that has been waiting longest is the one
     // most likely to have been forgotten.
     awaitingReviews: reviewRows
-      .filter((review) => review.status === "awaiting_confirmation")
-      .map((review) => ({
-        id: review.id,
-        projectName: review.projectName,
-        fromBranch: review.fromBranch,
-        intoBranch: review.intoBranch,
-        decided: byReview.get(review.id)?.decided ?? 0,
-        total: byReview.get(review.id)?.queued ?? 0,
-        since: review.runEndedAt,
-      }))
+      .flatMap((review) =>
+        needsAPerson(review.status)
+          ? [
+              {
+                id: review.id,
+                status: review.status,
+                projectName: review.projectName,
+                fromBranch: review.fromBranch,
+                intoBranch: review.intoBranch,
+                decided: byReview.get(review.id)?.decided ?? 0,
+                total: byReview.get(review.id)?.queued ?? 0,
+                since: review.runEndedAt,
+              },
+            ]
+          : [],
+      )
       // ISO times, so the least string is the oldest. One with no time last.
       .sort((a, b) =>
         a.since === null || b.since === null

@@ -222,6 +222,42 @@ describe("what the dashboard widgets need", () => {
     expect(board.awaitingReviews[0]?.fromBranch).toBe("feature/x");
   });
 
+  it("lists a review that goes on only at a Resume, each row saying which it is (D-259)", () => {
+    // Needs you said nothing was waiting over a review stopped at the usage
+    // limit. One cancelled, or still running, wants nothing from anybody.
+    const made = (name: string) => seedReview(db, seedProject(db, name).id).id;
+    const [paused, interrupted, failed, cancelled, running] = [
+      made("paused"),
+      made("interrupted"),
+      made("failed"),
+      made("cancelled"),
+      made("running"),
+    ];
+    for (const id of [paused, interrupted, failed, cancelled, running]) {
+      transitionReview(db, id, "running");
+    }
+    transitionReview(db, paused, "paused_limit");
+    // As a restart leaves one: nobody saw its run end.
+    transitionReview(db, interrupted, "interrupted", { runEndUnseen: true });
+    transitionReview(db, failed, "failed");
+    transitionReview(db, cancelled, "cancelled");
+    waitOnAPerson();
+
+    const board = readScoreboard(db);
+    expect(new Map(board.awaitingReviews.map((row) => [row.id, row.status]))).toEqual(
+      new Map([
+        [reviewId, "awaiting_confirmation"],
+        [paused, "paused_limit"],
+        [interrupted, "interrupted"],
+        [failed, "failed"],
+      ]),
+    );
+    // No time to wait from, so last.
+    expect(board.awaitingReviews.at(-1)).toMatchObject({ id: interrupted, since: null });
+    // The top bar's count stays the decisions to make.
+    expect(board.awaiting).toBe(1);
+  });
+
   it("dates a wait from when the run ended, not from when the review was made", () => {
     // A waiting review has no completion time, so the wait was counted from
     // its creation: one made on Monday and run on Friday had waited a week.

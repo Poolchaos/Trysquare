@@ -13,6 +13,12 @@ from 2026-11-03.
 
 ## Status
 
+- 2026-11-21: the dashboard's Needs you lists a review that goes on only
+  at a Resume (paused at the usage limit, interrupted, failed) beside
+  those awaiting a decision, each row saying which it is and what to press
+  (D-259). It said "Nothing is waiting on you" over one stopped at the
+  limit. `./verify.sh --e2e` exits 0 with 1559 unit tests passing, 8
+  skipped, and 154 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the
@@ -25,8 +31,8 @@ from 2026-11-03.
   apart (D-253). A `decomposed` review's report says how many rule and
   file pairs its profile left out (D-255), and the report's token line
   gives cache-write tokens (D-257). The audit stage's two unread table entries are gone, the tables typed
-  by the stages that ask a model (D-260). To build: Needs you listing a
-  review that waits on a Resume. A paid fixture run's evidence is committed under
+  by the stages that ask a model (D-260). Needs you listing a review that
+  waits on a Resume was built the day after (the entry above). A paid fixture run's evidence is committed under
   `docs/evidence/` from the next run on (D-261). The handover hooks are
   left to the maintainer (D-262).
 - 2026-11-20: the maintainer handed the app's decisions to the AI session
@@ -382,7 +388,8 @@ are accepted; anything else is refused by name.
   coverage, evidence, profiles, the quotation check, the report renderer,
   request planning, risk order, rule codes, the run summary, stage schemas,
   the five steps, mechanical sweeps, grading screens A to D, what a
-  findings list says while it is empty, when a run's ending is said); `rulesets`
+  findings list says while it is empty, when a run's ending is said, which
+  reviews Needs you lists and what each row says); `rulesets`
   (the ruleset's shape, import with a fidelity gate, prompt composition and
   batch planning, a directive section's name in words);
   `settings` (the CLI path, the emails that count as the person's); and
