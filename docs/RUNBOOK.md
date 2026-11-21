@@ -140,6 +140,9 @@ the name it asks a real model and spends usage: that run is what says
 whether the template finds what it claims to, and until it is on record
 the template says "Not yet run against a model." where it is picked. The
 evidence goes to `review/<date>-template-general/<time>-<model>/`.
+`npm run demo:template -- typescript --fake` does the same for the
+TypeScript template, nine plants and their look-alikes (measured
+2026-11-21, one run: "9/9 planted defect(s) found").
 
 ```bash
 npm run demo:design -- --fake

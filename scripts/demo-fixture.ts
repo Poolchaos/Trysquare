@@ -80,6 +80,8 @@ interface Manifest {
   cleanFiles: string[];
   /** Named by a template fixture's key; the seeded pair's branch is the script's own. */
   branches?: { from: string; into: string };
+  /** What a template fixture's change says it is for; the seeded pair's is the script's own. */
+  intent?: string;
 }
 
 /**
@@ -240,12 +242,9 @@ async function main(): Promise<number> {
     profileId: "full-context",
     engineMode: "headless",
     intent:
-      core === null
-        ? "Checkout fixes: order saving and archiving, team and permission lookups, billing " +
-          "fetches, transfer and refund endpoints, configuration, sign-in and sign-out " +
-          "logging, report export and import, pricing, tax by region, and project permissions."
-        : "Rename the Prefs.reportAutoNavigate field to autoNavigateDestination in the shared " +
-          "package and migrate every consumer, plus assorted unrelated tidy-ups.",
+      manifest.intent ??
+      "Rename the Prefs.reportAutoNavigate field to autoNavigateDestination in the shared " +
+        "package and migrate every consumer, plus assorted unrelated tidy-ups.",
     ...(core === null
       ? {}
       : {

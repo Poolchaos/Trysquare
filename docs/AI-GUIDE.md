@@ -119,8 +119,9 @@ list is in `PROJECT-STATE.md`, Structure.
   the slug to the list in `tests/server/rulesets/shelf.test.ts`, hold what
   the importer reads from it in `tests/templates/<slug>.test.ts` (the tags
   decide which files a rule is put to), and build its fixture as
-  `tests/fixtures/build-<slug>-fixture.mjs`, exporting `buildFixture`, with
-  a test beside the General one's. `npm run demo:template -- <slug> --fake`
+  `tests/fixtures/build-<slug>-fixture.mjs`: the files, the plants and the
+  look-alikes as data handed to `template-fixture.mjs`, exported as
+  `buildFixture`, with a test that calls `tests/templates/fixture-checks.ts`. `npm run demo:template -- <slug> --fake`
   then reviews it. Every rule cites a source read that day.
 - **Seeing it run.** `npm run demo:fixture -- --fake` reviews a seeded
   fixture end to end with the fake CLI and spends nothing.

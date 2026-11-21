@@ -16,27 +16,7 @@
  * the rule cited.
  */
 
-import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-
-const GIT_ENV = {
-  GIT_AUTHOR_NAME: "Fixture",
-  GIT_AUTHOR_EMAIL: "fixture@example.invalid",
-  GIT_COMMITTER_NAME: "Fixture",
-  GIT_COMMITTER_EMAIL: "fixture@example.invalid",
-  // Fixed dates keep commit hashes stable, so a fixture build is reproducible.
-  GIT_AUTHOR_DATE: "2026-01-01T00:00:00Z",
-  GIT_COMMITTER_DATE: "2026-01-01T00:00:00Z",
-};
-
-const FEATURE = "feature/checkout-fixes";
-
-function git(args, cwd) {
-  return execFileSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, ...GIT_ENV } });
-}
-
-const lines = (...rows) => `${rows.join("\n")}\n`;
+import { buildTemplateFixture, lines } from "./template-fixture.mjs";
 
 /** Every file on main. */
 const MAIN = {
@@ -885,17 +865,7 @@ const DEFECTS = [
   ["10", "WARNING", "src/orders/total.ts", "console.log(", "a print of the whole order is left in"],
   ["11", "WARNING", "src/orders/refund.ts", "// TODO:", "the ownership check is a comment"],
   ["12", "CRITICAL", "src/projects/delete.ts", "await db.projects.delete(projectId);", "the admin check is removed with nothing in its place"],
-].map(([ruleCode, severity, file, marker, description]) => ({
-  id: `rule-${ruleCode}`,
-  // One repository, named as the demo names the project it reviews.
-  repo: "app",
-  kind: "addition",
-  ruleCode,
-  severity,
-  file,
-  marker,
-  description,
-}));
+];
 
 /** The look-alike beside each plant, by its rule, with the test that proves it. */
 const LOOK_ALIKES = {
@@ -913,55 +883,17 @@ const LOOK_ALIKES = {
   12: ["src/projects/rename.ts", "tests/projects/rename.test.ts"],
 };
 
-function writeAll(root, files) {
-  for (const [path, contents] of Object.entries(files)) {
-    mkdirSync(dirname(join(root, path)), { recursive: true });
-    writeFileSync(join(root, path), contents);
-  }
-}
-
-function lineOf(root, file, marker) {
-  const found = readFileSync(join(root, file), "utf8")
-    .split("\n")
-    .flatMap((text, index) => (text.includes(marker) ? [index + 1] : []));
-  if (found.length !== 1) {
-    throw new Error(`${file} holds "${marker}" on ${found.length} lines, where the key needs one.`);
-  }
-  return found[0];
-}
-
-/**
- * Builds the repository in `root`, which must not hold one, and answers with
- * where it is and its key.
- */
 export function buildFixture(root) {
-  rmSync(root, { recursive: true, force: true });
-  mkdirSync(root, { recursive: true });
-  execFileSync("git", ["init", "-q", "-b", "main", root], { env: { ...process.env, ...GIT_ENV } });
-  git(["config", "user.email", GIT_ENV.GIT_AUTHOR_EMAIL], root);
-  git(["config", "user.name", GIT_ENV.GIT_AUTHOR_NAME], root);
-
-  writeAll(root, MAIN);
-  git(["add", "-A"], root);
-  git(["commit", "-qm", "Storefront service"], root);
-
-  git(["checkout", "-qb", FEATURE], root);
-  writeAll(root, CHANGE);
-  git(["add", "-A"], root);
-  git(["commit", "-qm", "Checkout fixes"], root);
-
-  return {
-    repoDir: root,
-    manifest: {
-      builtAt: GIT_ENV.GIT_AUTHOR_DATE,
-      template: "general",
-      branches: { from: FEATURE, into: "main" },
-      defects: DEFECTS.map((defect) => ({
-        ...defect,
-        line: lineOf(root, defect.file, defect.marker),
-      })),
-      lookAlikes: LOOK_ALIKES,
-      cleanFiles: Object.values(LOOK_ALIKES).flat(),
-    },
-  };
+  return buildTemplateFixture(root, {
+    template: "general",
+    feature: "feature/checkout-fixes",
+    intent:
+      "Checkout fixes: order saving and archiving, team and permission lookups, billing " +
+      "fetches, transfer and refund endpoints, configuration, sign-in and sign-out logging, " +
+      "report export and import, pricing, tax by region, and project permissions.",
+    main: MAIN,
+    change: CHANGE,
+    defects: DEFECTS,
+    lookAlikes: LOOK_ALIKES,
+  });
 }

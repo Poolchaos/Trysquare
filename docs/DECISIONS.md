@@ -6957,3 +6957,23 @@ verified evidence, in writing, here.
   maintainer's to weigh against the templates still to write. Left out:
   enums, naming and module style, which are taste; a missing return type,
   which the compiler infers.
+- 2026-11-21 D-280 The TypeScript template's fixture
+  (`tests/fixtures/build-typescript-fixture.mjs`, RT-3b), and what the
+  second fixture changed about the first. An orders service in strict
+  TypeScript: nine plants, nine look-alikes each with its test, 27 files
+  changed, counted by the demo. Its tsconfig leaves
+  noUncheckedIndexedAccess off on purpose: with it on the compiler
+  refuses the indexed read that rule 8 plants, and the template says to
+  report nothing then. Decided with it. First, a fixture is data over one
+  builder (`template-fixture.mjs`) and is held by one set of checks
+  (`tests/templates/fixture-checks.ts`): the General fixture was moved
+  onto both, its four checks unchanged in what they ask, so a third
+  template adds data and three lines of test. The checks now also hold
+  that the rules said to be swept are exactly the rules with a pattern.
+  Second, a key carries what its change says it is for. The demo had told
+  every template's review the General fixture's account, which a review
+  takes as a claim to hold the code against: found on the TypeScript
+  fixture's first run on the fake engine, which cannot object, before any
+  model was asked. The account is truthful and names no fault. Run on the
+  fake engine after both: 9/9 and 12/12 plants, nothing in a clean file,
+  and the seeded demo 11/11. Not run: a real model, on either fixture.
