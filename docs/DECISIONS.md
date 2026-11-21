@@ -7081,3 +7081,14 @@ verified evidence, in writing, here.
   a real model: that is RT-6, it spends the maintainer's usage, and it is
   the only thing that says whether a template finds what it claims to.
   Until a run is on record each template says so where it is picked.
+- 2026-11-21 Review round 22, over the HTTP API and database template and
+  its fixture (21460c2, c6b7c3f): one finding. The detection of its last
+  rule, writes that stand together made apart, ended "A read that decides
+  a write belongs inside it too." PostgreSQL's page on transactions, which
+  the rule cites, says a transaction is all-or-nothing and says nothing of
+  reads; and a read inside a transaction does not by itself keep another
+  writer out, which depends on the isolation level and on locks the
+  sentence did not name. Taken out, and the template moves to version 2.
+  Read again and left: the other seven rules against the CWE entries they
+  cite; the fixture's eight look-alikes, each the planted endpoint done
+  right; the one-line descriptions, each true of its template.

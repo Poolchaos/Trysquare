@@ -154,3 +154,9 @@ templates' words and both corrected, each template moving to version 2: a
 reason in the TypeScript template said a value "is stored" that its
 example never stores, and a reason in the React template gave a mechanism
 its cited page does not state.
+
+The pass after the HTTP API and database template ran the same day (review
+round 22, in DECISIONS), over RT-5a and RT-5b. One finding, corrected, the
+template moving to version 2: its last rule's detection said a read that
+decides a write belongs inside the transaction, which the page it cites
+does not say and which a transaction alone does not make safe.

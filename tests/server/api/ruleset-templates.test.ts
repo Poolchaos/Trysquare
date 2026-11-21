@@ -78,7 +78,7 @@ describe("GET /api/ruleset-templates", () => {
           slug: "http-api",
           name: "HTTP API and database",
           purpose: "Who may ask, what a request may carry, and how the store is read and written.",
-          version: 1,
+          version: 2,
           modelRun: null,
           ruleCount: 8,
         },

@@ -124,7 +124,9 @@ from 2026-11-03.
   templates plan as far as the session can take it: four templates, each
   with a fixture and a command that reviews it. What is left is the
   maintainer's: a run of each against a real model (RT-6), and his word
-  on a Firebase template (RT-7).
+  on a Firebase template (RT-7). The review pass over the fourth template
+  (round 22, in DECISIONS) took one sentence out of it; it is at version
+  2.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern

@@ -356,8 +356,7 @@ await db.transaction(async (tx) => {
 
 **Detection:** Where the change makes more than one write in a handler, ask
 what the store holds if the second fails or the process stops between them.
-Where that state is wrong, find the transaction around both. A read that
-decides a write belongs inside it too.
+Where that state is wrong, find the transaction around both.
 
 **Severity:** CRITICAL
 
