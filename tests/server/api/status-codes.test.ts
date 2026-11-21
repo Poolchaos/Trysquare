@@ -226,6 +226,9 @@ describe("an error thrown by another copy of its module", () => {
       [new manager.ReviewBeingDeletedError("x"), 409],
       [new service.NotAnOpenQuestionError("x", "verified"), 409],
       [new service.VerifyAgainUnavailableError("x"), 409],
+      [new rulesets.RulesetChangedError(2, 1), 409],
+      [new rulesets.RuleCodeTakenError("x", "y"), 409],
+      [new rulesets.RuleCodeHeldError("y"), 409],
     ];
     const byName = new Map(expected.map(([error]) => [error.name, error]));
     const names = ERROR_STATUSES.map(([name]) => name);

@@ -5307,6 +5307,9 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "PUT rulesets/[id]/default": {},
     "DELETE rulesets/[id]/default": {},
     "PATCH rulesets/[id]/rules/[code]": { data: { enabled: true } },
+    "PUT rulesets/[id]/rules/[code]": {
+      data: { markdown: "### 99. Swept\n\n**Rule:** None.\n", version: 1 },
+    },
   };
 
   // Read from the routes on disk, so a new one with no entry above fails

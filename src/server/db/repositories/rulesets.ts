@@ -18,7 +18,8 @@ import {
   type Severity,
   directiveSectionSchema,
 } from "@/lib/domain/enums";
-import type { ImportedRuleset } from "@/lib/rulesets/model";
+import { inferTags, parseSeverity } from "@/lib/rulesets/import";
+import type { ImportedRule, ImportedRuleset } from "@/lib/rulesets/model";
 import type { Db } from "../client";
 import { processDirectives, reviewRulesets, rules, rulesets } from "../schema";
 import { parseJsonColumn, serialiseJsonColumn } from "./json";
@@ -456,6 +457,114 @@ export function patchRule(
       .run();
   });
   return { version };
+}
+
+export class RulesetChangedError extends Error {
+  constructor(
+    readonly version: number,
+    readonly readVersion: number,
+  ) {
+    super(
+      `This ruleset changed since you opened it: it is at version ${version}, and this edit ` +
+        `was made from version ${readVersion}. Read it again before saving, so the other ` +
+        `change is not undone.`,
+    );
+    this.name = "RulesetChangedError";
+  }
+}
+
+export class RuleCodeTakenError extends Error {
+  constructor(
+    readonly rulesetName: string,
+    readonly code: string,
+  ) {
+    super(
+      `Ruleset "${rulesetName}" already has a rule ${code}. Give this one a code no other rule has.`,
+    );
+    this.name = "RuleCodeTakenError";
+  }
+}
+
+export class RuleCodeHeldError extends Error {
+  constructor(readonly code: string) {
+    super(
+      `Rule ${code} has sweep patterns, which the document's sweep table lists under its code. ` +
+        `Its text can change here; its code cannot yet.`,
+    );
+    this.name = "RuleCodeHeldError";
+  }
+}
+
+/**
+ * Saves a rule's text as edited in the app (RA-2): `edited` is the block as
+ * `parseRuleBlock` read it, alone.
+ *
+ * What the document around a rule gave it stays the rule's: its place, its
+ * group's tags, and the sweep patterns the table lists under its code, which
+ * is why a rule with patterns keeps its code until an export can carry the
+ * table along. A severity changed in the app stays too, unless the text's
+ * own severity line changed: the text of a promoted rule still says what it
+ * was imported as, and an edit elsewhere in it would have demoted the rule.
+ * The save carries the version it was made from, so two tabs cannot undo
+ * each other without a word.
+ */
+export function replaceRuleText(
+  db: Db,
+  rulesetId: string,
+  code: string,
+  edited: ImportedRule,
+  readVersion: number,
+): { version: number; code: string } {
+  const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
+  if (!row) throw new RulesetNotFoundError(rulesetId);
+
+  const rule = db
+    .select()
+    .from(rules)
+    .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, code)))
+    .get();
+  if (!rule) throw new RuleNotFoundError(row.name, code);
+
+  if (edited.raw === rule.rawMarkdown) return { version: row.version, code };
+  if (readVersion !== row.version) throw new RulesetChangedError(row.version, readVersion);
+
+  if (edited.code !== code) {
+    const swept = parseJsonColumn("rules.sweep_patterns", rule.sweepPatterns, stringArraySchema);
+    if (swept.length > 0) throw new RuleCodeHeldError(code);
+    const other = db
+      .select({ id: rules.id })
+      .from(rules)
+      .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, edited.code)))
+      .get();
+    if (other) throw new RuleCodeTakenError(row.name, edited.code);
+  }
+
+  const bodyOf = (raw: string) => raw.slice(raw.indexOf("\n") + 1);
+  const saidBefore = parseSeverity(bodyOf(rule.rawMarkdown));
+  const version = row.version + 1;
+  db.transaction((tx) => {
+    tx.update(rules)
+      .set({
+        code: edited.code,
+        title: edited.title,
+        ...(edited.severity === saidBefore ? {} : { severity: edited.severity }),
+        tags: serialiseJsonColumn(inferTags(rule.groupHeading, edited.title)),
+        ruleText: edited.ruleText,
+        violationExample: edited.violationExample,
+        correctPattern: edited.correctPattern,
+        detection: edited.detection,
+        notes: edited.notes,
+        rawMarkdown: edited.raw,
+        sourceEndLine: rule.sourceStartLine + edited.endLine - edited.startLine,
+      })
+      .where(eq(rules.id, rule.id))
+      .run();
+    tx.update(rulesets)
+      .set({ version, updatedAt: nowIso() })
+      .where(eq(rulesets.id, rulesetId))
+      .run();
+  });
+  return { version, code: edited.code };
 }
 
 /**

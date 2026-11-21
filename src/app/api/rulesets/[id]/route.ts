@@ -55,6 +55,9 @@ export async function GET(
         // The rule as the document has it, less the heading the row already
         // shows: its text, examples, detection and why it matters.
         text: rule.raw.slice(rule.raw.indexOf("\n") + 1).trim(),
+        // Whole, heading line and all: what the rule's editor opens on, and
+        // what a save is compared with (RA-2).
+        raw: rule.raw,
       })),
     });
   });

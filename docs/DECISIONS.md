@@ -6496,3 +6496,19 @@ verified evidence, in writing, here.
   cannot run on the wrong one. Still refused: a ruleset a review in line
   is about to start on, by its name, since that review stores its rules
   under the name as it starts and the ruleset would come back.
+- 2026-11-21 D-267 What a rule keeps when its text is saved in the app
+  (RA-2). The block is read alone by the importer's parser (D-265), and
+  read alone it would lose three things the document around it gave the
+  rule, so the save holds each. Its tags come from the group heading it
+  sat under: kept, read again from the stored group and the new title.
+  Its sweep patterns come from the document's sweep table, which lists
+  them under the rule's code: kept as stored, and for that reason a rule
+  with patterns keeps its code for now, since a duplicate goes through an
+  export and the table would hand the patterns to no rule; RA-5 lifts it.
+  A severity changed with the picker is kept unless the text's own
+  severity line changed in the edit: the text of a promoted rule still
+  says what it was imported as, and an edit elsewhere in it would have
+  demoted the rule without a word (no finding missed, D-251). A save
+  names the version it was made from and a stale one is refused. Rejected:
+  taking the severity from the text on every save, and letting a code
+  change drop the patterns.

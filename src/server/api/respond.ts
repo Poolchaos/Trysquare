@@ -166,6 +166,11 @@ export const ERROR_STATUSES: readonly (readonly [name: string, status: 404 | 409
   // Verifying an open question again (WP-D2).
   ["NotAnOpenQuestionError", 409],
   ["VerifyAgainUnavailableError", 409],
+  // A rule's text saved in the app (RA-2): from a version since replaced,
+  // or under a code it cannot take.
+  ["RulesetChangedError", 409],
+  ["RuleCodeTakenError", 409],
+  ["RuleCodeHeldError", 409],
 ];
 const STATUS_BY_NAME = new Map(ERROR_STATUSES);
 

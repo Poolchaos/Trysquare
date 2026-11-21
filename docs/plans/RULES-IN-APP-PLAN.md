@@ -75,8 +75,8 @@ and change" figure already shows. Evidence: the code lines above.
 
 | WP   | Scope | Blocked on | Status |
 | ---- | ----- | ---------- | ------ |
-| RA-1 | Delete one ruleset: a route over `deleteRuleset`, a control on the ruleset's page that says what goes (the rules, never a review that used them: its snapshot stays) and asks once. Refused while it is the default ruleset or a review in flight has not yet frozen it, each in words. | - | DONE 2026-11-21 (D-266). As built: the default is deleted too, the page saying first that new reviews then start with none chosen; refused only while a review in line is to start on it. A review that ran with it keeps its copy, which took migration 0019: the snapshot held its ruleset in place by a key. Shots graded in the commit. |
-| RA-2 | Edit a rule's text. The rule's page opens its markdown in a text area; save parses the block with `importProtocol`, refuses anything that is not exactly one rule with every line kept, keeps the rule's place in the ruleset, and raises the version. Changing the code is allowed and refused if another rule has it. States: unchanged (save off), refused (the importer's words beside the field), saved. A preview of the text as rendered. | RA-1 | TODO |
+| RA-1 | Delete one ruleset: a route over `deleteRuleset`, a control on the ruleset's page that says what goes (the rules, never a review that used them: its snapshot stays) and asks once. Refused while it is the default ruleset or a review in flight has not yet frozen it, each in words. | - | DONE 2026-11-21, 687191c (D-266). As built: the default is deleted too, the page saying first that new reviews then start with none chosen; refused only while a review in line is to start on it. A review that ran with it keeps its copy, which took migration 0019: the snapshot held its ruleset in place by a key. Shots graded in the commit. |
+| RA-2 | Edit a rule's text. The rule's page opens its markdown in a text area; save parses the block with `importProtocol`, refuses anything that is not exactly one rule with every line kept, keeps the rule's place in the ruleset, and raises the version. Changing the code is allowed and refused if another rule has it. States: unchanged (save off), refused (the importer's words beside the field), saved. A preview of the text as rendered. | RA-1 | IN BUILD. The save is built, 2026-11-21 (D-267): `parseRuleBlock` (`lib/rulesets/rule-edit.ts`), `replaceRuleText` and `PUT /api/rulesets/[id]/rules/[code]`, which takes the markdown and the version it was read at. A rule keeps its place, its group's tags and its sweep patterns; a severity changed in the app stays unless the text's own severity line changed; a rule with sweep patterns keeps its code until RA-5. To build: the editor on the ruleset's page, with its states shot and graded. |
 | RA-3 | Add a rule. "Add a rule" opens the same editor on a starting block that shows the protocol's shape (heading with a code, the rule, a violation, the correct pattern, detection, severity), each part a line the person replaces; nothing of it is saved until they do. The new rule goes to the end of its group, or of the ruleset. | RA-2 | TODO |
 | RA-4 | Remove a rule. A control on the rule, asked once, saying that reviews already run keep it. Removing the last rule is allowed and the pre-flight already refuses a ruleset with none on (AE4). | RA-2 | TODO |
 | RA-5 | The round trip held by a test: a ruleset edited, added to and removed from in the app exports (`exportProtocol`) to a document that imports back to the same rules with every line accounted for. The sweep table follows a rule whose patterns changed. | RA-2 to RA-4 | TODO |
@@ -90,8 +90,11 @@ and change" figure already shows. Evidence: the code lines above.
   report unchanged.
 - An edit quietly weakens a rule: a line dropped, a severity lost. Held by
   the importer's line accounting, on every save.
-- A sweep pattern that no longer compiles or never ends. To read in RA-2:
-  how an import checks a pattern today, and the same check on save.
+- A sweep pattern that no longer compiles or never ends. Read in RA-2: a
+  rule's patterns come from the document's sweep table, not from the
+  rule's own block, so an edit of the block cannot change one, and the
+  save keeps them as stored. A pattern is changed by importing the
+  document until RA-5.
 - Two rules with one code. Refused by name, as an import refuses it
   (`DuplicateRuleCodeError`).
 - A ruleset deleted under a review about to start. RA-1's refusal.

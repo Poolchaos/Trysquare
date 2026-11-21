@@ -9,7 +9,8 @@
 
 import { z } from "zod";
 import { severitySchema } from "@/lib/domain/enums";
-import { patchRule } from "@/server/db/repositories/rulesets";
+import { parseRuleBlock } from "@/lib/rulesets/rule-edit";
+import { patchRule, replaceRuleText } from "@/server/db/repositories/rulesets";
 import { handler, ok, readJson } from "@/server/api/respond";
 import { runtime } from "@/server/runtime";
 
@@ -32,5 +33,28 @@ export async function PATCH(
     // Already decoded by Next, as every route's params are; a second decode
     // would throw on a code holding a % (audit finding 6).
     return ok(patchRule(db, id, code, patch));
+  });
+}
+
+const edit = z.object({ markdown: z.string(), version: z.number().int() });
+
+/**
+ * Saves a rule's text as its markdown, heading line and all (RA-2). A block
+ * that is not exactly one rule is refused in the parser's words before
+ * anything is looked up, and nothing of it is saved.
+ */
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ id: string; code: string }> },
+): Promise<Response> {
+  return handler(async () => {
+    const { db } = runtime();
+    const { id, code } = await context.params;
+    const { markdown, version } = await readJson(request, edit);
+    const read = parseRuleBlock(markdown);
+    if ("refusal" in read) {
+      throw Response.json({ error: read.refusal, code: "RuleTextRefused" }, { status: 400 });
+    }
+    return ok(replaceRuleText(db, id, code, read.rule, version));
   });
 }
