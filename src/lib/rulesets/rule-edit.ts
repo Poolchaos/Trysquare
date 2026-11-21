@@ -9,7 +9,7 @@
  * in words the person can act on.
  */
 
-import { DuplicateRuleCodeError, importProtocol } from "./import";
+import { DuplicateRuleCodeError, importProtocol, unclosedFenceLine } from "./import";
 import type { ImportedRule } from "./model";
 
 const SHAPE =
@@ -60,5 +60,14 @@ export function parseRuleBlock(markdown: string): { rule: ImportedRule } | { ref
       refusal: `This holds ${rules.length} rules (${codes.slice(0, -1).join(", ")} and ${codes.at(-1)}). One rule is saved at a time.`,
     };
   }
-  return { rule: rules[0]! };
+  const rule = rules[0]!;
+  // Read alone the block is one rule either way; in the ruleset's document
+  // an open fence would take every rule after this one into it.
+  const open = unclosedFenceLine(rule.raw);
+  if (open !== null) {
+    return {
+      refusal: `Line ${open} opens a code fence that is never closed, so in the ruleset's document the rules after this one would read as code. Close it with a line of three backticks.`,
+    };
+  }
+  return { rule };
 }

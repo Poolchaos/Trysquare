@@ -116,6 +116,23 @@ export function parseSeverity(body: string): Severity {
   return "WARNING";
 }
 
+/** A line that opens or closes a code fence, as every reader here takes it. */
+const isFenceLine = (line: string): boolean => line.trimStart().startsWith("```");
+
+/**
+ * The line of a code fence that is opened and never closed, 1-indexed. Every
+ * heading after one reads as code, so in a document the blocks after it would
+ * be lines of this one.
+ */
+export function unclosedFenceLine(markdown: string): number | null {
+  let openedAt: number | null = null;
+  const lines = markdown.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    if (isFenceLine(lines[index]!)) openedAt = openedAt === null ? index + 1 : null;
+  }
+  return openedAt;
+}
+
 /** Extracts the text of a `**Label:**` block up to the next bold label or heading. */
 export function fieldAfterLabel(body: string, label: string): string | null {
   const lines = body.split("\n");
@@ -129,7 +146,7 @@ export function fieldAfterLabel(body: string, label: string): string | null {
   let inFence = false;
   for (let i = startIndex + 1; i < lines.length; i += 1) {
     const line = lines[i]!;
-    if (line.trimStart().startsWith("```")) inFence = !inFence;
+    if (isFenceLine(line)) inFence = !inFence;
     // A new label or heading ends the field, but not while inside a fence,
     // where such text is example content rather than structure.
     if (!inFence && (/^\s*\*\*[A-Z]/.test(line) || /^#{1,6}\s/.test(line))) break;
@@ -167,7 +184,7 @@ function findHeadings(lines: readonly string[]): Heading[] {
   const headings: Heading[] = [];
   let inFence = false;
   lines.forEach((line, index) => {
-    if (line.trimStart().startsWith("```")) inFence = !inFence;
+    if (isFenceLine(line)) inFence = !inFence;
     if (inFence) return;
     const match = /^(#{1,6})\s+(.*)$/.exec(line);
     // A "#" inside a fenced block is code, not a heading.

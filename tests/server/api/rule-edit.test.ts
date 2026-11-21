@@ -162,6 +162,21 @@ describe("saving a rule's text", () => {
     expect(await detail()).toEqual(before);
   });
 
+  it("refuses a code fence left open, which the rules after it would be read into", async () => {
+    const before = await detail();
+    const rule = before.rules.find((entry) => entry.code === "4")!;
+    const refused = await save(
+      "4",
+      `${rule.raw}\n\`\`\`ts\nconst open = 1;\n`,
+      before.ruleset.version,
+    );
+    expect(refused.status).toBe(400);
+    expect(((await refused.json()) as { error: string }).error).toMatch(
+      /^Line \d+ opens a code fence that is never closed/,
+    );
+    expect(await detail()).toEqual(before);
+  });
+
   it("refuses a save made from a version since replaced", async () => {
     const before = await detail();
     const rule = before.rules.find((entry) => entry.code === "4")!;

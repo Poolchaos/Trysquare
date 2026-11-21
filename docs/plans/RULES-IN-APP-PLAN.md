@@ -95,6 +95,12 @@ and change" figure already shows. Evidence: the code lines above.
   rule's own block, so an edit of the block cannot change one, and the
   save keeps them as stored. A pattern is changed by importing the
   document until RA-5.
+- A code fence opened in a rule and never closed. Read alone the block is
+  one rule; in the ruleset's document every heading after it reads as
+  code, and the example protocol with one such rule exported and read back
+  as 3 rules of 15 (measured 2026-11-21, RA-2 as first built). Refused at
+  the save by the line that opens it (`unclosedFenceLine`,
+  `lib/rulesets/import.ts`).
 - Two rules with one code. Refused by name, as an import refuses it
   (`DuplicateRuleCodeError`).
 - A ruleset deleted under a review about to start. RA-1's refusal.

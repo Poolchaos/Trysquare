@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { importProtocol } from "@/lib/rulesets/import";
+import { exportProtocol, importProtocol } from "@/lib/rulesets/import";
 import { parseRuleBlock } from "@/lib/rulesets/rule-edit";
 
 const PROTOCOL = importProtocol(
@@ -63,6 +63,27 @@ describe("a rule edited in the app", () => {
     expect(refusalOf(`${FALLBACK.raw}\n#### Exceptions\n\nNone.`)).toMatch(
       /^Line \d+, "Exceptions", is not a rule's heading\./,
     );
+  });
+
+  it("refuses a code fence left open, which would take the rules after it", () => {
+    const open = "### 2a. Silent Fallback\n\n**Rule:** Say so.\n\n```ts\nconst port = 3000;\n";
+    // Why: in the ruleset's document every heading after an open fence reads
+    // as code, so the rules after this one would be lines of it.
+    const document = exportProtocol({
+      ...PROTOCOL,
+      rules: PROTOCOL.rules.map((rule) => (rule.code === "2a" ? { ...rule, raw: open } : rule)),
+    });
+    expect(importProtocol(document).ruleset.rules.map((rule) => rule.code)).toEqual([
+      "1",
+      "2",
+      "2a",
+    ]);
+
+    expect(refusalOf(open)).toBe(
+      "Line 5 opens a code fence that is never closed, so in the ruleset's document the rules after this one would read as code. Close it with a line of three backticks.",
+    );
+    // A fence opened and closed is a rule like any other.
+    expect(refusalOf(`${open}\`\`\`\n`)).toBeNull();
   });
 
   it("refuses two rules, by their codes", () => {
