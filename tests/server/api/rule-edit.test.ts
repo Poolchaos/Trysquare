@@ -86,7 +86,11 @@ describe("saving a rule's text", () => {
 
     const saved = await save("2a", `${edited}\nA line added in the app.\n`, before.ruleset.version);
     expect(saved.status).toBe(200);
-    expect(await saved.json()).toEqual({ version: before.ruleset.version + 1, code: "2a" });
+    expect(await saved.json()).toEqual({
+      version: before.ruleset.version + 1,
+      code: "2a",
+      sweeps: [],
+    });
 
     const after = await detail();
     expect(after.ruleset.version).toBe(before.ruleset.version + 1);
@@ -107,7 +111,11 @@ describe("saving a rule's text", () => {
     const rule = before.rules.find((entry) => entry.code === "4")!;
     const saved = await save("4", rule.raw, before.ruleset.version);
     expect(saved.status).toBe(200);
-    expect(await saved.json()).toEqual({ version: before.ruleset.version, code: "4" });
+    expect(await saved.json()).toEqual({
+      version: before.ruleset.version,
+      code: "4",
+      sweeps: [],
+    });
   });
 
   it("keeps the sweep patterns the document's table gave the rule", async () => {
@@ -235,7 +243,11 @@ describe("saving a rule's text", () => {
 
     const moved = await save("4", rule.raw.replace("### 4.", "### 4b."), before.ruleset.version);
     expect(moved.status).toBe(200);
-    expect(await moved.json()).toEqual({ version: before.ruleset.version + 1, code: "4b" });
+    expect(await moved.json()).toEqual({
+      version: before.ruleset.version + 1,
+      code: "4b",
+      sweeps: [],
+    });
     const after = await detail();
     // Renamed where it stood.
     expect(after.rules.map((entry) => entry.code)).toEqual(
@@ -250,7 +262,7 @@ describe("saving a rule's text", () => {
     const held = await save("6", swept.raw.replace("### 6.", "### 6a."), before.ruleset.version);
     expect(held.status).toBe(409);
     expect(((await held.json()) as { error: string }).error).toBe(
-      "Rule 6 has sweep patterns, which the document's sweep table lists under its code. Its text can change here; its code cannot yet.",
+      "Rule 6 was not saved as 6a: table rows list its sweep patterns under 6, and under 6a it would lose them. Rows in the rule's own text can change with its heading. For rows elsewhere, change the code in the exported document and import that.",
     );
     expect(await detail()).toEqual(before);
   });

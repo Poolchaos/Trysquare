@@ -106,7 +106,11 @@ describe("adding a rule", () => {
     const before = await detail();
     const made = await add({ markdown: FRESH, version: before.ruleset.version, after: "4" });
     expect(made.status).toBe(201);
-    expect(await made.json()).toEqual({ version: before.ruleset.version + 1, code: "15" });
+    expect(await made.json()).toEqual({
+      version: before.ruleset.version + 1,
+      code: "15",
+      sweeps: [],
+    });
 
     const after = await detail();
     expect(after.ruleset.version).toBe(before.ruleset.version + 1);
@@ -185,6 +189,11 @@ describe("adding a rule", () => {
       swept,
     );
     expect(made.status).toBe(201);
+    expect(await made.json()).toEqual({
+      version: 2,
+      code: "2",
+      sweeps: [{ code: "2", patterns: ["debugger"], had: 0 }],
+    });
     expect((await detail(swept)).rules.at(-1)).toMatchObject({
       code: "2",
       sweepPatterns: ["debugger"],

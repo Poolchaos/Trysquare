@@ -228,7 +228,7 @@ describe("an error thrown by another copy of its module", () => {
       [new service.VerifyAgainUnavailableError("x"), 409],
       [new rulesets.RulesetChangedError(2, 1), 409],
       [new rulesets.RuleCodeTakenError("x", "y"), 409],
-      [new rulesets.RuleCodeHeldError("y"), 409],
+      [new rulesets.RuleCodeHeldError("y", "z"), 409],
       [new rulesets.RuleFenceOpenError("y"), 409],
     ];
     const byName = new Map(expected.map(([error]) => [error.name, error]));

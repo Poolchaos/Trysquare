@@ -95,7 +95,7 @@ describe("removing a rule", () => {
     const gone = before.rules.find((rule) => rule.code === "4")!;
     const removed = await remove("4", String(before.ruleset.version));
     expect(removed.status).toBe(200);
-    expect(await removed.json()).toEqual({ version: before.ruleset.version + 1 });
+    expect(await removed.json()).toEqual({ version: before.ruleset.version + 1, sweeps: [] });
 
     const after = await detail();
     expect(after.ruleset.version).toBe(before.ruleset.version + 1);

@@ -68,9 +68,11 @@ from 2026-11-03.
   saved longer had left the blocks after it at their old line numbers, so
   importing one's own export asked to replace the ruleset. A table row in
   a rule's text is a sweep row for the rule it names, as an import reads
-  it; the page does not yet say when that moved another rule's patterns
-  (RA-5b, next). `./verify.sh --e2e` exits 0 with 1604 unit tests passing,
-  8 skipped, and 160 browser tests.
+  it, and the page says when a change moved another rule's patterns, in
+  the opened rule or where a removed rule was (RA-5b). A code that sweep
+  rows name is refused with the two ways to change it. `./verify.sh --e2e`
+  exits 0 with 1604 unit tests passing, 8 skipped, and 161 browser tests.
+  RA-6 is next.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the

@@ -156,11 +156,23 @@ describe("a ruleset changed in the app", () => {
     const host = (await ruleOf(id, "4")).raw;
     const row =
       "| Sweep for | What a hit means |\n| --- | --- |\n| `setInterval` | Rule 5: missing cleanup |\n";
-    expect((await save(id, "4", `${host}\n${row}`)).status).toBe(200);
+    const saved = await save(id, "4", `${host}\n${row}`);
+    expect(saved.status).toBe(200);
+    // Said in the answer, for the page to say: another rule's patterns moved.
+    expect(await saved.json()).toEqual({
+      version: 2,
+      code: "4",
+      sweeps: [{ code: "5", patterns: ["setTimeout", "setInterval"], had: 1 }],
+    });
     expect((await ruleOf(id, "5")).sweepPatterns).toEqual(["setTimeout", "setInterval"]);
     expect((await exported(id, name)).differs).toBe(false);
 
-    expect((await remove(id, "4")).status).toBe(200);
+    const removed = await remove(id, "4");
+    expect(removed.status).toBe(200);
+    expect(await removed.json()).toEqual({
+      version: 3,
+      sweeps: [{ code: "5", patterns: ["setTimeout"], had: 2 }],
+    });
     expect((await ruleOf(id, "5")).sweepPatterns).toEqual(["setTimeout"]);
     expect((await exported(id, name)).differs).toBe(false);
   });
@@ -187,7 +199,7 @@ describe("a ruleset changed in the app", () => {
     expect(held.status).toBe(409);
     expect(await held.json()).toEqual({
       error:
-        "Rule 2 has sweep patterns, which the document's sweep table lists under its code. Its text can change here; its code cannot yet.",
+        "Rule 2 was not saved as 2a: table rows list its sweep patterns under 2, and under 2a it would lose them. Rows in the rule's own text can change with its heading. For rows elsewhere, change the code in the exported document and import that.",
       code: "RuleCodeHeldError",
     });
 
@@ -197,7 +209,7 @@ describe("a ruleset changed in the app", () => {
       second.replace("### 2.", "### 2a.").replace("Rule 2 |", "Rule 2a |"),
     );
     expect(moved.status).toBe(200);
-    expect(await moved.json()).toEqual({ version: 2, code: "2a" });
+    expect(await moved.json()).toEqual({ version: 2, code: "2a", sweeps: [] });
     expect((await ruleOf(id, "2a")).sweepPatterns).toEqual(["debugger"]);
     expect((await exported(id, name)).differs).toBe(false);
   });

@@ -491,10 +491,14 @@ export class RuleCodeTakenError extends Error {
 }
 
 export class RuleCodeHeldError extends Error {
-  constructor(readonly code: string) {
+  constructor(
+    readonly code: string,
+    readonly to: string,
+  ) {
     super(
-      `Rule ${code} has sweep patterns, which the document's sweep table lists under its code. ` +
-        `Its text can change here; its code cannot yet.`,
+      `Rule ${code} was not saved as ${to}: table rows list its sweep patterns under ${code}, ` +
+        `and under ${to} it would lose them. Rows in the rule's own text can change with its ` +
+        `heading. For rows elsewhere, change the code in the exported document and import that.`,
     );
     this.name = "RuleCodeHeldError";
   }
@@ -606,6 +610,35 @@ function storeReading(tx: Tx, reading: DocumentReading): void {
   }
 }
 
+/** A rule whose sweep patterns a change moved: those it has now, and how many it had. */
+interface SweepsMoved {
+  code: string;
+  patterns: string[];
+  had: number;
+}
+
+/**
+ * The rules whose sweep patterns a reading moves, asked before it is stored.
+ * A row in one rule's text can give or take another's (D-271), and the answer
+ * to the change names them so the page can say so.
+ */
+function sweepsMoved(db: Db, rulesetId: string, reading: DocumentReading): SweepsMoved[] {
+  const stored = new Map(
+    db
+      .select({ id: rules.id, sweepPatterns: rules.sweepPatterns })
+      .from(rules)
+      .where(eq(rules.rulesetId, rulesetId))
+      .all()
+      .map((row) => [row.id, row.sweepPatterns]),
+  );
+  return [...reading.rules].flatMap(([id, rule]) => {
+    const before = stored.get(id) ?? "[]";
+    if (before === serialiseJsonColumn(rule.sweepPatterns)) return [];
+    const had = parseJsonColumn("rules.sweep_patterns", before, stringArraySchema).length;
+    return [{ code: rule.code, patterns: rule.sweepPatterns, had }];
+  });
+}
+
 /**
  * Saves a rule's text as edited in the app (RA-2): `edited` is the block as
  * `parseRuleBlock` read it, alone.
@@ -626,7 +659,7 @@ export function replaceRuleText(
   code: string,
   edited: ImportedRule,
   readVersion: number,
-): { version: number; code: string } {
+): { version: number; code: string; sweeps: SweepsMoved[] } {
   const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
   if (!row) throw new RulesetNotFoundError(rulesetId);
 
@@ -637,7 +670,7 @@ export function replaceRuleText(
     .get();
   if (!rule) throw new RuleNotFoundError(row.name, code);
 
-  if (edited.raw === rule.rawMarkdown) return { version: row.version, code };
+  if (edited.raw === rule.rawMarkdown) return { version: row.version, code, sweeps: [] };
   if (readVersion !== row.version) throw new RulesetChangedError(row.version, readVersion);
 
   const renamed = edited.code !== code;
@@ -660,7 +693,7 @@ export function replaceRuleText(
   const swept = parseJsonColumn("rules.sweep_patterns", rule.sweepPatterns, stringArraySchema);
   const kept = reading.rules.get(rule.id)!.sweepPatterns;
   if (renamed && swept.some((pattern) => !kept.includes(pattern))) {
-    throw new RuleCodeHeldError(code);
+    throw new RuleCodeHeldError(code, edited.code);
   }
 
   // The text states a severity anew when its line reads as another one, or
@@ -671,6 +704,7 @@ export function replaceRuleText(
   const word = severityWord(bodyOf(edited.raw));
   const statedAnew =
     edited.severity !== parseSeverity(before) || (word !== null && word !== severityWord(before));
+  const sweeps = sweepsMoved(db, rulesetId, reading);
   const version = row.version + 1;
   db.transaction((tx) => {
     tx.update(rules)
@@ -693,7 +727,7 @@ export function replaceRuleText(
       .where(eq(rulesets.id, rulesetId))
       .run();
   });
-  return { version, code: edited.code };
+  return { version, code: edited.code, sweeps };
 }
 
 export class RuleFenceOpenError extends Error {
@@ -726,7 +760,7 @@ export function addRule(
   added: ImportedRule,
   after: string | undefined,
   readVersion: number,
-): { version: number; code: string } {
+): { version: number; code: string; sweeps: SweepsMoved[] } {
   const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
   if (!row) throw new RulesetNotFoundError(rulesetId);
   if (readVersion !== row.version) throw new RulesetChangedError(row.version, readVersion);
@@ -754,6 +788,7 @@ export function addRule(
     `Rule ${added.code} was not added to "${row.name}"`,
   );
 
+  const sweeps = sweepsMoved(db, rulesetId, reading);
   const version = row.version + 1;
   db.transaction((tx) => {
     // Its place, section, tags and sweep patterns are the reading's, stored
@@ -781,7 +816,7 @@ export function addRule(
       .where(eq(rulesets.id, rulesetId))
       .run();
   });
-  return { version, code: added.code };
+  return { version, code: added.code, sweeps };
 }
 
 /**
@@ -796,7 +831,7 @@ export function removeRule(
   rulesetId: string,
   code: string,
   readVersion: number,
-): { version: number } {
+): { version: number; sweeps: SweepsMoved[] } {
   const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
   if (!row) throw new RulesetNotFoundError(rulesetId);
 
@@ -814,6 +849,7 @@ export function removeRule(
     `Rule ${code} was not removed from "${row.name}"`,
   );
 
+  const sweeps = sweepsMoved(db, rulesetId, reading);
   const version = row.version + 1;
   db.transaction((tx) => {
     tx.delete(rules).where(eq(rules.id, rule.id)).run();
@@ -823,7 +859,7 @@ export function removeRule(
       .where(eq(rulesets.id, rulesetId))
       .run();
   });
-  return { version };
+  return { version, sweeps };
 }
 
 /**

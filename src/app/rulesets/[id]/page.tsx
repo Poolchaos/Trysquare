@@ -173,7 +173,7 @@ function NewRule({
   rules: Detail["rules"];
   /** Reads the ruleset again, answering with its version, or null when it could not be read. */
   reload: () => Promise<number | null>;
-  onAdded: (code: string, section: string) => Promise<void>;
+  onAdded: (code: string, section: string, sweeps: Moved[]) => Promise<void>;
   onCancel: () => void;
 }) {
   // Each section once, in the document's order, with the rule it ends on.
@@ -234,7 +234,7 @@ function NewRule({
         );
       }}
       onSave={async (markdown) => {
-        const sent = await send<{ code: string }>(
+        const sent = await send<{ code: string; sweeps: Moved[] }>(
           `/api/rulesets/${rulesetId}/rules`,
           {
             method: "POST",
@@ -250,11 +250,32 @@ function NewRule({
             ? sent.error
             : `Not added yet. The ruleset was changed since this page read it. The page now shows it as it stands, at version ${stands}, and your text is kept: press Add rule again.`;
         }
-        await onAdded(sent.body.code, section);
+        await onAdded(sent.body.code, section, sent.body.sweeps);
         return "";
       }}
     />
   );
+}
+
+/** A rule whose sweep patterns a change moved, as the server answers: those it has now, and how many it had. */
+interface Moved {
+  code: string;
+  patterns: string[];
+  had: number;
+}
+
+/**
+ * Said with a change that moved sweep patterns (RA-5b): a table row in one
+ * rule's text can give another rule a pattern, or take it away with the row.
+ */
+function sweepsMovedText(moved: Moved[]): string {
+  const count = (patterns: number) => (patterns === 0 ? "none" : String(patterns));
+  const rules = moved.map(({ code, patterns, had }) =>
+    patterns.length === had
+      ? `rule ${code} still has ${had}, not the same ${had === 1 ? "one" : "ones"}`
+      : `rule ${code} now has ${count(patterns.length)} (it had ${count(had)})`,
+  );
+  return `That also changed sweep patterns, which are read from table rows anywhere in the ruleset's document: ${rules.join(", ")}.`;
 }
 
 const takeFocus = (node: HTMLElement | null) => {
@@ -266,7 +287,7 @@ const takeFocus = (node: HTMLElement | null) => {
  * as it is drawn: the button that had it went with the rule, and the next
  * Tab would otherwise start from the top of the page.
  */
-function RemovedNote({ code }: { code: string }) {
+function RemovedNote({ code, moved }: { code: string; moved: Moved[] }) {
   return (
     <p
       role="status"
@@ -275,6 +296,7 @@ function RemovedNote({ code }: { code: string }) {
       className="rounded-md border border-[var(--color-good)] bg-[var(--color-good-soft)] px-3 py-2 text-sm text-[var(--color-good)]"
     >
       Rule {code} removed. Reviews already run keep it.
+      {moved.length > 0 ? ` ${sweepsMovedText(moved)}` : ""}
     </p>
   );
 }
@@ -305,7 +327,13 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   const [confirmingRemove, setConfirmingRemove] = useState("");
   const [removeRefusal, setRemoveRefusal] = useState<{ code: string; text: string } | null>(null);
   // The rule last removed here, and the rule that came after it.
-  const [removed, setRemoved] = useState<{ code: string; before: string | null } | null>(null);
+  const [removed, setRemoved] = useState<{
+    code: string;
+    before: string | null;
+    moved: Moved[];
+  } | null>(null);
+  // Said in the opened rule a save or an add left it in, until the next change.
+  const [sweepsNote, setSweepsNote] = useState<{ at: string; moved: Moved[] } | null>(null);
   // Remove rule is not drawn while its question is, so when the question is
   // put away with the rule still there it takes the focus back.
   const backToRemove = useRef(false);
@@ -348,6 +376,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   async function amend(code: string, patch: { enabled?: boolean; severity?: string }) {
     setError("");
     setRemoved(null);
+    setSweepsNote(null);
     setBusy(code);
     try {
       const sent = await send(
@@ -421,7 +450,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
     setError("");
     setBusy("remove");
     try {
-      const sent = await send(
+      const sent = await send<{ sweeps: Moved[] }>(
         `/api/rulesets/${id}/rules/${encodeURIComponent(code)}?version=${version}`,
         { method: "DELETE" },
         "The rule could not be removed",
@@ -431,7 +460,8 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
         setConfirmingRemove("");
         setOpenRule("");
         setAdded(null);
-        setRemoved({ code, before });
+        setSweepsNote(null);
+        setRemoved({ code, before, moved: sent.body.sweeps });
         return;
       }
       const behind =
@@ -523,7 +553,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
         className="block border-b border-[var(--color-border)] last:border-0 sm:table-row"
       >
         <td role="cell" colSpan={5} className="block px-3 py-2 sm:table-cell">
-          <RemovedNote code={removed.code} />
+          <RemovedNote code={removed.code} moved={removed.moved} />
         </td>
       </tr>
     );
@@ -632,7 +662,9 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
         <div data-testid="rules">
           {detail.rules.length === 0 ? (
             <Card className="grid gap-3 p-4">
-              {removed ? <RemovedNote key={removed.code} code={removed.code} /> : null}
+              {removed ? (
+                <RemovedNote key={removed.code} code={removed.code} moved={removed.moved} />
+              ) : null}
               <p className="text-sm text-[var(--color-ink-muted)]">
                 This ruleset has no rules, so a review will not start on it. Add a rule below.
               </p>
@@ -798,7 +830,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                                   saveLabel="Save rule"
                                   onCancel={() => setEditingRule("")}
                                   onSave={async (markdown) => {
-                                    const sent = await send<{ code: string }>(
+                                    const sent = await send<{ code: string; sweeps: Moved[] }>(
                                       `/api/rulesets/${id}/rules/${encodeURIComponent(rule.code)}`,
                                       {
                                         method: "PUT",
@@ -830,6 +862,11 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                                     }
                                     setEditingRule("");
                                     setRemoved(null);
+                                    setSweepsNote(
+                                      sent.body.sweeps.length > 0
+                                        ? { at: sent.body.code, moved: sent.body.sweeps }
+                                        : null,
+                                    );
                                     setOpenRule(sent.body.code);
                                     await load();
                                     return "";
@@ -837,6 +874,14 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                                 />
                               ) : (
                                 <>
+                                  {sweepsNote?.at === rule.code ? (
+                                    <p
+                                      role="status"
+                                      className="mb-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                                    >
+                                      {sweepsMovedText(sweepsNote.moved)}
+                                    </p>
+                                  ) : null}
                                   {rule.text === "" ? (
                                     <p className="text-sm text-[var(--color-ink-muted)]">
                                       This rule has no text under its heading. Edit text to write
@@ -930,9 +975,10 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
                 rules={detail.rules}
                 reload={async () => (await load())?.ruleset.version ?? null}
                 onCancel={() => setAdding(false)}
-                onAdded={async (code, section) => {
+                onAdded={async (code, section, sweeps) => {
                   setAdding(false);
                   setAdded({ code, section });
+                  setSweepsNote(sweeps.length > 0 ? { at: code, moved: sweeps } : null);
                   setOpenRule(code);
                   await load();
                 }}
@@ -945,6 +991,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
               onClick={() => {
                 setAdded(null);
                 setRemoved(null);
+                setSweepsNote(null);
                 setAdding(true);
               }}
             >

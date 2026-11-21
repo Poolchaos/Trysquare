@@ -6954,3 +6954,86 @@ test("a save or an add made behind the ruleset keeps the text and reads the rule
     expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
   }
 });
+
+test("a change that moves another rule's sweep patterns says so, and a code that sweep rows name is held with the way to change it (RA-5b)", async ({
+  page,
+}) => {
+  // Imported for this and deleted after: the suites after this find their
+  // rulesets as they were.
+  const made = await page.request.post("/api/rulesets/import", {
+    data: {
+      name: "A ruleset with sweep rows",
+      tier: "global",
+      markdown: readFileSync(PROTOCOL_PATH, "utf8"),
+    },
+  });
+  expect(made.status(), await made.text()).toBe(201);
+  const { rulesetId } = (await made.json()) as { rulesetId: string };
+  const bothThemes = async () => {
+    for (const scheme of ["dark", "light"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      expect(await accessibilityViolations(page), scheme).toEqual([]);
+    }
+  };
+  const panel = page.getByTestId("rule-text");
+  const moved = (rules: string) =>
+    `That also changed sweep patterns, which are read from table rows anywhere in the ruleset's document: ${rules}.`;
+  try {
+    await page.goto(`/rulesets/${rulesetId}`);
+    await expect(page.getByText("version 1", { exact: true })).toBeVisible();
+
+    // A table row written into rule 4's text names rule 5, which makes it a
+    // sweep row of rule 5's, as it would be in an imported document.
+    await page.getByRole("button", { name: "Index Signature Hiding a Typo", exact: true }).click();
+    await panel.getByRole("button", { name: "Edit text" }).click();
+    const field = panel.getByLabel("Rule 4 as markdown");
+    await field.fill(
+      `${await field.inputValue()}\n| Sweep for | What a hit means |\n| --- | --- |\n| \`setInterval\` | Rule 5: missing cleanup |\n`,
+    );
+    await panel.getByRole("button", { name: "Save rule" }).click();
+    await expect(page.getByText("version 2", { exact: true })).toBeVisible();
+    await expect(panel.getByRole("status")).toHaveText(moved("rule 5 now has 2 (it had 1)"));
+    await bothThemes();
+    await shootAll(page, panel, "rule-sweeps-moved-saved");
+
+    // The sweep table names rule 6, so under another code it would lose its
+    // patterns: refused, with the way a code is changed.
+    await page.getByRole("button", { name: "Left-In Logging", exact: true }).click();
+    await panel.getByRole("button", { name: "Edit text" }).click();
+    const held = panel.getByLabel("Rule 6 as markdown");
+    await held.fill((await held.inputValue()).replace("### 6.", "### 6a."));
+    await panel.getByRole("button", { name: "Save rule" }).click();
+    await expect(
+      panel.getByText(
+        "Rule 6 was not saved as 6a: table rows list its sweep patterns under 6, and under 6a it would lose them. Rows in the rule's own text can change with its heading. For rows elsewhere, change the code in the exported document and import that.",
+      ),
+    ).toBeVisible();
+    await shootAll(page, panel, "rule-code-held");
+    await panel.getByRole("button", { name: "Cancel" }).click();
+
+    // A new rule whose own text holds its sweep row.
+    await page.getByRole("button", { name: "Add a rule" }).click();
+    await page
+      .getByLabel("New rule as markdown")
+      .fill(
+        "### 15. Timer Left Running\n\n**Rule:** Flag a timer nothing clears.\n\n| Sweep for | What a hit means |\n| --- | --- |\n| `setImmediate` | Rule 15 |\n",
+      );
+    await page.getByRole("button", { name: "Add rule" }).click();
+    await expect(page.getByText("version 3", { exact: true })).toBeVisible();
+    await expect(panel.getByRole("status")).toHaveText(moved("rule 15 now has 1 (it had none)"));
+
+    // Removed, rule 4 takes its row with it, and rule 5 the pattern it gave.
+    await page.getByRole("button", { name: "Index Signature Hiding a Typo", exact: true }).click();
+    await panel.getByRole("button", { name: "Remove rule" }).click();
+    await panel.getByRole("button", { name: "Yes, remove rule 4" }).click();
+    const gone = page.getByRole("status").filter({ hasText: "Rule 4 removed." });
+    await expect(gone).toHaveText(
+      `Rule 4 removed. Reviews already run keep it. ${moved("rule 5 now has 1 (it had 2)")}`,
+    );
+    await expect(gone).toBeFocused();
+    await bothThemes();
+    await shootAll(page, gone, "rule-sweeps-moved-removed");
+  } finally {
+    expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
+  }
+});

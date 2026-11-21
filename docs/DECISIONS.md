@@ -6675,3 +6675,17 @@ verified evidence, in writing, here.
   made to it in the app, its blocks' order still holding, which the same
   test file holds. Not checked: whether the database on this machine holds
   such a ruleset; the guard hook refuses a script that opens it.
+- 2026-11-21 RA-5b, what D-271 left for the page. The answer to a save, an
+  add and a removal names every rule whose sweep patterns the change
+  moved, with the patterns it now has and how many it had (`sweeps`), and
+  the page says it where the person is looking: in the opened rule after
+  a save or an add, and in the note that stands where a removed rule was.
+  One sentence for all three, "That also changed sweep patterns, which are
+  read from table rows anywhere in the ruleset's document: rule 5 now has
+  2 (it had 1)", so a pattern given by a row the person did not mean as a
+  sweep row is seen at once and not at the next review's cost. The held
+  code's refusal no longer says "cannot yet": it names the code asked for,
+  says why the rule would lose its patterns under it, and gives both ways
+  on, a row in the rule's own text changed with the heading, or the code
+  changed in the exported document. Rejected: a count beside the row
+  alone, which D-268 had and nobody reads after saving another rule.
