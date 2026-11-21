@@ -13,6 +13,7 @@ import { handler, ok, readJson } from "@/server/api/respond";
 import { environmentClaudePath } from "@/server/cli-path";
 import { claudePathSchema } from "@/lib/settings/claude-path";
 import { identitiesSchema } from "@/lib/settings/identities";
+import { resultAddressesSchema } from "@/lib/settings/result-addresses";
 import { defaultRulesetId, requireRuleset } from "@/server/db/repositories/rulesets";
 import { globalUserEmail } from "@/server/gitops/identity";
 import { runtime } from "@/server/runtime";
@@ -31,6 +32,11 @@ const CATALOGUE = {
     fallback: [],
     // What a refusal calls it: its card says emails, and nobody typed the key.
     refusedAs: "The list of emails",
+  },
+  [SETTING_KEYS.resultAddresses]: {
+    schema: resultAddressesSchema,
+    fallback: [],
+    refusedAs: "The list of addresses",
   },
 } as const;
 

@@ -385,7 +385,10 @@ Data directory (display + open in file manager), model probes and results,
 stage timeout, concurrency, review identities (the git emails that count
 as mine, for the Mine filters and the scoreboard's author column; while
 none is kept, the `user.email` of the person's git config, which the card
-names, D-243), danger zone (delete all data, two-step).
+names, D-243), where results are sent (the addresses a result is to be
+emailed to, one a line, the first the default; the card says on a line
+of its own that no mail account is set up yet and nothing is sent,
+D-286), danger zone (delete all data, two-step).
 
 ## 4. Accessibility
 

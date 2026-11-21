@@ -7409,3 +7409,73 @@ test("with no ruleset yet, a new review and the dashboard say to start one, wher
   await stopEmpty();
   await page.emulateMedia({ colorScheme: "light" });
 });
+
+test("the addresses a result goes to are kept on Settings, which says nothing is sent yet, and a line that is not one address is refused beside the field (EM-2a)", async ({
+  page,
+}) => {
+  const bothThemes = async () => {
+    for (const scheme of ["dark", "light"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      expect(await accessibilityViolations(page), scheme).toEqual([]);
+    }
+  };
+  try {
+    await page.goto("/settings");
+    const card = page
+      .getByRole("main")
+      .locator("div")
+      .filter({ has: page.getByRole("heading", { name: "Where results are sent" }) })
+      .last();
+    // Said before the field, on a line of its own: an address typed here
+    // does nothing yet.
+    await expect(card).toContainText(
+      "A review's result will be emailed to the first address here.",
+    );
+    await expect(
+      card.getByText(
+        "No mail account is set up yet, so nothing is sent. Addresses are kept for later.",
+      ),
+    ).toBeVisible();
+    const field = card.getByLabel("Addresses, one per line");
+    await expect(field).toHaveValue("");
+    await bothThemes();
+    await shootAll(page, card, "settings-result-addresses-none");
+
+    // Two addresses, saved as the field is left, the first staying first.
+    await field.fill("lead@example.invalid\n  team@example.invalid  ");
+    await field.blur();
+    await expect(card.getByText("Saved.", { exact: true })).toBeVisible();
+    await expect(field).toHaveValue("lead@example.invalid\nteam@example.invalid");
+    await page.reload();
+    await expect(card.getByLabel("Addresses, one per line")).toHaveValue(
+      "lead@example.invalid\nteam@example.invalid",
+    );
+    await bothThemes();
+    await shootAll(page, card, "settings-result-addresses-kept");
+
+    // A name with its address is two things: refused in words, the text
+    // kept as typed, and what was stored left as it was.
+    const again = card.getByLabel("Addresses, one per line");
+    await again.fill("Lead <lead@example.invalid>");
+    await again.blur();
+    await expect(card).toContainText(
+      'The list of addresses holds "Lead <lead@example.invalid>", which is not one email address: enter the address alone, as name@example.com',
+    );
+    await expect(again).toHaveValue("Lead <lead@example.invalid>");
+    expect(await card.getByText("Saved.", { exact: true }).count()).toBe(0);
+    const stored = (await (await page.request.get("/api/settings")).json()) as {
+      settings: { resultAddresses: string[] };
+    };
+    expect(stored.settings.resultAddresses).toEqual([
+      "lead@example.invalid",
+      "team@example.invalid",
+    ]);
+    await bothThemes();
+    await shootAll(page, card, "settings-result-addresses-refused");
+  } finally {
+    await page.emulateMedia({ colorScheme: "light" });
+    expect(
+      (await page.request.put("/api/settings", { data: { resultAddresses: [] } })).status(),
+    ).toBe(200);
+  }
+});

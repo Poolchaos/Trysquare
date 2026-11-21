@@ -309,7 +309,9 @@ one that is not there is refused, deleting a ruleset clears a default
 that named it, and one gone from a database older than that reads as none,
 D-225), and identities (a list of the git emails that count as the
 person's; empty, the default, means `user.email` of their global git
-config, read when needed and never stored, D-243).
+config, read when needed and never stored, D-243), and resultAddresses
+(a list of the addresses a review's result is to be emailed to, the first
+the default; nothing is sent to them until a sender is built, D-286).
 Those are the whole catalogue; any other key is refused by name. A new
 review starts on the model last used, with no setting for it
 (`src/lib/models/availability.ts`); the `defaultModel` key was deleted on

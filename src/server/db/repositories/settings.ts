@@ -50,4 +50,6 @@ export const SETTING_KEYS = {
   defaultRulesetId: "defaultRulesetId",
   /** The git emails that count as the person's; none kept means git's own (D-243). */
   identities: "identities",
+  /** The addresses a review's result is to be emailed to, the first the default (EM-2). */
+  resultAddresses: "resultAddresses",
 } as const;

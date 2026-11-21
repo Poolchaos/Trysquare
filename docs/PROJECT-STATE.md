@@ -130,6 +130,9 @@ from 2026-11-03.
   With no ruleset yet, a new review, a draft and the dashboard say to
   start one, where each said to import one (D-285): the Rulesets form
   opens on a template, so importing is one way of three.
+  The addresses a review's result is to be emailed to are kept on
+  Settings (EM-2a, D-286), in a card that says no mail account is set up
+  yet and nothing is sent.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -137,8 +140,8 @@ from 2026-11-03.
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1664 unit tests passing, 8 skipped,
-  and 165 browser tests.
+  `./verify.sh --e2e` exits 0 with 1672 unit tests passing, 8 skipped,
+  and 166 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the
@@ -494,6 +497,9 @@ are accepted; anything else is refused by name.
 - `identities` (default empty). The git emails that count as the person's,
   for the Mine filter on a project's branches. Empty goes by `user.email`
   of their global git config, read each time and never stored (D-243).
+- `resultAddresses` (default empty). The addresses a review's result is to
+  be emailed to, the first the default. Kept only: nothing sends to them
+  until the email plan's sender is built (D-286).
 
 ## Structure
 
@@ -515,7 +521,8 @@ are accepted; anything else is refused by name.
   (the ruleset's shape, import with a fidelity gate, prompt composition and
   batch planning, a directive section's name in words, the bar a template
   is held to);
-  `settings` (the CLI path, the emails that count as the person's); and
+  `settings` (the CLI path, the emails that count as the person's, the
+  addresses a result goes to); and
   paths, ids and matching an error by the
   name its class sets.
 - `src/server/db/` - schema (16 tables), client, migrations 0000 to 0019, and
@@ -641,8 +648,10 @@ own now (D-75, D-81).
   single linked project.
 - More than one ruleset per review, so tiers compose: designed, not built.
 - Emailing a review's result: in scope since D-251, planned in
-  `plans/EMAIL-REPORT-PLAN.md` (D-264). Its sender waits on the
-  maintainer's mailbox; where a result goes is set in the app.
+  `plans/EMAIL-REPORT-PLAN.md` (D-264). The addresses a result goes to are
+  kept on Settings (EM-2a, D-286), and the card says nothing is sent yet.
+  Nothing sends: the sender waits on the maintainer's mailbox, and the
+  message and the record of a send are built with it.
 - Ruleset templates shipped with the app: in scope since D-251, planned
   in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). Built: the shelf, the General template on it, and a ruleset
   started from it on the Rulesets screen, and the General template's

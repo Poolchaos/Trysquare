@@ -101,6 +101,7 @@ interface Settings {
   stageMaxBudgetUsd: number;
   claudePath: string;
   identities: string[];
+  resultAddresses: string[];
 }
 
 /** What the server's own surroundings say, which Settings shows and cannot change. */
@@ -135,6 +136,8 @@ export default function SettingsPage() {
   const [pathProblem, setPathProblem] = useState("");
   const [emailsSaved, setEmailsSaved] = useState(false);
   const [emailsProblem, setEmailsProblem] = useState("");
+  const [addressesSaved, setAddressesSaved] = useState(false);
+  const [addressesProblem, setAddressesProblem] = useState("");
   const [system, setSystem] = useState<SystemInfo | null>(null);
   const [cli, setCli] = useState<CliStatus | null>(null);
   const [cliProblem, setCliProblem] = useState("");
@@ -320,6 +323,31 @@ export default function SettingsPage() {
     setEnvironment(sent.body.environment ?? null);
     field.value = (sent.body.settings?.identities ?? []).join("\n");
     setEmailsSaved(true);
+  }
+
+  async function saveAddresses(field: HTMLTextAreaElement) {
+    const kept = settings?.resultAddresses ?? [];
+    const typed = emailLines(field.value);
+    setAddressesProblem("");
+    if (typed.join("\n") === kept.join("\n")) {
+      field.value = kept.join("\n");
+      return;
+    }
+    setAddressesSaved(false);
+    const sent = await send<{ settings?: Settings; environment?: Environment }>(
+      "/api/settings",
+      { method: "PUT", body: JSON.stringify({ resultAddresses: typed }) },
+      "The addresses could not be saved",
+    );
+    // What was typed stays in the field when it is refused, as the emails do.
+    if (!sent.ok) {
+      setAddressesProblem(sent.error);
+      return;
+    }
+    setSettings(sent.body.settings ?? null);
+    setEnvironment(sent.body.environment ?? null);
+    field.value = (sent.body.settings?.resultAddresses ?? []).join("\n");
+    setAddressesSaved(true);
   }
 
   async function probe(id: string) {
@@ -586,6 +614,36 @@ export default function SettingsPage() {
                 )}
                 {emailsSaved ? <p className="text-xs text-[var(--color-good)]">Saved.</p> : null}
                 {emailsProblem === "" ? null : <Problem>{emailsProblem}</Problem>}
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-4">
+            <h2 className="mb-1 text-heading font-semibold">Where results are sent</h2>
+            {/* Said before the field, and in the page's own ink, not the grey of a
+                description: an address typed here does nothing yet. */}
+            <p className="mb-1 text-xs text-[var(--color-ink-muted)]">
+              A review&apos;s result will be emailed to the first address here.
+            </p>
+            <p className="mb-3 text-sm">
+              No mail account is set up yet, so nothing is sent. Addresses are kept for later.
+            </p>
+            {settings === null ? null : (
+              <div className="grid gap-1">
+                <Field
+                  label="Addresses, one per line"
+                  hint="The first is the one a review is offered. Saved when you leave the field."
+                >
+                  <Textarea
+                    rows={3}
+                    defaultValue={settings.resultAddresses.join("\n")}
+                    spellCheck={false}
+                    autoCapitalize="none"
+                    onBlur={(event) => void saveAddresses(event.currentTarget)}
+                  />
+                </Field>
+                {addressesSaved ? <p className="text-xs text-[var(--color-good)]">Saved.</p> : null}
+                {addressesProblem === "" ? null : <Problem>{addressesProblem}</Problem>}
               </div>
             )}
           </Card>

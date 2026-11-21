@@ -7112,3 +7112,21 @@ verified evidence, in writing, here.
   waits until every animation that ends reports itself finished or idle.
   What it asserts is unchanged: axe finds nothing, measured after the
   fades have ended.
+- 2026-11-21 D-286 The addresses a review's result is to be emailed to are
+  kept on Settings (EM-2a, the half of EM-2 that waits on nothing). One a
+  line, up to ten, the first the default, in the `resultAddresses`
+  setting, as the person's git emails are kept beside it. Decided with
+  it. First, EM-2 is split: the record on a review (the address and the
+  kind, a send's row) needs a migration and is read by nothing until
+  there is a sender, so it is built with EM-3. Second, an address is held
+  to one address strictly, where a git email is not: a To header is built
+  from it, so a name with it, two in a line, a comma, a line break or a
+  host with no dot is refused in words, the text kept as typed. Third,
+  the card says that nothing is sent yet on a line of its own, in the
+  page's ink and before the field. As first built it was the second
+  sentence of the grey description under the title, graded B by looking
+  and reworked; then shortened so it holds on one line at desk width.
+  Rejected: leaving the card out until the sender exists, which the plan
+  weighed (D-264) and which leaves the first step of setting mail up
+  behind the maintainer's answer on his mailbox; and a default picked
+  apart from the order, a second control for what the first line says.
