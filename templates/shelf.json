@@ -1,1 +1,11 @@
-{ "templates": [] }
+{
+  "templates": [
+    {
+      "slug": "general",
+      "name": "General",
+      "purpose": "What any change is held to, whatever it is written in: a failure hidden, input trusted, a credential or personal data exposed, a resource left open, behaviour changed with nothing to prove it, work left unfinished.",
+      "version": 1,
+      "modelRun": null
+    }
+  ]
+}

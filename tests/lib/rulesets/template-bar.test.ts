@@ -16,13 +16,17 @@ function rule(code: string, parts: Partial<Record<Part, string>> = {}): string {
     correct: "**Correct Pattern:**\n\n```ts\nfunction total() {\n  return 1;\n}\n```",
     detection: "**Detection:** Look for the statement in added lines.",
     severity: "**Severity:** WARNING",
+    why:
+      "**Why This Matters:** A breakpoint stops the program wherever a debugger is attached. " +
+      "Source: [CWE-489: Active Debug Code](https://cwe.mitre.org/data/definitions/489.html), " +
+      "read 2026-11-21.",
     ...parts,
   };
   return [`### ${code}. Debugger Left In`, ...Object.values(text).filter((part) => part !== "")]
     .map((part) => `${part}\n`)
     .join("\n");
 }
-type Part = "rule" | "violation" | "correct" | "detection" | "severity";
+type Part = "rule" | "violation" | "correct" | "detection" | "severity" | "why";
 
 const sweepTable = (pattern: string, code = "1") =>
   `## Mechanical Sweeps\n\n| Sweep for | What a hit means |\n| --- | --- |\n| \`${pattern}\` | Rule ${code} |\n`;
@@ -53,6 +57,31 @@ describe("the bar a ruleset template is held to", () => {
       'Rule 3 has no "**Correct Pattern:**" part.',
       'Rule 4 has no "**Detection:**" part.',
       'Rule 5 has no "**Severity:**" line naming CRITICAL, WARNING or NITPICK.',
+    ]);
+  });
+
+  it("holds every rule to a source: a link, and the date it was read", () => {
+    const why = (text: string) => ({ why: `**Why This Matters:** ${text}` });
+    expect(
+      templateBarFailures(
+        template(
+          rule("1", { why: "" }),
+          rule("2", why("It stops the program. Everyone knows that.")),
+          rule("3", why("See [CWE-489](https://cwe.mitre.org/data/definitions/489.html).")),
+          rule("4", why("CWE-489, read 2026-11-21.")),
+          rule(
+            "5",
+            why("[CWE-489](https://cwe.mitre.org/data/definitions/489.html), read 2026-11-21."),
+          ),
+        ),
+      ),
+    ).toEqual([
+      'Rule 1 has no "**Why This Matters:**" part.',
+      ...["2", "3", "4"].map(
+        (code) =>
+          `Rule ${code}'s "**Why This Matters:**" part cites no source: it needs a link to one ` +
+          'and the date it was read, as "read 2026-11-21".',
+      ),
     ]);
   });
 
@@ -110,11 +139,13 @@ describe("the bar a ruleset template is held to", () => {
 
   it("is not met by the example protocol, which is a fixture for the importer and not a template", () => {
     const failures = templateBarFailures(EXAMPLE);
-    expect(failures).toHaveLength(15);
-    expect(failures.slice(0, 3)).toEqual([
+    expect(failures).toHaveLength(30);
+    expect(failures.slice(0, 4)).toEqual([
+      'Rule 1\'s "**Why This Matters:**" part cites no source: it needs a link to one and the ' +
+        'date it was read, as "read 2026-11-21".',
+      'Rule 2 has no "**Why This Matters:**" part.',
       'Rule 2a has no "**Correct Pattern:**" part.',
-      "Rule 3's sweep pattern `any` matches no line of its violation example.",
-      'Rule 4 has no "**Correct Pattern:**" part.',
+      'Rule 2a has no "**Why This Matters:**" part.',
     ]);
   });
 });

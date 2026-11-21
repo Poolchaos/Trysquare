@@ -1,6 +1,7 @@
 # Ruleset templates plan
 
-Status: IN BUILD. RT-1a DONE 2026-11-21; RT-2 is next (D-273). Written
+Status: IN BUILD. RT-1a and RT-2a DONE 2026-11-21; RT-1b is next (D-273,
+D-274). Written
 2026-11-20, for D-251's scope (CP-12): "best quality and world class
 templates". Decided by the session; the maintainer
 reverses what he does not want.
@@ -95,12 +96,13 @@ bounded by the fifteen. Evidence: each rule's cited source.
 | WP   | Scope | Blocked on | Status |
 | ---- | ----- | ---------- | ------ |
 | RT-1a | The shelf, its server half (D-273). Template documents live in the repository's `templates/` folder, `<slug>.md` each, with `shelf.json` beside them saying what each is for, its version and the model run that proved it, if one has. The server reads the folder at run time and lists it; the tests of bar 1, 3 and 5 are one function the reader runs over every document, so a template that falls short is never listed. | - | DONE 2026-11-21, the commit after cf10ce4 (D-273). As built: `templateBarFailures` (`lib/rulesets/template-bar.ts`), `readShelf` (`server/rulesets/shelf.ts`) and `GET /api/ruleset-templates`. A shelf that is not whole answers with the reason: an index that cannot be read or is not in its shape, a template listed twice or with no document, a document the index does not list, a document under the bar. The shelf ships with no template, and a test names the templates it holds so one that reads as empty by mistake fails. A browser test asks the built server for the list: the folder is found under `npm run start`. Not as first written: the example protocol is not the first entry. Measured against the bar it falls short in 15 ways (eight rules with no correct pattern, two with no violation example, two with no detection, and three sweep patterns that match no line of their rule's violation example), and it stays the importer's fixture. |
-| RT-1b | The shelf on the Rulesets screen: the templates listed with a name, what each is for, its rule count and whether it has been run against a model; "Use this template" imports it as a new ruleset the person owns, the template's name and version in its description. | RT-2, so the screen is built and shot against a real template | TODO |
-| RT-2 | The General template, to the bar. Its fixture: one planted violation per rule and a clean look-alike beside each, with a key. | RT-1a | TODO |
-| RT-3 | The TypeScript template and its fixture. | RT-2 | TODO |
+| RT-1b | The shelf on the Rulesets screen: the templates listed with a name, what each is for, its rule count and whether it has been run against a model; "Use this template" imports it as a new ruleset the person owns, the template's name and version in its description. | RT-2a, so the screen is built and shot against a real template | TODO |
+| RT-2a | The General template, to the bar, on the shelf. | RT-1a | DONE 2026-11-21, the commit after a770477 (D-274). `templates/general.md`: twelve rules under six sections (failures, boundaries, resources, proof, leftovers, removals), each with its rule, a violation, the correct pattern, detection, a severity and the source it rests on, read that day: ten on CWE 5.0 entries, the two on tests on Google's review guide. Thirteen sweep patterns, each matching a line of its own rule's violation and none of its correct pattern. The bar's fourth part is checked too: a rule with no linked source and date read is under the bar (`templateBarFailures`). `tests/templates/general.test.ts` holds what the importer reads from it: eleven rules put to every file, the one on weakened tests to test files. Not run against a model, and its entry says so (`modelRun` none). |
+| RT-2b | The General template's fixture: one planted violation per rule and a clean look-alike beside each, with a key, built as the seeded fixture is and scored the same way. | RT-2a | TODO |
+| RT-3 | The TypeScript template and its fixture. | RT-2b | TODO |
 | RT-4 | The React template and its fixture. | RT-3 | TODO |
 | RT-5 | The HTTP API and database template and its fixture. | RT-4 | TODO |
-| RT-6 | The model runs: each template's fixture reviewed once on the recommended pair, scored against its key, the evidence committed under `docs/evidence/` (D-261). A rule the model misses or raises on the clean look-alike is rewritten and run again. | RT-2 to RT-5, the maintainer's go per run | TODO (maintainer starts each) |
+| RT-6 | The model runs: each template's fixture reviewed once on the recommended pair, scored against its key, the evidence committed under `docs/evidence/` (D-261). A rule the model misses or raises on the clean look-alike is rewritten and run again. | RT-2b to RT-5, the maintainer's go per run | TODO (maintainer starts each) |
 | RT-7 | The Firebase template. | RT-6, the maintainer's word | TODO |
 | RT-8 | Records: README (first steps start from a template), RUNBOOK, 04, `PROJECT-STATE.md`. | RT-1a to RT-5 | TODO |
 

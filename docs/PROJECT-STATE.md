@@ -90,10 +90,13 @@ from 2026-11-03.
   documents live in the repository's `templates/` folder, listed by
   `GET /api/ruleset-templates`, and each is held to the plan's bar as it
   is read (every part of every rule, every sweep pattern borne out by
-  its own rule's examples, fifteen rules at most). The shelf holds no
-  template yet and no screen shows it; the General template is next
-  (RT-2), then the shelf on the Rulesets screen (RT-1b).
-  `./verify.sh --e2e` exits 0 with 1624 unit tests passing, 8 skipped,
+  its own rule's examples, fifteen rules at most). The General template
+  is on it (RT-2a, D-274): twelve rules for any change in any language,
+  each resting on a source read the day it was written, which the bar
+  now asks of every rule. No screen shows the shelf yet (RT-1b, next),
+  and the template has not been run against a model: its fixture is
+  RT-2b and the run is the maintainer's to start (RT-6).
+  `./verify.sh --e2e` exits 0 with 1629 unit tests passing, 8 skipped,
   and 163 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
@@ -522,7 +525,7 @@ are accepted; anything else is refused by name.
   pass, and the shutdown pass.
   `drizzle/` - twenty committed migrations.
 - `templates/` - the template shelf: `shelf.json`, and a protocol document
-  per template once there is one.
+  per template (`general.md`).
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and
@@ -552,10 +555,13 @@ own now (D-75, D-81).
 - A ruleset's process directives show their markdown as written, where a
   rule's text is formatted (D-227; `plans/idea-inbox.md`). It is what the
   model is given, word for word.
-- One Turbopack build warning remains, traced to the engine's per-review log
-  paths, which cannot be static. It affects only the standalone output
-  manifest, which this app does not use. Adopting `output: "standalone"`
-  voids that acceptance; the re-check trigger is in `DECISIONS.md`.
+- One Turbopack build warning remains. The build's output of 2026-11-21
+  names `src/server/engine/cli.ts`, where the path of a CLI the person
+  names is resolved at run time; the entry of 2026-07-31 in `DECISIONS.md`
+  traced it to the engine's per-review log paths, which cannot be static
+  either. It affects only the standalone output manifest, which this app
+  does not use. Adopting `output: "standalone"` voids that acceptance; the
+  re-check trigger is in `DECISIONS.md`.
 - `npm audit --omit=dev` reports 0 vulnerabilities (2026-11-17, after next
   moved from 16.4.4 to 16.4.6, D-231; D-228 had moved it from 16.3.8 and zod
   from 4.4.3 to 4.6.7). The full audit reports 7 on 2026-11-19, all
@@ -590,8 +596,8 @@ own now (D-75, D-81).
   maintainer's mailbox; where a result goes is set in the app.
 - Ruleset templates shipped with the app: in scope since D-251, planned
   in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). The shelf is read and
-  listed by the server (RT-1a); it holds no template and no screen shows
-  it. A ruleset is started with
+  listed by the server (RT-1a) and holds the General template (RT-2a); no
+  screen shows it, so a person cannot yet start a ruleset from one. A ruleset is started with
   no document (RA-6, D-272), and a rule can be switched off, its severity
   changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
   removed (RA-4, D-269), and one ruleset deleted (RA-1, D-266). Process

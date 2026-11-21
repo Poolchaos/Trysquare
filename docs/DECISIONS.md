@@ -6778,6 +6778,45 @@ verified evidence, in writing, here.
   from them; bringing the example protocol up to the bar, which rewrites a
   fixture that 29 files of the tests and scripts read; and an environment
   variable naming another shelf so the screen could be shot against a
-  stand-in, a setting nobody asked for. A severity the importer would take as another (ERROR,
-  or a word it does not know) is under the bar: a template names the one
-  of the three it means.
+  stand-in, a setting nobody asked for. A severity the importer would take
+  as another (ERROR, or a word it does not know) is under the bar: a
+  template names the one of the three it means.
+- 2026-11-21 D-274 The General template (`templates/general.md`, RT-2a):
+  twelve rules a change is held to whatever it is written in. A swallowed
+  error, a failure reported as success, an unchecked result; unvalidated
+  input at a boundary, a credential in code, sensitive data in a log; a
+  resource not released on every path; behaviour changed with nothing to
+  prove it, a test weakened or switched off; debugging left in, unfinished
+  work shipped; a removed guard. Each names something a model can prove
+  from the change and the files around it, which is the plan's second bar
+  and is read by a person, not checked by a program. Each rests on a
+  source read on 2026-11-21 and linked in the rule: CWE 5.0 (dated
+  2026-10-28) entries 390, 392, 252, 20, 798, 532, 772, 489, 546 and 754,
+  and for the two rules on tests Google's "What to look for in a code
+  review", which asks for tests in the same change as the code. The
+  example of an unchecked result leans on `fetch` resolving for an error
+  status, read on MDN the same day. The words are written here, none
+  copied. Left out: rules of taste; a silenced linter or type check,
+  which goes to the TypeScript template where the tool's own
+  documentation is the source; a caller left behind by a changed
+  contract, for which no primary source was found. Decided with it.
+  First, the bar's fourth part is checked in form by the same function as
+  the others: a rule whose "Why This Matters" holds no link and no "read"
+  date is under the bar. That the source is a primary one and says what
+  the rule says stays with the review pass. Second, the examples are
+  TypeScript and the template says so; the rules are worded for any
+  language. Third, titles and sections are worded so that eleven rules
+  are put to every file: a title that names a technology narrows its rule
+  to that technology's files on a model that takes rules file by file
+  ("Secret" would have kept the credential rule from a YAML file), and a
+  test holds what the importer reads. The rule on weakened tests is put
+  to test files. Fourth, each sweep pattern is a row of its own with no
+  alternation: a table cell that holds a pipe gives its rule no pattern,
+  a fault in the importer measured the same day and fixed in the change
+  after this one. Fifth, the template has no directive on the form of a
+  finding: the app's own contract says that. Sixth, RT-2 is two changes,
+  the template and then its fixture and key (RT-2b); until a model has
+  run that fixture the template's entry says it has not been run. Also
+  put right: `PROJECT-STATE.md` said the one build warning was traced to
+  the engine's log paths, and the build names the line that resolves a
+  CLI path the person gives.

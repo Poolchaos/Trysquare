@@ -7195,12 +7195,22 @@ test("a ruleset is started with no document: a name and a tier, nothing to expor
   }
 });
 
-test("the template shelf is read by the server as built, and holds no template yet (RT-1)", async ({
+test("the template shelf is read by the server as built, and holds the General template (RT-1, RT-2)", async ({
   page,
 }) => {
   // The shelf is a folder outside `src/`, read at run time: a build that
   // could not find it answers 500 here.
   const listed = await page.request.get("/api/ruleset-templates");
   expect(listed.status()).toBe(200);
-  expect(await listed.json()).toEqual({ templates: [] });
+  expect(await listed.json()).toEqual({
+    templates: [
+      expect.objectContaining({
+        slug: "general",
+        name: "General",
+        version: 1,
+        ruleCount: 12,
+        modelRun: null,
+      }),
+    ],
+  });
 });

@@ -49,6 +49,19 @@ function ruleFailures(rule: ImportedRule): string[] {
       `Rule ${rule.code} has no "**Severity:**" line naming ${SEVERITIES.slice(0, -1).join(", ")} or ${SEVERITIES.at(-1)}.`,
     );
   }
+  // Nothing in a template is recalled: each rule rests on a source its
+  // reader can open. That it is a primary one, and says what the rule says,
+  // is read by a person.
+  if (rule.notes === null) failures.push(missing("Why This Matters"));
+  else if (
+    !/\]\(https:\/\/[^)\s]+\)/.test(rule.notes) ||
+    !/\bread \d{4}-\d{2}-\d{2}\b/.test(rule.notes)
+  ) {
+    failures.push(
+      `Rule ${rule.code}'s "**Why This Matters:**" part cites no source: it needs a link to one ` +
+        'and the date it was read, as "read 2026-11-21".',
+    );
+  }
 
   for (const pattern of rule.sweepPatterns) {
     const named = `Rule ${rule.code}'s sweep pattern \`${pattern}\``;
