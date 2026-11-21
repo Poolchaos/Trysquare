@@ -18,14 +18,14 @@ describe("the React template", () => {
   it("is eight rules, every line of it a rule's or a directive's", () => {
     expect(coverage.unmapped).toEqual([]);
     expect(ruleset.rules.map((rule) => [rule.code, rule.severity, rule.group])).toEqual([
-      ["1", "CRITICAL", "Hooks"],
-      ["2", "CRITICAL", "Hooks"],
-      ["3", "WARNING", "Hooks"],
-      ["4", "WARNING", "Hooks"],
-      ["5", "WARNING", "Component state"],
-      ["6", "CRITICAL", "Component state"],
-      ["7", "WARNING", "Components people use"],
-      ["8", "CRITICAL", "Components people use"],
+      ["31", "CRITICAL", "Hooks"],
+      ["32", "CRITICAL", "Hooks"],
+      ["33", "WARNING", "Hooks"],
+      ["34", "WARNING", "Hooks"],
+      ["35", "WARNING", "Component state"],
+      ["36", "CRITICAL", "Component state"],
+      ["37", "WARNING", "Components people use"],
+      ["38", "CRITICAL", "Components people use"],
     ]);
   });
 
@@ -44,7 +44,7 @@ describe("the React template", () => {
           .filter((rule) => rule.sweepPatterns.length > 0)
           .map((rule) => [rule.code, rule.sweepPatterns.length]),
       ),
-    ).toEqual({ 2: 1, 7: 2, 8: 2 });
+    ).toEqual({ 32: 1, 37: 2, 38: 2 });
   });
 
   it("says its scope, its severities and its sweeps where the app looks for them", () => {

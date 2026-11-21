@@ -18,14 +18,14 @@ describe("the HTTP API and database template", () => {
   it("is eight rules, every line of it a rule's or a directive's", () => {
     expect(coverage.unmapped).toEqual([]);
     expect(ruleset.rules.map((rule) => [rule.code, rule.severity, rule.group])).toEqual([
-      ["1", "CRITICAL", "Who is asking"],
-      ["2", "CRITICAL", "Who is asking"],
-      ["3", "CRITICAL", "What the request carries"],
-      ["4", "CRITICAL", "What the request carries"],
-      ["5", "WARNING", "What the request carries"],
-      ["6", "CRITICAL", "Reads and writes"],
-      ["7", "WARNING", "Reads and writes"],
-      ["8", "CRITICAL", "Reads and writes"],
+      ["41", "CRITICAL", "Who is asking"],
+      ["42", "CRITICAL", "Who is asking"],
+      ["43", "CRITICAL", "What the request carries"],
+      ["44", "CRITICAL", "What the request carries"],
+      ["45", "WARNING", "What the request carries"],
+      ["46", "CRITICAL", "Reads and writes"],
+      ["47", "WARNING", "Reads and writes"],
+      ["48", "CRITICAL", "Reads and writes"],
     ]);
   });
 
@@ -46,7 +46,7 @@ describe("the HTTP API and database template", () => {
           .filter((rule) => rule.sweepPatterns.length > 0)
           .map((rule) => [rule.code, rule.sweepPatterns.length]),
       ),
-    ).toEqual({ 4: 1, 5: 1, 6: 2 });
+    ).toEqual({ 44: 1, 45: 1, 46: 2 });
   });
 
   it("says its scope, its severities and its sweeps where the app looks for them", () => {

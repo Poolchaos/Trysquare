@@ -7184,3 +7184,20 @@ verified evidence, in writing, here.
   person what they did not pick. Not decided here and left to the plan's
   own packages: how the picker reads with many rulesets, and what the
   report's header says of three.
+- 2026-11-21 D-289 The templates' rule numbers are disjoint (RS-1 of
+  `plans/RULESETS-TOGETHER-PLAN.md`). TypeScript's nine rules are 21 to
+  29, React's eight 31 to 38, HTTP API and database's eight 41 to 48, in
+  each document's headings and sweep rows and in its fixture's key;
+  General keeps 1 to 12. The three are at version 3 on the shelf. A test
+  holds the four ranges and, for a template added later, that no code is
+  in two. Proven: the test failed on the templates as they were, the
+  three fake demos find 9/9, 8/8 and 8/8 under the new numbers. Nothing
+  stored is touched: a ruleset started from a template before today
+  keeps the numbers it had, and two such rulesets picked together will
+  meet the refusal RS-2 builds, which names the shared codes. Tens were
+  chosen over a prefix (TS-1) because the importer reads a rule's code
+  as digits with at most one letter after them (`RULE_HEADING`), so a
+  prefixed heading is not a rule to it. The cost, known: a range holds
+  ten codes and the bar allows a template 15 rules, so a template that
+  grows past the end of its range takes a new range, and the test fails
+  until it does.

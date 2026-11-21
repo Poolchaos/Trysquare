@@ -41,16 +41,16 @@ under the rule named, not a finding.
 
 | Sweep for                        | What a hit means                              |
 | -------------------------------- | --------------------------------------------- |
-| `Object\.assign\(.*\.body\b`     | Rule 4: a request body copied onto a record   |
-| `\.stack\b`                      | Rule 5: a stack trace read, perhaps sent      |
-| `\bWHERE\b.*\$\{`                | Rule 6: a value written into a statement      |
-| `\bWHERE\b.*["']\s*\+`           | Rule 6: a statement joined to a value         |
+| `Object\.assign\(.*\.body\b`     | Rule 44: a request body copied onto a record   |
+| `\.stack\b`                      | Rule 45: a stack trace read, perhaps sent      |
+| `\bWHERE\b.*\$\{`                | Rule 46: a value written into a statement      |
+| `\bWHERE\b.*["']\s*\+`           | Rule 46: a statement joined to a value         |
 
 ## Who is asking
 
 The server decides what a caller may do, on every request.
 
-### 1. Endpoint that does not check who asks
+### 41. Endpoint that does not check who asks
 
 **Rule:** Every endpoint that reads or changes something decides, on the
 server, whether this caller may: who they are, and that they may do this to
@@ -89,7 +89,7 @@ Source:
 [CWE-862: Missing Authorization](https://cwe.mitre.org/data/definitions/862.html),
 CWE 5.0, read 2026-11-21.
 
-### 2. Record reached by an id the caller chose
+### 42. Record reached by an id the caller chose
 
 **Rule:** A record looked up by an id from the request is looked up as the
 caller's: the lookup itself, or a check straight after it, holds the record
@@ -129,7 +129,7 @@ CWE 5.0, read 2026-11-21.
 
 A request holds what its sender chose to put in it.
 
-### 3. Body used without being checked
+### 43. Body used without being checked
 
 **Rule:** What a request carries (its body, its query, its headers) is
 checked for the shape and range the handler relies on before any of it is
@@ -169,7 +169,7 @@ missing one reaches the ledger as undefined. Source:
 [CWE-20: Improper Input Validation](https://cwe.mitre.org/data/definitions/20.html),
 CWE 5.0, read 2026-11-21.
 
-### 4. Body copied onto a record whole
+### 44. Body copied onto a record whole
 
 **Rule:** A handler names the fields a caller may set and takes those. It
 does not copy the request's body onto a stored record, or hand the body to
@@ -213,7 +213,7 @@ saved with it. Source:
 [CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes](https://cwe.mitre.org/data/definitions/915.html),
 CWE 5.0, read 2026-11-21.
 
-### 5. Failure's detail sent to the caller
+### 45. Failure's detail sent to the caller
 
 **Rule:** A reply to a failed request says what the caller can act on and
 nothing of how the server is built: no stack trace, no statement, no path,
@@ -257,7 +257,7 @@ CWE 5.0, read 2026-11-21.
 
 The store does what the statement says, to as many rows as it names.
 
-### 6. Statement built from input
+### 46. Statement built from input
 
 **Rule:** A value from a request reaches the store as a parameter, never as
 part of the statement's text.
@@ -288,7 +288,7 @@ caller who sends a quote and a statement of their own has it run. Source:
 [CWE-89: Improper Neutralization of Special Elements used in an SQL Command](https://cwe.mitre.org/data/definitions/89.html),
 CWE 5.0, read 2026-11-21.
 
-### 7. List with no limit
+### 47. List with no limit
 
 **Rule:** A read that returns a list has a limit the server sets, however
 many rows match, and a caller asks for the rest by page.
@@ -333,7 +333,7 @@ takes all grow with the table, and nothing in the code stops them. Source:
 [CWE-770: Allocation of Resources Without Limits or Throttling](https://cwe.mitre.org/data/definitions/770.html),
 CWE 5.0, read 2026-11-21.
 
-### 8. Writes that stand together, made apart
+### 48. Writes that stand together, made apart
 
 **Rule:** Writes that are only right together are made in one transaction,
 so a failure between them leaves none of them.

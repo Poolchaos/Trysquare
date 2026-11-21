@@ -41,18 +41,18 @@ under the rule named, not a finding.
 
 | Sweep for                         | What a hit means                            |
 | --------------------------------- | ------------------------------------------- |
-| `react-hooks/exhaustive-deps`     | Rule 2: the dependency check switched off   |
-| `key=\{index\}`                   | Rule 7: a position used as a key            |
-| `key=\{Math\.random\(\)\}`        | Rule 7: a key made while rendering          |
-| `<div[^>]*onClick=`               | Rule 8: a click handler on a div            |
-| `<span[^>]*onClick=`              | Rule 8: a click handler on a span           |
+| `react-hooks/exhaustive-deps`     | Rule 32: the dependency check switched off   |
+| `key=\{index\}`                   | Rule 37: a position used as a key            |
+| `key=\{Math\.random\(\)\}`        | Rule 37: a key made while rendering          |
+| `<div[^>]*onClick=`               | Rule 38: a click handler on a div            |
+| `<span[^>]*onClick=`              | Rule 38: a click handler on a span           |
 
 ## Hooks
 
 React tells one hook from the next by the order they are called in, and
 runs an effect again only when told what it read.
 
-### 1. Hook called where React cannot count on it
+### 31. Hook called where React cannot count on it
 
 **Rule:** A hook is called at the top level of a component or of another
 hook, on every render, in the same order: never inside a condition, a loop,
@@ -101,7 +101,7 @@ and
 [React: State, A Component's Memory](https://react.dev/learn/state-a-components-memory),
 read 2026-11-21.
 
-### 2. Effect that reads what it does not declare
+### 32. Effect that reads what it does not declare
 
 **Rule:** An effect's dependency list names every prop, state value and
 value declared in the component that its code reads. The list is not the
@@ -139,7 +139,7 @@ so the component goes on listening to the room it was first given. Source:
 [React: useEffect](https://react.dev/reference/react/useEffect),
 read 2026-11-21.
 
-### 3. Effect that leaves something running
+### 33. Effect that leaves something running
 
 **Rule:** An effect that starts something (a subscription, a listener, a
 timer, a connection) returns a function that stops it.
@@ -178,7 +178,7 @@ running and set state on what is no longer there. Source:
 [React: useEffect](https://react.dev/reference/react/useEffect),
 read 2026-11-21.
 
-### 4. Effect that takes a late reply for the current one
+### 34. Effect that takes a late reply for the current one
 
 **Rule:** An effect that asks for data and sets state from the reply
 ignores a reply that arrives after the effect has been cleaned up.
@@ -221,7 +221,7 @@ read 2026-11-21.
 
 State is what React is told. What it is not told, it does not draw.
 
-### 5. Derived value kept in state
+### 35. Derived value kept in state
 
 **Rule:** A value that can be worked out from props or other state is
 worked out while rendering. It is not kept in state of its own and brought
@@ -258,7 +258,7 @@ the effect corrects it, and the two copies are free to disagree. Source:
 [React: You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect),
 read 2026-11-21.
 
-### 6. State changed in place
+### 36. State changed in place
 
 **Rule:** An object or an array held in state is replaced through its
 setter, never changed in place.
@@ -300,7 +300,7 @@ read 2026-11-21.
 
 What is drawn has to stay the right item, and be reachable without a mouse.
 
-### 7. Key that does not name the item
+### 37. Key that does not name the item
 
 **Rule:** Each item of a list is keyed by something that belongs to the
 item and does not change. Its position in the array is not that, and
@@ -346,7 +346,7 @@ typed into it is lost. Source:
 [React: Rendering Lists](https://react.dev/learn/rendering-lists),
 read 2026-11-21.
 
-### 8. Control a keyboard cannot reach
+### 38. Control a keyboard cannot reach
 
 **Rule:** Anything a person can click can be reached and worked from the
 keyboard. A click handler goes on a button or a link, or on an element

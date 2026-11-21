@@ -11,21 +11,21 @@
       "slug": "typescript",
       "name": "TypeScript",
       "purpose": "Where a change makes the compiler prove less than the code assumes.",
-      "version": 2,
+      "version": 3,
       "modelRun": null
     },
     {
       "slug": "react",
       "name": "React",
       "purpose": "Hooks, effects and state, list keys, and controls a keyboard can reach.",
-      "version": 2,
+      "version": 3,
       "modelRun": null
     },
     {
       "slug": "http-api",
       "name": "HTTP API and database",
       "purpose": "Who may ask, what a request may carry, and how the store is read and written.",
-      "version": 2,
+      "version": 3,
       "modelRun": null
     }
   ]

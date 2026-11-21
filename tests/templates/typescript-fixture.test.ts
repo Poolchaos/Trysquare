@@ -4,5 +4,5 @@ import { holdsTemplateFixture } from "./fixture-checks";
 
 holdsTemplateFixture({
   slug: "typescript",
-  swept: ["1", "2", "3", "4", "6"],
+  swept: ["21", "22", "23", "24", "26"],
 });

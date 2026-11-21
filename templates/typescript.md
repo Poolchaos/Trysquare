@@ -41,22 +41,22 @@ under the rule named, not a finding.
 
 | Sweep for                       | What a hit means                            |
 | ------------------------------- | ------------------------------------------- |
-| `:\s*any\b`                     | Rule 1: a value declared as any             |
-| `\bas any\b`                    | Rule 1: a value asserted to any             |
-| `JSON\.parse\(.*\)\s+as\s`      | Rule 2: parsed data asserted to a type      |
-| `\bas unknown as\b`             | Rule 2: an assertion made through unknown   |
-| `[\w\])]!\.`                    | Rule 3: a non-null assertion before a member |
-| `[\w\])]![;)]`                  | Rule 3: a non-null assertion on a value     |
-| `@ts-ignore`                    | Rule 4: the next line's errors switched off |
-| `@ts-expect-error\s*$`          | Rule 4: an expected error with no reason    |
-| `\.forEach\(async\b`            | Rule 6: async work nothing waits for        |
+| `:\s*any\b`                     | Rule 21: a value declared as any             |
+| `\bas any\b`                    | Rule 21: a value asserted to any             |
+| `JSON\.parse\(.*\)\s+as\s`      | Rule 22: parsed data asserted to a type      |
+| `\bas unknown as\b`             | Rule 22: an assertion made through unknown   |
+| `[\w\])]!\.`                    | Rule 23: a non-null assertion before a member |
+| `[\w\])]![;)]`                  | Rule 23: a non-null assertion on a value     |
+| `@ts-ignore`                    | Rule 24: the next line's errors switched off |
+| `@ts-expect-error\s*$`          | Rule 24: an expected error with no reason    |
+| `\.forEach\(async\b`            | Rule 26: async work nothing waits for        |
 
 ## Escapes from the type checker
 
 Each of these compiles, and each is the code telling the compiler not to
 look.
 
-### 1. Explicit any
+### 21. Explicit any
 
 **Rule:** A change does not declare or assert a value as `any`. A value
 whose shape is not known is `unknown`, and is narrowed before it is used.
@@ -94,7 +94,7 @@ so a renamed field or a missing one is found when the code runs. Source:
 [TypeScript Handbook: Everyday Types, any](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#any),
 read 2026-11-21.
 
-### 2. Assertion on a value nothing checked
+### 22. Assertion on a value nothing checked
 
 **Rule:** A type assertion is made only where the code has already
 established what it asserts. Data from outside (parsed JSON, a reply, a
@@ -146,7 +146,7 @@ missing is handed on as complete. Source:
 [TypeScript Handbook: Everyday Types, Type Assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions),
 read 2026-11-21.
 
-### 3. Non-null assertion on a value that can be null
+### 23. Non-null assertion on a value that can be null
 
 **Rule:** A `!` after a value is written only where the lines around it
 show the value cannot be null or undefined. Where it can be, the code
@@ -181,7 +181,7 @@ is next used. Source:
 [TypeScript Handbook: Everyday Types, Non-null Assertion Operator](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#non-null-assertion-operator-postfix-),
 read 2026-11-21.
 
-### 4. Checker silenced by a comment
+### 24. Checker silenced by a comment
 
 **Rule:** A change does not switch the compiler off with a comment:
 `@ts-ignore`, `@ts-nocheck`, or an `@ts-expect-error` that does not say
@@ -224,7 +224,7 @@ read 2026-11-21.
 
 Work the code starts and does not wait for can fail with no code told of it.
 
-### 5. Promise left floating
+### 25. Promise left floating
 
 **Rule:** A promise the change creates is awaited, returned, or given a
 handler for its failure. A call whose promise is dropped runs after the
@@ -264,7 +264,7 @@ Source:
 [typescript-eslint: no-floating-promises](https://typescript-eslint.io/rules/no-floating-promises/),
 read 2026-11-21.
 
-### 6. Async function where nothing waits for it
+### 26. Async function where nothing waits for it
 
 **Rule:** An async function is not handed to code that ignores what it
 returns (`forEach`, an event listener, a callback typed to return nothing),
@@ -304,7 +304,7 @@ read 2026-11-21.
 
 The type says more than the code has made sure of.
 
-### 7. Switch that does not cover its union
+### 27. Switch that does not cover its union
 
 **Rule:** A switch over a union handles every member by name and ends in a
 default that the compiler refuses when a member is missing. A default that
@@ -362,7 +362,7 @@ compiler had no way to object. Source:
 [TypeScript Handbook: Narrowing, Exhaustiveness checking](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking),
 read 2026-11-21.
 
-### 8. Indexed value taken as present
+### 28. Indexed value taken as present
 
 **Rule:** A value read by key or by index from a record, a map or an array
 is checked before it is used, unless the lines around it show the key is
@@ -402,7 +402,7 @@ the value is undefined, so the tax comes out as NaN. Source:
 [TSConfig Reference: noUncheckedIndexedAccess](https://www.typescriptlang.org/tsconfig/noUncheckedIndexedAccess.html),
 read 2026-11-21.
 
-### 9. Type predicate that does not check what it claims
+### 29. Type predicate that does not check what it claims
 
 **Rule:** A function that returns `value is T` checks, in its body,
 everything about `T` that its callers go on to use.

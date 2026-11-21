@@ -4,5 +4,5 @@ import { holdsTemplateFixture } from "./fixture-checks";
 
 holdsTemplateFixture({
   slug: "http-api",
-  swept: ["4", "5", "6"],
+  swept: ["44", "45", "46"],
 });

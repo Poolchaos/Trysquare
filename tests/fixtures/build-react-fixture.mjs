@@ -288,7 +288,7 @@ const MAIN = {
 
 /** What the feature branch writes over main: each plant, and each look-alike with its test. */
 const CHANGE = {
-  // Rule 1, planted: a return some renders take, above the hooks.
+  // Rule 31, planted: a return some renders take, above the hooks.
   "src/components/Profile.tsx": lines(
     'import { useState } from "react";',
     'import { useUser } from "../api";',
@@ -306,7 +306,7 @@ const CHANGE = {
     "  );",
     "}",
   ),
-  // Rule 1, clean: the same early return, the hooks moved into a component of their own.
+  // Rule 31, clean: the same early return, the hooks moved into a component of their own.
   "src/components/Account.tsx": lines(
     'import { useState } from "react";',
     'import { useUser } from "../api";',
@@ -344,7 +344,7 @@ const CHANGE = {
     '  expect(screen.getByRole("button")).toBeInTheDocument();',
     "});",
   ),
-  // Rule 2, planted: the effect reads the user's name, and the check that would say so is off.
+  // Rule 32, planted: the effect reads the user's name, and the check that would say so is off.
   "src/components/ChatRoom.tsx": lines(
     REACT,
     'import { connect, notify } from "../api";',
@@ -364,7 +364,7 @@ const CHANGE = {
     "  return <p>{last}</p>;",
     "}",
   ),
-  // Rule 2, clean: an effect that names everything it reads.
+  // Rule 32, clean: an effect that names everything it reads.
   "src/components/Presence.tsx": lines(
     REACT,
     'import { watchPresence } from "../api";',
@@ -396,7 +396,7 @@ const CHANGE = {
     '  expect(watch).toHaveBeenLastCalledWith("r-2", expect.any(Function));',
     "});",
   ),
-  // Rule 3, planted: an interval started and never stopped.
+  // Rule 33, planted: an interval started and never stopped.
   "src/components/Clock.tsx": lines(
     REACT,
     "",
@@ -408,7 +408,7 @@ const CHANGE = {
     "  return <time>{new Date(now).toLocaleTimeString()}</time>;",
     "}",
   ),
-  // Rule 3, clean: the same interval, stopped by the function the effect returns.
+  // Rule 33, clean: the same interval, stopped by the function the effect returns.
   "src/components/Ticker.tsx": lines(
     REACT,
     "",
@@ -437,7 +437,7 @@ const CHANGE = {
     "  expect(vi.getTimerCount()).toBe(0);",
     "});",
   ),
-  // Rule 4, planted: whichever reply lands last is shown, whoever it is about.
+  // Rule 34, planted: whichever reply lands last is shown, whoever it is about.
   "src/components/Bio.tsx": lines(
     REACT,
     'import { fetchBio } from "../api";',
@@ -450,7 +450,7 @@ const CHANGE = {
     "  return <p>{bio ?? person}</p>;",
     "}",
   ),
-  // Rule 4, clean: the same request, a reply for an earlier person ignored.
+  // Rule 34, clean: the same request, a reply for an earlier person ignored.
   "src/components/Avatar.tsx": lines(
     REACT,
     'import { fetchAvatar } from "../api";',
@@ -499,7 +499,7 @@ const CHANGE = {
     '  await waitFor(() => expect(screen.getByAltText("Sipho")).toHaveAttribute("src", "/avatars/sipho.png"));',
     "});",
   ),
-  // Rule 5, planted: the full name kept in state and copied into it by an effect.
+  // Rule 35, planted: the full name kept in state and copied into it by an effect.
   "src/components/NameForm.tsx": lines(
     REACT,
     "",
@@ -525,7 +525,7 @@ const CHANGE = {
     "  );",
     "}",
   ),
-  // Rule 5, clean: the same kind of value, worked out while rendering.
+  // Rule 35, clean: the same kind of value, worked out while rendering.
   "src/components/AddressForm.tsx": lines(
     'import { useState } from "react";',
     "",
@@ -562,7 +562,7 @@ const CHANGE = {
     '  expect(screen.getByText("Delivered to 12 Long Street, Cape Town")).toBeInTheDocument();',
     "});",
   ),
-  // Rule 6, planted: the cart in state is changed in place and handed back.
+  // Rule 36, planted: the cart in state is changed in place and handed back.
   "src/components/Cart.tsx": lines(
     'import { useState } from "react";',
     'import type { Item } from "../api";',
@@ -584,7 +584,7 @@ const CHANGE = {
     "  );",
     "}",
   ),
-  // Rule 6, clean: the same list, replaced through its setter.
+  // Rule 36, clean: the same list, replaced through its setter.
   "src/components/Wishlist.tsx": lines(
     'import { useState } from "react";',
     'import type { Item } from "../api";',
@@ -618,7 +618,7 @@ const CHANGE = {
     '  expect(screen.getByText("2 wished for")).toBeInTheDocument();',
     "});",
   ),
-  // Rule 7, planted: rows that can be removed, keyed by where they stand.
+  // Rule 37, planted: rows that can be removed, keyed by where they stand.
   "src/components/TodoList.tsx": lines(
     'import { useState } from "react";',
     "",
@@ -650,7 +650,7 @@ const CHANGE = {
     "  );",
     "}",
   ),
-  // Rule 7, clean: the same kind of list, each row keyed by its order.
+  // Rule 37, clean: the same kind of list, each row keyed by its order.
   "src/components/OrderList.tsx": lines(
     'import { useState } from "react";',
     'import type { Order } from "../api";',
@@ -702,7 +702,7 @@ const CHANGE = {
     '  expect(screen.getByLabelText("Note on Ink")).toHaveValue("gift");',
     "});",
   ),
-  // Rule 8, planted: a row that opens on a click and takes no focus.
+  // Rule 38, planted: a row that opens on a click and takes no focus.
   "src/components/OrderRow.tsx": lines(
     'import type { Order } from "../api";',
     "",
@@ -714,7 +714,7 @@ const CHANGE = {
     "  );",
     "}",
   ),
-  // Rule 8, clean: the same row, opened by a button.
+  // Rule 38, clean: the same row, opened by a button.
   "src/components/ProductRow.tsx": lines(
     'import type { Item } from "../api";',
     "",
@@ -747,26 +747,26 @@ const CHANGE = {
 
 /** One plant per rule: where it is, and the text that finds its line. */
 const DEFECTS = [
-  ["1", "CRITICAL", "src/components/Profile.tsx", "if (userId === null) return <SignIn />;", "a return some renders take stands above the hooks"],
-  ["2", "CRITICAL", "src/components/ChatRoom.tsx", "react-hooks/exhaustive-deps", "the effect reads the user's name and the check that would say so is off"],
-  ["3", "WARNING", "src/components/Clock.tsx", "setInterval(() => setNow(Date.now()), 1000);", "an interval is started and never stopped"],
-  ["4", "WARNING", "src/components/Bio.tsx", "fetchBio(person).then((result) => setBio(result));", "whichever reply lands last is shown"],
-  ["5", "WARNING", "src/components/NameForm.tsx", 'setFullName(firstName + " " + lastName);', "the full name is kept in state and copied in by an effect"],
-  ["6", "CRITICAL", "src/components/Cart.tsx", "cart.items.push(item);", "the cart in state is changed in place"],
-  ["7", "WARNING", "src/components/TodoList.tsx", "key={index}", "rows that can be removed are keyed by position"],
-  ["8", "CRITICAL", "src/components/OrderRow.tsx", '<div className="row" onClick=', "a row opens on a click and takes no focus"],
+  ["31", "CRITICAL", "src/components/Profile.tsx", "if (userId === null) return <SignIn />;", "a return some renders take stands above the hooks"],
+  ["32", "CRITICAL", "src/components/ChatRoom.tsx", "react-hooks/exhaustive-deps", "the effect reads the user's name and the check that would say so is off"],
+  ["33", "WARNING", "src/components/Clock.tsx", "setInterval(() => setNow(Date.now()), 1000);", "an interval is started and never stopped"],
+  ["34", "WARNING", "src/components/Bio.tsx", "fetchBio(person).then((result) => setBio(result));", "whichever reply lands last is shown"],
+  ["35", "WARNING", "src/components/NameForm.tsx", 'setFullName(firstName + " " + lastName);', "the full name is kept in state and copied in by an effect"],
+  ["36", "CRITICAL", "src/components/Cart.tsx", "cart.items.push(item);", "the cart in state is changed in place"],
+  ["37", "WARNING", "src/components/TodoList.tsx", "key={index}", "rows that can be removed are keyed by position"],
+  ["38", "CRITICAL", "src/components/OrderRow.tsx", '<div className="row" onClick=', "a row opens on a click and takes no focus"],
 ];
 
 /** The look-alike beside each plant, by its rule, with the test that proves it. */
 const LOOK_ALIKES = {
-  1: ["src/components/Account.tsx", "tests/components/Account.test.tsx"],
-  2: ["src/components/Presence.tsx", "tests/components/Presence.test.tsx"],
-  3: ["src/components/Ticker.tsx", "tests/components/Ticker.test.tsx"],
-  4: ["src/components/Avatar.tsx", "tests/components/Avatar.test.tsx"],
-  5: ["src/components/AddressForm.tsx", "tests/components/AddressForm.test.tsx"],
-  6: ["src/components/Wishlist.tsx", "tests/components/Wishlist.test.tsx"],
-  7: ["src/components/OrderList.tsx", "tests/components/OrderList.test.tsx"],
-  8: ["src/components/ProductRow.tsx", "tests/components/ProductRow.test.tsx"],
+  31: ["src/components/Account.tsx", "tests/components/Account.test.tsx"],
+  32: ["src/components/Presence.tsx", "tests/components/Presence.test.tsx"],
+  33: ["src/components/Ticker.tsx", "tests/components/Ticker.test.tsx"],
+  34: ["src/components/Avatar.tsx", "tests/components/Avatar.test.tsx"],
+  35: ["src/components/AddressForm.tsx", "tests/components/AddressForm.test.tsx"],
+  36: ["src/components/Wishlist.tsx", "tests/components/Wishlist.test.tsx"],
+  37: ["src/components/OrderList.tsx", "tests/components/OrderList.test.tsx"],
+  38: ["src/components/ProductRow.tsx", "tests/components/ProductRow.test.tsx"],
 };
 
 export function buildFixture(root) {

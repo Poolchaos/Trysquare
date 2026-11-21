@@ -324,13 +324,13 @@ const MAIN = {
 
 /** What the feature branch writes over main: each plant, and each look-alike with its test. */
 const CHANGE = {
-  // Rule 1, planted: the payload's type is switched off.
+  // Rule 21, planted: the payload's type is switched off.
   "src/orders/total.ts": lines(
     "export function totalOf(payload: any): number {",
     "  return payload.lines.reduce((sum: number, line: { price: number; qty: number }) => sum + line.price * line.qty, 0);",
     "}",
   ),
-  // Rule 1, clean: a payload of unknown shape, narrowed before it is used.
+  // Rule 21, clean: a payload of unknown shape, narrowed before it is used.
   "src/orders/count.ts": lines(
     'import type { Line } from "./order";',
     "",
@@ -362,7 +362,7 @@ const CHANGE = {
     '  expect(() => unitsIn(null)).toThrow("An order payload must be an object.");',
     "});",
   ),
-  // Rule 2, planted: a file's contents asserted to be settings.
+  // Rule 22, planted: a file's contents asserted to be settings.
   "src/settings/load.ts": lines(
     'import { readFile } from "node:fs/promises";',
     'import type { Settings } from "./settings";',
@@ -372,7 +372,7 @@ const CHANGE = {
     "  return JSON.parse(text) as Settings;",
     "}",
   ),
-  // Rule 2, clean: the same read, checked into its type.
+  // Rule 22, clean: the same read, checked into its type.
   "src/settings/theme.ts": lines(
     'import { readFile } from "node:fs/promises";',
     'import type { Settings } from "./settings";',
@@ -414,7 +414,7 @@ const CHANGE = {
     '  await expect(themeOf(await written("null"))).rejects.toThrow("Settings must be an object.");',
     "});",
   ),
-  // Rule 3, planted: a search that can find nothing, asserted to have found.
+  // Rule 23, planted: a search that can find nothing, asserted to have found.
   "src/users/welcome.ts": lines(
     'import { sendWelcome, type User } from "./user";',
     "",
@@ -424,7 +424,7 @@ const CHANGE = {
     "  sendWelcome(user.email.toLowerCase());",
     "}",
   ),
-  // Rule 3, clean: the same search, the empty case said.
+  // Rule 23, clean: the same search, the empty case said.
   "src/users/lookup.ts": lines(
     'import { UserNotFoundError, type User } from "./user";',
     "",
@@ -458,7 +458,7 @@ const CHANGE = {
     '  expect(() => emailOf(users, "u-9")).toThrow(UserNotFoundError);',
     "});",
   ),
-  // Rule 4, planted: the error on the next line is switched off.
+  // Rule 24, planted: the error on the next line is switched off.
   "src/billing/total.ts": lines(
     'import { computeTotal, type Invoice } from "./invoice";',
     "",
@@ -467,7 +467,7 @@ const CHANGE = {
     "  return { id, total: computeTotal(lines, discount) };",
     "}",
   ),
-  // Rule 4, clean: an expected error that says which, and why it stands.
+  // Rule 24, clean: an expected error that says which, and why it stands.
   "src/billing/legacy.ts": lines(
     'import { legacyClient, type Invoice } from "./invoice";',
     "",
@@ -497,7 +497,7 @@ const CHANGE = {
     '  expect(send).toHaveBeenCalledWith({ id: "i-1", total: 40 });',
     "});",
   ),
-  // Rule 5, planted: the email is started and never waited for.
+  // Rule 25, planted: the email is started and never waited for.
   "src/checkout/checkout.ts": lines(
     ORDER,
     'import { charge, sendReceiptEmail, type Receipt } from "./services";',
@@ -508,7 +508,7 @@ const CHANGE = {
     "  return receipt;",
     "}",
   ),
-  // Rule 5, clean: the same call, waited for.
+  // Rule 25, clean: the same call, waited for.
   "src/checkout/refund.ts": lines(
     ORDER,
     'import { payBack, sendRefundEmail, type Receipt } from "./services";',
@@ -540,7 +540,7 @@ const CHANGE = {
     '  await expect(refund(order)).rejects.toThrow("mail is down");',
     "});",
   ),
-  // Rule 6, planted: async work handed to forEach, which waits for none of it.
+  // Rule 26, planted: async work handed to forEach, which waits for none of it.
   "src/checkout/archive.ts": lines(
     ORDER,
     'import { logger } from "../lib/logger";',
@@ -557,7 +557,7 @@ const CHANGE = {
     '  logger.info("archived", { count: orders.length });',
     "}",
   ),
-  // Rule 6, clean: the same loop, each one waited for.
+  // Rule 26, clean: the same loop, each one waited for.
   "src/checkout/restore.ts": lines(
     ORDER,
     'import { logger } from "../lib/logger";',
@@ -596,7 +596,7 @@ const CHANGE = {
     '  await expect(restoreAll([order])).rejects.toThrow("archive is offline");',
     "});",
   ),
-  // Rule 7, planted: the union gains a member and the default answers for it.
+  // Rule 27, planted: the union gains a member and the default answers for it.
   "src/payments/label.ts": lines(
     'export type PaymentState = "pending" | "paid" | "refunded" | "disputed";',
     "",
@@ -611,7 +611,7 @@ const CHANGE = {
     "  }",
     "}",
   ),
-  // Rule 7, clean: a union that gains a member, and the case with it.
+  // Rule 27, clean: a union that gains a member, and the case with it.
   "src/payments/badge.ts": lines(
     'export type ShipmentState = "packed" | "sent" | "returned";',
     "",
@@ -640,7 +640,7 @@ const CHANGE = {
     '  expect(badge("returned")).toBe("Sent back");',
     "});",
   ),
-  // Rule 8, planted: a rate read by region and used as if every region had one.
+  // Rule 28, planted: a rate read by region and used as if every region had one.
   "src/tax/rate.ts": lines(
     ORDER,
     "",
@@ -650,7 +650,7 @@ const CHANGE = {
     "  return order.total * rates[order.region];",
     "}",
   ),
-  // Rule 8, clean: the same read, the missing region said.
+  // Rule 28, clean: the same read, the missing region said.
   "src/tax/duty.ts": lines(
     ORDER,
     "",
@@ -677,7 +677,7 @@ const CHANGE = {
     '  expect(() => dutyFor({ ...order, region: "XX" })).toThrow("No duty is set for region XX.");',
     "});",
   ),
-  // Rule 9, planted: a predicate that says invoice of any object.
+  // Rule 29, planted: a predicate that says invoice of any object.
   "src/billing/is-invoice.ts": lines(
     'import type { Invoice } from "./invoice";',
     "",
@@ -690,7 +690,7 @@ const CHANGE = {
     "  return reply.total;",
     "}",
   ),
-  // Rule 9, clean: a predicate that checks each field its caller reads.
+  // Rule 29, clean: a predicate that checks each field its caller reads.
   "src/billing/is-receipt.ts": lines(
     "export interface PaidReceipt {",
     "  orderId: string;",
@@ -728,28 +728,28 @@ const CHANGE = {
 
 /** One plant per rule: where it is, and the text that finds its line. */
 const DEFECTS = [
-  ["1", "WARNING", "src/orders/total.ts", "payload: any", "the payload's type is switched off"],
-  ["2", "CRITICAL", "src/settings/load.ts", "as Settings;", "a file's contents are asserted to be settings"],
-  ["3", "WARNING", "src/users/welcome.ts", "=== id)!;", "a search that can find nothing is asserted to have found"],
-  ["4", "WARNING", "src/billing/total.ts", "// @ts-ignore", "the error on the next line is switched off"],
-  ["5", "CRITICAL", "src/checkout/checkout.ts", "  sendReceiptEmail(order.customer, receipt);", "the email is started and never waited for"],
-  ["6", "CRITICAL", "src/checkout/archive.ts", "orders.forEach(async", "async work is handed to forEach"],
-  ["7", "WARNING", "src/payments/label.ts", '| "disputed";', "the union gains a member the switch's default answers for"],
-  ["8", "WARNING", "src/tax/rate.ts", "rates[order.region];", "a rate is read by region and used unchecked"],
-  ["9", "CRITICAL", "src/billing/is-invoice.ts", "value is Invoice {", "the predicate says invoice of any object"],
+  ["21", "WARNING", "src/orders/total.ts", "payload: any", "the payload's type is switched off"],
+  ["22", "CRITICAL", "src/settings/load.ts", "as Settings;", "a file's contents are asserted to be settings"],
+  ["23", "WARNING", "src/users/welcome.ts", "=== id)!;", "a search that can find nothing is asserted to have found"],
+  ["24", "WARNING", "src/billing/total.ts", "// @ts-ignore", "the error on the next line is switched off"],
+  ["25", "CRITICAL", "src/checkout/checkout.ts", "  sendReceiptEmail(order.customer, receipt);", "the email is started and never waited for"],
+  ["26", "CRITICAL", "src/checkout/archive.ts", "orders.forEach(async", "async work is handed to forEach"],
+  ["27", "WARNING", "src/payments/label.ts", '| "disputed";', "the union gains a member the switch's default answers for"],
+  ["28", "WARNING", "src/tax/rate.ts", "rates[order.region];", "a rate is read by region and used unchecked"],
+  ["29", "CRITICAL", "src/billing/is-invoice.ts", "value is Invoice {", "the predicate says invoice of any object"],
 ];
 
 /** The look-alike beside each plant, by its rule, with the test that proves it. */
 const LOOK_ALIKES = {
-  1: ["src/orders/count.ts", "tests/orders/count.test.ts"],
-  2: ["src/settings/theme.ts", "tests/settings/theme.test.ts"],
-  3: ["src/users/lookup.ts", "tests/users/lookup.test.ts"],
-  4: ["src/billing/legacy.ts", "tests/billing/legacy.test.ts"],
-  5: ["src/checkout/refund.ts", "tests/checkout/refund.test.ts"],
-  6: ["src/checkout/restore.ts", "tests/checkout/restore.test.ts"],
-  7: ["src/payments/badge.ts", "tests/payments/badge.test.ts"],
-  8: ["src/tax/duty.ts", "tests/tax/duty.test.ts"],
-  9: ["src/billing/is-receipt.ts", "tests/billing/is-receipt.test.ts"],
+  21: ["src/orders/count.ts", "tests/orders/count.test.ts"],
+  22: ["src/settings/theme.ts", "tests/settings/theme.test.ts"],
+  23: ["src/users/lookup.ts", "tests/users/lookup.test.ts"],
+  24: ["src/billing/legacy.ts", "tests/billing/legacy.test.ts"],
+  25: ["src/checkout/refund.ts", "tests/checkout/refund.test.ts"],
+  26: ["src/checkout/restore.ts", "tests/checkout/restore.test.ts"],
+  27: ["src/payments/badge.ts", "tests/payments/badge.test.ts"],
+  28: ["src/tax/duty.ts", "tests/tax/duty.test.ts"],
+  29: ["src/billing/is-receipt.ts", "tests/billing/is-receipt.test.ts"],
 };
 
 export function buildFixture(root) {

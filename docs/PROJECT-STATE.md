@@ -138,7 +138,12 @@ from 2026-11-03.
   sentences about what is not built yet off that card.
   A review still takes one ruleset, so two templates cannot be used on
   one review. That is planned (`plans/RULESETS-TOGETHER-PLAN.md`, D-288)
-  and is the next thing to build.
+  and its first step is built (RS-1, D-289): no two templates share a
+  rule number. General keeps 1 to 12, TypeScript is 21 to 29, React 31
+  to 38, HTTP API and database 41 to 48, and those three are at version
+  3. A ruleset started from one of them before today keeps the numbers
+  it was started with. The server taking several rulesets (RS-2) is
+  next.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -146,7 +151,7 @@ from 2026-11-03.
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1672 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1674 unit tests passing, 8 skipped,
   and 167 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the

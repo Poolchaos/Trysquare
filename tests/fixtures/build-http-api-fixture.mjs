@@ -152,7 +152,7 @@ const MAIN = {
 
 /** What the feature branch writes over main: each plant, and each look-alike with its test. */
 const CHANGE = {
-  // Rule 1, planted: anyone who can send the request deletes the project.
+  // Rule 41, planted: anyone who can send the request deletes the project.
   "src/routes/projects.ts": lines(
     'import { router } from "../lib/http";',
     'import { projects } from "../lib/store";',
@@ -164,7 +164,7 @@ const CHANGE = {
     "",
     "export { router };",
   ),
-  // Rule 1, clean: the same deletion, for a signed-in caller who may.
+  // Rule 41, clean: the same deletion, for a signed-in caller who may.
   "src/routes/teams.ts": lines(
     'import { requireSignIn, router, type Request, type Response } from "../lib/http";',
     'import { teams } from "../lib/store";',
@@ -204,7 +204,7 @@ const CHANGE = {
     "  expect(remove).not.toHaveBeenCalled();",
     "});",
   ),
-  // Rule 2, planted: any signed-in customer reads any invoice by its number.
+  // Rule 42, planted: any signed-in customer reads any invoice by its number.
   "src/routes/invoices.ts": lines(
     'import { requireSignIn, router } from "../lib/http";',
     'import { invoices } from "../lib/store";',
@@ -217,7 +217,7 @@ const CHANGE = {
     "",
     "export { router };",
   ),
-  // Rule 2, clean: the same read, looked up as the caller's.
+  // Rule 42, clean: the same read, looked up as the caller's.
   "src/routes/receipts.ts": lines(
     'import { requireSignIn, router, type Request, type Response } from "../lib/http";',
     'import { receipts } from "../lib/store";',
@@ -250,7 +250,7 @@ const CHANGE = {
     '  expect((await call(readReceipt, { params: { id: "r-2" } })).status).toBe(404);',
     "});",
   ),
-  // Rule 3, planted: the body reaches the ledger as it arrived.
+  // Rule 43, planted: the body reaches the ledger as it arrived.
   "src/routes/transfers.ts": lines(
     'import { requireSignIn, router } from "../lib/http";',
     'import { ledger } from "../lib/store";',
@@ -263,7 +263,7 @@ const CHANGE = {
     "",
     "export { router };",
   ),
-  // Rule 3, clean: the same handler, the body checked before it is used.
+  // Rule 43, clean: the same handler, the body checked before it is used.
   "src/routes/refunds.ts": lines(
     'import { requireSignIn, router, type Request, type Response } from "../lib/http";',
     'import { ledger } from "../lib/store";',
@@ -305,7 +305,7 @@ const CHANGE = {
     "  expect(refund).not.toHaveBeenCalled();",
     "});",
   ),
-  // Rule 4, planted: whatever the body holds is copied onto the user, its role too.
+  // Rule 44, planted: whatever the body holds is copied onto the user, its role too.
   "src/routes/users.ts": lines(
     'import { requireSignIn, router } from "../lib/http";',
     'import { users } from "../lib/store";',
@@ -319,7 +319,7 @@ const CHANGE = {
     "",
     "export { router };",
   ),
-  // Rule 4, clean: the same update, taking the two fields a caller may set.
+  // Rule 44, clean: the same update, taking the two fields a caller may set.
   "src/routes/profiles.ts": lines(
     'import { requireSignIn, router, type Request, type Response } from "../lib/http";',
     'import { users } from "../lib/store";',
@@ -362,7 +362,7 @@ const CHANGE = {
     '  expect((await call(patchProfile, { params: { id: "u-1" }, body: { displayName: "T" } })).status).toBe(400);',
     "});",
   ),
-  // Rule 5, planted: the caller is sent the error's own message and its stack.
+  // Rule 45, planted: the caller is sent the error's own message and its stack.
   "src/routes/orders.ts": lines(
     'import { requireSignIn, router } from "../lib/http";',
     'import { orders } from "../lib/store";',
@@ -378,7 +378,7 @@ const CHANGE = {
     "",
     "export { router };",
   ),
-  // Rule 5, clean: the same failure, logged whole and answered with a reference.
+  // Rule 45, clean: the same failure, logged whole and answered with a reference.
   "src/routes/shipments.ts": lines(
     'import { randomUUID } from "node:crypto";',
     'import { requireSignIn, router, type Request, type Response } from "../lib/http";',
@@ -418,7 +418,7 @@ const CHANGE = {
     '  expect(logged).toHaveBeenCalledWith("shipment lookup failed", { reference: body.reference, error: failure });',
     "});",
   ),
-  // Rule 6, planted: the search term is written into the statement.
+  // Rule 46, planted: the search term is written into the statement.
   "src/routes/search.ts": lines(
     DB,
     'import { requireSignIn, router } from "../lib/http";',
@@ -431,7 +431,7 @@ const CHANGE = {
     "",
     "export { router };",
   ),
-  // Rule 6, clean: the same search, the term sent as a value.
+  // Rule 46, clean: the same search, the term sent as a value.
   "src/routes/lookup.ts": lines(
     DB,
     'import { requireSignIn, router, type Request, type Response } from "../lib/http";',
@@ -460,7 +460,7 @@ const CHANGE = {
     "  ]);",
     "});",
   ),
-  // Rule 7, planted: every order the customer ever made, in one reply.
+  // Rule 47, planted: every order the customer ever made, in one reply.
   "src/routes/history.ts": lines(
     DB,
     'import { requireSignIn, router } from "../lib/http";',
@@ -474,7 +474,7 @@ const CHANGE = {
     "",
     "export { router };",
   ),
-  // Rule 7, clean: the same list, a page at a time with the size the server sets.
+  // Rule 47, clean: the same list, a page at a time with the size the server sets.
   "src/routes/events.ts": lines(
     DB,
     'import { requireSignIn, router, type Request, type Response } from "../lib/http";',
@@ -521,7 +521,7 @@ const CHANGE = {
     "  expect(query).not.toHaveBeenCalled();",
     "});",
   ),
-  // Rule 8, planted: money leaves one account and, if the second write fails, reaches no other.
+  // Rule 48, planted: money leaves one account and, if the second write fails, reaches no other.
   "src/routes/payouts.ts": lines(
     DB,
     'import { requireSignIn, router } from "../lib/http";',
@@ -538,7 +538,7 @@ const CHANGE = {
     "",
     "export { router };",
   ),
-  // Rule 8, clean: the same two writes, in one transaction.
+  // Rule 48, clean: the same two writes, in one transaction.
   "src/routes/credits.ts": lines(
     DB,
     'import { requireSignIn, router, type Request, type Response } from "../lib/http";',
@@ -583,26 +583,26 @@ const CHANGE = {
 
 /** One plant per rule: where it is, and the text that finds its line. */
 const DEFECTS = [
-  ["1", "CRITICAL", "src/routes/projects.ts", 'router.delete("/projects/:id", async', "anyone who can send the request deletes the project"],
-  ["2", "CRITICAL", "src/routes/invoices.ts", "await invoices.find(", "any signed-in customer reads any invoice by its number"],
-  ["3", "CRITICAL", "src/routes/transfers.ts", "= request.body as", "the body reaches the ledger as it arrived"],
-  ["4", "CRITICAL", "src/routes/users.ts", "Object.assign(user, request.body);", "the body is copied onto the user, its role too"],
-  ["5", "WARNING", "src/routes/orders.ts", "stack: failure.stack", "the caller is sent the error's message and its stack"],
-  ["6", "CRITICAL", "src/routes/search.ts", "WHERE name LIKE", "the search term is written into the statement"],
-  ["7", "WARNING", "src/routes/history.ts", "FROM orders WHERE customer = $1 ORDER BY id", "every order the customer ever made comes back in one reply"],
-  ["8", "CRITICAL", "src/routes/payouts.ts", "balance = balance - $1", "two writes that are only right together are made apart"],
+  ["41", "CRITICAL", "src/routes/projects.ts", 'router.delete("/projects/:id", async', "anyone who can send the request deletes the project"],
+  ["42", "CRITICAL", "src/routes/invoices.ts", "await invoices.find(", "any signed-in customer reads any invoice by its number"],
+  ["43", "CRITICAL", "src/routes/transfers.ts", "= request.body as", "the body reaches the ledger as it arrived"],
+  ["44", "CRITICAL", "src/routes/users.ts", "Object.assign(user, request.body);", "the body is copied onto the user, its role too"],
+  ["45", "WARNING", "src/routes/orders.ts", "stack: failure.stack", "the caller is sent the error's message and its stack"],
+  ["46", "CRITICAL", "src/routes/search.ts", "WHERE name LIKE", "the search term is written into the statement"],
+  ["47", "WARNING", "src/routes/history.ts", "FROM orders WHERE customer = $1 ORDER BY id", "every order the customer ever made comes back in one reply"],
+  ["48", "CRITICAL", "src/routes/payouts.ts", "balance = balance - $1", "two writes that are only right together are made apart"],
 ];
 
 /** The look-alike beside each plant, by its rule, with the test that proves it. */
 const LOOK_ALIKES = {
-  1: ["src/routes/teams.ts", "tests/routes/teams.test.ts"],
-  2: ["src/routes/receipts.ts", "tests/routes/receipts.test.ts"],
-  3: ["src/routes/refunds.ts", "tests/routes/refunds.test.ts"],
-  4: ["src/routes/profiles.ts", "tests/routes/profiles.test.ts"],
-  5: ["src/routes/shipments.ts", "tests/routes/shipments.test.ts"],
-  6: ["src/routes/lookup.ts", "tests/routes/lookup.test.ts"],
-  7: ["src/routes/events.ts", "tests/routes/events.test.ts"],
-  8: ["src/routes/credits.ts", "tests/routes/credits.test.ts"],
+  41: ["src/routes/teams.ts", "tests/routes/teams.test.ts"],
+  42: ["src/routes/receipts.ts", "tests/routes/receipts.test.ts"],
+  43: ["src/routes/refunds.ts", "tests/routes/refunds.test.ts"],
+  44: ["src/routes/profiles.ts", "tests/routes/profiles.test.ts"],
+  45: ["src/routes/shipments.ts", "tests/routes/shipments.test.ts"],
+  46: ["src/routes/lookup.ts", "tests/routes/lookup.test.ts"],
+  47: ["src/routes/events.ts", "tests/routes/events.test.ts"],
+  48: ["src/routes/credits.ts", "tests/routes/credits.test.ts"],
 };
 
 export function buildFixture(root) {

@@ -4,5 +4,5 @@ import { holdsTemplateFixture } from "./fixture-checks";
 
 holdsTemplateFixture({
   slug: "react",
-  swept: ["2", "7", "8"],
+  swept: ["32", "37", "38"],
 });

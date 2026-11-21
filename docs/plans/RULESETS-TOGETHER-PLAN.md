@@ -88,7 +88,7 @@ shown by the pre-flight before Start. Evidence: the code lines above.
 
 | WP   | Scope | Blocked on | Status |
 | ---- | ----- | ---------- | ------ |
-| RS-1 | The templates' codes made disjoint: TypeScript 21 to 29, React 31 to 38, HTTP API and database 41 to 48, in each document's headings and sweep rows and in its fixture's key; each template's version raised; a test that no two templates on the shelf share a code. | - | TODO |
+| RS-1 | The templates' codes made disjoint: TypeScript 21 to 29, React 31 to 38, HTTP API and database 41 to 48, in each document's headings and sweep rows and in its fixture's key; each template's version raised; a test that no two templates on the shelf share a code. | - | DONE 2026-11-21 (D-289) |
 | RS-2 | The server takes a set: the start route and the service accept `rulesetIds`, one or more, the single `rulesetId` still read; a set whose codes collide is refused with a 409 that names each shared code and the rulesets it is in, before any row is written; one snapshot row per ruleset; the snapshot's meta and the report name every ruleset and its version. | RS-1 | TODO |
 | RS-3 | The pre-flight sizes the set and refuses the same collision in the same words; a review waiting in line holds its set, and a ruleset in any waiting set is not deleted (D-270's refusal, for each). | RS-2 | TODO |
 | RS-4 | The screens: on New review the Rules picker is a list of the rulesets by tier, each one ticked or not, the default ticked; the collision said beside it with Start off; a draft's own Start the same; the review's page and the report name the rulesets it ran with. | RS-3 | TODO |
