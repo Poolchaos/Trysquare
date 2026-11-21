@@ -199,7 +199,9 @@ The TypeScript template's fixture is built the same way
 (`build-typescript-fixture.mjs`, RT-3b): an orders service in strict
 TypeScript, nine plants and nine look-alikes. So is the React template's
 (`build-react-fixture.mjs`, RT-4b): the screens of a small shop, eight
-plants and eight look-alikes. The builders are data over
+plants and eight look-alikes; and the HTTP API and database template's
+(`build-http-api-fixture.mjs`, RT-5b): a shop's API over a SQL store,
+eight plants and eight look-alikes. The builders are data over
 one helper, `tests/fixtures/template-fixture.mjs`, and all are held by
 `tests/templates/fixture-checks.ts`. A key also carries what its change
 says it is for, a truthful account that names no fault: the review is

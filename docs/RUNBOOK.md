@@ -144,7 +144,9 @@ evidence goes to `review/<date>-template-general/<time>-<model>/`.
 TypeScript template, nine plants and their look-alikes (measured
 2026-11-21, one run: "9/9 planted defect(s) found"), and
 `npm run demo:template -- react --fake` for the React one, eight plants
-(measured the same day, one run: "8/8 planted defect(s) found").
+(measured the same day, one run: "8/8 planted defect(s) found"), and
+`npm run demo:template -- http-api --fake` for the HTTP API and database
+one, eight plants (one run: "8/8 planted defect(s) found").
 
 ```bash
 npm run demo:design -- --fake

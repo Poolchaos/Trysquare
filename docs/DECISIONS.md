@@ -7064,3 +7064,20 @@ verified evidence, in writing, here.
   are what the ruleset's page shows once it is made. The shorter lines
   showed a fault in the list, put right in the same change: each rule
   count stood at the end of its own text and not at the right edge.
+- 2026-11-21 D-284 The HTTP API and database template's fixture
+  (`tests/fixtures/build-http-api-fixture.mjs`, RT-5b): the API of a
+  small shop over a SQL store, eight plants and eight look-alikes each
+  with its test, 24 files changed, counted by the demo. Data over the
+  shared builder, held by the shared checks. Each look-alike is the
+  planted endpoint done right: a deletion for a signed-in caller who may,
+  a record looked up as the caller's, a body checked before use, two named
+  fields taken from a body, a failure logged whole and answered with a
+  reference, a value sent as a parameter, a page of a size the server
+  sets, two writes in one transaction. Run on the fake engine: 8/8 plants,
+  nothing in a clean file. With it the templates plan is built as far as
+  the session can take it. Four templates stand on the shelf, 37 rules
+  between them, each rule on a source read on 2026-11-21, each template
+  with a fixture and a command that reviews it. None has been run against
+  a real model: that is RT-6, it spends the maintainer's usage, and it is
+  the only thing that says whether a template finds what it claims to.
+  Until a run is on record each template says so where it is picked.

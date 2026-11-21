@@ -119,7 +119,12 @@ from 2026-11-03.
   both are at version 2.
   The HTTP API and database template is the fourth on the shelf (RT-5a,
   D-283): eight rules on who is asking, what a request carries and how
-  the store is read and written. Its fixture is next (RT-5b).
+  the store is read and written. Its fixture is built (RT-5b, D-284):
+  eight plants and their look-alikes, 8/8 on the fake engine. That is the
+  templates plan as far as the session can take it: four templates, each
+  with a fixture and a command that reviews it. What is left is the
+  maintainer's: a run of each against a real model (RT-6), and his word
+  on a Firebase template (RT-7).
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -127,7 +132,7 @@ from 2026-11-03.
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1659 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1663 unit tests passing, 8 skipped,
   and 164 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
@@ -551,8 +556,8 @@ are accepted; anything else is refused by name.
 - `tests/fixtures/fake-claude.mjs` - stand-in CLI, so tests are hermetic and
   cost nothing.
 - `tests/fixtures/build-general-fixture.mjs`,
-  `build-typescript-fixture.mjs` and `build-react-fixture.mjs` - each
-  template's fixture: one plant per
+  `build-typescript-fixture.mjs`, `build-react-fixture.mjs` and
+  `build-http-api-fixture.mjs` - each template's fixture: one plant per
   rule, a clean look-alike beside each, and a key, built by
   `template-fixture.mjs` (RT-2b, RT-3b, 05-TESTING section 4c).
 - `tests/fixtures/build-design-fixture.mjs` - the design fixture, screens
@@ -638,9 +643,9 @@ own now (D-75, D-81).
   started from it on the Rulesets screen, and the General template's
   fixture and the command that reviews it (RT-1a, RT-2a, RT-1b, RT-2b,
   RT-6a), and the TypeScript and React templates with their fixtures
-  (RT-3a to RT-4b), and the HTTP API and database template (RT-5a). Not
-  done: any template's run against a model, which is the maintainer's to
-  start. Not built: that template's fixture, and a Firebase template,
+  (RT-3a to RT-4b), and the HTTP API and database template with its
+  fixture (RT-5a, RT-5b). Not done: any template's run against a model,
+  which is the maintainer's to start. Not built: a Firebase template,
   which waits on the maintainer's word. A ruleset is started with
   no document (RA-6, D-272), and a rule can be switched off, its severity
   changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
