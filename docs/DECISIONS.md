@@ -7017,3 +7017,21 @@ verified evidence, in writing, here.
   fault Windows CI has shown before (D-104, D-105). Ubuntu and macOS
   passed, and Windows had passed the three runs before it. Recorded and
   left (D-246).
+- 2026-11-21 Review round 21, over the TypeScript and React templates and
+  their fixtures (0ecbb58, 310a955, e31d1bc, 38f93ce): two findings, each
+  a sentence that said more than the page it cites. 1: the TypeScript
+  template's rule 8 said the tax "is NaN and is stored as one"; its
+  example stores nothing, and the sentence now stops at NaN. 2: the React
+  template's rule 7 said that when a row is removed each later row takes
+  the key before it and React keeps their state on the wrong rows, which
+  react.dev's Rendering Lists does not say. It says a position changes
+  when an item is inserted, deleted or reordered, and that a key made
+  while rendering never matches and rebuilds every row, losing what was
+  typed; the reason now says that. Both templates move to version 2: a
+  ruleset started from one says which version it started as, and one may
+  have been started since they shipped. Read again and left: each rule's
+  examples against its own sweep patterns, which the bar holds; the two
+  fixtures' look-alikes, each making the planted change the right way;
+  the demo, which now takes what a change is for from the fixture's key.
+  Standing from round 20 and unchanged: whether a model leaves the
+  look-alikes alone is what the real runs answer.

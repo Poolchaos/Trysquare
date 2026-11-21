@@ -7220,14 +7220,14 @@ test("the template shelf is read by the server as built, and holds its three tem
       expect.objectContaining({
         slug: "typescript",
         name: "TypeScript",
-        version: 1,
+        version: 2,
         ruleCount: 9,
         modelRun: null,
       }),
       expect.objectContaining({
         slug: "react",
         name: "React",
-        version: 1,
+        version: 2,
         ruleCount: 8,
         modelRun: null,
       }),

@@ -398,7 +398,7 @@ compiler already refuses the violation and there is nothing to report.
 **Severity:** WARNING
 
 **Why This Matters:** For a region with no rate the type says number and
-the value is undefined, so the tax is NaN and is stored as one. Source:
+the value is undefined, so the tax comes out as NaN. Source:
 [TSConfig Reference: noUncheckedIndexedAccess](https://www.typescriptlang.org/tsconfig/noUncheckedIndexedAccess.html),
 read 2026-11-21.
 

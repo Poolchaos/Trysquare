@@ -145,3 +145,10 @@ Three findings, all in the records and fixed in one change: 04 still
 listed templates as not built, the RUNBOOK's third step told a person to
 paste into a form that now opens on a template, and README's account of
 how a ruleset is made left the template out.
+
+The pass after the TypeScript and React templates ran the same day (review
+round 21, in DECISIONS), over RT-3a to RT-4b. Two findings, both in the
+templates' words and both corrected, each template moving to version 2: a
+reason in the TypeScript template said a value "is stored" that its
+example never stores, and a reason in the React template gave a mechanism
+its cited page does not state.

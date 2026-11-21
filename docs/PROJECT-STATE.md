@@ -114,7 +114,9 @@ from 2026-11-03.
   The React template is the third on the shelf (RT-4a, D-281): eight
   rules on hooks, state and what people can reach, each on a source read
   that day. Its fixture is built (RT-4b, D-282): eight plants and their
-  look-alikes, 8/8 on the fake engine.
+  look-alikes, 8/8 on the fake engine. The review pass over the two
+  templates (round 21, in DECISIONS) corrected one sentence in each, and
+  both are at version 2.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern

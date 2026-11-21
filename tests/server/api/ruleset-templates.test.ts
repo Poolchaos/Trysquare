@@ -68,7 +68,7 @@ describe("GET /api/ruleset-templates", () => {
             "Where a change makes the compiler prove less than the code assumes: a value " +
             "declared or asserted past the type checker, a check silenced, a promise nobody " +
             "waits for, a union or a lookup the code does not cover.",
-          version: 1,
+          version: 2,
           modelRun: null,
           ruleCount: 9,
         },
@@ -80,7 +80,7 @@ describe("GET /api/ruleset-templates", () => {
             "what was drawn: a hook called out of order, an effect gone stale or left running, " +
             "state that disagrees with itself, a list keyed by position, a control the keyboard " +
             "cannot reach.",
-          version: 1,
+          version: 2,
           modelRun: null,
           ruleCount: 8,
         },

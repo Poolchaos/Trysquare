@@ -339,9 +339,10 @@ where a position is a sound key.
 
 **Severity:** WARNING
 
-**Why This Matters:** When a row is removed, each row after it takes the
-key of the one before, so React keeps their state (a typed value, an open
-menu) on the wrong rows. Source:
+**Why This Matters:** A position changes when an item is put in, taken out
+or moved, so the key stops naming the same item. A key made while rendering
+never matches the one before it, so every row is built again and what was
+typed into it is lost. Source:
 [React: Rendering Lists](https://react.dev/learn/rendering-lists),
 read 2026-11-21.
 
