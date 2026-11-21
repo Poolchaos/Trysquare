@@ -379,7 +379,7 @@ export default function RulesetsPage() {
                           checked={template?.slug === entry.slug}
                           onChange={() => setTemplateSlug(entry.slug)}
                         />
-                        <span className="grid min-w-0 gap-1">
+                        <span className="grid min-w-0 flex-1 gap-1">
                           <span className="flex flex-wrap items-baseline justify-between gap-x-3">
                             <span className="text-sm font-medium">{entry.name}</span>
                             <span className="text-xs text-[var(--color-ink-muted)] tabular-nums">

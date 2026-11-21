@@ -53,10 +53,7 @@ describe("GET /api/ruleset-templates", () => {
         {
           slug: "general",
           name: "General",
-          purpose:
-            "What any change is held to, whatever it is written in: a failure hidden, input " +
-            "trusted, a credential or personal data exposed, a resource left open, behaviour " +
-            "changed with nothing to prove it, work left unfinished.",
+          purpose: "What any change is held to, whatever it is written in.",
           version: 1,
           modelRun: null,
           ruleCount: 12,
@@ -64,10 +61,7 @@ describe("GET /api/ruleset-templates", () => {
         {
           slug: "typescript",
           name: "TypeScript",
-          purpose:
-            "Where a change makes the compiler prove less than the code assumes: a value " +
-            "declared or asserted past the type checker, a check silenced, a promise nobody " +
-            "waits for, a union or a lookup the code does not cover.",
+          purpose: "Where a change makes the compiler prove less than the code assumes.",
           version: 2,
           modelRun: null,
           ruleCount: 9,
@@ -75,12 +69,16 @@ describe("GET /api/ruleset-templates", () => {
         {
           slug: "react",
           name: "React",
-          purpose:
-            "Where a change tells React less than is true, or leaves a person unable to use " +
-            "what was drawn: a hook called out of order, an effect gone stale or left running, " +
-            "state that disagrees with itself, a list keyed by position, a control the keyboard " +
-            "cannot reach.",
+          purpose: "Hooks, effects and state, list keys, and controls a keyboard can reach.",
           version: 2,
+          modelRun: null,
+          ruleCount: 8,
+        },
+        {
+          slug: "http-api",
+          name: "HTTP API and database",
+          purpose: "Who may ask, what a request may carry, and how the store is read and written.",
+          version: 1,
           modelRun: null,
           ruleCount: 8,
         },

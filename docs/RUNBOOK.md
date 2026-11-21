@@ -201,8 +201,10 @@ Probe press in step 4, a real but tiny paid call.
 3. **Start a ruleset.** Rulesets screen. The form opens on A template: Use
    this template starts one from the template chosen: General, twelve rules
    for any change in any language; TypeScript, nine on where a change
-   makes the compiler prove less; or React, eight on hooks, state and what
-   people can reach. None is yet run against a model. To import your own
+   makes the compiler prove less; React, eight on hooks, state and what
+   people can reach; or HTTP API and database, eight on who is asking,
+   what a request carries and how the store is read and written. None is
+   yet run against a model. To import your own
    protocol, choose A document, paste the markdown, give it a name and a
    tier, Import. The document becomes numbered rules and
    process directives. Rules must be headings at level three or deeper whose

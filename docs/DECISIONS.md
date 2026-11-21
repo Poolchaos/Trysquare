@@ -7035,3 +7035,32 @@ verified evidence, in writing, here.
   the demo, which now takes what a change is for from the fixture's key.
   Standing from round 20 and unchanged: whether a model leaves the
   look-alikes alone is what the real runs answer.
+- 2026-11-21 D-283 The HTTP API and database template
+  (`templates/http-api.md`, RT-5a): eight rules. An endpoint that does
+  not check who asks; a record reached by an id the caller chose; a body
+  used without being checked; a body copied onto a record whole; a
+  failure's detail sent to the caller; a statement built from input; a
+  list with no limit; writes that stand together, made apart. Sources,
+  read 2026-11-21 and linked in each rule: CWE 5.0 entries 862, 639, 20,
+  915, 209, 89 and 770, and for the last rule PostgreSQL's documentation
+  of transactions ("a single, all-or-nothing operation"). Decided with
+  it. First, its titles and sections name no technology, so every rule
+  is put to every file: "SQL" or "query" in a title would have kept the
+  rule on statements from a handler that builds one inline, and "auth"
+  would have kept the rules on who is asking to JavaScript files, on a
+  model that takes rules file by file. A test holds it. Second, it
+  repeats the General template's rule on unchecked input, worded for a
+  request: a review takes one ruleset, so a template that leaned on
+  another's rule would leave it unasked. Third, two of its sweep
+  patterns have no alternation though the importer now reads one
+  (D-275): each names one way a value gets into a statement, and says
+  which in its row. Left out: rate limits and response codes chosen, which
+  a diff cannot prove wrong; an index missing for a query, which needs
+  the store's own plan to show. A Firebase template (RT-7) still waits on
+  the maintainer's word. Fourth, with it on the shelf
+  every template's description became one line saying what it is for. The
+  descriptions had listed each template's rules, and with four of them
+  Use this template stood below the fold of a laptop screen; the rules
+  are what the ruleset's page shows once it is made. The shorter lines
+  showed a fault in the list, put right in the same change: each rule
+  count stood at the end of its own text and not at the right edge.

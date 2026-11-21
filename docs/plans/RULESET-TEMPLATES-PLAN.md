@@ -1,9 +1,9 @@
 # Ruleset templates plan
 
-Status: IN BUILD. RT-1a, RT-2a, RT-1b, RT-2b, RT-6a, RT-3a, RT-3b, RT-4a
-and RT-4b DONE 2026-11-21; RT-6's runs of the General, TypeScript and
-React templates are the maintainer's to start, and RT-5 is next to build
-(D-273, D-274, D-276 to D-282). Written
+Status: IN BUILD. RT-1a, RT-2a, RT-1b, RT-2b, RT-6a, RT-3a, RT-3b, RT-4a,
+RT-4b and RT-5a DONE 2026-11-21; RT-6's runs of the General, TypeScript
+and React templates are the maintainer's to start, and RT-5b is next to
+build (D-273, D-274, D-276 to D-283). Written
 2026-11-20, for D-251's scope (CP-12): "best quality and world class
 templates". Decided by the session; the maintainer
 reverses what he does not want.
@@ -106,7 +106,8 @@ bounded by the fifteen. Evidence: each rule's cited source.
 | RT-3b | The TypeScript template's fixture: one plant per rule and a clean look-alike beside each, with a key, as RT-2b built the General one's. | RT-3a | DONE 2026-11-21, the commit after 0ecbb58 (D-280). `tests/fixtures/build-typescript-fixture.mjs`: an orders service in strict TypeScript whose feature branch breaks each of the nine rules once beside a right change of the same shape with its test, 27 files changed, 9 planted and 18 clean. Both fixtures are now built by one helper (`template-fixture.mjs`) and held by one set of checks (`tests/templates/fixture-checks.ts`), and each key carries what its change says it is for, which the demo tells the review. Broken on purpose (a non-null assertion in a look-alike), its sweep check failed. `npm run demo:template -- typescript --fake`: 9/9 plants, nothing in the clean files; the General and seeded demos after the change: 12/12 and 11/11. CI runs the fake form. |
 | RT-4a | The React template, to the bar, on the shelf. | RT-3b | DONE 2026-11-21, the commit after 310a955 (D-281). `templates/react.md`: eight rules under three sections. Hooks: one called where React cannot count on it, an effect that reads what it does not declare, one that leaves something running, one that takes a late reply for the current one. Component state: a derived value kept in state, state changed in place. Components people use: a key that does not name the item, a control a keyboard cannot reach. Seven rest on react.dev pages read that day, the last on WCAG 2.2's success criterion 2.1.1. Five sweep patterns, each borne out by its own rule's examples. `tests/templates/react.test.ts` holds that every rule is put to component files and to no other. Not run against a model. |
 | RT-4b | The React template's fixture: one plant per rule and a clean look-alike beside each, with a key, on the shared builder and checks. | RT-4a | DONE 2026-11-21, the commit after e31d1bc (D-282). `tests/fixtures/build-react-fixture.mjs`: the screens of a small shop, whose feature branch breaks each of the eight rules once beside a right change of the same shape with its test, 24 files changed, 8 planted and 16 clean. Held by the shared checks; broken on purpose (a position used as a key in a look-alike), its sweep check failed. `npm run demo:template -- react --fake`: 8/8 plants, nothing in the clean files. CI runs the fake form. |
-| RT-5 | The HTTP API and database template and its fixture. | RT-4b | TODO |
+| RT-5a | The HTTP API and database template, to the bar, on the shelf. | RT-4b | DONE 2026-11-21, the commit after b919c7b (D-283). `templates/http-api.md`: eight rules under three sections. Who is asking: an endpoint that does not check who asks, a record reached by an id the caller chose. What the request carries: a body used without being checked, a body copied onto a record whole, a failure's detail sent to the caller. Reads and writes: a statement built from input, a list with no limit, writes that stand together made apart. Seven rest on CWE 5.0 entries read that day, the last on PostgreSQL's documentation of transactions. Four sweep patterns, each borne out by its own rule's examples. `tests/templates/http-api.test.ts` holds that every rule is put to every file. Not run against a model. |
+| RT-5b | The HTTP API and database template's fixture: one plant per rule and a clean look-alike beside each, with a key, on the shared builder and checks. | RT-5a | TODO |
 | RT-6 | The model runs: each template's fixture reviewed once on the recommended pair, scored against its key, the evidence committed under `docs/evidence/` (D-261). A rule the model misses or raises on the clean look-alike is rewritten and run again. | RT-6a and RT-2b to RT-5, the maintainer's go per run | TODO (maintainer starts each) |
 | RT-7 | The Firebase template. | RT-6, the maintainer's word | TODO |
 | RT-8 | Records: README (first steps start from a template), RUNBOOK, 04, `PROJECT-STATE.md`. | RT-1a to RT-5 | TODO |

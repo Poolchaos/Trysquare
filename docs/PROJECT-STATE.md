@@ -117,6 +117,9 @@ from 2026-11-03.
   look-alikes, 8/8 on the fake engine. The review pass over the two
   templates (round 21, in DECISIONS) corrected one sentence in each, and
   both are at version 2.
+  The HTTP API and database template is the fourth on the shelf (RT-5a,
+  D-283): eight rules on who is asking, what a request carries and how
+  the store is read and written. Its fixture is next (RT-5b).
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -124,7 +127,7 @@ from 2026-11-03.
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1655 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1659 unit tests passing, 8 skipped,
   and 164 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
@@ -560,7 +563,8 @@ are accepted; anything else is refused by name.
   pass, and the shutdown pass.
   `drizzle/` - twenty committed migrations.
 - `templates/` - the template shelf: `shelf.json`, and a protocol document
-  per template (`general.md`, `typescript.md`, `react.md`).
+  per template (`general.md`, `typescript.md`, `react.md`,
+  `http-api.md`).
 - `verify.sh` - the gate.
 
 Runtime layout on disk is specced in `01-ARCHITECTURE.md` section 5 and
@@ -634,8 +638,10 @@ own now (D-75, D-81).
   started from it on the Rulesets screen, and the General template's
   fixture and the command that reviews it (RT-1a, RT-2a, RT-1b, RT-2b,
   RT-6a), and the TypeScript and React templates with their fixtures
-  (RT-3a to RT-4b). Not done: any template's run against a model, which is
-  the maintainer's to start. Not built: the HTTP and database template. A ruleset is started with
+  (RT-3a to RT-4b), and the HTTP API and database template (RT-5a). Not
+  done: any template's run against a model, which is the maintainer's to
+  start. Not built: that template's fixture, and a Firebase template,
+  which waits on the maintainer's word. A ruleset is started with
   no document (RA-6, D-272), and a rule can be switched off, its severity
   changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
   removed (RA-4, D-269), and one ruleset deleted (RA-1, D-266). Process

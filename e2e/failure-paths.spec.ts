@@ -7201,7 +7201,7 @@ test("a ruleset is started with no document: a name and a tier, nothing to expor
   }
 });
 
-test("the template shelf is read by the server as built, and holds its three templates (RT-1 to RT-4)", async ({
+test("the template shelf is read by the server as built, and holds its four templates (RT-1 to RT-5)", async ({
   page,
 }) => {
   // The shelf is a folder outside `src/`, read at run time: a build that
@@ -7228,6 +7228,13 @@ test("the template shelf is read by the server as built, and holds its three tem
         slug: "react",
         name: "React",
         version: 2,
+        ruleCount: 8,
+        modelRun: null,
+      }),
+      expect.objectContaining({
+        slug: "http-api",
+        name: "HTTP API and database",
+        version: 1,
         ruleCount: 8,
         modelRun: null,
       }),
@@ -7273,7 +7280,7 @@ test("a ruleset is started from a template: the form opens on the shelf, a shelf
       .locator("label")
       .filter({ has: page.getByRole("radio", { name: /^General/ }) });
     await expect(entry).toContainText("12 rules");
-    await expect(entry).toContainText("What any change is held to, whatever it is written in");
+    await expect(entry).toContainText("What any change is held to, whatever it is written in.");
     await expect(entry).toContainText("Not yet run against a model.");
     await expect(form.getByText("Left empty, the ruleset is called General.")).toBeVisible();
     await expect(form.getByLabel("Protocol document")).toHaveCount(0);

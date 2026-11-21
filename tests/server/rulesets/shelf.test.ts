@@ -107,6 +107,7 @@ describe("the template shelf", () => {
       "general",
       "typescript",
       "react",
+      "http-api",
     ]);
   });
 
