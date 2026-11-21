@@ -1509,7 +1509,77 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
         params(review.id),
       );
       expect(response.status).toBe(200);
-      expect(start).toHaveBeenCalledWith(review.id, { ruleset: { id: rulesetId } });
+      expect(start).toHaveBeenCalledWith(review.id, { ruleset: { ids: [rulesetId] } });
+    } finally {
+      start.mockRestore();
+    }
+  }, 120_000);
+
+  it("starts a review against every ruleset named, and refuses a set that shares a rule number", async () => {
+    // One ruleset was all a review could be started with (RS-2b).
+    const startRoute = await import("@/app/api/reviews/[id]/start/route");
+    const created = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { review } = (await created.json()) as { review: { id: string } };
+    const ruleset = async (name: string, code: string) => {
+      const imported = await routes.rulesets.POST(
+        post("http://localhost/api/rulesets/import", {
+          name,
+          tier: "global",
+          markdown: `# ${name}\n\n## Rules\n\n### ${code}. Dates\n\n**Rule:** Dates are UTC.\n`,
+        }),
+      );
+      const { rulesetId } = (await imported.json()) as { rulesetId: string };
+      expect(rulesetId).toBeTypeOf("string");
+      return rulesetId;
+    };
+    const ours = await ruleset("Ours at start", "90");
+    const theirs = await ruleset("Theirs at start", "90");
+    const apart = await ruleset("Apart at start", "91");
+
+    const { jobManager } = await import("@/server/jobs/manager");
+    const start = vi.spyOn(jobManager(), "start").mockReturnValue("queued");
+    try {
+      const ask = async (body: unknown) => {
+        const response = await startRoute.POST(
+          post(`http://localhost/api/reviews/${review.id}/start`, body),
+          params(review.id),
+        );
+        return [response.status, await response.json()];
+      };
+
+      expect(await ask({ rulesetIds: [ours, theirs] })).toEqual([
+        409,
+        {
+          error:
+            'These rulesets cannot judge one review together: rule 90 is in "Ours at start" ' +
+            'and "Theirs at start". A finding names its rule by number alone, so a number may ' +
+            "be in only one of a review's rulesets. Leave one of them out, or change the " +
+            "numbers in one.",
+          code: "RulesetCodesSharedError",
+        },
+      ]);
+      expect(await ask({ rulesetId: ours, rulesetIds: [apart] })).toEqual([
+        400,
+        { error: "Send rulesetId or rulesetIds, not both.", code: "RulesetsNamedTwoWays" },
+      ]);
+      expect(await ask({ rulesetIds: [ours, ours] })).toEqual([
+        400,
+        { error: "rulesetIds names a ruleset more than once.", code: "RulesetNamedTwice" },
+      ]);
+      expect((await ask({ rulesetIds: [] }))[0]).toBe(400);
+      expect((await ask({ rulesetIds: [ours, "no-such-ruleset"] }))[0]).toBe(404);
+      expect(start).not.toHaveBeenCalled();
+
+      expect((await ask({ rulesetIds: [ours, apart] }))[0]).toBe(200);
+      expect(start).toHaveBeenCalledWith(review.id, { ruleset: { ids: [ours, apart] } });
     } finally {
       start.mockRestore();
     }

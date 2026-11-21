@@ -207,13 +207,13 @@ export interface PrepareAndRunOptions {
   onStageLifecycle?: ((event: StageLifecycleEvent) => void) | undefined;
   /**
    * Required the first time a review runs; ignored once one is frozen. The
-   * app names a stored ruleset by its id, read as the review starts: what
-   * was changed while the review waited in line is what it runs with, and
-   * nothing is stored over it (D-270). A script hands over a document's
-   * rules, which are stored under the name first.
+   * app names stored rulesets by their ids, one or more, read as the review
+   * starts: what was changed while the review waited in line is what it
+   * runs with, and nothing is stored over it (D-270). A script hands over a
+   * document's rules, which are stored under the name first.
    */
   ruleset?:
-    | { id: string }
+    | { ids: readonly string[] }
     | { imported: ImportedRuleset; name: string; tier: RulesetTier; sourceDoc?: string | undefined }
     | undefined;
 }
@@ -267,16 +267,18 @@ export async function prepareAndRun(
   if (!hasReviewSnapshot(db, reviewId)) {
     if (!options.ruleset) throw new RulesetRequiredError(reviewId);
     const given = options.ruleset;
-    const rulesetId =
-      "id" in given
-        ? given.id
-        : saveImportedRuleset(db, {
-            name: given.name,
-            tier: given.tier,
-            imported: given.imported,
-            ...(given.sourceDoc === undefined ? {} : { sourceDoc: given.sourceDoc }),
-          }).rulesetId;
-    writeReviewSnapshot(db, reviewId, rulesetId);
+    const rulesetIds =
+      "ids" in given
+        ? given.ids
+        : [
+            saveImportedRuleset(db, {
+              name: given.name,
+              tier: given.tier,
+              imported: given.imported,
+              ...(given.sourceDoc === undefined ? {} : { sourceDoc: given.sourceDoc }),
+            }).rulesetId,
+          ];
+    writeReviewSnapshot(db, reviewId, ...rulesetIds);
     // Frozen at the same moment and for the same reason as the ruleset. This
     // is the only place the registry is consulted: everywhere downstream reads
     // the frozen column, so a probe expiring mid-review cannot change how an

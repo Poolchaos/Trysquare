@@ -214,8 +214,12 @@ describe("deciding what runs now", () => {
     expect(manager.startsOn({ id: "any", name: RULESET.name })).toBe(true);
     expect(manager.startsOn({ id: "any", name: "Another protocol" })).toBe(false);
     const third = seedReview();
-    expect(manager.start(third, { ruleset: { id: "stored-ruleset" } })).toBe("queued");
+    // Every ruleset of a waiting review's set is one it will start on (RS-2b).
+    expect(manager.start(third, { ruleset: { ids: ["stored-ruleset", "beside-it"] } })).toBe(
+      "queued",
+    );
     expect(manager.startsOn({ id: "stored-ruleset", name: "Another protocol" })).toBe(true);
+    expect(manager.startsOn({ id: "beside-it", name: "Another protocol" })).toBe(true);
     expect(manager.startsOn({ id: "another", name: "Another protocol" })).toBe(false);
     expect(manager.leaveQueue(third)).toBe(true);
     expect(manager.startsOn({ id: "stored-ruleset", name: "Another protocol" })).toBe(false);

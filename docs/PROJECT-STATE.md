@@ -145,8 +145,12 @@ from 2026-11-03.
   it was started with. A report names every ruleset its review ran
   with, each with its version (RS-2a, D-290): the store could already
   hold several for one review, and the report named the first by name.
-  The server taking several rulesets (RS-2b) is next: until it does,
-  nothing the app offers starts a review with more than one.
+  The server takes several (RS-2b, D-291): `POST /api/reviews/[id]/start`
+  reads `rulesetIds`, one or more, or the single `rulesetId` as before,
+  and a set in which two rulesets hold a rule under one number is refused
+  with a 409 that names the numbers and the rulesets, before the review
+  is put in line and again as its rules are frozen. No screen sends more
+  than one yet: the pre-flight (RS-3) and the picker (RS-4) are next.
   A review takes one ruleset, so the two templates cannot yet be used
   together on one review (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
@@ -154,8 +158,8 @@ from 2026-11-03.
   cut in two and the rule got none, with every line still counted as
   kept. A stored ruleset reads its document again at its next change in
   the app, and the page says which rules' patterns that moved.
-  `./verify.sh --e2e` exits 0 with 1676 unit tests passing, 8 skipped,
-  and 167 browser tests.
+  `./verify.sh --e2e` exits 0 with 1683 unit tests passing, 8 skipped,
+  and 168 browser tests.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the

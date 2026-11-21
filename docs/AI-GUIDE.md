@@ -45,8 +45,8 @@ A review:
 2. `POST /api/reviews` fetches, pins both commits and creates the review row.
    `POST /api/reviews/preflight` says what would be examined before anything
    is spent.
-3. `POST /api/reviews/[id]/start` hands it to the job manager
-   (`src/server/jobs/manager.ts`), which runs `prepareAndRun` in
+3. `POST /api/reviews/[id]/start` hands it, with the ids of its rulesets, to
+   the job manager (`src/server/jobs/manager.ts`), which runs `prepareAndRun` in
    `src/server/review/service.ts`: S0 prepare (worktree, diff, sweeps), then
    the stages S1 to S6 in `src/server/review/pipeline.ts`, of which S6,
    the audit, asks no model. Only

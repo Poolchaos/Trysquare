@@ -179,6 +179,7 @@ export const ERROR_STATUSES: readonly (readonly [name: string, status: 404 | 409
   // block whose open code fence it would be read into.
   ["RulesetChangedError", 409],
   ["RuleCodeTakenError", 409],
+  ["RulesetCodesSharedError", 409],
   ["RuleCodeHeldError", 409],
   ["RuleFenceOpenError", 409],
 ];

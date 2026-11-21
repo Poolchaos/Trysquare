@@ -25,6 +25,7 @@ import {
   unclosedFenceLine,
 } from "@/lib/rulesets/import";
 import type { ImportedDirective, ImportedRule, ImportedRuleset } from "@/lib/rulesets/model";
+import { sharedCodes, sharedCodesRefusal, type SharedCodes } from "@/lib/rulesets/shared-codes";
 import type { Db } from "../client";
 import { processDirectives, reviewRulesets, rules, rulesets } from "../schema";
 import { parseJsonColumn, serialiseJsonColumn } from "./json";
@@ -405,31 +406,62 @@ export function listRulesetSummaries(db: Db): (RulesetRow & { ruleCount: number 
   return listRulesets(db).map((row) => ({ ...row, ruleCount: counts.get(row.id) ?? 0 }));
 }
 
+/** Two of the rulesets chosen for one review hold a rule under one code (RS-2b). */
+export class RulesetCodesSharedError extends Error {
+  constructor(readonly shared: readonly SharedCodes[]) {
+    super(sharedCodesRefusal(shared));
+    this.name = "RulesetCodesSharedError";
+  }
+}
+
 /**
- * Freezes a ruleset onto a review.
+ * Refuses a set of rulesets that cannot judge one review: two of them hold
+ * an enabled rule under the same code. Asked when the review is started and
+ * again as its rules are frozen, since a ruleset can be changed while a
+ * review waits in line.
+ */
+export function refuseSharedCodes(db: Db, rulesetIds: readonly string[]): void {
+  const shared = sharedCodes(
+    rulesetIds.map((rulesetId) => {
+      const enabled = loadRuleset(db, rulesetId, { enabledOnly: true });
+      return { name: enabled.title, codes: enabled.rules.map((rule) => rule.code) };
+    }),
+  );
+  if (shared.length > 0) throw new RulesetCodesSharedError(shared);
+}
+
+/**
+ * Freezes the rulesets a review is judged against onto it, one or more.
  *
  * Written once, at the review's first start. Everything the run composes
- * afterwards, including on resume, reads this and not the live tables.
+ * afterwards, including on resume, reads this and not the live tables. All
+ * of them or none: a set that shares a rule code, or holds a ruleset with
+ * no rule switched on, writes nothing.
  */
-export function writeReviewSnapshot(db: Db, reviewId: string, rulesetId: string): void {
-  const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
-  if (!row) throw new Error(`No ruleset with id "${rulesetId}".`);
+export function writeReviewSnapshot(db: Db, reviewId: string, ...rulesetIds: string[]): void {
+  const frozen = rulesetIds.map((rulesetId) => {
+    const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
+    if (!row) throw new Error(`No ruleset with id "${rulesetId}".`);
+    // Only the enabled rules: the snapshot is what this review is judged
+    // against, and a rule someone switched off is not part of that judgement.
+    return { row, enabled: loadEnabledRuleset(db, rulesetId) };
+  });
+  refuseSharedCodes(db, rulesetIds);
 
-  // Only the enabled rules: the snapshot is what this review is judged
-  // against, and a rule someone switched off is not part of that judgement.
-  const enabled = loadEnabledRuleset(db, rulesetId);
-
-  const snapshot = toSnapshot(row.name, row.version, enabled);
-  db.insert(reviewRulesets)
-    .values({
-      reviewId,
-      rulesetId,
-      rulesetName: row.name,
-      rulesetVersion: row.version,
-      snapshotJson: serialiseJsonColumn(snapshot),
-    })
-    .onConflictDoNothing()
-    .run();
+  db.transaction((tx) => {
+    for (const { row, enabled } of frozen) {
+      tx.insert(reviewRulesets)
+        .values({
+          reviewId,
+          rulesetId: row.id,
+          rulesetName: row.name,
+          rulesetVersion: row.version,
+          snapshotJson: serialiseJsonColumn(toSnapshot(row.name, row.version, enabled)),
+        })
+        .onConflictDoNothing()
+        .run();
+    }
+  });
 }
 
 /**

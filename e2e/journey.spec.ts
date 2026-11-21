@@ -1086,3 +1086,41 @@ test("the scoreboard counts what the machine has actually run", async ({ page })
   // And the recent table carries the review it just ran.
   await expect(page.getByRole("table")).toContainText("feature/rename-prefs");
 });
+
+test("a report's last line names every ruleset its review ran with", async ({ page }) => {
+  // The journey's review ran with one ruleset, and no screen starts one with
+  // two yet (RS-4), so the report's answer is given a second here: what is
+  // proven is the line the page draws from two. That the server freezes and
+  // reports two is held by its own tests (RS-2a, RS-2b).
+  const listed = (await (await page.request.get("/api/reviews")).json()) as {
+    reviews: { id: string; status: string }[];
+  };
+  const done = listed.reviews.find((review) => review.status === "complete");
+  if (done === undefined) throw new Error("The journey left no completed review.");
+  const stop = await routeUntilStopped(page, `**/api/reviews/${done.id}/report`, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as {
+      report: { rulesets: { name: string; version: number }[] };
+    };
+    await route.fulfill({
+      response,
+      json: {
+        ...body,
+        report: {
+          ...body.report,
+          rulesets: [...body.report.rulesets, { name: "TypeScript", version: 3 }],
+        },
+      },
+    });
+  });
+  try {
+    await page.goto(`/reviews/${done.id}`);
+    const ranWith = page.locator("footer").filter({ hasText: "profile, against" });
+    await expect(ranWith).toContainText(
+      /profile, against Example protocol v\d+, TypeScript v3\. Commit /,
+    );
+    await shootInThree(page, ranWith, "report-ran-with-two");
+  } finally {
+    await stop();
+  }
+});

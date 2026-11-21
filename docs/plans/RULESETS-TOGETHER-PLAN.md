@@ -89,9 +89,9 @@ shown by the pre-flight before Start. Evidence: the code lines above.
 | WP   | Scope | Blocked on | Status |
 | ---- | ----- | ---------- | ------ |
 | RS-1 | The templates' codes made disjoint: TypeScript 21 to 29, React 31 to 38, HTTP API and database 41 to 48, in each document's headings and sweep rows and in its fixture's key; each template's version raised; a test that no two templates on the shelf share a code. | - | DONE 2026-11-21, a6054b9 (D-289) |
-| RS-2a | The snapshot's meta, the report (markdown and HTML) and the report on the review's page name every ruleset frozen onto the review, each with its version. Built first, so that no commit holds a review that ran with two and a report that names one. | RS-1 | DONE 2026-11-21 (D-290) |
-| RS-2b | The server takes a set: the start route and the service accept `rulesetIds`, one or more, the single `rulesetId` still read; a set whose codes collide is refused with a 409 that names each shared code and the rulesets it is in, before any row is written; one snapshot row per ruleset. | RS-2a | TODO |
-| RS-3 | The pre-flight sizes the set and refuses the same collision in the same words; a review waiting in line holds its set, and a ruleset in any waiting set is not deleted (D-270's refusal, for each). | RS-2b | TODO |
+| RS-2a | The snapshot's meta, the report (markdown and HTML) and the report on the review's page name every ruleset frozen onto the review, each with its version. Built first, so that no commit holds a review that ran with two and a report that names one. | RS-1 | DONE 2026-11-21, 43266c9 (D-290) |
+| RS-2b | The server takes a set: the start route and the service accept `rulesetIds`, one or more, the single `rulesetId` still read; a set whose codes collide is refused with a 409 that names each shared code and the rulesets it is in, before any row is written; one snapshot row per ruleset. Built with it, since the type it changes is the one the line holds: a review waiting in line holds its set, and a ruleset in any waiting set is not deleted. | RS-2a | DONE 2026-11-21 (D-291) |
+| RS-3 | The pre-flight sizes the set and refuses the same collision in the same words. The model is given each ruleset's directives under that ruleset's name (section 3): today they are given one after another, unnamed. | RS-2b | TODO |
 | RS-4 | The screens: on New review the Rules picker is a list of the rulesets by tier, each one ticked or not, the default ticked; the collision said beside it with Start off; a draft's own Start the same; the review's page and the report name the rulesets it ran with. | RS-3 | TODO |
 | RS-5 | Records: README (How it works), RUNBOOK, 00-BRIEF's unowned line, 02, 03, 04, `PROJECT-STATE.md`. A review pass over RS-1 to RS-4. | RS-4 | TODO |
 
@@ -106,8 +106,8 @@ shown by the pre-flight before Start. Evidence: the code lines above.
   rule of another.
 - A resumed review reading a different set. It reads its own snapshot
   rows, as today; nothing chosen later reaches it.
-- A report that names one ruleset of three. RS-2 changes the meta to all
-  of them, and a test reads a report of a review on two.
+- A report that names one ruleset of three. RS-2a changed the meta to
+  all of them, and a test reads a report of a review on two.
 - Each ruleset's directives given side by side, some saying the same (two
   severity tables). They are given as written, each under its own
   ruleset's name. The cost is tokens, which the pre-flight shows; trimming

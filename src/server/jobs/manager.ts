@@ -265,8 +265,8 @@ export class JobManager {
     return this.queue.some(({ options: { ruleset: held } }) =>
       held === undefined
         ? false
-        : "id" in held
-          ? held.id === ruleset.id
+        : "ids" in held
+          ? held.ids.includes(ruleset.id)
           : held.name === ruleset.name,
     );
   }

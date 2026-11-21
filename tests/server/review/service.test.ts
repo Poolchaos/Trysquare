@@ -1109,7 +1109,7 @@ describe("what a review is judged against", () => {
     const id = stored.rulesetId;
     const reviewId = seedReview();
     // What the start route hands the manager as Start is pressed.
-    const pressed = { id };
+    const pressed = { ids: [id] };
 
     // While the review waits: one rule switched off, another's text edited.
     rulesets.setRuleEnabled(db, id, "1", false);
@@ -1136,6 +1136,50 @@ describe("what a review is judged against", () => {
     expect(frozen.find((entry) => entry.code === "4")?.raw).toBe(edited.rule.raw);
     expect(rulesets.readReviewSnapshotMeta(db, reviewId)).toEqual([
       { name: "Kept in line", version },
+    ]);
+  }, 120_000);
+
+  it("freezes every ruleset named onto the review, and none of a set that shares a rule number", async () => {
+    // A review could be started with one ruleset only (RS-2b).
+    const rulesets = await import("@/server/db/repositories/rulesets");
+    const { importProtocol } = await import("@/lib/rulesets/import");
+    const own = (name: string, code: string) =>
+      rulesets.saveImportedRuleset(db, {
+        name,
+        tier: "project",
+        imported: importProtocol(
+          `# ${name}\n\n## Rules\n\n### ${code}. Dates\n\n**Rule:** Dates are UTC.\n`,
+        ).ruleset,
+      }).rulesetId;
+    const general = rulesets.saveImportedRuleset(db, {
+      name: "Kept apart",
+      tier: "global",
+      imported: PROTOCOL,
+    }).rulesetId;
+    const clash = own("Shares rule 1", "1");
+    const apart = own("Numbered apart", "90");
+
+    const reviewId = seedReview();
+    await expect(run(reviewId, { ruleset: { ids: [general, clash] } })).rejects.toThrow(
+      'rule 1 is in "Kept apart" and "Shares rule 1"',
+    );
+    expect(rulesets.hasReviewSnapshot(db, reviewId)).toBe(false);
+
+    // The refusal wrote nothing, so the same review starts with another set.
+    // Frozen before the first stage, so the run need go no further.
+    const controller = new AbortController();
+    await run(reviewId, {
+      ruleset: { ids: [general, apart] },
+      signal: controller.signal,
+      onStageLifecycle: () => controller.abort(),
+    });
+    expect(rulesets.readReviewSnapshotMeta(db, reviewId)).toEqual([
+      { name: "Kept apart", version: 1 },
+      { name: "Numbered apart", version: 1 },
+    ]);
+    expect(rulesets.readReviewSnapshot(db, reviewId).rules.map((rule) => rule.code)).toEqual([
+      ...PROTOCOL.rules.map((rule) => rule.code),
+      "90",
     ]);
   }, 120_000);
 });

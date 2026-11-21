@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { exportProtocol, importProtocol } from "@/lib/rulesets/import";
 import type { Db } from "@/server/db/client";
 import {
+  RulesetCodesSharedError,
   RulesetNameTakenError,
   deleteRuleset,
   duplicateRuleset,
@@ -228,6 +229,38 @@ describe("the ruleset a review is judged against", () => {
       { name: "Example protocol", version: 1 },
     ]);
     expect(readReviewSnapshot(db, reviewId).rules[0]?.code).toBe("90");
+  });
+
+  it("freezes several rulesets at once, or none when two hold a rule under one number", () => {
+    const general = save().rulesetId;
+    const clash = saveImportedRuleset(db, {
+      name: "Shares rule 1",
+      tier: "project",
+      imported: importProtocol("# Own\n\n## Rules\n\n### 1. Dates\n\n**Rule:** Dates are UTC.\n")
+        .ruleset,
+    }).rulesetId;
+
+    expect(() => writeReviewSnapshot(db, reviewId, general, clash)).toThrow(
+      RulesetCodesSharedError,
+    );
+    expect(() => writeReviewSnapshot(db, reviewId, general, clash)).toThrow(
+      'These rulesets cannot judge one review together: rule 1 is in "Example protocol" and ' +
+        '"Shares rule 1". A finding names its rule by number alone, so a number may be in only ' +
+        "one of a review's rulesets. Leave one of them out, or change the numbers in one.",
+    );
+    expect(hasReviewSnapshot(db, reviewId)).toBe(false);
+
+    // Switched off, the protocol's rule 1 is not what the review is judged
+    // against, so the two share nothing.
+    setRuleEnabled(db, general, "1", false);
+    writeReviewSnapshot(db, reviewId, general, clash);
+    expect(readReviewSnapshotMeta(db, reviewId).map((entry) => entry.name)).toEqual([
+      "Example protocol",
+      "Shares rule 1",
+    ]);
+    expect(readReviewSnapshot(db, reviewId).rules.filter((rule) => rule.code === "1")).toHaveLength(
+      1,
+    );
   });
 
   it("is frozen at the review, not read live", () => {

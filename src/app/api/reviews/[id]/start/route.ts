@@ -6,7 +6,11 @@
  */
 
 import { z } from "zod";
-import { hasReviewSnapshot, requireRuleset } from "@/server/db/repositories/rulesets";
+import {
+  hasReviewSnapshot,
+  refuseSharedCodes,
+  requireRuleset,
+} from "@/server/db/repositories/rulesets";
 import { appendRunNote, requireReview } from "@/server/db/repositories/reviews";
 import { secondVerifierNotReady } from "@/server/db/repositories/models";
 import { handler, ok, readOptionalJson } from "@/server/api/respond";
@@ -23,6 +27,8 @@ export const dynamic = "force-dynamic";
 
 const body = z.object({
   rulesetId: z.string().min(1).optional(),
+  /** One or more, each named once: the review is judged against them all (RS-2b). */
+  rulesetIds: z.array(z.string().min(1)).min(1).optional(),
   billingShown: billingShownSchema,
 });
 
@@ -38,6 +44,23 @@ export async function POST(
     // request had named none (5.8, A8).
     const input = await readOptionalJson(request, body);
 
+    // Said one way or the other. Both sent, one of them would be dropped
+    // without a word; a ruleset named twice would share every code with
+    // itself.
+    if (input.rulesetId !== undefined && input.rulesetIds !== undefined) {
+      throw Response.json(
+        { error: "Send rulesetId or rulesetIds, not both.", code: "RulesetsNamedTwoWays" },
+        { status: 400 },
+      );
+    }
+    const named = input.rulesetIds ?? (input.rulesetId ? [input.rulesetId] : undefined);
+    if (named !== undefined && new Set(named).size !== named.length) {
+      throw Response.json(
+        { error: "rulesetIds names a ruleset more than once.", code: "RulesetNamedTwice" },
+        { status: 400 },
+      );
+    }
+
     const review = requireReview(db, id);
 
     // A resumed review already carries its frozen ruleset and must not be
@@ -46,7 +69,7 @@ export async function POST(
     if (hasReviewSnapshot(db, id)) {
       // Refused, not ignored: the review keeps the ruleset frozen onto it,
       // and one sent now was dropped without a word (D-138).
-      if (input.rulesetId !== undefined) {
+      if (named !== undefined) {
         throw Response.json(
           {
             error:
@@ -57,16 +80,19 @@ export async function POST(
         );
       }
     } else {
-      if (!input.rulesetId) {
+      if (named === undefined) {
         throw Response.json(
           { error: "Choose a ruleset before starting this review.", code: "RulesetRequired" },
           { status: 400 },
         );
       }
-      // Named, not copied: a review put in line reads the ruleset as it
+      // Named, not copied: a review put in line reads its rulesets as it
       // starts. A copy taken here was stored over the ruleset at that start,
       // undoing whatever had been changed while the review waited (D-270).
-      ruleset = { id: requireRuleset(db, input.rulesetId).id };
+      ruleset = { ids: named.map((rulesetId) => requireRuleset(db, rulesetId).id) };
+      // Refused here, before the review is put in line, and again as its
+      // rules are frozen (RS-2b).
+      refuseSharedCodes(db, ruleset.ids);
     }
 
     // A review that cannot run, or a ruleset for one already running or in

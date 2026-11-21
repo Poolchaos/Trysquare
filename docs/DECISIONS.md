@@ -7215,3 +7215,25 @@ verified evidence, in writing, here.
   one and keeps its picture. Not provable in the browser yet: the line
   with two, since nothing starts such a review until RS-2b. It is held
   by the report's unit test, and its picture is owed with RS-2b.
+- 2026-11-21 D-291 The server starts a review against one or more
+  rulesets (RS-2b). The start route reads `rulesetIds` or, as before,
+  `rulesetId`; both sent is a 400, and so is an id named twice, since
+  either would have one dropped without a word. The service's option
+  holds the ids, the snapshot's writer freezes all of them in one
+  transaction or none, and a waiting review's whole set is kept from a
+  delete. A set in which two rulesets hold an enabled rule under one
+  code is refused (`RulesetCodesSharedError`, 409) at the route, before
+  the review is put in line, and again by the writer as the review
+  starts, because a ruleset can be changed while a review waits; that
+  second refusal ends the start as a missing ruleset does, with the
+  words as the reason. A rule switched off is not counted: it is not
+  what the review is judged against. The words group the codes by the
+  rulesets that share them, so two templates started before D-289 read
+  as one clause, not eight. Proven: four tests failed on the old code;
+  a refused set leaves the review with no snapshot row and startable.
+  The picture owed by D-290 is taken: the review page's last line with
+  two rulesets, from a report answer given a second ruleset in the
+  browser test, since no screen starts such a review until RS-4. Not
+  done, and now written into RS-3's row: the model is given the
+  directives of several rulesets one after another without the names
+  the plan's section 3 says they go under.
