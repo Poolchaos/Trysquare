@@ -1475,6 +1475,46 @@ describe("starting a review asks the CLI again (MVP 6.2)", () => {
     }
   }, 240_000);
 
+  it("names the ruleset to the review it starts, holding no copy of its rules", async () => {
+    // A copy handed over here was stored over the ruleset as a review left
+    // the line, undoing what had been changed while it waited (D-270).
+    const startRoute = await import("@/app/api/reviews/[id]/start/route");
+    const created = await routes.reviews.POST(
+      post("http://localhost/api/reviews", {
+        projectId,
+        fromBranch: "feature/rename-prefs",
+        intoBranch: "main",
+        model: "claude-fable-5[1m]",
+      }),
+    );
+    expect(created.status).toBe(201);
+    const { review } = (await created.json()) as { review: { id: string } };
+    const markdown = await (
+      await import("node:fs/promises")
+    ).readFile(new URL("../../fixtures/example-protocol.md", import.meta.url), "utf8");
+    const imported = await routes.rulesets.POST(
+      post("http://localhost/api/rulesets/import", {
+        name: "Named at start protocol",
+        tier: "global",
+        markdown,
+      }),
+    );
+    const { rulesetId } = (await imported.json()) as { rulesetId: string };
+
+    const { jobManager } = await import("@/server/jobs/manager");
+    const start = vi.spyOn(jobManager(), "start").mockReturnValue("queued");
+    try {
+      const response = await startRoute.POST(
+        post(`http://localhost/api/reviews/${review.id}/start`, { rulesetId }),
+        params(review.id),
+      );
+      expect(response.status).toBe(200);
+      expect(start).toHaveBeenCalledWith(review.id, { ruleset: { id: rulesetId } });
+    } finally {
+      start.mockRestore();
+    }
+  }, 120_000);
+
   it("notes a review put in line once, though two presses put it there", async () => {
     // Both judged startable before the CLI was asked, and both noted it,
     // the second press having started nothing (review of the D-163 fixes).

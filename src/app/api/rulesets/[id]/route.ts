@@ -79,7 +79,7 @@ export async function DELETE(
     const { db, manager } = runtime();
     const { id } = await context.params;
     const row = requireRuleset(db, id);
-    if (manager.startsOn(row.name)) {
+    if (manager.startsOn(row)) {
       throw Response.json(
         {
           error: `A review waiting for a place will start on "${row.name}" and has not taken its copy of the rules yet. Delete the ruleset once that review has started, or take the review out of the line first.`,

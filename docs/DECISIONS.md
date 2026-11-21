@@ -6563,3 +6563,25 @@ verified evidence, in writing, here.
   remove the last rule, which RA-6 (a ruleset started empty) would lift
   again; and taking the row away with no word, the version in the header
   its only trace.
+- 2026-11-21 D-270 A review in line runs with its ruleset as it stands
+  when the review starts, and stores nothing over it. Found by the review
+  pass over RA-1 to RA-4, and older than they are: as Start was pressed the
+  start route read the whole ruleset and handed that copy to the review,
+  and a review that waited in line stored the copy over the ruleset as it
+  started, whenever the two differed. Measured on the code before: with a
+  rule switched off and another's text saved while a review waited, the
+  start moved the ruleset from version 3 to 4, the saved text was gone, and
+  the rule switched off was on again, in the ruleset and in the review's
+  own copy. A severity changed with the picker did it since the picker was
+  built; RA-2 to RA-4 made every edit in the app a way in. The route now
+  names the ruleset by its id and the review reads it when its turn comes,
+  the rules switched on then (`PrepareAndRunOptions.ruleset`,
+  `src/server/review/service.ts`). The scripts that review a fixture still
+  hand over a document's rules, stored under their name first. A ruleset
+  is still not deleted under a review in line (D-266), now for what is true
+  of it: that start would find no ruleset. Rejected: freezing the rules as
+  the review is put in line, since a review taken out of the line again
+  (D-224) would be a draft already frozen, and the start route refuses a
+  frozen review another ruleset; and keeping the copy without storing it,
+  a second answer to which rules a review runs with beside the ruleset's
+  own.

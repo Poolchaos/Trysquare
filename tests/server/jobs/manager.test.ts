@@ -209,15 +209,22 @@ describe("deciding what runs now", () => {
     expect(() => manager.judge(second, { ruleset: RULESET })).toThrow(ReviewAlreadyStartedError);
     expect(manager.queueDepth()).toBe(1);
     // One in line has not taken its copy of the rules, so the ruleset it
-    // will start on is known by name and kept from a delete (RA-1).
-    expect(manager.startsOn(RULESET.name)).toBe(true);
-    expect(manager.startsOn("Another protocol")).toBe(false);
+    // will start on is known and kept from a delete (RA-1): by name for
+    // rules handed over as a document, by id for a stored ruleset.
+    expect(manager.startsOn({ id: "any", name: RULESET.name })).toBe(true);
+    expect(manager.startsOn({ id: "any", name: "Another protocol" })).toBe(false);
+    const third = seedReview();
+    expect(manager.start(third, { ruleset: { id: "stored-ruleset" } })).toBe("queued");
+    expect(manager.startsOn({ id: "stored-ruleset", name: "Another protocol" })).toBe(true);
+    expect(manager.startsOn({ id: "another", name: "Another protocol" })).toBe(false);
+    expect(manager.leaveQueue(third)).toBe(true);
+    expect(manager.startsOn({ id: "stored-ruleset", name: "Another protocol" })).toBe(false);
     const cancelled = seedReview();
     transitionReview(db, cancelled, "cancelled");
     expect(() => manager.judge(cancelled)).toThrow(ReviewNotStartableError);
     await manager.settled(first);
     await manager.settled(second);
-    expect(manager.startsOn(RULESET.name)).toBe(false);
+    expect(manager.startsOn({ id: "any", name: RULESET.name })).toBe(false);
   }, 240_000);
 
   it("lets a delete claim only what it does not hold, and starts nothing claimed", async () => {

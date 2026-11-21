@@ -6,8 +6,7 @@
  */
 
 import { z } from "zod";
-import { rulesetTierSchema } from "@/lib/domain/enums";
-import { hasReviewSnapshot, loadRuleset, requireRuleset } from "@/server/db/repositories/rulesets";
+import { hasReviewSnapshot, requireRuleset } from "@/server/db/repositories/rulesets";
 import { appendRunNote, requireReview } from "@/server/db/repositories/reviews";
 import { secondVerifierNotReady } from "@/server/db/repositories/models";
 import { handler, ok, readOptionalJson } from "@/server/api/respond";
@@ -64,12 +63,10 @@ export async function POST(
           { status: 400 },
         );
       }
-      const row = requireRuleset(db, input.rulesetId);
-      ruleset = {
-        imported: loadRuleset(db, input.rulesetId),
-        name: row.name,
-        tier: rulesetTierSchema.parse(row.tier),
-      };
+      // Named, not copied: a review put in line reads the ruleset as it
+      // starts. A copy taken here was stored over the ruleset at that start,
+      // undoing whatever had been changed while the review waited (D-270).
+      ruleset = { id: requireRuleset(db, input.rulesetId).id };
     }
 
     // A review that cannot run, or a ruleset for one already running or in

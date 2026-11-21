@@ -1093,6 +1093,52 @@ describe("what a review is judged against", () => {
     const systemPromptSent = recordedSystemPrompts()[2] ?? "";
     expect(systemPromptSent).toContain(PROTOCOL.rules[0]?.ruleText ?? "never matched");
   }, 120_000);
+
+  it("starts on the stored ruleset as it stands, undoing nothing changed while it waited", async () => {
+    // A review in line carried the rules as they were when Start was pressed
+    // and stored them over the ruleset as it started: a rule edited
+    // meanwhile was set back, one switched off was on again, in the ruleset
+    // and in the review, and the version moved (review round 18).
+    const rulesets = await import("@/server/db/repositories/rulesets");
+    const { parseRuleBlock } = await import("@/lib/rulesets/rule-edit");
+    const stored = rulesets.saveImportedRuleset(db, {
+      name: "Kept in line",
+      tier: "global",
+      imported: PROTOCOL,
+    });
+    const id = stored.rulesetId;
+    const reviewId = seedReview();
+    // What the start route hands the manager as Start is pressed.
+    const pressed = { id };
+
+    // While the review waits: one rule switched off, another's text edited.
+    rulesets.setRuleEnabled(db, id, "1", false);
+    const rule = rulesets.loadRuleset(db, id).rules.find((entry) => entry.code === "4")!;
+    const edited = parseRuleBlock(`${rule.raw}\nEdited while the review waited.\n`);
+    if ("refusal" in edited) throw new Error(edited.refusal);
+    const { version } = rulesets.replaceRuleText(db, id, "4", edited.rule, stored.version + 1);
+
+    // The ruleset is frozen before the first stage, so the run need go no further.
+    const controller = new AbortController();
+    await run(reviewId, {
+      ruleset: pressed,
+      signal: controller.signal,
+      onStageLifecycle: () => controller.abort(),
+    });
+
+    expect(rulesets.requireRuleset(db, id).version).toBe(version);
+    const live = rulesets.loadRuleset(db, id, { enabledOnly: true }).rules;
+    expect(live.map((entry) => entry.code)).not.toContain("1");
+    expect(live.find((entry) => entry.code === "4")?.raw).toBe(edited.rule.raw);
+
+    const frozen = rulesets.readReviewSnapshot(db, reviewId).rules;
+    expect(frozen.map((entry) => entry.code)).toEqual(live.map((entry) => entry.code));
+    expect(frozen.find((entry) => entry.code === "4")?.raw).toBe(edited.rule.raw);
+    expect(rulesets.readReviewSnapshotMeta(db, reviewId)).toEqual({
+      rulesetName: "Kept in line",
+      rulesetVersion: version,
+    });
+  }, 120_000);
 });
 
 describe("when a review cannot finish", () => {

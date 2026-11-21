@@ -256,12 +256,19 @@ export class JobManager {
   }
 
   /**
-   * Whether a review in line will start on the ruleset of this name. It
-   * carries its rules with it and stores them under that name as it starts,
-   * so a ruleset deleted meanwhile would come back with that start (RA-1).
+   * Whether a review in line will start on this ruleset. It reads the
+   * ruleset by its id as it starts, so that start would fail on one deleted
+   * meanwhile; a script's review stores its rules under the name, and the
+   * ruleset would come back with that start (RA-1, D-270).
    */
-  startsOn(rulesetName: string): boolean {
-    return this.queue.some((entry) => entry.options.ruleset?.name === rulesetName);
+  startsOn(ruleset: { id: string; name: string }): boolean {
+    return this.queue.some(({ options: { ruleset: held } }) =>
+      held === undefined
+        ? false
+        : "id" in held
+          ? held.id === ruleset.id
+          : held.name === ruleset.name,
+    );
   }
 
   /**

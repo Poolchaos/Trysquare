@@ -82,12 +82,12 @@ describe("deleting one ruleset", () => {
   });
 
   it("is refused while a review in line is about to start on it", async () => {
-    // One in line stores its rules by name as it starts: deleted meanwhile,
-    // the ruleset would come back with that start.
+    // One in line reads the ruleset as it starts: deleted meanwhile, that
+    // start would find nothing to run with.
     const id = await imported("Example protocol");
     const { runtime } = await import("@/server/runtime");
     const inLine = vi.spyOn(runtime().manager, "startsOn");
-    inLine.mockImplementation((name) => name === "Example protocol");
+    inLine.mockImplementation((ruleset) => ruleset.id === id);
     try {
       const refused = await remove(id);
       expect(refused.status).toBe(409);

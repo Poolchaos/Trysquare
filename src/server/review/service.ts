@@ -205,8 +205,15 @@ export interface PrepareAndRunOptions {
   signal?: AbortSignal | undefined;
   onEvent?: ((stage: ReviewStage, event: EngineEvent) => void) | undefined;
   onStageLifecycle?: ((event: StageLifecycleEvent) => void) | undefined;
-  /** Required the first time a review runs; ignored once one is frozen. */
+  /**
+   * Required the first time a review runs; ignored once one is frozen. The
+   * app names a stored ruleset by its id, read as the review starts: what
+   * was changed while the review waited in line is what it runs with, and
+   * nothing is stored over it (D-270). A script hands over a document's
+   * rules, which are stored under the name first.
+   */
   ruleset?:
+    | { id: string }
     | { imported: ImportedRuleset; name: string; tier: RulesetTier; sourceDoc?: string | undefined }
     | undefined;
 }
@@ -259,12 +266,16 @@ export async function prepareAndRun(
   // review that was never going to be able to run does not first look started.
   if (!hasReviewSnapshot(db, reviewId)) {
     if (!options.ruleset) throw new RulesetRequiredError(reviewId);
-    const { rulesetId } = saveImportedRuleset(db, {
-      name: options.ruleset.name,
-      tier: options.ruleset.tier,
-      imported: options.ruleset.imported,
-      ...(options.ruleset.sourceDoc === undefined ? {} : { sourceDoc: options.ruleset.sourceDoc }),
-    });
+    const given = options.ruleset;
+    const rulesetId =
+      "id" in given
+        ? given.id
+        : saveImportedRuleset(db, {
+            name: given.name,
+            tier: given.tier,
+            imported: given.imported,
+            ...(given.sourceDoc === undefined ? {} : { sourceDoc: given.sourceDoc }),
+          }).rulesetId;
     writeReviewSnapshot(db, reviewId, rulesetId);
     // Frozen at the same moment and for the same reason as the ruleset. This
     // is the only place the registry is consulted: everywhere downstream reads
