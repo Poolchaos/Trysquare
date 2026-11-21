@@ -886,6 +886,10 @@ const DEFECTS = [
   ["11", "WARNING", "src/orders/refund.ts", "// TODO:", "the ownership check is a comment"],
   ["12", "CRITICAL", "src/projects/delete.ts", "await db.projects.delete(projectId);", "the admin check is removed with nothing in its place"],
 ].map(([ruleCode, severity, file, marker, description]) => ({
+  id: `rule-${ruleCode}`,
+  // One repository, named as the demo names the project it reviews.
+  repo: "app",
+  kind: "addition",
   ruleCode,
   severity,
   file,
@@ -930,7 +934,7 @@ function lineOf(root, file, marker) {
  * Builds the repository in `root`, which must not hold one, and answers with
  * where it is and its key.
  */
-export function buildGeneralFixture(root) {
+export function buildFixture(root) {
   rmSync(root, { recursive: true, force: true });
   mkdirSync(root, { recursive: true });
   execFileSync("git", ["init", "-q", "-b", "main", root], { env: { ...process.env, ...GIT_ENV } });

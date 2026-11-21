@@ -35,8 +35,8 @@ beforeAll(async () => {
   root = mkdtempSync(join(tmpdir(), "trysquare-general-fixture-"));
   const builder = (await import(
     new URL("../fixtures/build-general-fixture.mjs", import.meta.url).href
-  )) as { buildGeneralFixture: (root: string) => { repoDir: string; manifest: Manifest } };
-  manifest = builder.buildGeneralFixture(join(root, "repo")).manifest;
+  )) as { buildFixture: (root: string) => { repoDir: string; manifest: Manifest } };
+  manifest = builder.buildFixture(join(root, "repo")).manifest;
 
   const diff = execFileSync(
     "git",

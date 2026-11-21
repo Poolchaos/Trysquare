@@ -19,7 +19,7 @@
  *   npm run demo:fixture -- --model claude-fable-5-1
  */
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -42,6 +42,7 @@ import { readDemoOptions } from "./lib/demo-args";
 import { readyForReview } from "./lib/demo-cli";
 import { findsDefect } from "./lib/demo-score";
 import { JobManager } from "@/server/jobs/manager";
+import { readTemplate } from "@/server/rulesets/shelf";
 import type { ReviewEvent } from "@/server/jobs/bus";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -77,12 +78,65 @@ function qualifiedPath(defect: { repo: string; file: string }): string {
 interface Manifest {
   defects: Defect[];
   cleanFiles: string[];
+  /** Named by a template fixture's key; the seeded pair's branch is the script's own. */
+  branches?: { from: string; into: string };
+}
+
+/**
+ * A template and the builder of its fixture, or why it cannot be reviewed:
+ * it is not on the shelf, or no fixture has been built for it.
+ */
+function templateSubject(
+  name: string,
+):
+  | { template: NonNullable<ReturnType<typeof readTemplate>>; builder: string }
+  | { refusal: string } {
+  const template = /^[a-z0-9-]+$/.test(name) ? readTemplate(name) : undefined;
+  if (template === undefined) return { refusal: `No template called "${name}" is on the shelf.` };
+  const builder = join(FIXTURES, `build-${name}-fixture.mjs`);
+  if (!existsSync(builder)) {
+    return {
+      refusal: `The ${template.name} template has no fixture yet: ${builder} does not exist.`,
+    };
+  }
+  return { template, builder };
 }
 
 async function main(): Promise<number> {
-  const asked = readDemoOptions("npm run demo:fixture", process.argv.slice(2), process.env);
+  // `--template <name>` reviews that template's fixture with the template as
+  // its ruleset (RT-6a), in place of the seeded pair and the example protocol.
+  const argv = process.argv.slice(2);
+  const templateAt = argv.indexOf("--template");
+  const templateName = templateAt === -1 ? undefined : argv[templateAt + 1];
+  if (templateAt !== -1) {
+    if (templateName === undefined || templateName.startsWith("--")) {
+      log(
+        "--template needs the template's name after it, as npm run demo:template -- general --fake.",
+      );
+      return 1;
+    }
+    argv.splice(templateAt, 2);
+  }
+  const subject = templateName === undefined ? null : templateSubject(templateName);
+  if (subject !== null && "refusal" in subject) {
+    log(subject.refusal);
+    return 1;
+  }
+  const asked = readDemoOptions(
+    subject === null ? "npm run demo:fixture" : `npm run demo:template -- ${templateName}`,
+    argv,
+    process.env,
+  );
   if ("refusal" in asked) {
-    log(asked.refusal);
+    // The usage puts each flag after a "--", which this command's own name
+    // already holds: its flags follow the template's name.
+    log(
+      subject === null
+        ? asked.refusal
+        : asked.refusal
+            .replaceAll(`${templateName} -- `, `${templateName} `)
+            .replaceAll("or -- --model", "or --model"),
+    );
     return 1;
   }
   const { options } = asked;
@@ -93,19 +147,32 @@ async function main(): Promise<number> {
   mkdirSync(fixtureRoot, { recursive: true });
 
   log(`Trysquare demo`);
+  if (subject !== null)
+    log(`template ${subject.template.name}, version ${subject.template.version}`);
   log(`model    ${options.fake ? "fake CLI (no model is called)" : options.model}`);
   log(`data dir ${dataDir}`);
   log();
 
   // Built by the same script the tests use, so the demo and the suite are
   // scoring the same code against the same answer key.
-  const { buildSeededRepos } = (await import(
-    pathToFileURL(join(FIXTURES, "build-seeded-repos.mjs")).href
-  )) as {
-    buildSeededRepos: (root: string) => { appDir: string; coreDir: string; manifest: Manifest };
-  };
-  const built = buildSeededRepos(fixtureRoot);
+  let built: { appDir: string; coreDir: string | null; manifest: Manifest };
+  if (subject === null) {
+    const { buildSeededRepos } = (await import(
+      pathToFileURL(join(FIXTURES, "build-seeded-repos.mjs")).href
+    )) as {
+      buildSeededRepos: (root: string) => { appDir: string; coreDir: string; manifest: Manifest };
+    };
+    built = buildSeededRepos(fixtureRoot);
+  } else {
+    const { buildFixture } = (await import(pathToFileURL(subject.builder).href)) as {
+      buildFixture: (root: string) => { repoDir: string; manifest: Manifest };
+    };
+    const made = buildFixture(join(fixtureRoot, APP_SLUG));
+    built = { appDir: made.repoDir, coreDir: null, manifest: made.manifest };
+  }
   const manifest = built.manifest;
+  // The branch under review: the seeded pair's, or the one the template's key names.
+  const from = manifest.branches?.from ?? "feature/rename-prefs";
   log(
     `Built the fixture: ${manifest.defects.length} planted defect(s), ` +
       `${manifest.cleanFiles.length} file(s) that are deliberately fine.`,
@@ -146,43 +213,61 @@ async function main(): Promise<number> {
     return { id: project.id, clonePath };
   };
   const app = await addProject("app", built.appDir);
-  const core = await addProject("shared-core", built.coreDir);
+  const core = built.coreDir === null ? null : await addProject("shared-core", built.coreDir);
   const appClone = app.clonePath;
-  const coreClone = core.clonePath;
-  linkDependency(db, {
-    projectId: app.id,
-    dependencyProjectId: core.id,
-    packageName: "@acme/shared-core",
-  });
+  if (core !== null) {
+    linkDependency(db, {
+      projectId: app.id,
+      dependencyProjectId: core.id,
+      packageName: "@acme/shared-core",
+    });
+  }
 
-  const ruleset = importProtocol(
-    await readFile(join(FIXTURES, "example-protocol.md"), "utf8"),
-  ).ruleset;
+  const ruleset =
+    subject === null
+      ? importProtocol(await readFile(join(FIXTURES, "example-protocol.md"), "utf8")).ruleset
+      : subject.template.imported;
+  const rulesetName = subject === null ? "Example protocol" : subject.template.name;
 
   const reviewId = createReview(db, {
     projectId: app.id,
-    fromBranch: "feature/rename-prefs",
-    fromCommit: await resolveBranch(appClone, "feature/rename-prefs"),
+    fromBranch: from,
+    fromCommit: await resolveBranch(appClone, from),
     intoBranch: "main",
     intoCommit: await resolveBranch(appClone, "main"),
-    mergeBaseCommit: await mergeBase(appClone, "main", "feature/rename-prefs"),
+    mergeBaseCommit: await mergeBase(appClone, "main", from),
     model: options.model,
     profileId: "full-context",
     engineMode: "headless",
     intent:
-      "Rename the Prefs.reportAutoNavigate field to autoNavigateDestination in the shared " +
-      "package and migrate every consumer, plus assorted unrelated tidy-ups.",
-    linked: {
-      projectId: core.id,
-      fromBranch: "feature/rename-prefs",
-      fromCommit: await resolveBranch(coreClone, "feature/rename-prefs"),
-      intoBranch: "main",
-      intoCommit: await resolveBranch(coreClone, "main"),
-      mergeBaseCommit: await mergeBase(coreClone, "main", "feature/rename-prefs"),
-    },
+      core === null
+        ? "Checkout fixes: order saving and archiving, team and permission lookups, billing " +
+          "fetches, transfer and refund endpoints, configuration, sign-in and sign-out " +
+          "logging, report export and import, pricing, tax by region, and project permissions."
+        : "Rename the Prefs.reportAutoNavigate field to autoNavigateDestination in the shared " +
+          "package and migrate every consumer, plus assorted unrelated tidy-ups.",
+    ...(core === null
+      ? {}
+      : {
+          linked: {
+            projectId: core.id,
+            fromBranch: from,
+            fromCommit: await resolveBranch(core.clonePath, from),
+            intoBranch: "main",
+            intoCommit: await resolveBranch(core.clonePath, "main"),
+            mergeBaseCommit: await mergeBase(core.clonePath, "main", from),
+          },
+        }),
   }).id;
 
-  if (options.fake) await writeFakeAnswers(dataDir, built, manifest, appClone, coreClone);
+  if (options.fake) {
+    await writeFakeAnswers(dataDir, manifest, {
+      appClone,
+      coreClone: core?.clonePath ?? null,
+      from,
+      rules: ruleset.rules,
+    });
+  }
 
   const eventLog: string[] = [];
   const stageStartedAt = new Map<string, number>();
@@ -194,7 +279,7 @@ async function main(): Promise<number> {
   log();
   log(`Running`);
   manager.start(reviewId, {
-    ruleset: { imported: ruleset, name: "Example protocol", tier: "global" },
+    ruleset: { imported: ruleset, name: rulesetName, tier: "global" },
   });
   const outcome = await manager.settled(reviewId);
 
@@ -209,7 +294,12 @@ async function main(): Promise<number> {
   const runLabel = `${stamp.slice(11, 19).replaceAll(":", "")}-${
     options.fake ? "fake" : options.model.replace(/[^a-z0-9.-]+/gi, "-").replace(/^-|-$/g, "")
   }`;
-  const outDir = join(REPO_ROOT, "review", `${stamp.slice(0, 10)}-fg2`, runLabel);
+  const outDir = join(
+    REPO_ROOT,
+    "review",
+    `${stamp.slice(0, 10)}-${subject === null ? "fg2" : `template-${templateName}`}`,
+    runLabel,
+  );
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, "events.jsonl"), `${eventLog.join("\n")}\n`);
   writeFileSync(join(outDir, "score.json"), `${JSON.stringify(report, null, 2)}\n`);
@@ -382,11 +472,10 @@ function renderScore(
  */
 async function writeFakeAnswers(
   dataDir: string,
-  built: { appDir: string; coreDir: string },
   manifest: Manifest,
-  appClone: string,
-  coreClone: string,
+  reviewed: { appClone: string; coreClone: string | null; from: string; rules: unknown },
 ): Promise<void> {
+  const { appClone, coreClone, from } = reviewed;
   const helpers = (await import(
     pathToFileURL(join(REPO_ROOT, "tests", "helpers", "ideal-answers.ts")).href
   )) as {
@@ -396,18 +485,20 @@ async function writeFakeAnswers(
   };
 
   const reference = join(dataDir, "reference");
-  const appHead = await resolveBranch(appClone, "feature/rename-prefs");
-  const coreHead = await resolveBranch(coreClone, "feature/rename-prefs");
+  const appHead = await resolveBranch(appClone, from);
   const { addWorktree } = await import("@/server/gitops/worktree");
   await addWorktree(appClone, join(reference, "app"), appHead);
-  await addWorktree(coreClone, join(reference, "shared-core"), coreHead);
-
   const appFiles = parseUnifiedDiff(
-    await diffText(appClone, await mergeBase(appClone, "main", "feature/rename-prefs"), appHead),
+    await diffText(appClone, await mergeBase(appClone, "main", from), appHead),
   );
-  const coreFiles = parseUnifiedDiff(
-    await diffText(coreClone, await mergeBase(coreClone, "main", "feature/rename-prefs"), coreHead),
-  );
+  let coreFiles: ReturnType<typeof parseUnifiedDiff> = [];
+  if (coreClone !== null) {
+    const coreHead = await resolveBranch(coreClone, from);
+    await addWorktree(coreClone, join(reference, "shared-core"), coreHead);
+    coreFiles = parseUnifiedDiff(
+      await diffText(coreClone, await mergeBase(coreClone, "main", from), coreHead),
+    );
+  }
 
   const outputs = helpers.buildIdealStageOutputs({
     files: [
@@ -416,8 +507,7 @@ async function writeFakeAnswers(
     ],
     manifest,
     worktreeRoot: reference,
-    rules: importProtocol(await readFile(join(FIXTURES, "example-protocol.md"), "utf8")).ruleset
-      .rules,
+    rules: reviewed.rules,
   });
 
   process.env.FAKE_CLAUDE_SCENARIO = "script";

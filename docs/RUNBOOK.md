@@ -125,6 +125,23 @@ Both forms write their score and full event log into `review/<date>-fg2/`,
 which is gitignored, so the evidence stays on your machine.
 
 ```bash
+npm run demo:template -- general --fake
+```
+
+The same for a template (RT-6a): builds the General template's fixture, a
+small service whose feature branch breaks each of the template's twelve
+rules once beside a change of the same shape that is right, reviews it
+with the template as its ruleset, and scores the run against the key
+(measured 2026-11-21 on the maintainer's Linux machine, one run: "12/12
+planted defect(s) found", "No findings in the files that are deliberately
+fine", 0.7s as the demo reports it). On the fake engine the answers are
+built from the key, so it proves the plumbing only. With `--real` after
+the name it asks a real model and spends usage: that run is what says
+whether the template finds what it claims to, and until it is on record
+the template says "Not yet run against a model." where it is picked. The
+evidence goes to `review/<date>-template-general/<time>-<model>/`.
+
+```bash
 npm run demo:design -- --fake
 ```
 

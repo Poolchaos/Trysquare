@@ -6886,3 +6886,23 @@ verified evidence, in writing, here.
   serves. Not known until a model has run it: whether a model finds the
   twelve and leaves the 23 alone. That is what the fixture is for, and the
   run is the maintainer's to start.
+- 2026-11-21 D-278 A template's fixture is reviewed by the fixture demo
+  itself, told which template (RT-6a): `npm run demo:template -- general`
+  with `--fake`, `--real` or `--model <id>` is
+  `scripts/demo-fixture.ts --template general`. It builds
+  `tests/fixtures/build-<name>-fixture.mjs`, takes the template from the
+  shelf as the ruleset, reviews the one repository with no linked one, and
+  scores by the same function against the same shape of key. One script
+  and not a second: the run, the score, the evidence it writes and the
+  check that a real CLI is ready are the seeded demo's, and a copy of them
+  would drift. A fixture builder exports `buildFixture` and its key names
+  the branch to review. Proven on the fake engine, where the answers are
+  built from the key and so prove the plumbing only: 12/12 plants found
+  and nothing in the 23 clean files, and the seeded demo after the change
+  11/11. CI runs the fake form on every push, after the seeded one; the
+  suite has no test that starts a script through tsx, and this adds none.
+  The evidence of a run goes to `review/<date>-template-<name>/`, which
+  git ignores; a paid run's is copied under `docs/evidence/` when it is
+  made (D-261). Not run: the real model. It spends the maintainer's usage
+  and is his to start, and until it is on record the template's entry
+  says it has not been run.

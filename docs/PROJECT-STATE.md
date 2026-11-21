@@ -98,8 +98,11 @@ from 2026-11-03.
   template makes a ruleset the person owns and opens it. The template
   has not been run against a model, and says so where it is picked. Its
   fixture is built (RT-2b, D-277): a repository with one plant per rule
-  and a clean look-alike beside each, its key held by a test. The command
-  that reviews it is next (RT-6a), and the run on a real model is the
+  and a clean look-alike beside each, its key held by a test.
+  `npm run demo:template -- general --fake` reviews it end to end and
+  scores the run (RT-6a, D-278): 12/12 plants and no finding in a clean
+  file on the fake engine, which proves the plumbing. The run on a real
+  model, which is what says whether the template works, is the
   maintainer's to start (RT-6).
   A sweep row whose pattern holds a pipe gives its rule the pattern
   (D-275): escaped as a table asks, or bare inside its backticks, it was
@@ -420,6 +423,8 @@ default leaves build and e2e off so it stays fast.
 
 `npm run demo:fixture -- --fake` reviews the seeded fixture end to end with no
 model and no money, scoring the result against the fixture's manifest.
+`npm run demo:template -- general --fake` does the same for the General
+template's fixture, with the template as the ruleset (RT-6a).
 
 Setup commands, added 2026-11-03 (D-226), each driven by tests in
 `tests/scripts/` and proven on Linux the same day: `npm run doctor` (also
@@ -610,9 +615,10 @@ own now (D-75, D-81).
 - Ruleset templates shipped with the app: in scope since D-251, planned
   in `plans/RULESET-TEMPLATES-PLAN.md` (D-265). Built: the shelf, the General template on it, and a ruleset
   started from it on the Rulesets screen, and the General template's
-  fixture (RT-1a, RT-2a, RT-1b, RT-2b). Not built: the command that
-  reviews that fixture and its run against a model, and the TypeScript,
-  React, and HTTP and database templates. A ruleset is started with
+  fixture and the command that reviews it (RT-1a, RT-2a, RT-1b, RT-2b,
+  RT-6a). Not done: the General template's run against a model, which is
+  the maintainer's to start. Not built: the TypeScript, React, and HTTP
+  and database templates. A ruleset is started with
   no document (RA-6, D-272), and a rule can be switched off, its severity
   changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
   removed (RA-4, D-269), and one ruleset deleted (RA-1, D-266). Process

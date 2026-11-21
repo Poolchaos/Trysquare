@@ -191,7 +191,9 @@ that is neither a plant nor a look-alike, and the template's own sweep
 patterns hitting the plants of the rules that have one and no other added
 line. The plants carry no tests, so a finding under rule 8 in a planted
 file is the rule working; a run is scored by file and line, as the seeded
-fixture's is. The command that reviews it is not built (RT-6a).
+fixture's is. `npm run demo:template -- general --fake` reviews it end to
+end with the template as its ruleset and scores the run against the key;
+with `--real` it asks a model (RT-6a, RUNBOOK). CI runs the fake form.
 
 ## 5. Numbers or silence
 
