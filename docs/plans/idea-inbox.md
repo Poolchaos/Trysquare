@@ -109,8 +109,8 @@ pulled deliberately.
   ruleset is deleted only by Settings' delete-everything (maintainer asked).
   `COMPLETION-PLAN.md` CG-5. Planned in `plans/RULES-IN-APP-PLAN.md`;
   deleting one ruleset BUILT 2026-11-21 (RA-1, D-266), and editing a
-  rule's text (RA-2, D-267) and adding a rule (RA-3, D-268) the same day.
-  Removing one is RA-4.
+  rule's text (RA-2, D-267), adding a rule (RA-3, D-268) and removing one
+  (RA-4, D-269) the same day.
 - 2026-11-03: a memory guard for a project's own commands. Only a 20-minute
   limit bounds them now; one large project's e2e, measured at 20.7 GB on the
   maintainer's machine, could exhaust a colleague's laptop. Needs a free-memory reading
@@ -347,3 +347,7 @@ the line entirely would lose the trail.
   a rule's title opens to its text from the document, formatted (D-227).
   Left open, and listed above: directive bodies still show their markdown
   raw.
+- 2026-11-21: the Delete ruleset card loses the keyboard focus when Delete
+  is pressed and again at Keep it, the button pressed being taken off the
+  page. Remove rule (RA-4) puts the focus on Keep it and back on the
+  control; the card could do the same.

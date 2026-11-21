@@ -9,7 +9,7 @@
  */
 
 import { useRouter } from "next/navigation";
-import { Fragment, use, useCallback, useEffect, useState, type ReactNode } from "react";
+import { Fragment, use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { MarkdownText } from "@/components/markdown";
 import { PageBody, PageHeader, PageLoading } from "@/components/page";
 import {
@@ -23,7 +23,7 @@ import {
   Textarea,
   severityTone,
 } from "@/components/ui";
-import { send } from "@/components/request";
+import { asSentence, send } from "@/components/request";
 import type { DirectiveSection } from "@/lib/domain/enums";
 import { inferTags } from "@/lib/rulesets/import";
 import { parseRuleBlock, startingRuleBlock } from "@/lib/rulesets/rule-edit";
@@ -241,6 +241,28 @@ function NewRule({
   );
 }
 
+const takeFocus = (node: HTMLElement | null) => {
+  node?.focus();
+};
+
+/**
+ * Said where the rule was, since its row is gone (RA-4). It takes the focus
+ * as it is drawn: the button that had it went with the rule, and the next
+ * Tab would otherwise start from the top of the page.
+ */
+function RemovedNote({ code }: { code: string }) {
+  return (
+    <p
+      role="status"
+      tabIndex={-1}
+      ref={takeFocus}
+      className="rounded-md border border-[var(--color-good)] bg-[var(--color-good-soft)] px-3 py-2 text-sm text-[var(--color-good)]"
+    >
+      Rule {code} removed. Reviews already run keep it.
+    </p>
+  );
+}
+
 export default function RulesetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [detail, setDetail] = useState<Detail | null>(null);
@@ -264,6 +286,18 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   const [added, setAdded] = useState<{ code: string; section: string } | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [confirmingRemove, setConfirmingRemove] = useState("");
+  const [removeRefusal, setRemoveRefusal] = useState<{ code: string; text: string } | null>(null);
+  // The rule last removed here, and the rule that came after it.
+  const [removed, setRemoved] = useState<{ code: string; before: string | null } | null>(null);
+  // Remove rule is not drawn while its question is, so when the question is
+  // put away with the rule still there it takes the focus back.
+  const backToRemove = useRef(false);
+  const focusBack = useCallback((node: HTMLButtonElement | null) => {
+    if (node === null || !backToRemove.current) return;
+    backToRemove.current = false;
+    node.focus();
+  }, []);
   const router = useRouter();
 
   // Read again after a change; one that fails says so, where it used to
@@ -296,6 +330,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
 
   async function amend(code: string, patch: { enabled?: boolean; severity?: string }) {
     setError("");
+    setRemoved(null);
     setBusy(code);
     try {
       const sent = await send(
@@ -359,6 +394,63 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
     }
   }
 
+  /**
+   * One rule, asked once (RA-4). A refusal because this page was behind the
+   * ruleset is answered by reading the ruleset again, so the next press is
+   * made of it as it stands.
+   */
+  async function removeRule(code: string, version: number, before: string | null) {
+    setRemoveRefusal(null);
+    setError("");
+    setBusy("remove");
+    try {
+      const sent = await send(
+        `/api/rulesets/${id}/rules/${encodeURIComponent(code)}?version=${version}`,
+        { method: "DELETE" },
+        "The rule could not be removed",
+      );
+      if (sent.ok) {
+        await load();
+        setConfirmingRemove("");
+        setOpenRule("");
+        setAdded(null);
+        setRemoved({ code, before });
+        return;
+      }
+      const behind =
+        sent.body.code === "RulesetChangedError" || sent.body.code === "RuleNotFoundError";
+      const read = behind
+        ? await send<Detail>(`/api/rulesets/${id}`, {}, "This ruleset could not be read again")
+        : null;
+      if (!read?.ok) {
+        backToRemove.current = true;
+        setConfirmingRemove("");
+        setRemoveRefusal({
+          code,
+          text: read ? `${asSentence(sent.error)} ${read.error}` : sent.error,
+        });
+        return;
+      }
+      setDetail(read.body);
+      setConfirmingRemove("");
+      const stands = `the page now shows it as it stands, at version ${read.body.ruleset.version}`;
+      if (read.body.rules.some((rule) => rule.code === code)) {
+        backToRemove.current = true;
+        setRemoveRefusal({
+          code,
+          text: `Rule ${code} was not removed. The ruleset changed since this page read it, and ${stands}. Remove the rule again if it should still go.`,
+        });
+      } else {
+        setOpenRule("");
+        setError(
+          `Rule ${code} was already gone. The ruleset changed since this page read it, and ${stands}.`,
+        );
+      }
+    } finally {
+      setBusy("");
+    }
+  }
+
   /** One ruleset, asked once (RA-1). Its page is gone after, so the list it is. */
   async function remove() {
     setDeleteError("");
@@ -398,6 +490,26 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
   }
 
   const off = detail.rules.filter((rule) => !rule.enabled).length;
+  // Before the rule that came after it, or at the end when that was the
+  // last rule or is no longer here.
+  const removedBefore =
+    removed === null
+      ? undefined
+      : detail.rules.some((rule) => rule.code === removed.before)
+        ? removed.before
+        : null;
+  const removedRow =
+    removed === null ? null : (
+      <tr
+        key={`removed-${removed.code}`}
+        role="row"
+        className="block border-b border-[var(--color-border)] last:border-0 sm:table-row"
+      >
+        <td role="cell" colSpan={5} className="block px-3 py-2 sm:table-cell">
+          <RemovedNote code={removed.code} />
+        </td>
+      </tr>
+    );
 
   return (
     <>
@@ -408,7 +520,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
             <Badge>{detail.ruleset.tier}</Badge>
             <span>version {detail.ruleset.version}</span>
             <span>
-              {detail.rules.length} rule(s)
+              {`${detail.rules.length} ${detail.rules.length === 1 ? "rule" : "rules"}`}
               {off > 0 ? `, ${off} switched off` : ""}
             </span>
             {detail.ruleset.isDefault ? <Badge tone="accent">default for new reviews</Badge> : null}
@@ -492,7 +604,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
           A switched-off rule is left out of the rules a new review is judged against, and its
           mechanical sweeps do not run. Changing a severity is a new standard, so it moves the
           version too. Reviews already started keep the rules they were frozen with. The exported
-          document always contains every rule, because it is the document that was imported.
+          document holds every rule the ruleset has, switched off or not.
         </p>
         <p className="mb-4 text-xs text-[var(--color-ink-faint)]">
           {detail.ruleset.sourceDoc ? `Imported from ${detail.ruleset.sourceDoc}. ` : ""}
@@ -500,191 +612,272 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
           {detail.ruleset.updatedAt.slice(0, 10)}.
         </p>
 
-        <Card className="overflow-x-auto">
-          {/* Below sm a rule is a stack, not a row: five columns do not fit a
+        <div data-testid="rules">
+          {detail.rules.length === 0 ? (
+            <Card className="grid gap-3 p-4">
+              {removed ? <RemovedNote key={removed.code} code={removed.code} /> : null}
+              <p className="text-sm text-[var(--color-ink-muted)]">
+                This ruleset has no rules, so a review will not start on it. Add a rule below.
+              </p>
+            </Card>
+          ) : (
+            <Card className="overflow-x-auto">
+              {/* Below sm a rule is a stack, not a row: five columns do not fit a
               phone, and the last three sat past the card's edge. The header
               row goes, and Tags and Sweeps say their own names. The roles are
               written out because a table drawn as blocks loses them. */}
-          <table role="table" className="block w-full text-sm sm:table">
-            <thead role="rowgroup" className="hidden sm:table-header-group">
-              <tr
-                role="row"
-                className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-ink-muted)]"
-              >
-                <th role="columnheader" className="px-3 py-2 font-medium">
-                  Rule
-                </th>
-                <th role="columnheader" className="px-3 py-2 font-medium">
-                  Severity
-                </th>
-                <th role="columnheader" className="px-3 py-2 font-medium">
-                  Tags
-                </th>
-                <th role="columnheader" className="px-3 py-2 font-medium">
-                  Sweeps
-                </th>
-                <th role="columnheader" className="px-3 py-2 text-right font-medium">
-                  Applies
-                </th>
-              </tr>
-            </thead>
-            <tbody role="rowgroup" className="block sm:table-row-group">
-              {detail.rules.map((rule) => (
-                <Fragment key={rule.code}>
+              <table role="table" className="block w-full text-sm sm:table">
+                <thead role="rowgroup" className="hidden sm:table-header-group">
                   <tr
                     role="row"
-                    className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 border-b border-[var(--color-border)] px-3 py-2 last:border-0 sm:table-row sm:p-0"
+                    className="border-b border-[var(--color-border)] text-left text-xs text-[var(--color-ink-muted)]"
                   >
-                    <td role="cell" className="sm:px-3 sm:py-2">
-                      <Mono className="text-xs text-[var(--color-ink-muted)]">{rule.code}</Mono>
-                      {/* A rule switched off is set back by its title's
-                          colour and its badge's, never by the row's
-                          opacity: at 55% its tags, its badge and "off"
-                          fell under AA contrast in both themes. */}
-                      <button
-                        type="button"
-                        className={`ml-2 text-left underline-offset-2 hover:underline ${
-                          rule.enabled ? "" : "text-[var(--color-ink-muted)]"
-                        }`}
-                        aria-expanded={openRule === rule.code}
-                        onClick={() => setOpenRule((open) => (open === rule.code ? "" : rule.code))}
-                      >
-                        {rule.title}
-                      </button>
-                    </td>
-                    <td role="cell" className="col-span-2 sm:px-3 sm:py-2">
-                      <label className="inline-flex items-center gap-2">
-                        <span className="sr-only">Severity of rule {rule.code}</span>
-                        <Badge tone={rule.enabled ? severityTone(rule.severity) : "neutral"}>
-                          {rule.severity}
-                        </Badge>
-                        <Select
-                          value={rule.severity}
-                          disabled={busy !== ""}
-                          onChange={(event) =>
-                            void amend(rule.code, { severity: event.target.value })
-                          }
-                          className="w-auto px-2 py-1 text-xs"
-                        >
-                          {SEVERITIES.map((severity) => (
-                            <option key={severity} value={severity}>
-                              {severity}
-                            </option>
-                          ))}
-                        </Select>
-                      </label>
-                    </td>
-                    <td
-                      role="cell"
-                      className="col-span-2 text-xs text-[var(--color-ink-muted)] sm:px-3 sm:py-2"
-                    >
-                      <span className="sm:hidden">Tags: </span>
-                      {rule.tags.join(", ") || "any"}
-                    </td>
-                    <td
-                      role="cell"
-                      className="col-span-2 text-xs text-[var(--color-ink-muted)] sm:px-3 sm:py-2 sm:text-sm"
-                    >
-                      <span className="sm:hidden">Sweeps: </span>
-                      {rule.sweepPatterns.length === 0 ? (
-                        "0"
-                      ) : (
-                        <button
-                          type="button"
-                          className="underline underline-offset-2 hover:text-[var(--color-ink)]"
-                          aria-expanded={openSweeps === rule.code}
-                          onClick={() =>
-                            setOpenSweeps((open) => (open === rule.code ? "" : rule.code))
-                          }
-                        >
-                          {rule.sweepPatterns.length}
-                        </button>
-                      )}
-                      {openSweeps === rule.code ? (
-                        <ul className="mt-1 grid gap-0.5">
-                          {rule.sweepPatterns.map((pattern) => (
-                            <li key={pattern}>
-                              <Mono className="text-xs">{pattern}</Mono>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </td>
-                    <td role="cell" className="col-start-2 row-start-1 text-right sm:px-3 sm:py-2">
-                      <label className="inline-flex items-center gap-2">
-                        <span className="text-xs text-[var(--color-ink-muted)]">
-                          {rule.enabled ? "on" : "off"}
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={rule.enabled}
-                          disabled={busy !== ""}
-                          onChange={(event) =>
-                            void amend(rule.code, { enabled: event.target.checked })
-                          }
-                        />
-                      </label>
-                    </td>
+                    <th role="columnheader" className="px-3 py-2 font-medium">
+                      Rule
+                    </th>
+                    <th role="columnheader" className="px-3 py-2 font-medium">
+                      Severity
+                    </th>
+                    <th role="columnheader" className="px-3 py-2 font-medium">
+                      Tags
+                    </th>
+                    <th role="columnheader" className="px-3 py-2 font-medium">
+                      Sweeps
+                    </th>
+                    <th role="columnheader" className="px-3 py-2 text-right font-medium">
+                      Applies
+                    </th>
                   </tr>
-                  {openRule === rule.code ? (
-                    <tr
-                      role="row"
-                      className="block border-b border-[var(--color-border)] last:border-0 sm:table-row"
-                    >
-                      <td role="cell" colSpan={5} className="block px-3 pb-3 sm:table-cell">
-                        {/* No wider than the screen, and pinned to the card's
+                </thead>
+                <tbody role="rowgroup" className="block sm:table-row-group">
+                  {detail.rules.map((rule, index) => (
+                    <Fragment key={rule.code}>
+                      {removedBefore === rule.code ? removedRow : null}
+                      <tr
+                        role="row"
+                        className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 border-b border-[var(--color-border)] px-3 py-2 last:border-0 sm:table-row sm:p-0"
+                      >
+                        <td role="cell" className="sm:px-3 sm:py-2">
+                          <Mono className="text-xs text-[var(--color-ink-muted)]">{rule.code}</Mono>
+                          {/* A rule switched off is set back by its title's
+                              colour and its badge's, never by the row's
+                              opacity: at 55% its tags, its badge and "off"
+                              fell under AA contrast in both themes. */}
+                          <button
+                            type="button"
+                            className={`ml-2 text-left underline-offset-2 hover:underline ${
+                              rule.enabled ? "" : "text-[var(--color-ink-muted)]"
+                            }`}
+                            aria-expanded={openRule === rule.code}
+                            onClick={() => {
+                              // Each was about the rule as it was opened.
+                              setConfirmingRemove("");
+                              setRemoveRefusal(null);
+                              backToRemove.current = false;
+                              setOpenRule((open) => (open === rule.code ? "" : rule.code));
+                            }}
+                          >
+                            {rule.title}
+                          </button>
+                        </td>
+                        <td role="cell" className="col-span-2 sm:px-3 sm:py-2">
+                          <label className="inline-flex items-center gap-2">
+                            <span className="sr-only">Severity of rule {rule.code}</span>
+                            <Badge tone={rule.enabled ? severityTone(rule.severity) : "neutral"}>
+                              {rule.severity}
+                            </Badge>
+                            <Select
+                              value={rule.severity}
+                              disabled={busy !== ""}
+                              onChange={(event) =>
+                                void amend(rule.code, { severity: event.target.value })
+                              }
+                              className="w-auto px-2 py-1 text-xs"
+                            >
+                              {SEVERITIES.map((severity) => (
+                                <option key={severity} value={severity}>
+                                  {severity}
+                                </option>
+                              ))}
+                            </Select>
+                          </label>
+                        </td>
+                        <td
+                          role="cell"
+                          className="col-span-2 text-xs text-[var(--color-ink-muted)] sm:px-3 sm:py-2"
+                        >
+                          <span className="sm:hidden">Tags: </span>
+                          {rule.tags.join(", ") || "any"}
+                        </td>
+                        <td
+                          role="cell"
+                          className="col-span-2 text-xs text-[var(--color-ink-muted)] sm:px-3 sm:py-2 sm:text-sm"
+                        >
+                          <span className="sm:hidden">Sweeps: </span>
+                          {rule.sweepPatterns.length === 0 ? (
+                            "0"
+                          ) : (
+                            <button
+                              type="button"
+                              className="underline underline-offset-2 hover:text-[var(--color-ink)]"
+                              aria-expanded={openSweeps === rule.code}
+                              onClick={() =>
+                                setOpenSweeps((open) => (open === rule.code ? "" : rule.code))
+                              }
+                            >
+                              {rule.sweepPatterns.length}
+                            </button>
+                          )}
+                          {openSweeps === rule.code ? (
+                            <ul className="mt-1 grid gap-0.5">
+                              {rule.sweepPatterns.map((pattern) => (
+                                <li key={pattern}>
+                                  <Mono className="text-xs">{pattern}</Mono>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </td>
+                        <td
+                          role="cell"
+                          className="col-start-2 row-start-1 text-right sm:px-3 sm:py-2"
+                        >
+                          <label className="inline-flex items-center gap-2">
+                            <span className="text-xs text-[var(--color-ink-muted)]">
+                              {rule.enabled ? "on" : "off"}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={rule.enabled}
+                              disabled={busy !== ""}
+                              onChange={(event) =>
+                                void amend(rule.code, { enabled: event.target.checked })
+                              }
+                            />
+                          </label>
+                        </td>
+                      </tr>
+                      {openRule === rule.code ? (
+                        <tr
+                          role="row"
+                          className="block border-b border-[var(--color-border)] last:border-0 sm:table-row"
+                        >
+                          <td role="cell" colSpan={5} className="block px-3 pb-3 sm:table-cell">
+                            {/* No wider than the screen, and pinned to the card's
                           visible edge should the card ever scroll sideways.
                           Shown whole, with no scroll box of its own: one a
                           keyboard cannot reach is an axe failure
                           (scrollable-region-focusable). */}
-                        <div
-                          data-testid="rule-text"
-                          className="sticky left-3 max-w-[min(48rem,calc(100vw-5.5rem))] rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3"
-                        >
-                          {editingRule === rule.code ? (
-                            <RuleEditor
-                              field={`rule-markdown-${rule.code}`}
-                              label={`Rule ${rule.code} as markdown`}
-                              opensOn={rule.raw}
-                              hint="The heading line carries the rule's code and title. Reviews already run keep the text they ran with."
-                              saveLabel="Save rule"
-                              onCancel={() => setEditingRule("")}
-                              onSave={async (markdown) => {
-                                const sent = await send<{ code: string }>(
-                                  `/api/rulesets/${id}/rules/${encodeURIComponent(rule.code)}`,
-                                  {
-                                    method: "PUT",
-                                    body: JSON.stringify({
-                                      markdown,
-                                      version: detail.ruleset.version,
-                                    }),
-                                  },
-                                  "The rule could not be saved",
-                                );
-                                if (!sent.ok) return sent.error;
-                                setEditingRule("");
-                                setOpenRule(sent.body.code);
-                                await load();
-                                return "";
-                              }}
-                            />
-                          ) : (
-                            <>
-                              <MarkdownText text={rule.text} />
-                              <div className="mt-3">
-                                <Button onClick={() => setEditingRule(rule.code)}>Edit text</Button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+                            <div
+                              data-testid="rule-text"
+                              className="sticky left-3 max-w-[min(48rem,calc(100vw-5.5rem))] rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3"
+                            >
+                              {editingRule === rule.code ? (
+                                <RuleEditor
+                                  field={`rule-markdown-${rule.code}`}
+                                  label={`Rule ${rule.code} as markdown`}
+                                  opensOn={rule.raw}
+                                  hint="The heading line carries the rule's code and title. Reviews already run keep the text they ran with."
+                                  saveLabel="Save rule"
+                                  onCancel={() => setEditingRule("")}
+                                  onSave={async (markdown) => {
+                                    const sent = await send<{ code: string }>(
+                                      `/api/rulesets/${id}/rules/${encodeURIComponent(rule.code)}`,
+                                      {
+                                        method: "PUT",
+                                        body: JSON.stringify({
+                                          markdown,
+                                          version: detail.ruleset.version,
+                                        }),
+                                      },
+                                      "The rule could not be saved",
+                                    );
+                                    if (!sent.ok) return sent.error;
+                                    setEditingRule("");
+                                    setRemoved(null);
+                                    setOpenRule(sent.body.code);
+                                    await load();
+                                    return "";
+                                  }}
+                                />
+                              ) : (
+                                <>
+                                  <MarkdownText text={rule.text} />
+                                  {confirmingRemove === rule.code ? (
+                                    <div className="mt-3 grid gap-3">
+                                      {/* What a removal is, against the switch in
+                                      the row above that keeps the text. */}
+                                      <p className="text-sm">
+                                        {`Removing rule ${rule.code} takes its text out of this ruleset and out of the document it exports. Reviews already run keep it. To keep the text and leave the rule out of new reviews, switch it off instead.`}
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        <Button
+                                          variant="primary"
+                                          disabled={busy !== ""}
+                                          onClick={() =>
+                                            void removeRule(
+                                              rule.code,
+                                              detail.ruleset.version,
+                                              detail.rules[index + 1]?.code ?? null,
+                                            )
+                                          }
+                                        >
+                                          {busy === "remove"
+                                            ? "Removing..."
+                                            : `Yes, remove rule ${rule.code}`}
+                                        </Button>
+                                        {/* The focus lands on the answer that
+                                        changes nothing. */}
+                                        <Button
+                                          variant="quiet"
+                                          autoFocus
+                                          disabled={busy !== ""}
+                                          onClick={() => {
+                                            backToRemove.current = true;
+                                            setConfirmingRemove("");
+                                          }}
+                                        >
+                                          Keep it
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      {removeRefusal?.code === rule.code ? (
+                                        <div className="mt-3">
+                                          <Problem>{removeRefusal.text}</Problem>
+                                        </div>
+                                      ) : null}
+                                      <div className="mt-3 flex flex-wrap gap-2">
+                                        <Button onClick={() => setEditingRule(rule.code)}>
+                                          Edit text
+                                        </Button>
+                                        <Button
+                                          ref={focusBack}
+                                          onClick={() => {
+                                            setRemoveRefusal(null);
+                                            setConfirmingRemove(rule.code);
+                                          }}
+                                        >
+                                          Remove rule
+                                        </Button>
+                                      </div>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  ))}
+                  {removedBefore === null ? removedRow : null}
+                </tbody>
+              </table>
+            </Card>
+          )}
+        </div>
 
         {adding ? (
           <div className="mt-3" data-testid="new-rule">
@@ -708,6 +901,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
             <Button
               onClick={() => {
                 setAdded(null);
+                setRemoved(null);
                 setAdding(true);
               }}
             >

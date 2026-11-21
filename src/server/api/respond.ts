@@ -122,6 +122,14 @@ export async function readOptionalJson<T>(request: Request, schema: z.ZodType<T>
   return validated(raw, schema);
 }
 
+/**
+ * A request's query, held to a schema as a body is. A parameter left out is
+ * absent, where `searchParams.get` gives a null that coerces to 0.
+ */
+export function readQuery<T>(request: Request, schema: z.ZodType<T>): T {
+  return validated(Object.fromEntries(new URL(request.url).searchParams), schema);
+}
+
 function notJson(): Response {
   return Response.json(
     { error: "The request body was not JSON.", code: "BadBody" },

@@ -27,9 +27,9 @@ chosen per review in the advanced fold.
   refusal designed with it. The preview drawer per ruleset that section 3
   describes is not built either: the screen has one select and a link to
   the chosen ruleset's page.
-- Rulesets: removing a rule (`plans/RULES-IN-APP-PLAN.md`, RA-4), and a
-  new ruleset with no document (RA-6). A rule's text is edited in place
-  and a rule is added since 2026-11-21 (RA-2, RA-3, section 3), its
+- Rulesets: a new ruleset with no document (`plans/RULES-IN-APP-PLAN.md`,
+  RA-6). A rule's text is edited in place, a rule is added and a rule is
+  removed since 2026-11-21 (RA-2 to RA-4, section 3), its
   severity and its on/off switch can be changed, sweep patterns and
   directive bodies are shown, and duplicate-to-tier and deleting a ruleset
   are built.
@@ -325,6 +325,14 @@ badge once its branch is found merged; delete per 02 rules.
   section, the last one unless another is picked), with the tags the text
   as it stands would get there; once added, a note says where it went and
   its row is opened (RA-3, D-268);
+  Remove rule, beside Edit text in an opened rule, asks once (Yes, remove,
+  or Keep it, which has the focus), saying that the text goes from the
+  ruleset and from the document it exports, that reviews already run keep
+  it, and that a rule switched off keeps its text. Removed, a note where
+  the rule was says so. A removal from a page behind the ruleset is
+  refused: the page reads the ruleset again and says so beside the
+  control, or above the rules when the rule had already gone. A ruleset
+  with no rule says a review will not start on it (RA-4, D-269);
   versioning bumps on edit (snapshots keep old reviews stable).
 - Import: from markdown (REVIEW_PROTOCOL.md shape); shows the fidelity
   report (mapped headings, unmapped lines = import blocked). A different

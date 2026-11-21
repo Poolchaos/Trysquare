@@ -41,7 +41,14 @@ from 2026-11-03.
   A rule switched off is set back by its title's colour and its badge's:
   its row was drawn at 55% opacity, which put its tags, its badge and
   "off" under AA contrast in both themes, found by the first axe pass over
-  a ruleset with a rule off. Removing a rule (RA-4) is next.
+  a ruleset with a rule off.
+  A rule is removed on its ruleset's page too (RA-4, D-269), asked once
+  with what a removal is against switching the rule off: the blocks after
+  it in the document move up to where it started, a page behind the
+  ruleset is refused and reads it again, and a ruleset left with no rule
+  says a review will not start on it. `./verify.sh --e2e` exits 0 with
+  1595 unit tests passing, 8 skipped, and 159 browser tests. A review pass
+  over RA-1 to RA-4 is next, then RA-5.
 - 2026-11-20: the questions that waited on the maintainer are decided by
   the session, as D-251 has it (D-252 to D-263). Built from them: the
   "Invention rate" tile is "Proofs discarded" (AE14, the last of the
@@ -530,12 +537,12 @@ own now (D-75, D-81).
 - Emailing a review's result: in scope since D-251, planned in
   `plans/EMAIL-REPORT-PLAN.md` (D-264). Its sender waits on the
   maintainer's mailbox; where a result goes is set in the app.
-- Rules removed in the app, a ruleset started with no document, and
-  ruleset templates shipped with the app: in scope since D-251, planned in
-  `plans/RULES-IN-APP-PLAN.md` and `plans/RULESET-TEMPLATES-PLAN.md`
-  (D-265). A rule can be switched off, its severity changed, its text
-  edited (RA-2, D-267) and a rule added (RA-3, D-268), and one ruleset
-  deleted (RA-1, D-266); a new ruleset comes only from an imported file.
+- A ruleset started with no document, and ruleset templates shipped with
+  the app: in scope since D-251, planned in `plans/RULES-IN-APP-PLAN.md`
+  and `plans/RULESET-TEMPLATES-PLAN.md` (D-265). A rule can be switched
+  off, its severity changed, its text edited (RA-2, D-267), a rule added
+  (RA-3, D-268) and removed (RA-4, D-269), and one ruleset deleted (RA-1,
+  D-266); a new ruleset comes only from an imported file.
 - A viewer for a failed stage's transcript: the review page names the file
   and renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
 - The live output of git while a project clones: a failure's stderr is

@@ -5314,6 +5314,7 @@ test("every route answers an id that names nothing with a 404 naming it", async 
     "PUT rulesets/[id]/rules/[code]": {
       data: { markdown: "### 99. Swept\n\n**Rule:** None.\n", version: 1 },
     },
+    "DELETE rulesets/[id]/rules/[code]": { query: "?version=1" },
   };
 
   // Read from the routes on disk, so a new one with no entry above fails
@@ -6635,5 +6636,189 @@ test("a rule switched off is set back by colour, its row readable in both themes
   } finally {
     await page.emulateMedia({ colorScheme: "light" });
     expect((await page.request.delete(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
+  }
+});
+
+test("a rule is removed on its ruleset's page: asked once, a page behind the ruleset refused and read again, its place saying it went, and a ruleset left with none saying so (RA-4)", async ({
+  page,
+}) => {
+  // Rulesets imported for this and deleted after: it needs nothing the
+  // journey leaves, and the suites after this find theirs as they were.
+  const imported = async (name: string, markdown: string) => {
+    const made = await page.request.post("/api/rulesets/import", {
+      data: { name, tier: "global", markdown },
+    });
+    expect(made.status(), await made.text()).toBe(201);
+    return ((await made.json()) as { rulesetId: string }).rulesetId;
+  };
+  const rulesetId = await imported("A ruleset to remove from", readFileSync(PROTOCOL_PATH, "utf8"));
+  const oneId = await imported(
+    "A ruleset with one rule",
+    "# One\n\n## Hygiene\n\n### 1. Left-In Logging\n\n**Rule:** Flag a console call left in.\n",
+  );
+  const bothThemes = async () => {
+    for (const scheme of ["dark", "light"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      expect(await accessibilityViolations(page), scheme).toEqual([]);
+    }
+  };
+  const panel = page.getByTestId("rule-text");
+  const rulesCard = page.getByTestId("rules");
+  try {
+    await page.goto(`/rulesets/${rulesetId}`);
+    await expect(page.getByText("version 1", { exact: true })).toBeVisible();
+    await expect(page.getByText("15 rules", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Silent Fallback", exact: true }).click();
+    await panel.getByRole("button", { name: "Remove rule" }).click();
+    const yes = panel.getByRole("button", { name: "Yes, remove rule 2a" });
+    await expect(yes).toBeVisible();
+    // What a removal is, against switching the rule off, before it is done.
+    await expect(panel).toContainText(
+      "Removing rule 2a takes its text out of this ruleset and out of the document it exports. Reviews already run keep it. To keep the text and leave the rule out of new reviews, switch it off instead.",
+    );
+    // The focus is on the answer that changes nothing, and goes back to the
+    // control once the question is put away.
+    await expect(panel.getByRole("button", { name: "Keep it" })).toBeFocused();
+    await bothThemes();
+    await shootAll(page, panel, "rule-remove-asked");
+    await panel.getByRole("button", { name: "Keep it" }).click();
+    await expect(yes).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: "Remove rule" })).toBeFocused();
+    expect((await page.request.get(`/api/rulesets/${rulesetId}`)).status()).toBe(200);
+
+    // The ruleset changes behind this page, as another tab would change it.
+    // The server refuses the removal, and the page reads the ruleset again
+    // and says so beside the control, the question put away.
+    const changed = await page.request.patch(`/api/rulesets/${rulesetId}/rules/3`, {
+      data: { enabled: false },
+    });
+    expect(changed.status()).toBe(200);
+    await panel.getByRole("button", { name: "Remove rule" }).click();
+    await yes.click();
+    await expect(
+      panel.getByText(
+        "Rule 2a was not removed. The ruleset changed since this page read it, and the page now shows it as it stands, at version 2. Remove the rule again if it should still go.",
+      ),
+    ).toBeVisible();
+    await expect(yes).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: "Remove rule" })).toBeFocused();
+    await expect(page.getByText("version 2", { exact: true })).toBeVisible();
+    await expect(page.getByText("15 rules, 1 switched off", { exact: true })).toBeVisible();
+    await shootAll(page, panel, "rule-remove-refused");
+
+    // Asked again from the page as it now stands, and removed. The refusal
+    // goes with the question it answered.
+    await panel.getByRole("button", { name: "Remove rule" }).click();
+    await expect(panel.getByText(/was not removed/)).toHaveCount(0);
+    await yes.click();
+    const note = rulesCard.getByRole("status");
+    await expect(note).toHaveText("Rule 2a removed. Reviews already run keep it.");
+    // The control that had the focus went with the rule, so the note takes it.
+    await expect(note).toBeFocused();
+    await expect(page.getByText("version 3", { exact: true })).toBeVisible();
+    await expect(page.getByText("14 rules, 1 switched off", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Silent Fallback", exact: true })).toHaveCount(0);
+    // Said where the rule was: after rule 2, before rule 3.
+    const rows = await rulesCard.getByRole("row").allInnerTexts();
+    const at = rows.findIndex((row) => row.includes("Rule 2a removed"));
+    expect(rows[at - 1]).toContain("Swallowed Error");
+    expect(rows[at + 1]).toContain("Unchecked Cast");
+    const detail = (await (await page.request.get(`/api/rulesets/${rulesetId}`)).json()) as {
+      rules: { code: string }[];
+    };
+    expect(detail.rules.map((rule) => rule.code)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+    ]);
+    const document = await (await page.request.get(`/api/rulesets/${rulesetId}/export`)).text();
+    expect(document).toContain("### 2. Swallowed Error");
+    expect(document).not.toContain("### 2a. Silent Fallback");
+    await bothThemes();
+    await shootAll(page, rulesCard, "rule-remove-removed");
+
+    // The note is about the last change, and goes with the next one.
+    await rulesCard
+      .getByRole("row")
+      .filter({ hasText: "Missing Cleanup" })
+      .getByRole("checkbox")
+      .click();
+    await expect(page.getByText("version 4", { exact: true })).toBeVisible();
+    await expect(note).toHaveCount(0);
+
+    // A rule removed behind this page while its question is up: the server
+    // has no such rule, and the page reads the ruleset again and says the
+    // rule had gone, where it would have shown a rule the ruleset lacks.
+    await page
+      .getByRole("button", { name: "Changed Default Nobody Opted Into", exact: true })
+      .click();
+    await panel.getByRole("button", { name: "Remove rule" }).click();
+    const behind = await page.request.delete(`/api/rulesets/${rulesetId}/rules/14?version=4`);
+    expect(behind.status()).toBe(200);
+    await panel.getByRole("button", { name: "Yes, remove rule 14" }).click();
+    const gone = page.getByText(
+      "Rule 14 was already gone. The ruleset changed since this page read it, and the page now shows it as it stands, at version 5.",
+    );
+    await expect(gone).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Changed Default Nobody Opted Into", exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByText("13 rules, 2 switched off", { exact: true })).toBeVisible();
+    await shootAll(page, gone, "rule-remove-already-gone");
+
+    // The last rule goes too, and the ruleset says what that leaves.
+    await page.goto(`/rulesets/${oneId}`);
+    await expect(page.getByText("1 rule", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Left-In Logging", exact: true }).click();
+    await panel.getByRole("button", { name: "Remove rule" }).click();
+    await panel.getByRole("button", { name: "Yes, remove rule 1" }).click();
+    await expect(note).toHaveText("Rule 1 removed. Reviews already run keep it.");
+    await expect(page.getByText("0 rules", { exact: true })).toBeVisible();
+    await expect(rulesCard).toContainText(
+      "This ruleset has no rules, so a review will not start on it. Add a rule below.",
+    );
+    await expect(rulesCard.getByRole("columnheader")).toHaveCount(0);
+    await bothThemes();
+    await shootAll(page, rulesCard, "rule-remove-none");
+
+    // A rule written into a ruleset with none, which no screen reached
+    // before a rule could be removed: no section to pick, and none promised.
+    const region = page.getByTestId("new-rule");
+    await region.getByRole("button", { name: "Add a rule" }).click();
+    await expect(note).toHaveCount(0);
+    const field = region.getByLabel("New rule as markdown");
+    expect((await field.inputValue()).startsWith("### 1. Title of the rule\n")).toBe(true);
+    await expect(region.getByLabel("Section")).toHaveCount(0);
+    await expect(region).toContainText("The rule goes to the end of the ruleset's document.");
+    expect(await region.getByText(/Tagged/).count()).toBe(0);
+    await shootAll(page, region, "rule-add-to-none");
+    await field.fill("### 1. Left-In Logging\n\n**Rule:** Flag a console call left in.\n");
+    await region.getByRole("button", { name: "Add rule" }).click();
+    await expect(region.getByRole("status")).toHaveText("Rule 1 added, and opened above.");
+    await expect(page.getByText("1 rule", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Left-In Logging", exact: true }),
+    ).toHaveAttribute("aria-expanded", "true");
+    // Under the section the document ends on, as the importer reads it there.
+    const one = (await (await page.request.get(`/api/rulesets/${oneId}`)).json()) as {
+      rules: { code: string; group: string; tags: string[] }[];
+    };
+    expect(one.rules).toMatchObject([{ code: "1", group: "Hygiene", tags: ["organisation"] }]);
+  } finally {
+    await page.emulateMedia({ colorScheme: "light" });
+    for (const id of [rulesetId, oneId]) {
+      expect((await page.request.delete(`/api/rulesets/${id}`)).status()).toBe(200);
+    }
   }
 });

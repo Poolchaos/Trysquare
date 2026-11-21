@@ -6537,3 +6537,29 @@ verified evidence, in writing, here.
   section the request names, which would be a second reading of the
   document beside the importer's; and a new rule always at the document's
   end, where it would sit under whatever section the document ends on.
+- 2026-11-21 D-269 What removing a rule does (RA-4). The rule's row goes
+  and the ruleset's version rises; a review already started keeps the rule
+  in its own copy. The blocks after it in the ruleset's document move up to
+  where it started, not by its count of lines. The two are the same in a
+  document whose line numbers are true. After a rule's text is saved longer
+  than it was imported they are not (the fault RA-5 is to fix), and moved
+  by the count the later blocks landed above the earlier ones, so the
+  export came out in another order: a test saves a rule 400 lines longer,
+  removes it, and reads the document back as the original less that rule.
+  Removing such a rule so puts the line numbers after it right. The request
+  carries the version the page read, in the query since a DELETE has no
+  body, and one left out or not a whole number is a 400. On the page the
+  question says what a removal is against the switch in the row above it:
+  the text goes from the ruleset and from the document it exports, where a
+  rule switched off keeps its text. The focus lands on Keep it, and where
+  the rule was a note says it went and takes the focus, the control that
+  had it being gone. A removal refused because the page was behind the
+  ruleset is answered by reading the ruleset again: the page shows it as
+  it stands and says so in its own words, the server's ("Read it again
+  before saving") being about an edit. The last rule can be removed, and
+  the page then says a review will not start on the ruleset, which the
+  pre-flight and a run's first start both refuse. Left to RA-5: the removed
+  rule's rows stay in the document's sweep table. Rejected: refusing to
+  remove the last rule, which RA-6 (a ruleset started empty) would lift
+  again; and taking the row away with no word, the version in the header
+  its only trace.

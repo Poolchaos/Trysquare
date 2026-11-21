@@ -9,7 +9,7 @@
  * review.
  */
 
-import { and, asc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { newId, nowIso } from "@/lib/ids";
 import {
@@ -711,6 +711,70 @@ export function addRule(
       .run();
   });
   return { version, code: added.code };
+}
+
+/**
+ * Removes a rule from its ruleset and from the ruleset's document (RA-4).
+ *
+ * The blocks after it move up to where it started, so the export keeps its
+ * order. That is the rule's own line count in a document whose line numbers
+ * are true, and it holds the order in one where they are not: a rule saved
+ * longer than it was imported ends past where the next block starts (RA-5),
+ * and moved up by its lines the blocks after it would land above the blocks
+ * before it. A review already started keeps the rule in its own copy.
+ */
+export function removeRule(
+  db: Db,
+  rulesetId: string,
+  code: string,
+  readVersion: number,
+): { version: number } {
+  const row = db.select().from(rulesets).where(eq(rulesets.id, rulesetId)).get();
+  if (!row) throw new RulesetNotFoundError(rulesetId);
+
+  const rule = db
+    .select()
+    .from(rules)
+    .where(and(eq(rules.rulesetId, rulesetId), eq(rules.code, code)))
+    .get();
+  if (!rule) throw new RuleNotFoundError(row.name, code);
+  if (readVersion !== row.version) throw new RulesetChangedError(row.version, readVersion);
+
+  const stored = loadRuleset(db, rulesetId);
+  const next = [...stored.rules, ...stored.directives]
+    .map((block) => block.startLine)
+    .filter((start) => start > rule.sourceStartLine)
+    .reduce((first, start) => Math.min(first, start), Infinity);
+  const up = Number.isFinite(next) ? next - rule.sourceStartLine : 0;
+
+  const version = row.version + 1;
+  db.transaction((tx) => {
+    tx.delete(rules).where(eq(rules.id, rule.id)).run();
+    tx.update(rules)
+      .set({
+        sourceStartLine: sql`${rules.sourceStartLine} - ${up}`,
+        sourceEndLine: sql`${rules.sourceEndLine} - ${up}`,
+      })
+      .where(and(eq(rules.rulesetId, rulesetId), gt(rules.sourceStartLine, rule.sourceStartLine)))
+      .run();
+    tx.update(processDirectives)
+      .set({
+        sourceStartLine: sql`${processDirectives.sourceStartLine} - ${up}`,
+        sourceEndLine: sql`${processDirectives.sourceEndLine} - ${up}`,
+      })
+      .where(
+        and(
+          eq(processDirectives.rulesetId, rulesetId),
+          gt(processDirectives.sourceStartLine, rule.sourceStartLine),
+        ),
+      )
+      .run();
+    tx.update(rulesets)
+      .set({ version, updatedAt: nowIso() })
+      .where(eq(rulesets.id, rulesetId))
+      .run();
+  });
+  return { version };
 }
 
 /**
