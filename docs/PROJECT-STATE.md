@@ -77,7 +77,14 @@ from 2026-11-03.
   call covers a headless review's calls alone. Nine immaterial lines came
   with them (AG1 to AG11). Corrected the same day (D-299): both screens
   tick the first ruleset the list draws, an interactive review states no
-  effort, and the words say the rest. A twentieth grade is owed.
+  effort, and the words say the rest.
+  The twentieth grade, at f2fadc6 the same day, was C on three lines of
+  one kind, each true of a headless review and false of an interactive
+  one: its report and tiles give zero tokens and a zero cost equivalent
+  as its own, its queue offers a Verify again the server refuses every
+  time, and the dashboard says nothing is waiting on the person while a
+  stage waits on them. Five immaterial lines and three siblings came with
+  them (AH1 to AH8 in the audit file). Not yet corrected.
   `./verify.sh --e2e` exits 0 with 1704 unit tests passing, 8 skipped,
   and 172 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
