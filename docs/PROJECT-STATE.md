@@ -56,6 +56,15 @@ from 2026-11-03.
   table in git's words, the board shown all the same.
   `./verify.sh --e2e` exits 0 with 1697 unit tests passing, 8 skipped,
   and 172 browser tests.
+  The eighteenth grade of the records, at acef4d1 the same day, was C on
+  three lines on screens, none inherited: the Delete ruleset card says a
+  new review then starts with no ruleset chosen, where it starts on the
+  first listed; a paused review's Tests and design line says a resume
+  runs the project's checks again, where it keeps their result; and Rule
+  yield is counted by a rule's number across every ruleset. Thirteen
+  immaterial lines came with them and three siblings of the
+  seventeenth's. All are logged as AF1 to AF16 in the audit file, not
+  yet checked or corrected.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
   those awaiting a decision, each row saying which it is and what to press
