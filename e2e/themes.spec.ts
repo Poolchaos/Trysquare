@@ -594,6 +594,22 @@ test("Mine leaves the branches I last committed to, and an empty one says whose 
   };
   const desk = page.viewportSize() ?? { width: 1280, height: 720 };
   const phone = { width: 360, height: 780 };
+  // A new review's branch picker, for the project the branches were opened on.
+  let projectId = "";
+  const picker = page.getByRole("group", { name: "Branch to review" });
+  const choices = picker.getByRole("radio");
+  // The card it sits in, so a picture shows its edges too.
+  const pickerCard = picker.locator("..");
+  const openPicker = async () => {
+    await page.goto(`/reviews/new?projectId=${projectId}`);
+    await expect(mine).toBeVisible({ timeout: 60_000 });
+  };
+  const reviewsMade: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/reviews") {
+      reviewsMade.push(request.url());
+    }
+  });
 
   try {
     // Nothing kept: git's own email is the one in effect, and Settings says so.
@@ -631,6 +647,41 @@ test("Mine leaves the branches I last committed to, and an empty one says whose 
     expect(toggle!.height).toBeGreaterThanOrEqual(40);
     await photograph(page, shot("project-mine-phone"));
     await page.setViewportSize(desk);
+
+    // The same toggle in a new review's branch picker (WP-L, the second
+    // slice): it listed every branch, with no way to see one's own alone.
+    projectId = new URL(page.url()).pathname.split("/").pop()!;
+    await openPicker();
+    await expect(mine).toHaveAttribute("aria-pressed", "false");
+    await expect(choices).toHaveCount(4);
+    await mine.click();
+    await expect(mine).toHaveAttribute("aria-pressed", "true");
+    await expect(choices).toHaveCount(3);
+    await expect(picker.getByText(COLLEAGUE_BRANCH)).toHaveCount(0);
+    await expect(picker.getByText("feature/rename-prefs")).toHaveCount(1);
+    expect(await violations()).toEqual([]);
+    await pickerCard.screenshot({ path: shot("new-review-mine"), animations: "disabled" });
+    await page.getByPlaceholder("Filter branches").fill("no branch is called this");
+    await expect(picker.getByText("No branch matches that filter")).toBeVisible();
+    await expect(
+      picker.getByText("3 of your branches are here; the filter is hiding them."),
+    ).toBeVisible();
+    await mine.click();
+    await expect(picker.getByText("4 branches are here; the filter is hiding them.")).toBeVisible();
+    await page.getByPlaceholder("Filter branches").fill("");
+    await expect(choices).toHaveCount(4);
+    await mine.click();
+    await page.setViewportSize(phone);
+    expect(await sideways(), "the new review scrolls sideways at 360").toBeLessThanOrEqual(0);
+    const pickerToggle = await mine.boundingBox();
+    expect(pickerToggle, "Mine has a box in the picker").not.toBeNull();
+    expect(pickerToggle!.x).toBeGreaterThanOrEqual(0);
+    expect(pickerToggle!.x + pickerToggle!.width).toBeLessThanOrEqual(phone.width);
+    expect(pickerToggle!.height).toBeGreaterThanOrEqual(40);
+    await pickerCard.screenshot({ path: shot("new-review-mine-phone"), animations: "disabled" });
+    await page.setViewportSize(desk);
+    // The toggle sits in the form that starts a review, and is no submit.
+    expect(reviewsMade).toEqual([]);
 
     // Somebody else's email kept: it replaces git's, and no branch here is
     // theirs, which the empty list says with the email it went by.
@@ -672,6 +723,53 @@ test("Mine leaves the branches I last committed to, and an empty one says whose 
     expect(await linesOfEmail(), "the email sits on one line at 360").toBeLessThan(1.5);
     await photograph(page, shot("project-mine-none-phone"));
     await page.setViewportSize(desk);
+    // The picker says it in the same words, where it showed an empty list.
+    await openPicker();
+    await mine.click();
+    await expect(picker.getByText("No branch here is yours")).toBeVisible();
+    await expect(
+      picker.getByText(
+        "None ends on a commit authored as someone-else@example.invalid. The emails that count as yours are kept in Settings.",
+      ),
+    ).toBeVisible();
+    await expect(choices).toHaveCount(0);
+    expect(await violations()).toEqual([]);
+    await pickerCard.screenshot({ path: shot("new-review-mine-none"), animations: "disabled" });
+    await page.setViewportSize(phone);
+    expect(
+      await sideways(),
+      "the picker's empty Mine list scrolls sideways at 360",
+    ).toBeLessThanOrEqual(0);
+    // The email is wider than the line here. It is broken after its @ and
+    // nowhere else, and its full stop stays with it: it was cut as "inva"
+    // and "lid", the stop alone at the start of the next line.
+    const halves = await picker
+      .getByText("someone-else@example.invalid", { exact: true })
+      .evaluate((email) =>
+        [...email.childNodes]
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((half) => {
+            const range = document.createRange();
+            range.selectNodeContents(half);
+            return [...range.getClientRects()].map((line) => Math.round(line.top));
+          }),
+      );
+    expect(
+      halves.map((lines) => lines.length),
+      "each half of the email on one line",
+    ).toEqual([1, 1]);
+    expect(halves[1]![0]!, "the domain under the name").toBeGreaterThan(halves[0]![0]!);
+    await expect(
+      picker.locator("span.inline-block", { hasText: "someone-else@example.invalid" }),
+    ).toHaveText("someone-else@example.invalid.");
+    await pickerCard.screenshot({
+      path: shot("new-review-mine-none-phone"),
+      animations: "disabled",
+    });
+    await page.setViewportSize(desk);
+    await openBranches();
+    await mine.click();
+    await expect(none).toBeVisible();
     // The way out it names is a link, and it goes there.
     await page.getByRole("main").getByRole("link", { name: "Settings", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
@@ -701,6 +799,14 @@ test("Mine leaves the branches I last committed to, and an empty one says whose 
     await expect(page.getByText("No email counts as yours yet")).toBeVisible();
     expect(await violations()).toEqual([]);
     await photograph(page, shot("project-mine-no-email"));
+    await openPicker();
+    await mine.click();
+    await expect(picker.getByText("No email counts as yours yet")).toBeVisible();
+    await expect(picker.getByRole("link", { name: "Settings", exact: true })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
+    expect(reviewsMade).toEqual([]);
   } finally {
     // As the next theme's run, and every test after this one, expects it.
     writeFileSync(GIT_CONFIG, `[user]\n\tname = Fixture\n\temail = ${MY_EMAIL}\n`);

@@ -384,3 +384,6 @@ the line entirely would lose the trail.
   ruleset in the same tab, and New review's choices (branch, model,
   intent, ticks) go with the page. The refusal for a shared number sends
   a person there to renumber (review round 25).
+- 2026-11-22: in a new review's branch picker, a branch chosen and then
+  hidden by Mine or by the text filter stays the branch to review, and
+  nothing on the screen says which it is (D-296).

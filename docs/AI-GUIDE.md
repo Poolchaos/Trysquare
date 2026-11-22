@@ -84,7 +84,7 @@ Shared UI: `src/components/ui.tsx` (buttons, badges, cards, inputs),
 `page.tsx` (page header and body), `request.ts` (`send`, the one fetch
 helper), `topbar.tsx`, `markdown.tsx` (a protocol's markdown, formatted,
 D-227), `ruleset-picker.tsx` (the rulesets ticked for a review, on New
-review and on a draft's own Start, D-294, D-295, and `useReadOnReturn`, by which both read the list again when the window is come back to). Pure logic lives in `src/lib/`, by folder; the folder
+review and on a draft's own Start, D-294, D-295, and `useReadOnReturn`, by which both read the list again when the window is come back to), `mine-branches.tsx` (the Mine toggle and what an empty Mine list says, on a project's branches and in a new review's picker, D-296). Pure logic lives in `src/lib/`, by folder; the folder
 list is in `PROJECT-STATE.md`, Structure.
 
 ## Common changes

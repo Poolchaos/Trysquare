@@ -7391,3 +7391,38 @@ verified evidence, in writing, here.
   refused over a set its list took for one that can run, and reads
   nothing again then. One idea to the inbox: the count beside a ruleset
   opens it in the same tab, and New review's choices go with it.
+- 2026-11-22 D-296 (WP-L, second slice) A new review's branch picker has
+  the Mine toggle. The branches route has said `mine` for each branch and
+  the emails it went by since D-243; the picker listed every branch, with
+  a text filter alone. The toggle, what a Mine list with nothing in it
+  says, and the line for a filter that hides every branch are one
+  component now (`src/components/mine-branches.tsx`), used by the
+  project's branch list and by the picker, so the two cannot come to say
+  it differently; the picker's "N branch(es) are here" went with that.
+  The toggle is a button of type `button`: the picker sits in the form
+  that starts a review, where a bare button is a submit. The picker's
+  empty states moved out of the list's scroll box, which is sized for
+  rows. Its header is a named group, "Branch to review", as Rules is.
+  Two faults found building it and fixed in the shared component, so on
+  the project's page too. The link to Settings inside the sentence was
+  told from the words round it by colour alone: axe passed it on the
+  project's page, whose textured background it cannot measure against,
+  and failed it in the picker's card. It is underlined. And an email
+  wider than its line, as the fixture's is in the picker at 360 px, was
+  cut mid-word with the full stop alone on the next line: it breaks
+  after its @ before anywhere else, and the mark after it stays in its
+  box. Proven: the browser test, in both themes, failed on the old
+  screen (no Mine in the picker); it reads three of four branches under
+  Mine, the two empty states in the project page's words, both filter
+  lines, the toggle's box at 360 px, where the email breaks, and that no
+  review is made by pressing Mine. Graded by the builder,
+  `review/2026-11-22-e2e/`, light and dark each: `new-review-mine` A,
+  `new-review-mine-phone` B (the fetched line wraps beside Refresh, as
+  before), `new-review-mine-none` A, `new-review-mine-none-phone` B (the
+  email on two lines, broken at its @), `project-mine-none` A,
+  `project-mine-none-phone` A, `project-mine-no-email` A. Left as it
+  is: a branch chosen and then hidden by Mine stays chosen with nothing
+  saying so, as one hidden by the text filter always has (idea inbox).
+  Not narrowed: "Compare against", which is seldom the person's own, and
+  a dependency's branches. Still to build under WP-L: the scoreboard's
+  author column.

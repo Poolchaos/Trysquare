@@ -37,9 +37,9 @@ chosen per review in the advanced fold.
 - Settings: opening the data directory in a file manager (it is displayed).
 - Of the 2026-08-17 UX audit, one item is still partly owed, my branches
   (WP-L): the emails that count as the person's are on Settings and a
-  project's branch list has its Mine filter (2026-11-18, D-243); the same
-  filter in the new-review picker and the scoreboard's author column are
-  not built. The queue's phone layout
+  project's branch list has its Mine filter (2026-11-18, D-243), and so
+  has the new-review picker (2026-11-22, D-296); the scoreboard's author
+  column is not built. The queue's phone layout
   with thumb-height actions (WP-K) was built on 2026-11-17. The completion
   moment and queue momentum (WP-G) came with later work, bar a comparison
   with this machine's median that is left out on purpose (D-238). The rest of that audit is built, including the

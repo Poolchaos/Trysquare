@@ -43,6 +43,11 @@ from 2026-11-03.
   notice, the terminal note, a managed policy, a pause's reason) stands
   apart, where each sat flush on the next and on the card under it. The
   plan is built.
+  A new review's branch picker has the Mine toggle a project's branch
+  list has (WP-L's second slice of three, D-296): one component for both
+  (`src/components/mine-branches.tsx`), so a Mine list with nothing in it
+  says whose commits it looked for in the same words on each. Still to
+  build under WP-L: the scoreboard's author column.
   `./verify.sh --e2e` exits 0 with 1692 unit tests passing, 8 skipped,
   and 171 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
@@ -460,7 +465,7 @@ from 2026-11-03.
   screen and a rendered report. `plans/UX-UPLIFT-PLAN.md` and
   `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; one row is
   open (WP-L my branches, its first slice of three built on 2026-11-18,
-  D-243), outside the MVP (its non-goals): on 2026-11-17
+  D-243, its second on 2026-11-22, D-296), outside the MVP (its non-goals): on 2026-11-17
   WP-G was closed as built by later work (D-238) and WP-K's queue layout
   for a phone was built. The FG-4 design acceptance is now part of
   G3, the public release after the MVP (D-86); its argument was
@@ -552,7 +557,8 @@ are accepted; anything else is refused by name.
 - `defaultRulesetId` (default empty). The ruleset a new review starts on
   (D-225).
 - `identities` (default empty). The git emails that count as the person's,
-  for the Mine filter on a project's branches. Empty goes by `user.email`
+  for the Mine filter on a project's branches and in a new review's
+  branch picker. Empty goes by `user.email`
   of their global git config, read each time and never stored (D-243).
 - `resultAddresses` (default empty). The addresses a review's result is to
   be emailed to, the first the default. Kept only: nothing sends to them

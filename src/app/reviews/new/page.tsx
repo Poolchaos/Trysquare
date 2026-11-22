@@ -45,6 +45,7 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
+import { hiddenByFilter, MineToggle, NoBranchOfYours } from "@/components/mine-branches";
 import { asSentence, send } from "@/components/request";
 import { type SignIn } from "@/lib/engine/sign-in-command";
 import {
@@ -67,6 +68,8 @@ interface Branch {
   committedAt: string;
   ahead: number;
   behind: number;
+  /** Its newest commit was authored with one of the person's emails (D-243). */
+  mine: boolean;
 }
 
 interface Link {
@@ -160,6 +163,10 @@ function NewReview() {
   const prefilledBranch = search.get("fromBranch") ?? "";
 
   const [branches, setBranches] = useState<Branch[] | null>(null);
+  // The emails `mine` went by, so a Mine list with nothing in it can say
+  // whose commits it looked for.
+  const [identities, setIdentities] = useState<string[]>([]);
+  const [mineOnly, setMineOnly] = useState(false);
   const [stale, setStale] = useState<string | null>(null);
   const [branchesAsOf, setBranchesAsOf] = useState<Date | null>(null);
   // Why a read failed, said where it matters (5.13, U9): in the branch card
@@ -336,11 +343,12 @@ function NewReview() {
 
     void (async () => {
       const [branchList, rulesetList, modelList, detail] = await Promise.all([
-        send<{ branches: Branch[]; stale?: string | null; defaultBranch: string }>(
-          `/api/projects/${projectId}/branches`,
-          {},
-          "The branches could not be listed",
-        ),
+        send<{
+          branches: Branch[];
+          identities: string[];
+          stale?: string | null;
+          defaultBranch: string;
+        }>(`/api/projects/${projectId}/branches`, {}, "The branches could not be listed"),
         send<{ rulesets: PickableRuleset[]; defaultRulesetId?: string | null }>(
           "/api/rulesets",
           {},
@@ -393,6 +401,7 @@ function NewReview() {
       if (branchList.ok) {
         setBranchProblem("");
         setBranches(branchList.body.branches);
+        setIdentities(branchList.body.identities);
         setStale(branchList.body.stale ?? null);
         setBranchesAsOf(new Date());
         setChosenInto((current) => current || branchList.body.defaultBranch);
@@ -723,7 +732,11 @@ function NewReview() {
     }
   }
 
-  const shown = (branches ?? []).filter((branch) => branch.name.includes(filter));
+  const allBranches = branches ?? [];
+  const myBranches = allBranches.filter((branch) => branch.mine);
+  const shown = (mineOnly ? myBranches : allBranches).filter((branch) =>
+    branch.name.includes(filter),
+  );
 
   // A dependency ticked without both its branches was dropped from the
   // review it was ticked for, without a word (5.14, audit U11).
@@ -843,96 +856,108 @@ function NewReview() {
           ) : null}
 
           <Card className="p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <span className="text-sm font-medium">Branch to review</span>
-              <Input
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-                placeholder="Filter branches"
-                aria-label="Filter branches"
-                className="max-w-56"
-              />
-            </div>
+            <div role="group" aria-labelledby="branch-to-review">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <span id="branch-to-review" className="text-sm font-medium">
+                  Branch to review
+                </span>
+                <div className="flex min-w-0 items-center gap-2">
+                  {/* The same narrowing as a project's branch list (WP-L):
+                    offered once there are branches to narrow. */}
+                  {allBranches.length === 0 ? null : (
+                    <MineToggle on={mineOnly} onChange={setMineOnly} />
+                  )}
+                  <Input
+                    value={filter}
+                    onChange={(event) => setFilter(event.target.value)}
+                    placeholder="Filter branches"
+                    aria-label="Filter branches"
+                    className="max-w-56"
+                  />
+                </div>
+              </div>
 
-            {branchesAsOf && !branchProblem ? (
-              <p className="mb-2 flex items-center gap-2 text-xs text-[var(--color-ink-muted)]">
-                {stale
-                  ? "Cached refs, shown because the remote could not be reached."
-                  : `Fetched from the remote at ${branchesAsOf.toLocaleTimeString()}.`}
-                <button
-                  type="button"
-                  className="underline underline-offset-2 hover:text-[var(--color-ink)]"
-                  onClick={() => {
-                    setBranches(null);
-                    setStale(null);
-                    setBranchesAsOf(null);
-                    setLinkBranchesFor("");
-                    setRefreshCount((count) => count + 1);
-                  }}
-                >
-                  Refresh
-                </button>
-              </p>
-            ) : null}
+              {branchesAsOf && !branchProblem ? (
+                <p className="mb-2 flex items-center gap-2 text-xs text-[var(--color-ink-muted)]">
+                  {stale
+                    ? "Cached refs, shown because the remote could not be reached."
+                    : `Fetched from the remote at ${branchesAsOf.toLocaleTimeString()}.`}
+                  <button
+                    type="button"
+                    className="underline underline-offset-2 hover:text-[var(--color-ink)]"
+                    onClick={() => {
+                      setBranches(null);
+                      setStale(null);
+                      setBranchesAsOf(null);
+                      setLinkBranchesFor("");
+                      setRefreshCount((count) => count + 1);
+                    }}
+                  >
+                    Refresh
+                  </button>
+                </p>
+              ) : null}
 
-            {branchProblem ? (
-              <Loading
-                error={branchProblem}
-                {...(projectMissing
-                  ? { back: { href: "/projects", label: "All projects" } }
-                  : { onRetry: retryReads })}
-              />
-            ) : branches === null ? (
-              <p className="py-6 text-center text-sm text-[var(--color-ink-muted)]">
-                Fetching the latest branches...
-              </p>
-            ) : (
-              <ul className="-mx-1 max-h-72 overflow-y-auto p-1">
-                {shown.map((branch) => (
-                  <li key={branch.name}>
-                    {/* Relative, so the hidden radio is placed inside its label and
+              {branchProblem ? (
+                <Loading
+                  error={branchProblem}
+                  {...(projectMissing
+                    ? { back: { href: "/projects", label: "All projects" } }
+                    : { onRetry: retryReads })}
+                />
+              ) : branches === null ? (
+                <p className="py-6 text-center text-sm text-[var(--color-ink-muted)]">
+                  Fetching the latest branches...
+                </p>
+              ) : shown.length === 0 ? (
+                // Outside the list's scroll box: an empty list is not one, and
+                // what it says was cut by a box sized for rows.
+                <div className="py-6">
+                  {allBranches.length === 0 ? (
+                    <Empty title="This repository has no branches to review">
+                      Nothing has been pushed to it yet, or the clone could not read its refs.
+                    </Empty>
+                  ) : mineOnly && myBranches.length === 0 ? (
+                    <NoBranchOfYours identities={identities} />
+                  ) : (
+                    <Empty title="No branch matches that filter">
+                      {hiddenByFilter(mineOnly ? myBranches.length : allBranches.length, mineOnly)}
+                    </Empty>
+                  )}
+                </div>
+              ) : (
+                <ul className="-mx-1 max-h-72 overflow-y-auto p-1">
+                  {shown.map((branch) => (
+                    <li key={branch.name}>
+                      {/* Relative, so the hidden radio is placed inside its label and
                         focusing it scrolls the list to it: placed outside, arrow
                         keys chose branches out of sight (review of the D-149 fixes). */}
-                    <label
-                      className={`relative flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 ${
-                        fromBranch === branch.name
-                          ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
-                          : "border-transparent hover:bg-[var(--color-surface-sunken)]"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="fromBranch"
-                        className="sr-only"
-                        checked={fromBranch === branch.name}
-                        onChange={() => setFromBranch(branch.name)}
-                      />
-                      <Mono className="min-w-0 flex-1 truncate text-sm">{branch.name}</Mono>
-                      <span className="shrink-0 text-xs text-[var(--color-ink-muted)]">
-                        {branch.ahead > 0 ? `${branch.ahead} ahead` : null}
-                        {branch.ahead > 0 && branch.behind > 0 ? ", " : null}
-                        {branch.behind > 0 ? `${branch.behind} behind` : null}
-                      </span>
-                    </label>
-                  </li>
-                ))}
-                {shown.length === 0 ? (
-                  <li className="py-6">
-                    <Empty
-                      title={
-                        (branches ?? []).length === 0
-                          ? "This repository has no branches to review"
-                          : "No branch matches that filter"
-                      }
-                    >
-                      {(branches ?? []).length === 0
-                        ? "Nothing has been pushed to it yet, or the clone could not read its refs."
-                        : `${(branches ?? []).length} branch(es) are here; the filter is hiding them.`}
-                    </Empty>
-                  </li>
-                ) : null}
-              </ul>
-            )}
+                      <label
+                        className={`relative flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 ${
+                          fromBranch === branch.name
+                            ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
+                            : "border-transparent hover:bg-[var(--color-surface-sunken)]"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="fromBranch"
+                          className="sr-only"
+                          checked={fromBranch === branch.name}
+                          onChange={() => setFromBranch(branch.name)}
+                        />
+                        <Mono className="min-w-0 flex-1 truncate text-sm">{branch.name}</Mono>
+                        <span className="shrink-0 text-xs text-[var(--color-ink-muted)]">
+                          {branch.ahead > 0 ? `${branch.ahead} ahead` : null}
+                          {branch.ahead > 0 && branch.behind > 0 ? ", " : null}
+                          {branch.behind > 0 ? `${branch.behind} behind` : null}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </Card>
 
           <div className="grid gap-4 sm:grid-cols-2">

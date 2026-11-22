@@ -26,6 +26,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
+import { hiddenByFilter, MineToggle, NoBranchOfYours } from "@/components/mine-branches";
 import { send, type Sent } from "@/components/request";
 import type { ProjectChecks } from "@/lib/projects/checks";
 import { StoredCredentialsNotice } from "@/components/stored-credentials-notice";
@@ -320,17 +321,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-heading font-semibold">Branches</h2>
               <div className="flex min-w-0 items-center gap-2">
-                {/* Offered once there are branches to narrow. A toggle, so it
-                    says whether it is on rather than leaving that to colour. */}
-                {all.length === 0 ? null : (
-                  <Button
-                    variant={mineOnly ? "primary" : "secondary"}
-                    aria-pressed={mineOnly}
-                    onClick={() => setMineOnly(!mineOnly)}
-                  >
-                    Mine
-                  </Button>
-                )}
+                {/* Offered once there are branches to narrow. */}
+                {all.length === 0 ? null : <MineToggle on={mineOnly} onChange={setMineOnly} />}
                 <Input
                   value={filter}
                   onChange={(event) => setFilter(event.target.value)}
@@ -350,44 +342,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   Nothing has been pushed to it yet, or the clone could not read its refs.
                 </Empty>
               ) : mineOnly && mine.length === 0 ? (
-                // Why Mine came back empty, and where that is changed: an
-                // empty list alone reads as a project with no branches.
-                branches.body.identities.length === 0 ? (
-                  <Empty title="No email counts as yours yet">
-                    A branch is yours when its newest commit was authored with one of your git
-                    emails. Enter yours in{" "}
-                    <Link href="/settings" className="text-[var(--color-accent)] hover:underline">
-                      Settings
-                    </Link>
-                    .
-                  </Empty>
-                ) : (
-                  <Empty title="No branch here is yours">
-                    None ends on a commit authored as{" "}
-                    {/* Each email its own box: it moves to the next line whole,
-                        and is broken only when it is wider than the line. */}
-                    {branches.body.identities.map((email, index) => (
-                      <span key={email}>
-                        {index === 0 ? null : ", "}
-                        <Mono className="inline-block max-w-full break-all">{email}</Mono>
-                      </span>
-                    ))}
-                    . The emails that count as yours are kept in{" "}
-                    <Link href="/settings" className="text-[var(--color-accent)] hover:underline">
-                      Settings
-                    </Link>
-                    .
-                  </Empty>
-                )
+                <NoBranchOfYours identities={branches.body.identities} />
               ) : (
                 <Empty title="No branch matches that filter">
-                  {mineOnly
-                    ? mine.length === 1
-                      ? "1 of your branches is here; the filter is hiding it."
-                      : `${mine.length} of your branches are here; the filter is hiding them.`
-                    : all.length === 1
-                      ? "1 branch is here; the filter is hiding it."
-                      : `${all.length} branches are here; the filter is hiding them.`}
+                  {hiddenByFilter(mineOnly ? mine.length : all.length, mineOnly)}
                 </Empty>
               )
             ) : (
