@@ -196,6 +196,27 @@ export function launchCommandsFor(
   };
 }
 
+/**
+ * What a person is told to run, the command for this machine's own shell
+ * first. The app is local, so the platform it runs on is the one the
+ * terminal is on: PowerShell led on a Linux machine (D-309).
+ */
+export function waitingWords(input: {
+  stage: ReviewStage;
+  commands: { posix: string; powershell: string };
+  answerPath: string;
+  platform: NodeJS.Platform;
+}): string {
+  const posix = `In bash or zsh:\n${input.commands.posix}\n`;
+  const powershell = `In PowerShell:\n${input.commands.powershell}\n`;
+  return (
+    `${input.stage} is waiting for you. ` +
+    (input.platform === "win32" ? powershell + posix : posix + powershell) +
+    `then save the JSON answer to ${input.answerPath}. The command needs Claude Code ` +
+    `${MINIMUM_CLI_VERSION} or newer, for --system-prompt-file.`
+  );
+}
+
 export function createInteractiveEngine(options: InteractiveEngineOptions): ReviewEngine {
   const pollMs = options.pollMs ?? 1000;
 
@@ -268,11 +289,12 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
     );
     options.onEvent?.(request.stage, {
       kind: "waiting",
-      text:
-        `${request.stage} is waiting for you. In PowerShell:\n${commands.powershell}\n` +
-        `In bash or zsh:\n${commands.posix}\n` +
-        `then save the JSON answer to ${answerPath}. The command needs Claude Code ` +
-        `${MINIMUM_CLI_VERSION} or newer, for --system-prompt-file.`,
+      text: waitingWords({
+        stage: request.stage,
+        commands,
+        answerPath,
+        platform: process.platform,
+      }),
     });
 
     let raw: string;

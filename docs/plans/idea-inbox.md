@@ -320,8 +320,8 @@ pulled deliberately.
   reproduced.
 - 2026-11-22: the "Your turn" card gives the command for both shells as
   one block with no copy button, and names the stage by its id.
-  And it gives the PowerShell command before the bash one on a Linux
-  machine (seen in `review/2026-11-22-e2e/interactive-your-turn-focused-light.png`).
+  It gave the PowerShell command before the bash one on a Linux machine;
+  that part is done, the machine's own shell coming first (D-309).
 - 2026-11-22: Rule yield files a rule number that a review's one ruleset
   does not hold under that ruleset's name: a review on one ruleset is
   answered without reading its frozen copy (`frozenRuleOwners`,

@@ -126,7 +126,7 @@ from 2026-11-03.
   in the audit file). Corrected the same day (D-307), the first at the
   code: a refused answer's file is moved aside in the bundle, so a resumed
   review waits for a new one and goes on. A twenty-third grade is owed.
-  `./verify.sh --e2e` exits 0 with 1722 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1723 unit tests passing, 8 skipped,
   and 176 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside

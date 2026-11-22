@@ -184,7 +184,7 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
 - **InteractiveEngine (Mode B, fallback):** materialises the same prompt to
   `runs/<id>/bundle/<stage>[-b<n>]-<call id>-prompt.md`, with the system
   prompt beside it as `-system.md`, prints a launch command for PowerShell
-  and for bash or zsh (read-only tools, no settings file at all, no MCP servers,
+  and for bash or zsh, the one for the machine's own platform first (D-309) (read-only tools, no settings file at all, no MCP servers,
   `--system-prompt-file`, the prompt itself read from the file rather than
   passed in argv), and watches for that call's own `-output.json`. Each call
   names its own files, so a batch or a resumed attempt never reads another

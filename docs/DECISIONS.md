@@ -7850,3 +7850,13 @@ verified evidence, in writing, here.
   review's (`launchArgsFor` in `src/server/engine/interactive.ts`, the
   command's flags; the pipeline is the same for both engines). Decided by the
   session, before the twenty-third grade. Words alone, nothing to run.
+- 2026-11-22 D-309 An interactive stage's command is given for the
+  machine's own shell first. The "Your turn" card printed PowerShell's
+  command and then bash's on every machine, Linux included, which the
+  design notes named as a weak point (D-306). The app is local, so the
+  platform it runs on is the one the person's terminal is on: bash or zsh
+  comes first on Linux and macOS, PowerShell on Windows, and both are
+  still given. Decided by the session. Left in the inbox: the two
+  commands are one block with no way to copy one, and the stage is named
+  by its id. Proven by a test of the words for each platform
+  (`tests/server/engine/interactive.test.ts`).

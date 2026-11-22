@@ -26,6 +26,7 @@ import {
   callIdFor,
   createInteractiveEngine,
   exchangeFilesFor,
+  waitingWords,
   launchArgsFor,
   launchCommandsFor,
 } from "@/server/engine/interactive";
@@ -181,6 +182,29 @@ describe("the file a person is handed", () => {
     expect(said[0]).toContain("fake-claude.mjs");
     expect(said[0]).toContain("2.1.301 or newer");
     expect(said[0]).toContain(filesFor(ask).answer);
+  });
+
+  it("gives the command for this machine's own shell first", () => {
+    // The app is local: the platform it runs on is the terminal's. On a
+    // Linux machine PowerShell's command led (D-309).
+    const said = (platform: NodeJS.Platform) =>
+      waitingWords({
+        stage: "s1_risk",
+        commands: { posix: "cd '/w' && 'claude'", powershell: "Set-Location '/w'; & 'claude'" },
+        answerPath: "/b/s1_risk-output.json",
+        platform,
+      });
+    for (const platform of ["linux", "darwin"] as const) {
+      expect(said(platform)).toBe(
+        "s1_risk is waiting for you. In bash or zsh:\ncd '/w' && 'claude'\n" +
+          "In PowerShell:\nSet-Location '/w'; & 'claude'\n" +
+          "then save the JSON answer to /b/s1_risk-output.json. The command needs Claude Code " +
+          "2.1.301 or newer, for --system-prompt-file.",
+      );
+    }
+    expect(said("win32")).toContain(
+      "is waiting for you. In PowerShell:\nSet-Location '/w'; & 'claude'\nIn bash or zsh:\n",
+    );
   });
 
   it("refuses to hand out a command for a model alias", async () => {

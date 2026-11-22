@@ -103,8 +103,10 @@ Grades, from the interactive review's shots (D-302, D-304):
 `interactive-your-turn-focused-light` B, `-dark` B,
 `interactive-feed-waiting-light` B, `-dark` B, `-phone` B,
 `interactive-verification-stage-dark` B, `-phone` B. The card gives both
-shells' commands as one block with no way to copy one, PowerShell first on
-a Linux machine, and the feed under it is mostly empty while a stage waits.
+shells' commands as one block with no way to copy one (the machine's own
+shell first since D-309; the shots graded here were taken before it, with
+PowerShell first), and the feed under it is mostly empty while a stage
+waits.
 A headless review's scan view was not looked at for these notes.
 
 ### Confirmation (a review awaiting its decisions)
