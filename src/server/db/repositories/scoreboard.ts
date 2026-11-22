@@ -29,6 +29,11 @@ export interface ScoreboardRow {
   projectName: string;
   fromBranch: string;
   intoBranch: string;
+  /**
+   * Who authored the commit the reviewed branch ended on, as git has it.
+   * Null for a review made before it was kept (D-297).
+   */
+  author: { name: string; email: string } | null;
   model: string;
   status: string;
   confirmed: number;
@@ -110,6 +115,8 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
       projectName: projects.name,
       fromBranch: reviews.fromBranch,
       intoBranch: reviews.intoBranch,
+      fromAuthorName: reviews.fromAuthorName,
+      fromAuthorEmail: reviews.fromAuthorEmail,
       model: reviews.model,
       status: reviews.status,
       cost: reviews.costEquivalentUsd,
@@ -208,6 +215,10 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
       projectName: review.projectName,
       fromBranch: review.fromBranch,
       intoBranch: review.intoBranch,
+      author:
+        review.fromAuthorEmail === null
+          ? null
+          : { name: review.fromAuthorName ?? "", email: review.fromAuthorEmail },
       model: review.model,
       status: review.status,
       confirmed: byReview.get(review.id)?.confirmed ?? 0,

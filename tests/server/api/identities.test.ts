@@ -207,3 +207,74 @@ describe("which branches are mine", () => {
     });
   });
 });
+
+describe("whose branch a review was of, on the scoreboard (D-297)", () => {
+  interface Row {
+    id: string;
+    author: { name: string; email: string } | null;
+    mine: boolean;
+  }
+
+  /** A review in the store, with the author git gives for the branch's newest commit. */
+  async function reviewOf(branch: string, keepAuthor = true): Promise<string> {
+    const { runtime } = await import("@/server/runtime");
+    const { createReview } = await import("@/server/db/repositories/reviews");
+    const { requireClonedProject } = await import("@/server/db/repositories/projects");
+    const { commitAuthor, resolveBranch } = await import("@/server/gitops/repo");
+    const { db } = runtime();
+    const clone = requireClonedProject(db, projectId).clonePath;
+    const tip = await resolveBranch(clone, branch);
+    return createReview(db, {
+      projectId,
+      fromBranch: branch,
+      fromCommit: tip,
+      intoBranch: "main",
+      intoCommit: tip,
+      mergeBaseCommit: tip,
+      ...(keepAuthor ? { fromAuthor: await commitAuthor(clone, tip) } : {}),
+      model: "claude-fable-5[1m]",
+      profileId: "full-context",
+      engineMode: "headless",
+    }).id;
+  }
+
+  async function board(): Promise<{ rows: Map<string, Row>; identitiesProblem: string | null }> {
+    const { GET } = await import("@/app/api/scoreboard/route");
+    const response = await GET();
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { recent: Row[]; identitiesProblem: string | null };
+    return {
+      rows: new Map(body.recent.map((row) => [row.id, row])),
+      identitiesProblem: body.identitiesProblem,
+    };
+  }
+
+  it("is mine where I authored its newest commit, and names the author where I did not", async () => {
+    const mine = await reviewOf("feature/mine");
+    // Authored by a colleague and committed by me: theirs.
+    const theirs = await reviewOf("feature/theirs");
+    const { rows, identitiesProblem } = await board();
+    expect(rows.get(mine)).toMatchObject({ author: ME, mine: true });
+    expect(rows.get(theirs)).toMatchObject({ author: COLLEAGUE, mine: false });
+    expect(identitiesProblem).toBeNull();
+  });
+
+  it("follows the emails kept in Settings", async () => {
+    const theirs = await reviewOf("feature/theirs");
+    await save({ identities: [COLLEAGUE.email] });
+    expect((await board()).rows.get(theirs)).toMatchObject({ author: COLLEAGUE, mine: true });
+  });
+
+  it("has no author for a review made before one was kept", async () => {
+    const old = await reviewOf("feature/mine", false);
+    expect((await board()).rows.get(old)).toMatchObject({ author: null, mine: false });
+  });
+
+  it("says git's own words when its config cannot be read, and the board all the same", async () => {
+    const mine = await reviewOf("feature/mine");
+    globalConfig("broken.gitconfig", "[user\n");
+    const { rows, identitiesProblem } = await board();
+    expect(identitiesProblem).toContain("bad config line 1");
+    expect(rows.get(mine)).toMatchObject({ author: ME, mine: false });
+  });
+});

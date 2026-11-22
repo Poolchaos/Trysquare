@@ -54,6 +54,8 @@ export interface CreateReviewInput {
   intoBranch: string;
   intoCommit: string;
   mergeBaseCommit: string;
+  /** Who authored `fromCommit`, as git has it (D-297). */
+  fromAuthor?: { name: string; email: string };
   model: string;
   profileId: ReviewProfile;
   effort?: ReviewEffort;
@@ -80,6 +82,8 @@ export function createReview(db: Db, input: CreateReviewInput): Review {
     intoBranch: input.intoBranch,
     intoCommit: input.intoCommit,
     mergeBaseCommit: input.mergeBaseCommit,
+    fromAuthorName: input.fromAuthor?.name ?? null,
+    fromAuthorEmail: input.fromAuthor?.email ?? null,
     linkedProjectId: input.linked?.projectId ?? null,
     linkedFromBranch: input.linked?.fromBranch ?? null,
     linkedFromCommit: input.linked?.fromCommit ?? null,

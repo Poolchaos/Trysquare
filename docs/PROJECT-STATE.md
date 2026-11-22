@@ -46,10 +46,16 @@ from 2026-11-03.
   A new review's branch picker has the Mine toggle a project's branch
   list has (WP-L's second slice of three, D-296): one component for both
   (`src/components/mine-branches.tsx`), so a Mine list with nothing in it
-  says whose commits it looked for in the same words on each. Still to
-  build under WP-L: the scoreboard's author column.
-  `./verify.sh --e2e` exits 0 with 1692 unit tests passing, 8 skipped,
-  and 171 browser tests.
+  says whose commits it looked for in the same words on each.
+  And the scoreboard says whose branch each recent review was of (WP-L's
+  third slice, D-297), which finishes WP-L: a review keeps the name and
+  email its branch's newest commit was authored with (migration 0020),
+  and Recent reviews has an Author column, "You" by the emails a branch
+  list goes by, else that name, a dash for a review made before the
+  author was kept. A git config that cannot be read is said under the
+  table in git's words, the board shown all the same.
+  `./verify.sh --e2e` exits 0 with 1697 unit tests passing, 8 skipped,
+  and 172 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
   those awaiting a decision, each row saying which it is and what to press
@@ -463,9 +469,10 @@ from 2026-11-03.
   D-79, D-81) reshaped the surface: a top bar in place of the left rail, a
   widget dashboard at `/`, a full-screen scan theater, a queue-first review
   screen and a rendered report. `plans/UX-UPLIFT-PLAN.md` and
-  `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; one row is
-  open (WP-L my branches, its first slice of three built on 2026-11-18,
-  D-243, its second on 2026-11-22, D-296), outside the MVP (its non-goals): on 2026-11-17
+  `plans/DASHBOARD-SHELL-PLAN.md` carry the row-by-row state; no row is
+  open since 2026-11-22 (WP-L my branches, built in three slices: D-243
+  on 2026-11-18, D-296 and D-297 on 2026-11-22), all outside the MVP
+  (its non-goals): on 2026-11-17
   WP-G was closed as built by later work (D-238) and WP-K's queue layout
   for a phone was built. The FG-4 design acceptance is now part of
   G3, the public release after the MVP (D-86); its argument was
@@ -588,7 +595,7 @@ are accepted; anything else is refused by name.
   addresses a result goes to); and
   paths, ids and matching an error by the
   name its class sets.
-- `src/server/db/` - schema (16 tables), client, migrations 0000 to 0019, and
+- `src/server/db/` - schema (16 tables), client, migrations 0000 to 0020, and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings, stage executions, the scoreboard, a project's checks and what
   they found.
@@ -641,7 +648,7 @@ are accepted; anything else is refused by name.
 - `tests/` - unit and integration tests. `e2e/` - the browser journey, the
   failure paths, the theme and screenshot pass with the axe accessibility
   pass, and the shutdown pass.
-  `drizzle/` - twenty committed migrations.
+  `drizzle/` - twenty-one committed migrations.
 - `templates/` - the template shelf: `shelf.json`, and a protocol document
   per template (`general.md`, `typescript.md`, `react.md`,
   `http-api.md`).

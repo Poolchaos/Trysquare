@@ -16,6 +16,7 @@ import {
   ChangeSetMismatchError,
   checkChangeSet,
   cloneBare,
+  commitAuthor,
   detectDefaultBranch,
   diffText,
   divergence,
@@ -113,6 +114,14 @@ describe("cloning", () => {
       "test@example.invalid",
       "test@example.invalid",
     ]);
+  });
+
+  it("says who authored a commit, by the name and the email it was made with", async () => {
+    const tip = await resolveBranch(cloneDir, "feature/totals");
+    expect(await commitAuthor(cloneDir, tip)).toEqual({
+      name: "Test",
+      email: "test@example.invalid",
+    });
   });
 
   it("detects the default branch from the repository itself", async () => {

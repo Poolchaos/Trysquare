@@ -24,7 +24,9 @@ import {
   APP_REPO,
   COUNTER_FILE,
   E2E_ROOT,
+  GIT_CONFIG,
   LIMIT_TRIGGER,
+  MY_EMAIL,
   PROTOCOL_PATH,
   STALL_TRIGGER,
 } from "./setup";
@@ -2105,6 +2107,10 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   // column had, and the id broke at its hyphens over three lines.
   const card = page.getByRole("table").locator("..");
   expect(await card.evaluate((node) => node.scrollWidth - node.clientWidth)).toBe(0);
+  // The pair is whole there too. Its column is the one that gives, and with
+  // the author's column beside it "into main" was cut to "int" (D-297).
+  const pair = inRecent.getByText("feature/rename-prefs into main", { exact: true }).first();
+  expect(await pair.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(0);
   const model = inRecent.getByText(resumed.model, { exact: true });
   expect(await model.evaluate((node) => node.getClientRects().length)).toBe(1);
 });
@@ -4730,6 +4736,55 @@ test("a ruleset renumbered or deleted in another tab is on the list again on the
       const removed = await page.request.delete(`/api/rulesets/${id}`);
       expect.soft(removed.status(), "the ruleset removed").toBe(200);
     }
+  }
+});
+
+test("the scoreboard says whose branch each recent review was of", async ({ page }) => {
+  // WP-L, the third slice (D-297). Every review this suite makes is of a
+  // branch the fixture's author committed last, and the suite's server
+  // commits as that author (playwright.config.ts): each is the person's
+  // until Settings keeps somebody else's email.
+  const table = page
+    .getByRole("table")
+    .filter({ has: page.getByRole("columnheader", { name: "Author" }) });
+  const card = table.locator("..");
+  const authors = table.locator("tbody tr td:nth-child(2)");
+  const keep = (emails: string[]) =>
+    page.request.put("/api/settings", { data: { identities: emails } });
+  try {
+    await page.goto("/");
+    await expect(authors.first()).toHaveText("You", { timeout: 30_000 });
+    await expect(authors.first().locator("span")).toHaveAttribute("title", MY_EMAIL);
+    expect(new Set(await authors.allTextContents())).toEqual(new Set(["You"]));
+    // A sixth column, and the table still inside its card at desk width.
+    expect(await card.evaluate((box) => box.scrollWidth - box.clientWidth)).toBeLessThanOrEqual(0);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, card, "scoreboard-authors-mine");
+
+    // Somebody else's email kept: the same reviews are the fixture author's,
+    // said by the name the commits were made with.
+    expect((await keep(["someone-else@example.invalid"])).status()).toBe(200);
+    await page.reload();
+    await expect(authors.first()).toHaveText("Fixture", { timeout: 30_000 });
+    await expect(authors.first().locator("span")).toHaveAttribute("title", MY_EMAIL);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, card, "scoreboard-authors-theirs");
+
+    // Nothing kept and a git config that cannot be read: said under the
+    // table in git's words, the board and the names there all the same.
+    expect((await keep([])).status()).toBe(200);
+    writeFileSync(GIT_CONFIG, "[user\n");
+    await page.reload();
+    await expect(
+      card.getByText(
+        /^Which of these branches are yours is not known, because git's config could not be read: .*bad config line 1/,
+      ),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(authors.first()).toHaveText("Fixture");
+    await shootAll(page, card, "scoreboard-authors-unknown");
+  } finally {
+    writeFileSync(GIT_CONFIG, `[user]\n\tname = Fixture\n\temail = ${MY_EMAIL}\n`);
+    expect.soft((await keep([])).status(), "the kept emails emptied").toBe(200);
   }
 });
 

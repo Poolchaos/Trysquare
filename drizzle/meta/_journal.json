@@ -141,6 +141,13 @@
       "when": 1795234348516,
       "tag": "0019_rare_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1795335004938,
+      "tag": "0020_dark_electro",
+      "breakpoints": true
     }
   ]
 }

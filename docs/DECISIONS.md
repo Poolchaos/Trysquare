@@ -7426,3 +7426,51 @@ verified evidence, in writing, here.
   Not narrowed: "Compare against", which is seldom the person's own, and
   a dependency's branches. Still to build under WP-L: the scoreboard's
   author column.
+- 2026-11-22 D-297 (WP-L, third slice, which finishes it) The scoreboard
+  says whose branch each recent review was of. D-69 asked for an author
+  column on the scoreboard by the same identity as the Mine filters.
+  Decided by the session. A review keeps, from when it is made, the name
+  and the email its from-branch's pinned commit was authored with
+  (`fromAuthorName`, `fromAuthorEmail`, migration 0020; read by
+  `commitAuthor`, `server/gitops/repo.ts`, with no `.mailmap`, as D-243
+  reads a branch's). The scoreboard's answer gives each recent review
+  its author and `mine`, by the emails in effect that a branch list goes
+  by, asked only when a row holds an author. Recent reviews has an
+  Author column after the branch pair: "You" where it is the person's,
+  else the name the commit was made with (its email where it has no
+  name), the email in the cell's title, and a dash for a review made
+  before the author was kept. A git config that cannot be read is said
+  under the table in git's words, with the board and the names shown
+  all the same: the home screen needs git for nothing else, so it is
+  not refused for it. Rejected: reading the author from git each time
+  the scoreboard is read, which covers reviews made before today but
+  spawns git on the home screen and loses the author with the clone or
+  once the commit is pruned; and filling the old reviews in, which
+  needs each one's clone and is left (a review made before today shows
+  a dash). The author, not the committer: a colleague's commit a person
+  rebased is still the colleague's branch (D-243). Proven: the server's
+  cases against real repositories (mine, a colleague's commit I
+  committed, the emails kept in Settings, a review with no author, a
+  broken git config) pass, and two fail with the committer read in the
+  author's place; the browser test failed on the old screen and reads
+  "You", then the author's name once Settings keeps another email, then
+  git's words under the table, with the table inside its card at desk
+  width. Not driven in the browser: a review of the fixture's
+  colleague's branch, whose change against every other branch is empty,
+  so no review of it can be made; the unit cases hold a colleague's.
+  The first full gate refused the column: with a table of reviews it
+  pushed Recent reviews 35 px past its card at desk width, which the
+  usage-limit test already forbade. The branch pair is now the column
+  that gives: it takes the room the others leave and truncates, whole in
+  its title, down to a floor (18rem, 12rem beside the rule yield) under
+  which the card scrolls, where it was a fixed 18rem; and the columns
+  stand 20 px apart, where 32, which is what keeps the fixture's pair
+  whole beside "awaiting your decision". The usage-limit test holds both
+  now, the second seen failing by 33 px before the spacing changed.
+  Graded by the builder, `review/2026-11-22-e2e/`:
+  `scoreboard-authors-mine`, `-theirs` and `-unknown`, light A and dark
+  A each; the three phone shots B, the table scrolling sideways inside
+  its card there as it did before, the Author column now the one at
+  its edge. All nine were looked at before the layout changed, and one
+  of each kind after it (mine light, unknown dark, theirs phone). The three new strings (Author, You, the line under the
+  table) were written without the antislop copywriting file read.

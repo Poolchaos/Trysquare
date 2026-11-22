@@ -161,6 +161,13 @@ export const reviews = sqliteTable(
     intoBranch: text("into_branch").notNull(),
     intoCommit: text("into_commit").notNull(),
     mergeBaseCommit: text("merge_base_commit").notNull(),
+    /**
+     * Who authored `fromCommit`, the commit the branch ended on when the
+     * review was made: whose branch was reviewed (D-69, D-297). Null on a
+     * review made before these were kept.
+     */
+    fromAuthorName: text("from_author_name"),
+    fromAuthorEmail: text("from_author_email"),
 
     /** Set only for a linked review spanning a dependency repository. */
     linkedProjectId: text("linked_project_id").references(() => projects.id, {

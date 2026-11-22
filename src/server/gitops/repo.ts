@@ -189,6 +189,19 @@ export async function resolveBranch(repoDir: string, branch: string): Promise<st
   return resolveCommit(repoDir, branchRef(branch));
 }
 
+/**
+ * Who authored a commit: the name and the email it was made with, as they
+ * are in the commit, with no `.mailmap` (D-243, D-297).
+ */
+export async function commitAuthor(
+  repoDir: string,
+  commit: string,
+): Promise<{ name: string; email: string }> {
+  const output = await git(["log", "-1", "--format=%an%x00%ae", commit], { cwd: repoDir });
+  const [name = "", email = ""] = output.replace(/\r?\n$/, "").split("\0");
+  return { name, email };
+}
+
 export async function resolveCommit(repoDir: string, ref: string): Promise<string> {
   const output = await git(["rev-parse", "--verify", `${ref}^{commit}`], { cwd: repoDir });
   return output.trim();

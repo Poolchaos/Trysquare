@@ -26,7 +26,13 @@ import { getModel, secondVerifierNotReady } from "@/server/db/repositories/model
 import { effortRunsOn } from "@/lib/models/effort-support";
 import { reviewModelSchema } from "@/lib/models/model-id";
 import { downgradeNote, resolveProfile } from "@/lib/review/profiles";
-import { fetchAll, mergeBase, readChangeSet, resolveBranch } from "@/server/gitops/repo";
+import {
+  commitAuthor,
+  fetchAll,
+  mergeBase,
+  readChangeSet,
+  resolveBranch,
+} from "@/server/gitops/repo";
 import { created, failed, handler, ok, readJson } from "@/server/api/respond";
 import { detectMerged } from "@/server/review/merged";
 import { findingTallies } from "@/server/db/repositories/findings";
@@ -158,6 +164,9 @@ export function POST(request: Request): Promise<Response> {
     // the one reported, as when they ran in turn.
     for (const outcome of fetched) if (outcome.status === "rejected") throw outcome.reason;
     const pins = await pin(project.clonePath, input.fromBranch, input.intoBranch);
+    // Whose branch it is, kept with the pin: the scoreboard says it, and a
+    // commit's author never changes (D-297).
+    const fromAuthor = await commitAuthor(project.clonePath, pins.fromCommit);
     const linked =
       dependency && input.linked
         ? {
@@ -258,6 +267,7 @@ export function POST(request: Request): Promise<Response> {
       fromBranch: input.fromBranch,
       intoBranch: input.intoBranch,
       ...pins,
+      fromAuthor,
       model: input.model,
       profileId: resolution.profile,
       engineMode: input.engineMode ?? "headless",

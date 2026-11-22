@@ -46,6 +46,10 @@ interface Row {
   durationMs: number | null;
   ranBefore: boolean;
   createdAt: string;
+  /** Who authored the reviewed branch's newest commit; null where none was kept (D-297). */
+  author: { name: string; email: string } | null;
+  /** That author is the person, by the emails a branch list goes by. */
+  mine: boolean;
 }
 
 interface AwaitingRow {
@@ -79,6 +83,8 @@ interface Scoreboard {
   recent: Row[];
   ruleYield: { ruleCode: string; confirmed: number; total: number }[];
   projects: ProjectRow[];
+  /** Git's words when the emails that count as the person's could not be read. */
+  identitiesProblem: string | null;
 }
 
 interface LiveRun {
@@ -483,13 +489,14 @@ export default function HomePage() {
                 <table className="w-full text-dense">
                   <thead className="font-[family-name:var(--font-mono)] text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
                     <tr>
-                      <th className="px-4 py-2 text-left font-medium">Branch pair</th>
-                      <th className="px-4 py-2 text-right font-medium">Findings</th>
-                      <th className="px-4 py-2 text-right font-medium whitespace-nowrap">
+                      <th className="py-2 pr-2.5 pl-4 text-left font-medium">Branch pair</th>
+                      <th className="px-2.5 py-2 text-left font-medium">Author</th>
+                      <th className="px-2.5 py-2 text-right font-medium">Findings</th>
+                      <th className="px-2.5 py-2 text-right font-medium whitespace-nowrap">
                         Cost equivalent
                       </th>
-                      <th className="px-4 py-2 text-right font-medium">Took</th>
-                      <th className="px-4 py-2 text-left font-medium">Status</th>
+                      <th className="px-2.5 py-2 text-right font-medium">Took</th>
+                      <th className="py-2 pr-4 pl-2.5 text-left font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -502,7 +509,14 @@ export default function HomePage() {
                             : ""
                         }`}
                       >
-                        <td className="px-4 py-2">
+                        {/* The column that gives: it takes the room the others
+                            leave and truncates, never widening the table,
+                            down to a floor under which the card scrolls. At
+                            a fixed 18rem the author's column pushed the
+                            table 35px past its card at desk width (D-297).
+                            The floor is lower beside the rule yield, where
+                            the card is narrowest for its screen. */}
+                        <td className="w-full max-w-0 min-w-[18rem] py-2 pr-2.5 pl-4 xl:min-w-[12rem]">
                           {/* The model rides under the pair, with the project:
                               as a column of its own it was the part that gave,
                               its id broken at the hyphens. The pair truncates,
@@ -510,7 +524,7 @@ export default function HomePage() {
                           <Link
                             href={`/reviews/${row.id}`}
                             title={`${row.fromBranch} into ${row.intoBranch}`}
-                            className="block max-w-[18rem] min-w-0"
+                            className="block min-w-0"
                           >
                             <Mono className="block truncate">
                               {row.fromBranch} into {row.intoBranch}
@@ -521,16 +535,34 @@ export default function HomePage() {
                             </span>
                           </Link>
                         </td>
-                        <td className="px-4 py-2 text-right tabular-nums">
+                        {/* Whose branch it was (WP-L, D-297): "You" by the
+                            emails a branch list goes by, else the name the
+                            commit was made with, the email in its title. A
+                            review made before the author was kept has none. */}
+                        <td className="px-2.5 py-2">
+                          {row.author === null ? (
+                            <span className="text-[var(--color-ink-muted)]">-</span>
+                          ) : (
+                            <span
+                              title={row.author.email}
+                              className={`block max-w-[9rem] truncate ${
+                                row.mine ? "font-medium" : "text-[var(--color-ink-muted)]"
+                              }`}
+                            >
+                              {row.mine ? "You" : row.author.name || row.author.email}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-2.5 py-2 text-right tabular-nums">
                           {row.total > 0 ? `${row.confirmed} of ${row.total}` : "-"}
                         </td>
-                        <td className="px-4 py-2 text-right tabular-nums">
+                        <td className="px-2.5 py-2 text-right tabular-nums">
                           {row.costUsd > 0 ? `$${row.costUsd.toFixed(2)}` : "-"}
                         </td>
                         {/* "last run" and the time each whole: one word to a
                             line on a phone read as noise, and one line at
                             desk width pushed the table past its card. */}
-                        <td className="px-4 py-2 text-right tabular-nums text-[var(--color-ink-muted)]">
+                        <td className="px-2.5 py-2 text-right tabular-nums text-[var(--color-ink-muted)]">
                           {duration(row.durationMs, row.ranBefore).length === 0
                             ? "-"
                             : duration(row.durationMs, row.ranBefore).map((part, index) => (
@@ -542,13 +574,19 @@ export default function HomePage() {
                         </td>
                         {/* One line: "awaiting your decision" broke over three
                             on a phone, where the table scrolls sideways. */}
-                        <td className="px-4 py-2 whitespace-nowrap">
+                        <td className="py-2 pr-4 pl-2.5 whitespace-nowrap">
                           <Badge tone={statusTone(row.status)}>{statusLabel(row.status)}</Badge>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                {board.identitiesProblem ? (
+                  <p className="border-t border-[var(--color-border)] px-4 py-2 text-aside text-[var(--color-critical)]">
+                    Which of these branches are yours is not known, because git&apos;s config could
+                    not be read: {board.identitiesProblem}
+                  </p>
+                ) : null}
               </Card>
 
               <Card className="self-start p-4">

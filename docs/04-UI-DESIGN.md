@@ -35,11 +35,11 @@ chosen per review in the advanced fold.
   directive bodies are shown, and duplicate-to-tier and deleting a ruleset
   are built.
 - Settings: opening the data directory in a file manager (it is displayed).
-- Of the 2026-08-17 UX audit, one item is still partly owed, my branches
+- Of the 2026-08-17 UX audit, nothing is owed since 2026-11-22. My branches
   (WP-L): the emails that count as the person's are on Settings and a
-  project's branch list has its Mine filter (2026-11-18, D-243), and so
-  has the new-review picker (2026-11-22, D-296); the scoreboard's author
-  column is not built. The queue's phone layout
+  project's branch list has its Mine filter (2026-11-18, D-243), so has
+  the new-review picker (2026-11-22, D-296), and the scoreboard has its
+  author column (the same day, D-297). The queue's phone layout
   with thumb-height actions (WP-K) was built on 2026-11-17. The completion
   moment and queue momentum (WP-G) came with later work, bar a comparison
   with this machine's median that is left out on purpose (D-238). The rest of that audit is built, including the
@@ -134,6 +134,9 @@ precision is a claim about findings somebody judged.
   it is absent, not empty: a panel labelled live with nothing in it is the
   dashboard claiming to have something to watch.
 - **Recent reviews:** branch pair with its project and model under it,
+  the author of the branch's newest commit ("You" by the emails that count
+  as the person's, else the name the commit was made with, a dash for a
+  review made before the author was kept, D-297),
   findings count, cost equivalent, duration and status chip, with any review
   awaiting a decision highlighted. The pair truncates, whole in its title; the
   model and the status are never broken.

@@ -160,6 +160,7 @@ Ruleset-scoped non-rule content composed into every review prompt.
 | fromBranch, fromCommit              | text         | commit pinned when the review is created   |
 | intoBranch, intoCommit              | text         |                                            |
 | mergeBaseCommit                     | text         | diff base = merge-base(from, into)         |
+| fromAuthorName, fromAuthorEmail     | text null    | who authored fromCommit, as git has it; null on a review made before migration 0020 (D-297) |
 | linkedProjectId                     | text FK null | dependency project included in this review |
 | linkedFromBranch, linkedFromCommit  | text null    | pinned like the primary pair               |
 | linkedIntoBranch, linkedIntoCommit  | text null    |                                            |
