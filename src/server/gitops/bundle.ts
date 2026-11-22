@@ -83,9 +83,10 @@ function toInventoryFile(file: ParsedFile, spec: RepoSpec): InventoryFile {
  * Writes the bundle for one or two repositories.
  *
  * `packageName` is the import specifier of the linked dependency, recorded in
- * links.json so review stages resolve an import of that package to the
+ * links.json for review stages to resolve an import of that package to the
  * dependency's worktree rather than to whatever is in node_modules, which may
- * be a published version rather than the branch under review.
+ * be a published version rather than the branch under review. Written and
+ * not yet read: no stage is given the mapping (03, Not built yet).
  */
 export async function buildBundle(options: {
   bundleDir: string;

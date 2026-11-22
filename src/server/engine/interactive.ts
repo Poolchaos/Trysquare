@@ -156,8 +156,9 @@ export function renderExchangeDocument(input: {
  * prompt from a file. The prompt itself stays out of argv, where Windows caps
  * a command line at 32,767 characters; the session is told where to read it.
  * `--add-dir` lets it read the question's own folder, which is outside the
- * worktree, and no other: the review's other answers are in folders the
- * command does not name. `--` ends the options, since `--add-dir` and
+ * worktree, and for a grading stage the screenshots' folder. The review's
+ * other answers are in folders the command does not name; a read there is
+ * the person's CLI's to refuse, not this code's. `--` ends the options, since `--add-dir` and
  * `--tools` take every value that follows them.
  */
 export function launchArgsFor(input: {

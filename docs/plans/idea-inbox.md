@@ -359,6 +359,26 @@ pulled deliberately.
   the review's page, its scan view and its report say the first two, and
   the new review form the third. The reviews list and the dashboard's
   rows give a time with no such word.
+- 2026-11-22: a linked package's imports are not resolved through
+  `links.json`: the file is written to the bundle and nothing reads it,
+  no stage being given the mapping or the package's name, so the Package
+  name a person enters for a link feeds nothing in a review (the
+  twenty-fourth grade, AL7; 03, Not built yet). Giving it to a stage
+  changes a prompt, so it wants a measured run.
+- 2026-11-22: S2's uncertainties reach nothing: the pipeline keeps only
+  the files its answer says it read, and S3 is neither told of them nor
+  has a place to answer them (AL8; 03, Not built yet).
+- 2026-11-22: a timed-out interactive stage fails the review and removes
+  the checkout the person's session may still be reading
+  (`src/server/review/service.ts`, `recordFailure`), and the timeout's
+  words say only to save the answer and resume. Derived by the
+  twenty-fourth grader by reading, not reproduced.
+- 2026-11-22: an interactive answer the pipeline refuses is moved aside
+  with a rename that is not guarded (D-307): on Windows a file an editor
+  holds open can refuse it, the row being struck already and the file
+  left to be read back. Not reachable on Linux or macOS as far as reading
+  shows (the twenty-third grade, on AJ1); Windows is not looked after
+  (D-232).
 
 ## Retired
 

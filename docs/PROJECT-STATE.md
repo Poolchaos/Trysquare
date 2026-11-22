@@ -132,9 +132,16 @@ from 2026-11-03.
   hunt's answer and the second verifier's the first's proofs. Seven
   immaterial lines came with it (AK1 to AK8 in the audit file). Corrected
   the same day (D-310), the first at the code: each question has a folder
-  of its own and its command adds that folder alone. A twenty-fourth
-  grade is owed.
-  `./verify.sh --e2e` exits 0 with 1724 unit tests passing, 8 skipped,
+  of its own and its command adds that folder, with the screenshots' for
+  a stage that grades them, and no other. The twenty-fourth grade, at
+  6c80b01 the same day, was C on two lines older than the day's changes,
+  both in 03: a linked review's stages were said to resolve a dependency's
+  imports through `links.json`, which is written and read by nothing, and
+  the hunt was said to resolve the comprehension stage's uncertainties,
+  which nothing hands it. Six immaterial lines came with them (AL1 to AL8
+  in the audit file). Corrected the same day (D-312): 03 and 02 say both
+  are not built. A twenty-fifth grade is owed.
+  `./verify.sh --e2e` exits 0 with 1725 unit tests passing, 8 skipped,
   and 176 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside

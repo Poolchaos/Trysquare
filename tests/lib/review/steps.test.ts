@@ -223,6 +223,13 @@ describe("what each step came to", () => {
     secondVerifier: true,
   };
 
+  it("says one rule as one rule", () => {
+    // "1 rules frozen for this review" (the twenty-fourth grade's note).
+    expect(stepResult(0, { ...facts, rules: 1 })).toBe(
+      "1 rule frozen for this review, and the sweeps marked every added line a rule's pattern matches.",
+    );
+  });
+
   it("says each step's result, refuted and discarded told apart", () => {
     expect(STEPS.map((_, index) => stepResult(index, facts))).toEqual([
       "14 rules frozen for this review, and the sweeps marked every added line a rule's pattern matches.",

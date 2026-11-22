@@ -19,6 +19,16 @@ than being edited away.
 - Bulk dismissal by rule (section 2). A finding is dismissed one at a time,
   by id. Unowned: U7 built the rule text and the diff hunk in confirmation
   and did not take this on.
+- Resolving a linked package's imports through `links.json` (sections 0
+  and 1). The file is written to the bundle and nothing reads it: no stage
+  is given the mapping or the package's name, and no stage can read the
+  bundle. A stage is given the changed symbols and their paths and finds
+  the consumers by its own search. Unowned (the twenty-fourth grade, AL7).
+- S3 resolving S2's uncertainties (section 1). S2's answer carries them
+  and the pipeline keeps only the files it says it read: no instruction
+  hands them to S3 and S3's answer has no place for them. In an
+  interactive review S3's session does not see S2's answer at all. Unowned
+  (AL8).
 
 Trued up 2026-10-23: three items listed here since 2026-08-03 are built and
 gone from this list. S4 reads each deleted file's pre-change copy from
@@ -62,8 +72,9 @@ S1 work its risk-tagged files first (U12).
    - `base/<slug>/<path>`: pre-change copies of every modified and deleted
      file (from each repo's merge base)
    - `links.json`: package-to-worktree mapping from project_links, e.g.
-     `{"@acme/shared-core": "shared-core/"}`, so stages resolve imports of
-     the package to the linked worktree source instead of node_modules
+     `{"@acme/shared-core": "shared-core/"}`, written for stages to resolve
+     imports of the package to the linked worktree source instead of
+     node_modules, and read by none yet (Not built yet, above)
    - `stats.json`: per-repo and combined counts
 4. Run the **mechanical sweeps**: for every enabled rule with sweepPatterns,
    run the regexes over changed files' added lines (and whole changed files
@@ -120,8 +131,10 @@ first two lines alone: an answer in the wrong shape fails the stage with no
 repair round, its usage and session are recorded as zero and empty since
 the app cannot see them, no transcript is written, and each stage starts a
 session of its own, so nothing carries from one to the next: the command
-lets that session read the checkout and the stage's own folder, where its
-question is and no other stage's answer (D-310).
+adds to what that session may read, beside the checkout, the stage's own
+folder, where its question is and no other stage's answer, and for a stage
+that grades screens their folder (D-310). A read anywhere else is the
+person's CLI's to refuse, which the app does not see.
 
 - cwd = worktree; tools = Read, Grep, Glob only (no Edit, no Bash, no web).
 - System prompt = composed ruleset snapshot + stage instruction + the
@@ -158,7 +171,7 @@ are FORBIDDEN in this stage's output (protocol: do not form findings yet).
 Output per file: what the change does and why (own words), chain files read
 (each as the model names it, no form asked for; persisted to
 ledger_files.chainFilesRead), open uncertainties. A file whose behaviour cannot be explained gets an explicit
-uncertainty entry, which S3 must resolve or convert to an open question.
+uncertainty entry. S3 resolving it or converting it to an open question is the target and is not built: nothing hands the entry on (Not built yet, above).
 
 ### S3 Adversarial pass (protocol step 4)
 
@@ -177,7 +190,7 @@ is struck from the checkpoints, so a resume asks the stage again.
 changed exported type, interface, signature, enum/union, or default value
 in the dependency repo is a cross-repo contract change. For each one, the
 stage must enumerate its consumers in the primary repo (Grep the primary
-worktree, resolving the package import via `links.json`), verify each
+worktree, by its own search: the `links.json` mapping is not given to it, Not built yet above), verify each
 consumer against the new contract, and disposition the contract change like
 a hunk: findings or an explicit all-consumers-verified clear naming the
 consumer files checked. A finding at a consumer the branch never touched is
@@ -208,8 +221,10 @@ elsewhere into a prompt; a run note says when it is not a file there, and
 when it was cut. Eight screenshots a request, each listed by its name, its
 path and the sha256 of its bytes, so a resume after the e2e saved another
 image asks again rather than replaying a grade of the old. The stage may
-read the screenshots' folder and nothing else outside its checkout:
-`--add-dir` names that folder, the tools stay Read, Grep and Glob (D-198).
+read the screenshots' folder and nothing else outside its checkout (in an
+interactive review, its question's own folder too, as every stage's command
+adds): `--add-dir` names that folder, the tools stay Read, Grep and Glob
+(D-198).
 Each grade says whether the grader opened the image, and the engine sees
 every Read call the session makes. App code then checks that every
 screenshot asked about was graded exactly once and had a Read call naming

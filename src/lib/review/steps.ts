@@ -243,7 +243,7 @@ export function stepResult(
     case 0:
       return facts.rules === null
         ? "The sweeps marked every added line a rule's pattern matches."
-        : `${facts.rules} rules frozen for this review, and the sweeps marked every added line a rule's pattern matches.`;
+        : `${counted(facts.rules, "rule", "rules")} frozen for this review, and the sweeps marked every added line a rule's pattern matches.`;
     case 1:
       return facts.files === 1
         ? "1 changed file given to the model to class by risk and to read with what it calls into."

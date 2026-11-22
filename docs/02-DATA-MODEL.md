@@ -45,7 +45,7 @@ reviewed together with it (e.g. an app consumes a shared-core package).
 | id                  | text PK   |                                                                                            |
 | projectId           | text FK   | the consumer (e.g. pos)                                                                    |
 | dependencyProjectId | text FK   | the dependency (e.g. shared-core)                                                             |
-| packageName         | text      | import specifier, e.g. @acme/shared-core, used to map imports to the dependency worktree |
+| packageName         | text      | import specifier, e.g. @acme/shared-core, written to the bundle's `links.json` to map imports to the dependency worktree; no stage reads it yet (03, Not built yet) |
 | note                | text null |                                                                                            |
 | createdAt           | text      |                                                                                            |
 
@@ -325,7 +325,7 @@ owed (`04-UI-DESIGN.md`, Not built yet).
 
 ## Deletion rules
 
-Deleting a review deletes its worktree, bundle, logs, and rows (cascade).
+Deleting a review deletes its run folder (worktrees, bundle, logs and what its project's checks saved) and its rows (cascade).
 Deleting a project requires zero reviews (UI offers bulk-delete first) and
 then removes the bare clone. Both are two-step confirmed in the UI, never
 cascading silently from a single click.

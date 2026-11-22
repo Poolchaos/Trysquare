@@ -95,8 +95,10 @@ regardless of how confident anything was about it.
 prints each stage's command for you to run and reads the answer you save. A
 fresh session, the model and the read-only tool list are what that command
 asks for, and the app sees none of them. Beside the checkout, the command
-lets the session read one folder, the stage's own, which holds its question
-and no other stage's answer. The checks that are the program's
+adds one folder to what the session may read, the stage's own, which holds
+its question and no other stage's answer (a stage that grades screens is
+given their folder too). A read anywhere else is the CLI's to refuse and
+yours to allow. The checks that are the program's
 own, of coverage and of every quoted line, run on your answers as they do on
 a headless review's.
 
@@ -117,8 +119,9 @@ to the remote's, and a review registers its worktree there.
 precision and proofs discarded, above what is waiting on a person, the recent
 reviews and each rule's yield.](docs/images/dashboard.png)
 
-The home is a board of widgets ordered by what it costs you to miss: anything
-waiting on a person sits above anything that merely happened. Every number on
+The home is a board of widgets ordered by what it costs you to miss: under
+four totals, anything waiting on a person sits above anything that merely
+happened. Every number on
 it is counted from runs on this machine, and a rate with nothing judged yet
 renders as a dash rather than as a confident zero.
 

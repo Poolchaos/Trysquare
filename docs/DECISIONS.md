@@ -7921,3 +7921,36 @@ verified evidence, in writing, here.
   dashboard's rows give an interactive review's time with no such word.
   Decided by the session, while the twenty-fourth grade was being read.
   Proven by the report's test and the browser test of the two lines.
+- 2026-11-22 D-312 The twenty-fourth grade of the records. A fresh grader
+  read 6c80b01 and graded Honest C (AL1 to AL8, in
+  `plans/AUDIT-2026-11-17.md`): two material lines, both older than the
+  day's changes and both in 03, and six immaterial, with AK1's fix read
+  as sound. Each was checked at the code before it was changed, and each
+  held. Decided by the session.
+  AL7: 03 and 02 said a linked review's stages resolve the dependency
+  package's imports through `links.json`. The file is written to the
+  bundle and read by nothing, no prompt names the package, and no stage
+  can read the bundle: a stage is given the changed symbols and their
+  paths and searches for itself. AL8: 03 said S3 must resolve S2's
+  uncertainties or turn them into open questions, and nothing hands them
+  to S3. Both are now under 03's "Not built yet" and said as unbuilt
+  where they were claimed, 02 and the bundle's own comment with them, and
+  the Package name field on a project's page says a review does not use
+  it yet. Not built here: either changes a prompt, which wants a measured
+  run, so each is in the inbox.
+  The words. AL1, AL2: README, 01, 03, PROJECT-STATE and the completion
+  plan say a stage's command adds its question's folder, with the
+  screenshots' for a stage that grades them, and that a read anywhere
+  else is the person's CLI's to refuse; D-310's "can read no other
+  stage's answer" said more than the code does, which only adds folders.
+  AL3: 04 on a row with no age. AL4: the index's row for the audit. AL5:
+  RUNBOOK and 02 on what Delete removes. AL6: the README on the home's
+  order. Its note: one rule is "1 rule frozen". From its list of the
+  unsaid: the Your turn card says cancelling ends the wait and leaves the
+  terminal's session, and 03 says S3's session does not see S2's answer
+  in an interactive review. In the inbox: the checkout removed under a
+  session when an interactive stage times out, which the grader derived
+  by reading, and AJ1's residual, the unguarded rename. Its other note:
+  the index's changelog line for `plans/RULESETS-TOGETHER-PLAN.md`.
+  Proven: the steps' test for one rule. The rest are words, read against
+  the code named.

@@ -515,7 +515,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                       ))}
                     </Select>
                   </Field>
-                  <Field label="Package name" hint="As it appears in package.json.">
+                  <Field
+                    label="Package name"
+                    hint="As it appears in package.json. Kept with the link: a review does not use it yet."
+                  >
                     <Input
                       value={packageName}
                       onChange={(event) => setPackageName(event.target.value)}

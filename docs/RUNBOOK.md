@@ -406,6 +406,6 @@ skipped unless `TRYSQUARE_REAL_CLI=1` is set.
 | `$TRYSQUARE_DATA/exports/` | Exported reports. Survive deleting the review. |
 | `review/<date>-*/` | Gate evidence on this machine only. Gitignored. |
 
-Deleting a review removes its worktree, bundle and logs, and keeps its
-exports. Deleting a project is refused while any review still refers to it,
+Deleting a review removes its run folder (its worktrees, bundle and logs,
+and what its project's checks saved), and keeps its exports. Deleting a project is refused while any review still refers to it,
 and tells you how many.

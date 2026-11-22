@@ -2458,7 +2458,8 @@ function YourTurn({ text }: { text: string }) {
       <p className="mt-1 mb-3 text-xs text-[var(--color-ink-muted)]">
         This stage waits for you to run its command in your own terminal and save the answer where
         it says. The review goes on when the answer is there, and the stage fails if none comes
-        within the timeout.
+        within the timeout. Cancelling the review ends the wait; the session in your terminal is
+        yours to close.
       </p>
       {/* Focusable because it scrolls: a command taller than the box could
           not be read to its end by keyboard. */}
