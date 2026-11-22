@@ -94,7 +94,7 @@ export function interactiveEngineWords(verifierModel: string | null): string {
     "Those commands name the model above" +
     (verifierModel === null
       ? ""
-      : `, but for the second verifier's and the second grader's, which name ${verifierModel}`) +
+      : `, but for any the second verifier or the second grader was given, which name ${verifierModel}`) +
     ". Where this report says the model, a verifier or a grader, it means the session that " +
     "answered that stage's command."
   );

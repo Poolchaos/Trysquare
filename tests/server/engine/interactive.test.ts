@@ -246,7 +246,7 @@ describe("the answer it accepts", () => {
     // A reader that treated an empty file as an answer would fail the stage
     // over its own timing instead of the writer's content.
     const answerPath = filesFor(ask).answer;
-    mkdirSync(join(dir, "bundle"), { recursive: true });
+    mkdirSync(filesFor(ask).dir, { recursive: true });
     setTimeout(() => writeFileSync(answerPath, "", "utf8"), 40);
     setTimeout(() => writeFileSync(answerPath, JSON.stringify({ files: [] }), "utf8"), 120);
 
@@ -262,7 +262,7 @@ describe("the answer it accepts", () => {
     // partial text changes every 5 ms, faster than the 25 ms poll, so no two
     // reads can agree until the whole answer is down.
     const answerPath = filesFor(ask).answer;
-    mkdirSync(join(dir, "bundle"), { recursive: true });
+    mkdirSync(filesFor(ask).dir, { recursive: true });
     let writes = 0;
     const growing = setInterval(() => {
       writes += 1;
@@ -315,10 +315,57 @@ describe("when no answer comes", () => {
     answerLater("not JSON");
     await expect(engine().run(ask)).rejects.toBeInstanceOf(StageOutputUnreadableError);
     expect(existsSync(filesFor(ask).answer)).toBe(false);
-    expect(readdirSync(join(dir, "bundle")).some((name) => name.includes(".rejected-"))).toBe(true);
+    expect(readdirSync(filesFor(ask).dir).some((name) => name.includes(".rejected-"))).toBe(true);
 
     // Without the move this would fail at once on the same bad file.
     await expect(engine({ timeoutMs: 200 }).run(ask)).rejects.toThrow(/No answer appeared at/);
+  });
+});
+
+describe("what a stage's session may read of the review", () => {
+  it("is its own question's folder, where no other stage's answer is", async () => {
+    // The twenty-third grade, AK1. Every answer was a file in one folder,
+    // and each command added that folder: a later stage's session could
+    // read every earlier answer, the first verifier's proofs among them.
+    const said: string[] = [];
+    const reviewer = createInteractiveEngine({
+      exchangeDir: join(dir, "bundle"),
+      worktreeRoot: join(dir, "worktree"),
+      model: "claude-fable-5[1m]",
+      directives: [],
+      rules: [],
+      timeoutMs: 5_000,
+      pollMs: 25,
+      claudePath: FAKE_CLI,
+      onEvent: (_stage, event) => {
+        if (event.kind === "waiting") said.push(event.text);
+      },
+    });
+    const later: Question = { ...ask, stage: "s3_adversarial", prompt: "Hunt." };
+    answerLater(JSON.stringify({ files: [] }));
+    await reviewer.run(ask);
+    answerLater(
+      JSON.stringify({ findings: [], clearedHunks: [], sweepDispositions: [] }),
+      60,
+      filesFor(later).answer,
+    );
+    await reviewer.run(later);
+
+    const earlier = filesFor(ask);
+    const laterFiles = filesFor(later);
+    expect(laterFiles.dir).not.toBe(earlier.dir);
+    // The later command names its own folder and not the earlier one, nor
+    // the folder both are in.
+    expect(said[1]).toContain(`'--add-dir' '${laterFiles.dir}'`);
+    expect(said[1]).not.toContain(`'${earlier.dir}'`);
+    expect(said[1]).not.toContain(`'${join(dir, "bundle")}'`);
+    // And the earlier answer is outside what it names.
+    expect(earlier.answer.startsWith(`${laterFiles.dir}/`)).toBe(false);
+    expect(readdirSync(laterFiles.dir).sort()).toEqual(
+      ["output.json", "prompt.md", "system.md"].map(
+        (suffix) => `s3_adversarial-${callIdFor(later)}-${suffix}`,
+      ),
+    );
   });
 });
 
@@ -348,9 +395,11 @@ describe("an answer the pipeline refused after the engine took it", () => {
 
     expect(existsSync(filesFor(adversarial(1)).answer)).toBe(false);
     expect(existsSync(filesFor(adversarial(2)).answer)).toBe(false);
-    expect(
-      readdirSync(join(dir, "bundle")).filter((name) => name.includes(".rejected-")),
-    ).toHaveLength(2);
+    for (const question of [adversarial(1), adversarial(2)]) {
+      expect(
+        readdirSync(filesFor(question).dir).filter((name) => name.includes(".rejected-")),
+      ).toHaveLength(1);
+    }
     // Another stage's answer is not the one refused.
     expect(existsSync(filesFor(ask).answer)).toBe(true);
     // Asked again, the stage waits: the old file is not read back.
@@ -386,8 +435,8 @@ describe("one question's files belong to that question", () => {
   });
 
   it("does not read an answer to a different question", async () => {
-    mkdirSync(join(dir, "bundle"), { recursive: true });
     const other = { ...ask, prompt: "Assess something else." };
+    mkdirSync(filesFor(other).dir, { recursive: true });
     writeFileSync(filesFor(other).answer, JSON.stringify({ files: [] }), "utf8");
     await expect(engine({ timeoutMs: 200 }).run(ask)).rejects.toThrow(/No answer appeared at/);
   });
@@ -408,11 +457,12 @@ describe("the command a person is given", () => {
   // string at either.
   const exchangeDir = "/data dir/it's D’Angelo";
   const files = {
-    prompt: `${exchangeDir}/s1_risk-c1-prompt.md`,
-    system: `${exchangeDir}/s1_risk-c1-system.md`,
-    answer: `${exchangeDir}/s1_risk-c1-output.json`,
+    dir: `${exchangeDir}/s1_risk-c1`,
+    prompt: `${exchangeDir}/s1_risk-c1/s1_risk-c1-prompt.md`,
+    system: `${exchangeDir}/s1_risk-c1/s1_risk-c1-system.md`,
+    answer: `${exchangeDir}/s1_risk-c1/s1_risk-c1-output.json`,
   };
-  const args = launchArgsFor({ model: "claude-fable-5[1m]", exchangeDir, files });
+  const args = launchArgsFor({ model: "claude-fable-5[1m]", files });
 
   it("starts the session isolated the way a headless stage is", () => {
     expect(args).toContain("--strict-mcp-config");
@@ -425,7 +475,12 @@ describe("the command a person is given", () => {
     expect(args).toContain("--setting-sources=");
     expect(args).not.toContain("--setting-sources");
     expect(args[args.indexOf("--system-prompt-file") + 1]).toBe(files.system);
-    expect(args[args.indexOf("--add-dir") + 1]).toBe(exchangeDir);
+    // The question's own folder, and never the folder the review's other
+    // answers are in: with that one added, the verifier's session could
+    // read the hunt's answer, and the second verifier's the first's proofs
+    // (the twenty-third grade, AK1).
+    expect(args[args.indexOf("--add-dir") + 1]).toBe(files.dir);
+    expect(args).not.toContain(exchangeDir);
     // Options end before the one positional argument, since --add-dir and
     // --tools would otherwise take it as one of their values.
     expect(args.at(-2)).toBe("--");

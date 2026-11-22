@@ -39,7 +39,7 @@ export async function DELETE(): Promise<Response> {
         {
           error:
             `${active.length} review(s) are still running. Cancel them first: deleting a ` +
-            `review while it runs would orphan the process it owns.`,
+            `review while it runs would orphan its run.`,
           code: "ReviewStillRunning",
         },
         { status: 409 },

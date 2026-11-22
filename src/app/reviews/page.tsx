@@ -285,8 +285,8 @@ function ReviewsList() {
 
         {reviews && reviews.length > 0 ? (
           <p className="mt-4 text-xs text-[var(--color-ink-faint)]">
-            Deleting a review removes its worktrees, bundle and logs. An exported report lives
-            outside all of that and stays.
+            Deleting a review removes its run folder: its worktrees, bundle and logs, and what its
+            project&apos;s checks saved. An exported report lives outside all of that and stays.
           </p>
         ) : null}
       </PageBody>

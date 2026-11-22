@@ -125,8 +125,16 @@ from 2026-11-03.
   pauses every review. Ten immaterial lines came with them (AJ1 to AJ13
   in the audit file). Corrected the same day (D-307), the first at the
   code: a refused answer's file is moved aside in the bundle, so a resumed
-  review waits for a new one and goes on. A twenty-third grade is owed.
-  `./verify.sh --e2e` exits 0 with 1723 unit tests passing, 8 skipped,
+  review waits for a new one and goes on. The twenty-third grade, at
+  0985220 the same day, was C on one line, not inherited: each interactive
+  command let its session read the review's whole bundle, where every
+  earlier answer is a file, so the verifier's session could read the
+  hunt's answer and the second verifier's the first's proofs. Seven
+  immaterial lines came with it (AK1 to AK8 in the audit file). Corrected
+  the same day (D-310), the first at the code: each question has a folder
+  of its own and its command adds that folder alone. A twenty-fourth
+  grade is owed.
+  `./verify.sh --e2e` exits 0 with 1724 unit tests passing, 8 skipped,
   and 176 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside

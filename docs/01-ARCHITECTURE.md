@@ -18,7 +18,8 @@ unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
 Local, single-user web app. One Node process serves the UI and runs review
 jobs; review jobs spawn `claude` CLI subprocesses (subscription login) inside
-read-only git worktrees. All state lives in SQLite plus a managed data
+read-only git worktrees, or in the interactive mode spawn none and print each
+stage's command for the person to run. All state lives in SQLite plus a managed data
 directory. No auth, no hosting, no telemetry: the framework's and the CLI's
 own are switched off for what the app starts (D-233, D-240).
 
@@ -45,7 +46,7 @@ Versions are pinned at WP-A and recorded in `PROJECT-STATE.md` once installed.
   MVP-PLAN WP 2.3).
 - **Job manager:** a server-side singleton (initialised from
   `instrumentation.ts`) that owns review jobs. One review = one job. Jobs run
-  in-process (async orchestration), spawning subprocesses per stage. Max one
+  in-process (async orchestration), spawning subprocesses per stage (a headless review; an interactive one spawns none). Max one
   running review at a time by default (configurable); others queue. It lives
   on `globalThis`, built by the instrumentation bundle's copy of the server
   modules, while the routes share another copy, so an error it throws is not
@@ -163,7 +164,7 @@ Laws:
 
 ```
 // The seam both engines satisfy (server/engine/adapter.ts):
-interface ReviewEngine { mode; run(request); chainSessionId() }
+interface ReviewEngine { mode; run(request); chainSessionId(); discardAnswers?(stage) }
 // Underneath it, Mode A still calls:
 runStage(options: StageRunOptions): Promise<StageOutcome>
 // Events reach the caller through an optional onEvent callback rather
@@ -182,7 +183,7 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
   verified against `claude --help` at WP-E, never guessed (workspace law);
   they are built in `src/lib/engine/command.ts` and held by its tests.
 - **InteractiveEngine (Mode B, fallback):** materialises the same prompt to
-  `runs/<id>/bundle/<stage>[-b<n>]-<call id>-prompt.md`, with the system
+  `runs/<id>/bundle/<stage>[-b<n>]-<call id>/<stage>[-b<n>]-<call id>-prompt.md`, a folder of the call's own, which is the only one its command adds to what the session may read, so that no session reads another stage's answer (D-310), with the system
   prompt beside it as `-system.md`, prints a launch command for PowerShell
   and for bash or zsh, the one for the machine's own platform first (D-309) (read-only tools, no settings file at all, no MCP servers,
   `--system-prompt-file`, the prompt itself read from the file rather than

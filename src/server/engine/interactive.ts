@@ -55,6 +55,14 @@ export interface InteractiveEngineOptions {
 }
 
 export interface ExchangeFiles {
+  /**
+   * The folder these three files are alone in, and the only one the printed
+   * command lets its session read beside the worktree. One per question: in
+   * one folder for the whole review, the verifier's session could read the
+   * hunt's answer and the second verifier's the first's proofs (the
+   * twenty-third grade, AK1).
+   */
+  dir: string;
   /** The document a person reads: instructions, question, where to reply. */
   prompt: string;
   /** The same instructions alone, for the session's system prompt. */
@@ -93,10 +101,12 @@ export function exchangeFilesFor(
   callId: string,
 ): ExchangeFiles {
   const base = `${stage}${batchNumber === undefined ? "" : `-b${batchNumber}`}-${callId}`;
+  const dir = join(exchangeDir, base);
   return {
-    prompt: join(exchangeDir, `${base}-prompt.md`),
-    system: join(exchangeDir, `${base}-system.md`),
-    answer: join(exchangeDir, `${base}-output.json`),
+    dir,
+    prompt: join(dir, `${base}-prompt.md`),
+    system: join(dir, `${base}-system.md`),
+    answer: join(dir, `${base}-output.json`),
   };
 }
 
@@ -145,20 +155,20 @@ export function renderExchangeDocument(input: {
  * MCP servers from the reviewed repository, the instructions as the system
  * prompt from a file. The prompt itself stays out of argv, where Windows caps
  * a command line at 32,767 characters; the session is told where to read it.
- * `--add-dir` lets it read the exchange directory, which is outside the
- * worktree, and `--` ends the options, since `--add-dir` and `--tools` take
- * every value that follows them.
+ * `--add-dir` lets it read the question's own folder, which is outside the
+ * worktree, and no other: the review's other answers are in folders the
+ * command does not name. `--` ends the options, since `--add-dir` and
+ * `--tools` take every value that follows them.
  */
 export function launchArgsFor(input: {
   model: string;
-  exchangeDir: string;
   files: ExchangeFiles;
   /** The screenshots' folder, for a grading stage (D-198). */
   readDirs?: readonly string[];
 }): string[] {
   return [
     "--add-dir",
-    input.exchangeDir,
+    input.files.dir,
     ...(input.readDirs ?? []).flatMap((dir) => ["--add-dir", dir]),
     "--model",
     input.model,
@@ -251,13 +261,13 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
       throw new StageFailedError("spawn", `Refused to start the stage: ${aliasRefusal(model)}`);
     }
 
-    await mkdir(options.exchangeDir, { recursive: true });
     const files = exchangeFilesFor(
       options.exchangeDir,
       request.stage,
       request.batchNumber,
       callIdFor({ ...request, systemPrompt }),
     );
+    await mkdir(files.dir, { recursive: true });
     const promptPath = files.prompt;
     const answerPath = files.answer;
 
@@ -282,7 +292,6 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
       options.worktreeRoot,
       launchArgsFor({
         model,
-        exchangeDir: options.exchangeDir,
         files,
         ...(request.readDirs === undefined ? {} : { readDirs: request.readDirs }),
       }),
@@ -367,16 +376,12 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
   // the pipeline judges them merged and cannot say which was at fault.
   const discardAnswers = (stage: ReviewStage): void => {
     if (!existsSync(options.exchangeDir)) return;
-    const answers = new RegExp(`^${stage}(?:-b\\d+)?-[0-9a-f]{12}-output\\.json$`);
+    const ofTheStage = new RegExp(`^${stage}(?:-b\\d+)?-[0-9a-f]{12}$`);
     for (const name of readdirSync(options.exchangeDir)) {
-      if (!answers.test(name)) continue;
-      renameSync(
-        join(options.exchangeDir, name),
-        join(
-          options.exchangeDir,
-          name.replace(/-output\.json$/, `-output.rejected-${Date.now()}.json`),
-        ),
-      );
+      if (!ofTheStage.test(name)) continue;
+      const answer = join(options.exchangeDir, name, `${name}-output.json`);
+      if (!existsSync(answer)) continue;
+      renameSync(answer, answer.replace(/-output\.json$/, `-output.rejected-${Date.now()}.json`));
     }
   };
 

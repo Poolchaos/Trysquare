@@ -7860,3 +7860,53 @@ verified evidence, in writing, here.
   commands are one block with no way to copy one, and the stage is named
   by its id. Proven by a test of the words for each platform
   (`tests/server/engine/interactive.test.ts`).
+- 2026-11-22 D-310 The twenty-third grade of the records, and an
+  interactive stage's session that can read no other stage's answer. A
+  fresh grader read 0985220 and graded Honest C (AK1 to AK8, in
+  `plans/AUDIT-2026-11-17.md`): one material line and seven immaterial,
+  with AJ1's fix found sound on every path the pipeline strikes an answer
+  by. Each was checked at the code before it was changed, and each held.
+  Decided by the session.
+  AK1 is a fault in the design, not only in the words. Every question's
+  prompt, system prompt and answer were files in one folder, the review's
+  bundle, and each printed command added that folder to what its session
+  may read, so that it could read its prompt. A later stage's session
+  could therefore read every earlier answer: the verifier's the hunt's,
+  and the second verifier's the first's proofs, which 03 says it is not
+  shown. Each question now has a folder of its own under the bundle, named
+  as its files are, and the command adds that folder alone. A headless
+  stage is unchanged: it reads the checkout and, when grading, the
+  screenshots. Rejected: saying in the documents that the session can
+  read the earlier answers, which would give up the property the second
+  verifier exists for. Not handled: an interactive review begun before
+  this and resumed after asks from the new folders, so an answer saved
+  under the old layout is not read and its stage is answered again.
+  The words. AK2: the scan view says under its steps what the model, a
+  verifier or a grader mean while an interactive review runs, as the
+  finished summary does. AK3: 04 and the design notes say a running
+  interactive review comes last under Needs you and shows no age. AK4:
+  the two refusals speak of a review's run, not of a process it owns, and
+  01's overview says an interactive review spawns none. AK5: the five weak
+  points the design notes name and the inbox lacked are in it. AK6: the
+  index's row for the notes says what they hold. AK7: 01's line of the
+  engine's interface. AK8: the Engine line speaks of any command the
+  second verifier or the second grader was given, not of commands that
+  may never have been printed. Its two notes: the index has its changelog
+  line, and the reviews list says Delete removes the run folder, with what
+  the project's checks saved. From its list of the unsaid: Settings'
+  timeout says it is also how long an interactive stage waits. Left
+  unsaid, and in the inbox: that an interactive review's times include
+  the person's wherever they are given, that "requests" there are
+  commands, and that it holds its place in the line for as long as the
+  person takes.
+  Proven: the engine's test that a later stage's command names its own
+  folder and neither the earlier one nor the bundle, and that the folder
+  holds its three files alone (not run against the old code, where the
+  command named the bundle); the whole interactive review and the
+  refused-answer review in the service's tests, on the new folders; the
+  report's test of the Engine line; and the browser tests, which answer a
+  whole interactive review from the paths the commands print and read the
+  scan view's line. Graded by the builder, `review/2026-11-22-e2e/`:
+  `interactive-your-turn-note-light` B (the scan view with its line under
+  the steps, bash's command first, and the command naming the question's
+  own folder).

@@ -151,6 +151,11 @@ const INTERACTIVE_MEANS =
   "This review was answered in your own sessions. Where this page says the model, a verifier " +
   "or a grader, it means the session you ran on that stage's command.";
 
+/** The same, said while the review runs, in the scan view. */
+const INTERACTIVE_MEANS_RUNNING =
+  "This review is answered in your own sessions. Where this view says the model, a verifier " +
+  "or a grader, it means the session you run on that stage's command.";
+
 function stageDescription(stage: string, interactive: boolean): string | undefined {
   return (
     (interactive ? INTERACTIVE_DESCRIPTIONS.get(stage) : undefined) ??
@@ -2674,6 +2679,18 @@ function ScanTheater({
             );
           })}
         </ol>
+        {/* The steps above speak of the model and the verifiers while the
+            review runs too. The line that says what they mean for an
+            interactive review stood in the finished summary alone (the
+            twenty-third grade, AK2). */}
+        {review.engineMode === "interactive" ? (
+          <p
+            className="mt-2 text-xs text-[var(--color-ink-muted)]"
+            data-testid="interactive-means-running"
+          >
+            {INTERACTIVE_MEANS_RUNNING}
+          </p>
+        ) : null}
 
         <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <span className="font-[family-name:var(--font-mono)] text-title font-semibold">

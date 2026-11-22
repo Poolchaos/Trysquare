@@ -342,7 +342,20 @@ pulled deliberately.
   columns. On a phone the report cuts a long code quote at its card's edge
   with nothing to say it scrolls, and a long file path runs to the card's
   border. On a phone Settings' model rows break differently by the length
-  of a model's name. The report says "file(s)" and "hunk(s)".
+  of a model's name. The report says "file(s)" and "hunk(s)". And five the
+  notes name that this line left out (the twenty-third grade, AK5): on a
+  phone a project's branch table scrolls sideways in its card and its
+  review rows stand between the branches and the settings; a new review
+  cuts a long branch name beside its counts; the scan view's feed is
+  mostly empty while an interactive stage waits; the queue cuts its paths
+  and titles beside their severity; and a long rule title drops under its
+  number.
+- 2026-11-22: three things never said of an interactive review (the
+  twenty-third grade's list, D-310): its run's time includes the person's
+  wherever it is given (the header, the Duration tile, the five steps,
+  the lists, the report); "requests" there are commands the app printed
+  and never sent; and it holds its place in the line for as long as the
+  person takes, up to the timeout of each stage.
 
 ## Retired
 

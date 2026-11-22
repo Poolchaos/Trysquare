@@ -727,6 +727,21 @@ describe("verifying an open question again (proof-and-steps plan, WP-D2)", () =>
   }, 120_000);
 });
 
+/**
+ * A stage's prompt in an interactive review's bundle, as a path under the
+ * bundle. Each question has a folder of its own, named as its files are, so
+ * that a session reads no other stage's answer (AK1).
+ */
+function interactivePromptOf(bundle: string, stage: string): string | undefined {
+  if (!existsSync(bundle)) return undefined;
+  for (const name of readdirSync(bundle)) {
+    if (!name.startsWith(`${stage}-`)) continue;
+    const prompt = join(name, `${name}-prompt.md`);
+    if (existsSync(join(bundle, prompt))) return prompt;
+  }
+  return undefined;
+}
+
 describe("the interactive engine", () => {
   it("runs a whole review from files on disk, spending nothing", async () => {
     // Mode B end to end: the app writes each stage's prompt into the bundle,
@@ -770,12 +785,7 @@ describe("the interactive engine", () => {
 
     // Each call names its own files, `<stage>-<id>-prompt.md` and the
     // matching `-output.json`, so this finds the prompt by its stage.
-    const promptOf = (stage: string) =>
-      existsSync(bundle)
-        ? readdirSync(bundle).find(
-            (name) => name.startsWith(`${stage}-`) && name.endsWith("-prompt.md"),
-          )
-        : undefined;
+    const promptOf = (stage: string) => interactivePromptOf(bundle, stage);
 
     // Stands in for the person: waits for each prompt to be written, then
     // saves that stage's answer next to it.
@@ -873,14 +883,11 @@ describe("the interactive engine", () => {
       "s5_verification",
       "s5b_second_verification",
     ] as const;
-    const promptOf = (stage: string) =>
-      existsSync(bundle)
-        ? readdirSync(bundle).find(
-            (name) => name.startsWith(`${stage}-`) && name.endsWith("-prompt.md"),
-          )
-        : undefined;
-    const huntAnswers = () =>
-      readdirSync(bundle).filter((name) => /^s3_adversarial-.*-output\.json$/.test(name));
+    const promptOf = (stage: string) => interactivePromptOf(bundle, stage);
+    const huntFiles = () =>
+      readdirSync(bundle)
+        .filter((name) => name.startsWith("s3_adversarial-"))
+        .flatMap((name) => readdirSync(join(bundle, name)));
 
     // Stands in for the person, saving each stage's answer once it is
     // asked for and no answer is there: a stage asked again is answered
@@ -921,8 +928,8 @@ describe("the interactive engine", () => {
     await stopFirst();
     expect(refused.kind, JSON.stringify(refused)).toBe("failed");
     // The refused answer is not left where the same question would find it.
-    expect(huntAnswers()).toEqual([]);
-    expect(readdirSync(bundle).some((name) => name.includes(".rejected-"))).toBe(true);
+    expect(huntFiles().filter((name) => name.endsWith("-output.json"))).toEqual([]);
+    expect(huntFiles().some((name) => name.includes(".rejected-"))).toBe(true);
 
     // So a Resume waits for a new answer, and goes on with it.
     const stopSecond = answerWith(good);

@@ -47,8 +47,8 @@ person.
 What a template could not have decided: every figure is counted from this
 machine's reviews and says its own denominator ("confirmed of the proven
 findings decided", "by the quotation check, of findings raised"). Needs you
-lists what goes on only when a person acts, oldest wait first, each row
-saying what it waits for. Rule yield is sorted with the rules confirmed
+lists what goes on only when a person acts, oldest wait first (a running
+interactive review last, with no age), each row saying what it waits for. Rule yield is sorted with the rules confirmed
 least often first, because the question it answers is which rule costs
 attention for nothing.
 
@@ -146,8 +146,8 @@ card's border. The report says "file(s)" and "hunk(s)".
 What it is for: finding a review again.
 
 What a template could not have decided: a row leads with what state the
-review is in, and Delete says under the list exactly what it removes and
-what it leaves.
+review is in, and Delete says under the list what it removes, the review's
+run folder, and what it leaves, an exported report.
 
 Grades: `light-reviews` B, `dark-reviews` B: each row's figures sit as a
 ragged cluster at its right, not in columns. `light-reviews-phone` was D

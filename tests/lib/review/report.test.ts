@@ -270,9 +270,9 @@ describe("the footer that makes a report reproducible", () => {
     const words = interactiveEngineWords("claude-opus-5-5");
     expect(words).toBe(
       "interactive. Each stage's command was printed for a person to run in their own " +
-        "session. Those commands name the model above, but for the second verifier's and " +
-        "the second grader's, which name claude-opus-5-5. Where this report says the model, " +
-        "a verifier or a grader, it means the session that answered that stage's command.",
+        "session. Those commands name the model above, but for any the second verifier or " +
+        "the second grader was given, which name claude-opus-5-5. Where this report says the " +
+        "model, a verifier or a grader, it means the session that answered that stage's command.",
     );
     // A review from before the second verifier names one model.
     expect(interactiveEngineWords(null)).toContain("Those commands name the model above. Where");

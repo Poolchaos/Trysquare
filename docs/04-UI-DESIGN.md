@@ -122,7 +122,7 @@ precision is a claim about findings somebody judged.
   history; it needs two points to be a line and draws nothing below that.
 - **Needs you:** every review that goes on only when a person acts, oldest
   wait first: one awaiting a decision, a running interactive review, whose stages wait for its commands to be run, and one waiting on a Resume (paused
-  at the usage limit, interrupted, failed; D-259). Each row carries its
+  at the usage limit, interrupted, failed; D-259). A running interactive review has no wait to date, each of its stages waiting in turn: it comes last and shows no age. Each other row carries its
   branch pair, project and age, and says which it is: decided-of-total, or
   the stop and the button to press. A row links straight into its review.
   The count in the bar is of decisions alone; this says where the work is.

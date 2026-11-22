@@ -94,7 +94,9 @@ regardless of how confident anything was about it.
 **In the interactive mode the sessions are yours.** The app starts none: it
 prints each stage's command for you to run and reads the answer you save. A
 fresh session, the model and the read-only tool list are what that command
-asks for, and the app sees none of them. The checks that are the program's
+asks for, and the app sees none of them. Beside the checkout, the command
+lets the session read one folder, the stage's own, which holds its question
+and no other stage's answer. The checks that are the program's
 own, of coverage and of every quoted line, run on your answers as they do on
 a headless review's.
 

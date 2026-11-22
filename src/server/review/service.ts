@@ -1041,7 +1041,7 @@ export class ReviewStillRunningError extends Error {
   ) {
     super(
       `Review ${reviewId} is ${status} and cannot be deleted while it runs. ` +
-        "Cancel it first, so the process it owns is stopped rather than orphaned.",
+        "Cancel it first, so its run is stopped and nothing it started is orphaned.",
     );
     this.name = "ReviewStillRunningError";
   }

@@ -3703,7 +3703,7 @@ test("a review deleted from the list takes its evidence with it", async ({ page 
   await page.goto("/reviews");
   // Waited for rather than counted immediately: the list is fetched on the
   // client, and counting a list that has not arrived counts zero.
-  await expect(page.getByText(/Deleting a review removes its worktrees/)).toBeVisible();
+  await expect(page.getByText(/Deleting a review removes its run folder/)).toBeVisible();
   const rows = page.getByRole("main").locator("ul > li");
   const before = await rows.count();
   expect(before).toBeGreaterThan(0);
@@ -5152,6 +5152,12 @@ test("an interactive review answered stage by stage says only what the app knows
       "These commands run in your own terminal, with its environment",
     );
     await shootView(page, environment, "interactive-your-turn-note");
+    // And the scan view says what its steps' words mean while the review
+    // runs: the line stood in the finished summary alone (AK2).
+    await expect(page.getByTestId("interactive-means-running")).toHaveText(
+      "This review is answered in your own sessions. Where this view says the model, a " +
+        "verifier or a grader, it means the session you run on that stage's command.",
+    );
 
     // The next stage's command reaches a page that is listening. It is in
     // the card, once: the feed printed it whole a second time, both shells'

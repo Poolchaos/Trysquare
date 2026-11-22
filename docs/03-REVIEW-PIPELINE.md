@@ -119,7 +119,9 @@ stage's command for a person to run in their own session, and keeps the
 first two lines alone: an answer in the wrong shape fails the stage with no
 repair round, its usage and session are recorded as zero and empty since
 the app cannot see them, no transcript is written, and each stage starts a
-session of its own, so nothing carries from one to the next.
+session of its own, so nothing carries from one to the next: the command
+lets that session read the checkout and the stage's own folder, where its
+question is and no other stage's answer (D-310).
 
 - cwd = worktree; tools = Read, Grep, Glob only (no Edit, no Bash, no web).
 - System prompt = composed ruleset snapshot + stage instruction + the

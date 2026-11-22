@@ -86,7 +86,7 @@ const FIELDS = [
   {
     key: "stageTimeoutMinutes",
     label: "Timeout per call (minutes)",
-    hint: "How long any single model call may take before the run gives up on it.",
+    hint: "How long any single model call may take before the run gives up on it. It is also how long an interactive stage waits for your answer.",
   },
   {
     key: "stageMaxBudgetUsd",
