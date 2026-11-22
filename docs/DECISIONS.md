@@ -7586,3 +7586,11 @@ verified evidence, in writing, here.
   browser from a staged answer. Not driven in the browser: an
   interactive review's own page and queue, since no test runs one by
   hand. A twenty-first grade is owed.
+- 2026-11-22 D-300, added the same day. One place the pass missed, found
+  by the session reading the review's page for every figure of usage
+  before another grade was spent: each stage's row under Stages gave "0
+  fresh, 0 cached, 0 out, $0.0000" for an interactive review. It says
+  "Answered in your own session: its usage is not recorded." Not driven
+  in the browser, as the rest of an interactive review's page is not.
+  The reviews list and the dashboard's Recent reviews already show no
+  cost where it is zero.

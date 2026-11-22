@@ -1938,7 +1938,15 @@ function RunDetail({
                   </span>
                 </div>
 
-                {last && !DETERMINISTIC_STAGES.has(stage) ? (
+                {last &&
+                !DETERMINISTIC_STAGES.has(stage) &&
+                snapshot.review.engineMode === "interactive" ? (
+                  // Zeros here read as a stage that spent nothing: its usage
+                  // is recorded as zero and was never measured (AH1).
+                  <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
+                    Answered in your own session: its usage is not recorded.
+                  </p>
+                ) : last && !DETERMINISTIC_STAGES.has(stage) ? (
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
                     {spent.inputTokens.toLocaleString("en-US")} fresh,{" "}
                     {spent.cacheReadTokens.toLocaleString("en-US")} cached,{" "}
