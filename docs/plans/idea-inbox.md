@@ -372,3 +372,11 @@ the line entirely would lose the trail.
   imported yet", "Import a ruleset first"), a draft review ("import one")
   and the dashboard's first line name importing alone; a ruleset is also
   started with no document (RA-6). Done 2026-11-21 (D-285).
+- 2026-11-22: only the Windows job failed in CI run 44932086480 at d5a3d45
+  (Ubuntu and macOS passed): `e2e/journey.spec.ts`, "a report's last line
+  names every ruleset its review ran with", 5 seconds waiting for the
+  footer on a page still at "Loading...". The run's trace has one script
+  chunk of the review page refused with net::ERR_NO_BUFFER_SPACE, so the
+  page never hydrated: the loopback fault Windows CI has shown before
+  (D-104, D-105). The three runs before it, from 59c7496 where the test
+  was added, passed on Windows. Recorded and left (D-246).
