@@ -355,7 +355,10 @@ pulled deliberately.
   wherever it is given (the header, the Duration tile, the five steps,
   the lists, the report); "requests" there are commands the app printed
   and never sent; and it holds its place in the line for as long as the
-  person takes, up to the timeout of each stage.
+  person takes, up to the timeout of each stage. DONE 2026-11-22 (D-311):
+  the review's page, its scan view and its report say the first two, and
+  the new review form the third. The reviews list and the dashboard's
+  rows give a time with no such word.
 
 ## Retired
 

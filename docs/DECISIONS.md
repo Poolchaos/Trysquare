@@ -7910,3 +7910,14 @@ verified evidence, in writing, here.
   `interactive-your-turn-note-light` B (the scan view with its line under
   the steps, bash's command first, and the command naming the question's
   own folder).
+- 2026-11-22 D-311 Three things said of an interactive review that D-310
+  left unsaid. The line on the review's page and in its scan view that
+  says what the model, a verifier or a grader mean now also says that a
+  request is one command the person was given and that every time given
+  includes theirs; the report's Engine line says the run's time includes
+  the person's; and the new review form's hint on the engine says each
+  stage waits up to the timeout per call and the review holds its place
+  in the line while it waits. Not said: the reviews list and the
+  dashboard's rows give an interactive review's time with no such word.
+  Decided by the session, while the twenty-fourth grade was being read.
+  Proven by the report's test and the browser test of the two lines.

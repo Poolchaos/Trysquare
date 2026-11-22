@@ -5156,7 +5156,8 @@ test("an interactive review answered stage by stage says only what the app knows
     // runs: the line stood in the finished summary alone (AK2).
     await expect(page.getByTestId("interactive-means-running")).toHaveText(
       "This review is answered in your own sessions. Where this view says the model, a " +
-        "verifier or a grader, it means the session you run on that stage's command.",
+        "verifier or a grader, it means the session you run on that stage's command. A " +
+        "request is one such command, and every time given includes yours.",
     );
 
     // The next stage's command reaches a page that is listening. It is in
@@ -5215,7 +5216,8 @@ test("an interactive review answered stage by stage says only what the app knows
     // And the page says once what its words mean for such a review.
     await expect(page.getByTestId("interactive-means")).toHaveText(
       "This review was answered in your own sessions. Where this page says the model, a " +
-        "verifier or a grader, it means the session you ran on that stage's command.",
+        "verifier or a grader, it means the session you ran on that stage's command. A " +
+        "request is one such command, and every time given includes yours.",
     );
     const agreed = page.getByText("The second verifier's answer, from the command that named");
     await expect(agreed).toHaveText(

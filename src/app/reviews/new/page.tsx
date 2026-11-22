@@ -1141,7 +1141,7 @@ function NewReview() {
             <div className="grid gap-4 border-t border-[var(--color-border)] p-4">
               <Field
                 label="Engine"
-                hint="Headless runs the CLI unattended with read-only tools and spends your usage. Interactive writes each stage's prompt into the review's bundle and waits for you to save the answer beside it, so the tokens are spent in your own session and the usage recorded here stays at zero."
+                hint="Headless runs the CLI unattended with read-only tools and spends your usage. Interactive writes each stage's prompt into the review's bundle and waits for you to save the answer beside it, so the tokens are spent in your own session and the usage recorded here stays at zero. Each stage waits for your answer up to the timeout per call, and the review holds its place in the line of reviews while it waits."
               >
                 <Select
                   value={engineMode}

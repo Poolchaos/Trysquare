@@ -96,7 +96,7 @@ export function interactiveEngineWords(verifierModel: string | null): string {
       ? ""
       : `, but for any the second verifier or the second grader was given, which name ${verifierModel}`) +
     ". Where this report says the model, a verifier or a grader, it means the session that " +
-    "answered that stage's command."
+    "answered that stage's command, and the time the run took includes that person's."
   );
 }
 

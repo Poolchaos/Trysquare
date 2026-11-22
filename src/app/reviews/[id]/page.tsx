@@ -149,12 +149,14 @@ const INTERACTIVE_DESCRIPTIONS = new Map<string, string>([
 /** What an interactive review's page means by the words every review's page uses. */
 const INTERACTIVE_MEANS =
   "This review was answered in your own sessions. Where this page says the model, a verifier " +
-  "or a grader, it means the session you ran on that stage's command.";
+  "or a grader, it means the session you ran on that stage's command. A request is one such " +
+  "command, and every time given includes yours.";
 
 /** The same, said while the review runs, in the scan view. */
 const INTERACTIVE_MEANS_RUNNING =
   "This review is answered in your own sessions. Where this view says the model, a verifier " +
-  "or a grader, it means the session you run on that stage's command.";
+  "or a grader, it means the session you run on that stage's command. A request is one such " +
+  "command, and every time given includes yours.";
 
 function stageDescription(stage: string, interactive: boolean): string | undefined {
   return (
