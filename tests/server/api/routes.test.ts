@@ -1243,7 +1243,7 @@ describe("looking before you pay", () => {
     ]);
     expect(await ask({})).toEqual([
       400,
-      { error: "Choose a ruleset before sizing this review.", code: "RulesetRequired" },
+      { error: "Choose at least one ruleset before sizing this review.", code: "RulesetRequired" },
     ]);
     // An id that names no ruleset is a 404, as at the start route: it was a
     // 500, the server's fault in the answer (review round 24).

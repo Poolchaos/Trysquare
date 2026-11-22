@@ -234,13 +234,18 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
     effort: review.engineMode === "interactive" ? null : review.effort,
     profile: review.profileId,
 
-    usage: {
-      inputTokens: review.usageInputTokens,
-      outputTokens: review.usageOutputTokens,
-      cacheReadTokens: review.usageCacheReadTokens,
-      cacheCreationTokens: review.usageCacheCreationTokens,
-      costEquivalentUsd: review.costEquivalentUsd,
-    },
+    // Not given for an interactive review: its usage is recorded as zero and
+    // was never measured (the twentieth grade, AH1).
+    usage:
+      review.engineMode === "interactive"
+        ? null
+        : {
+            inputTokens: review.usageInputTokens,
+            outputTokens: review.usageOutputTokens,
+            cacheReadTokens: review.usageCacheReadTokens,
+            cacheCreationTokens: review.usageCacheCreationTokens,
+            costEquivalentUsd: review.costEquivalentUsd,
+          },
     startedAt: review.startedAt,
     runEndedAt: review.runEndedAt,
     ranBefore: ranBefore(review.startedAt, firstStageStarts(db, reviewId).get(reviewId)),

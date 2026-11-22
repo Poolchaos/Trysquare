@@ -1,5 +1,6 @@
 /**
- * What a report is told of its review's effort (the nineteenth grade, AG3).
+ * What a report is told of its review's effort and usage (the nineteenth
+ * grade, AG3; the twentieth, AH1).
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -10,23 +11,26 @@ import { buildReportInput } from "@/server/review/report-input";
 import { makeTestDb, seedProject, type TestDb } from "../db/helpers";
 
 let ctx: TestDb;
+let projectId: string;
+let rulesetId: string;
 
 beforeEach(() => {
   ctx = makeTestDb();
+  projectId = seedProject(ctx.db).id;
+  // A report is of a review that froze a ruleset: one rule is enough.
+  rulesetId = saveImportedRuleset(ctx.db, {
+    name: "One rule",
+    tier: "project",
+    imported: importProtocol("# One\n\n## Rules\n\n### 1. Dates\n\n**Rule:** Dates are UTC.\n")
+      .ruleset,
+  }).rulesetId;
 });
 
 afterEach(() => ctx.cleanup());
 
 function reviewRunAs(engineMode: "headless" | "interactive"): string {
-  // A report is of a review that froze a ruleset: one rule is enough.
-  const { rulesetId } = saveImportedRuleset(ctx.db, {
-    name: "One rule",
-    tier: "project",
-    imported: importProtocol("# One\n\n## Rules\n\n### 1. Dates\n\n**Rule:** Dates are UTC.\n")
-      .ruleset,
-  });
   const { id } = createReview(ctx.db, {
-    projectId: seedProject(ctx.db).id,
+    projectId,
     fromBranch: "feature/x",
     fromCommit: "a".repeat(40),
     intoBranch: "main",
@@ -48,5 +52,15 @@ describe("the effort a report states", () => {
 
   it("is none for an interactive review, whose commands pass no effort", () => {
     expect(buildReportInput(ctx.db, reviewRunAs("interactive")).effort).toBeNull();
+  });
+});
+
+describe("the usage a report states", () => {
+  it("is what the app measured, and none for an interactive review", () => {
+    // Recorded as zero there, which is not a measurement (AH1).
+    expect(buildReportInput(ctx.db, reviewRunAs("headless")).usage).toMatchObject({
+      costEquivalentUsd: 0,
+    });
+    expect(buildReportInput(ctx.db, reviewRunAs("interactive")).usage).toBeNull();
   });
 });

@@ -77,7 +77,10 @@ export function POST(request: Request): Promise<Response> {
     const named = namedRulesetIds(input);
     if (named === undefined) {
       throw Response.json(
-        { error: "Choose a ruleset before sizing this review.", code: "RulesetRequired" },
+        {
+          error: "Choose at least one ruleset before sizing this review.",
+          code: "RulesetRequired",
+        },
         { status: 400 },
       );
     }

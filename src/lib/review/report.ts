@@ -80,6 +80,15 @@ export interface ReportCheckRun {
   outcome: "passed" | "failed" | "timed out" | "cancelled";
 }
 
+/**
+ * What stands where an interactive review's tokens and cost would be. Its
+ * commands run in the person's own session, and the app records zero for
+ * them: shown as figures, the zeros read as a review that spent nothing
+ * (the twentieth grade, AH1).
+ */
+export const USAGE_NOT_RECORDED =
+  "not recorded. This review was answered in your own session, whose usage the app cannot see.";
+
 export interface ReportInput {
   projectName: string;
   fromBranch: string;
@@ -128,13 +137,18 @@ export interface ReportInput {
   effort: string | null;
   profile: string;
 
+  /**
+   * Null for an interactive review: its tokens are spent in the person's own
+   * session and recorded as zero, which is not a measurement (the twentieth
+   * grade, AH1).
+   */
   usage: {
     inputTokens: number;
     outputTokens: number;
     cacheReadTokens: number;
     cacheCreationTokens: number;
     costEquivalentUsd: number;
-  };
+  } | null;
   startedAt: string | null;
   /** When the run stopped: the wait for a person after it is not the run's (D-248). */
   runEndedAt: string | null;
@@ -462,9 +476,13 @@ function footer(input: ReportInput): string[] {
   }
 
   rows.push(
-    `- Tokens: ${input.usage.inputTokens} fresh input, ${input.usage.cacheReadTokens} cached ` +
-      `read, ${input.usage.cacheCreationTokens} cache write, ${input.usage.outputTokens} output`,
-    `- Cost equivalent: ${input.usage.costEquivalentUsd.toFixed(4)} USD`,
+    ...(input.usage === null
+      ? [`- Tokens and cost: ${USAGE_NOT_RECORDED}`]
+      : [
+          `- Tokens: ${input.usage.inputTokens} fresh input, ${input.usage.cacheReadTokens} cached ` +
+            `read, ${input.usage.cacheCreationTokens} cache write, ${input.usage.outputTokens} output`,
+          `- Cost equivalent: ${input.usage.costEquivalentUsd.toFixed(4)} USD`,
+        ]),
   );
 
   const ran = spanMs(input.startedAt, input.runEndedAt);
@@ -650,7 +668,7 @@ ${group("Left out unproven", input.leftOutUnproven, "Left out")}
 ${group("Dismissed", input.dismissed)}
 <footer>${escapeHtml(input.model)}${input.effort === null ? "" : ` at effort ${escapeHtml(input.effort)}`}, ${escapeHtml(input.profile)} profile, against ${input.rulesets.map((ruleset) => `${escapeHtml(ruleset.name)} v${ruleset.version}`).join(", ")}.
 Commit ${escapeHtml(input.fromCommit.slice(0, 12))}, merge base ${escapeHtml(input.mergeBaseCommit.slice(0, 12))}.
-Cost equivalent $${input.usage.costEquivalentUsd.toFixed(4)}.</footer>
+${input.usage === null ? `Tokens and cost: ${USAGE_NOT_RECORDED}` : `Cost equivalent $${input.usage.costEquivalentUsd.toFixed(4)}.`}</footer>
 </body></html>
 `;
 }

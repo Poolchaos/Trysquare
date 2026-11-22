@@ -17,7 +17,7 @@ export function needsAPerson(status: string): status is NeedsYouStatus {
 }
 
 export function needsYouLine(row: {
-  status: NeedsYouStatus;
+  status: NeedsYouStatus | "interactive";
   decided: number;
   total: number;
 }): string {
@@ -31,7 +31,26 @@ export function needsYouLine(row: {
       return "paused at the usage limit: Resume once it clears";
     case "interrupted":
       return "interrupted: Resume to go on";
+    // Said of the review, not of this moment: between two commands the app
+    // is at work for a second or two.
+    case "interactive":
+      return "runs in your terminal: its page prints the command to run";
     case "failed":
       return "failed: Resume to go on";
   }
+}
+
+/** What a row of Needs you is for: a status that waits on a person, or a review answered by one. */
+export type NeedsYouKind = NeedsYouStatus | "interactive";
+
+/**
+ * Whether a review goes on only when a person acts, and how. A running
+ * interactive review does: each of its stages waits for the person to run
+ * the command its page prints, and fails when no answer comes. It was left
+ * out, under "Nothing is waiting on you" (the twentieth grade, AH3).
+ */
+export function needsYouKind(review: { status: string; engineMode: string }): NeedsYouKind | null {
+  if (needsAPerson(review.status)) return review.status;
+  const running = review.status === "running" || review.status === "verifying";
+  return running && review.engineMode === "interactive" ? "interactive" : null;
 }

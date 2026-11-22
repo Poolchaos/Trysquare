@@ -148,7 +148,7 @@ export function rulesetRow(dataDir: string): [Level, string] {
     };
     return count > 0
       ? ["ok", `${count} stored`]
-      : ["warn", "none yet; import your protocol on the Rulesets screen, or npm run rules:seed"];
+      : ["warn", "none yet; start one on the Rulesets screen, or npm run rules:seed"];
   } catch (error) {
     const message = (error as Error).message;
     // Only a database the app has not set up yet is a warning. Any other

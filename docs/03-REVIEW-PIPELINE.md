@@ -307,7 +307,7 @@ hunk, mechanism, rule text it violates. Actions: confirm, dismiss (reason
 required, stored), edit-then-confirm (comment wording only; file/lines are
 immutable post-verification). Bulk actions exist only for dismiss-by-rule.
 Nothing is reported as a finding without an explicit confirm, and only a proven
-(verified) finding can be confirmed: an open question is dismissed, or
+(verified) finding can be confirmed: an open question is dismissed, or, in a headless review,
 verified again, never confirmed (PG-2 (a), D-185). Verifying again asks S5
 about that one finding in a fresh session, never replayed from a stored
 answer, and, if S5 proves it, the second verifier too, each held to the
@@ -335,9 +335,9 @@ the human already made). Dismissed findings appear in an appendix with
 their reasons, those left out unproven (dismissed open questions) under
 their own heading, apart from the ones a person rejected (D-190). Export: markdown file to `exports/`
 and clipboard, with a single-file HTML written beside it. The markdown's
-footer records: each ruleset's name and version, the model with its effort
+footer records: each ruleset's name and version, the model with its effort (none for an interactive review, whose commands pass none)
 and profile, the commit reviewed and its merge base, a linked project's
-branch and commit, token usage, the cost equivalent, and how long the
+branch and commit, token usage and the cost equivalent (said as not recorded for an interactive review, whose usage the app cannot see), and how long the
 run took, to when it stopped and not to when the review was completed
 (D-248), said as the last run's where an earlier run asked a model
 anything, the tokens and the cost being every run's. The HTML's footer and the page's leave out the tokens, the

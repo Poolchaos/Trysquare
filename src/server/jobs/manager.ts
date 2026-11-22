@@ -90,7 +90,7 @@ export class ReviewAlreadyStartedError extends Error {
     readonly state: "running" | "queued",
   ) {
     super(
-      `Review "${reviewId}" is already ${state} with the ruleset it was started with, so the one sent now would not be used.`,
+      `Review "${reviewId}" is already ${state} with the rulesets it was started with, so those sent now would not be used.`,
     );
     this.name = "ReviewAlreadyStartedError";
   }

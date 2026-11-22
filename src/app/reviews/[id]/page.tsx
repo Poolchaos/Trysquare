@@ -22,6 +22,7 @@ import {
   checksRan,
   completeness,
   refutedOnlySentence,
+  USAGE_NOT_RECORDED,
   type DesignChecked,
   type ReportCheck,
   type ReportCheckRun,
@@ -90,7 +91,7 @@ const STAGES = [
   [
     "s0_prepare",
     "Prepare",
-    "Fetch, check out the pinned commits, build the bundle, run the sweeps",
+    "Fetch, check out the pinned commits, build the bundle, run the sweeps, and the project's own checks where they are on",
   ],
   ["s1_risk", "Risk", "Classify each changed file"],
   ["s2_comprehension", "Comprehension", "Read the code, including what it calls into"],
@@ -272,7 +273,8 @@ interface ReportData {
   /** Null for an interactive review, whose commands pass none. */
   effort: string | null;
   profile: string;
-  usage: { costEquivalentUsd: number };
+  /** Null for an interactive review, whose usage is not recorded. */
+  usage: { costEquivalentUsd: number } | null;
   startedAt: string | null;
   runEndedAt: string | null;
 }
@@ -1414,6 +1416,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   reviewId={id}
                   model={review.model}
                   verifierModel={review.verifierModel ?? null}
+                  interactive={review.engineMode === "interactive"}
                   findings={findings}
                   checks={{ total: checkRows.length, undecided: undecidedChecks }}
                   onChanged={() => void reload()}
@@ -1465,7 +1468,16 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 mock gives them; the token breakdown stays, beneath, at the
                 weight it deserves. */}
             <div className="grid grid-cols-2 gap-3">
-              <StatTile label="Cost equivalent" value={`$${review.costEquivalentUsd.toFixed(2)}`} />
+              <StatTile
+                label="Cost equivalent"
+                // A dash for an interactive review: its usage is recorded as
+                // zero and was never measured (AH1). The card under it says so.
+                value={
+                  review.engineMode === "interactive"
+                    ? "-"
+                    : `$${review.costEquivalentUsd.toFixed(2)}`
+                }
+              />
               <StatTile
                 // Beside a cost that is every run's, a resumed run's time
                 // is said as the last run's (D-248: a resume is a new run).
@@ -1481,22 +1493,34 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               <p className="mb-2 text-aside tracking-wide text-[var(--color-ink-muted)] uppercase">
                 Tokens
               </p>
-              <dl className="grid gap-1.5 text-dense">
-                <Stat label="Fresh input" value={review.usageInputTokens.toLocaleString("en-US")} />
-                {/* Written into the cache by this review, which is what makes
+              {/* An interactive review's usage is recorded as zero and was
+                  never measured: four zeros read as a review that spent
+                  nothing (AH1). */}
+              {review.engineMode === "interactive" ? (
+                <p className="text-dense text-[var(--color-ink-muted)]">
+                  Tokens and cost: {USAGE_NOT_RECORDED}
+                </p>
+              ) : (
+                <dl className="grid gap-1.5 text-dense">
+                  <Stat
+                    label="Fresh input"
+                    value={review.usageInputTokens.toLocaleString("en-US")}
+                  />
+                  {/* Written into the cache by this review, which is what makes
                     the cached reads below cost a fraction of fresh input. It
                     is charged, so leaving it out understated what a run
                     spent. */}
-                <Stat
-                  label="Cache write"
-                  value={review.usageCacheCreationTokens.toLocaleString("en-US")}
-                />
-                <Stat
-                  label="Cached read"
-                  value={review.usageCacheReadTokens.toLocaleString("en-US")}
-                />
-                <Stat label="Output" value={review.usageOutputTokens.toLocaleString("en-US")} />
-              </dl>
+                  <Stat
+                    label="Cache write"
+                    value={review.usageCacheCreationTokens.toLocaleString("en-US")}
+                  />
+                  <Stat
+                    label="Cached read"
+                    value={review.usageCacheReadTokens.toLocaleString("en-US")}
+                  />
+                  <Stat label="Output" value={review.usageOutputTokens.toLocaleString("en-US")} />
+                </dl>
+              )}
             </Card>
 
             {review.intent ? (
@@ -2295,8 +2319,10 @@ function RenderedReport({ data }: { data: ReportData }) {
         <Mono>{data.model}</Mono>
         {data.effort === null ? "" : ` at effort ${data.effort}`}, {data.profile} profile, against{" "}
         {data.rulesets.map((ruleset) => `${ruleset.name} v${ruleset.version}`).join(", ")}. Commit{" "}
-        <Sha value={data.fromCommit} />, merge base <Sha value={data.mergeBaseCommit} />. Cost
-        equivalent ${data.usage.costEquivalentUsd.toFixed(4)}.
+        <Sha value={data.fromCommit} />, merge base <Sha value={data.mergeBaseCommit} />.{" "}
+        {data.usage === null
+          ? `Tokens and cost: ${USAGE_NOT_RECORDED}`
+          : `Cost equivalent $${data.usage.costEquivalentUsd.toFixed(4)}.`}
       </footer>
     </Card>
   );
@@ -2524,7 +2550,7 @@ function ScanTheater({
             {executing !== null
               ? stageLabel(executing)
               : snapshot.queued
-                ? "Waiting for the running review"
+                ? "Waiting for a place"
                 : "Preparing"}
           </span>
           {stageIndex !== -1 ? (
@@ -2656,12 +2682,16 @@ function ScanTheater({
 
         <footer className="mt-4 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap gap-6">
-            <span className="text-dense text-[var(--color-ink-muted)]">
-              <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
-                ${review.costEquivalentUsd.toFixed(2)}
-              </span>{" "}
-              cost equivalent so far
-            </span>
+            {/* Not for an interactive review: its usage is not recorded, and
+                "$0.00 so far" read as a run that had spent nothing (AH1). */}
+            {review.engineMode === "interactive" ? null : (
+              <span className="text-dense text-[var(--color-ink-muted)]">
+                <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
+                  ${review.costEquivalentUsd.toFixed(2)}
+                </span>{" "}
+                cost equivalent so far
+              </span>
+            )}
             {coverage.totalFiles > 0 ? (
               <span className="text-dense text-[var(--color-ink-muted)]">
                 <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">

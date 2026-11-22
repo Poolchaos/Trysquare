@@ -7551,3 +7551,38 @@ verified evidence, in writing, here.
   wrong as the one it replaced, so a correction of what a control does
   is read against the code path of every screen that does it, not
   against the line the grader cited.
+- 2026-11-22 D-300 The twentieth grade of the records, and one pass over
+  what does not reach an interactive review. A fresh grader read f2fadc6
+  and graded Honest C on three lines of one kind (AH1 to AH8, in
+  `plans/AUDIT-2026-11-17.md`): each true of a headless review and false
+  of an interactive one, the third grade running to find that kind. It
+  found the corrections of D-299 accurate and advised one pass over
+  every figure, setting and action that does not reach an interactive
+  review, in place of line-by-line fixes. Taken, by the session. The
+  list, read in `server/engine/interactive.ts` and `server/review/service.ts`:
+  no effort is passed (D-299); the budget per call is not on its commands
+  (D-299); its usage is recorded as zero and never measured; a finding
+  of it cannot be verified again from the app; and it goes on only when
+  the person runs each command. Decided for the last three. Usage: an
+  interactive review's report, in the markdown, the HTML and the page,
+  says "Tokens and cost: not recorded. This review was answered in your
+  own session, whose usage the app cannot see.", the report's input
+  holding no usage for it; its page draws a dash where the cost stood and
+  that sentence where the token counts stood; its scan gives no cost; and
+  the dashboard's cost figure notes how many interactive reviews it does
+  not count. A dash, not a zero, as D-75 has it for a rate with no
+  denominator. Verify again: its queue offers none and says an open
+  question there can only be dismissed, since the server refuses the
+  request every time. Needs you: a running interactive review is listed,
+  "runs in your terminal: its page prints the command to run", said of
+  the review and not of the moment, since between two commands the app
+  works for a second or two. Looked at and left: the timeout of each
+  call does reach it, the wait for an answer being held to the same
+  timeout (`interactive.ts`). Not looked at, so the pass is not the whole
+  of what the grader asked: its place in the line of waiting reviews,
+  what its duration counts, and whether the model named on its page is
+  the one the person's session runs. Proven by unit tests of the report, its input, Needs you
+  and the scoreboard; the dashboard's row and note are read in the
+  browser from a staged answer. Not driven in the browser: an
+  interactive review's own page and queue, since no test runs one by
+  hand. A twenty-first grade is owed.

@@ -121,7 +121,7 @@ precision is a claim about findings somebody judged.
   numerals. The cost equivalent alone has a sparkline, from this machine's own
   history; it needs two points to be a line and draws nothing below that.
 - **Needs you:** every review that goes on only when a person acts, oldest
-  wait first: one awaiting a decision, and one waiting on a Resume (paused
+  wait first: one awaiting a decision, a running interactive review, whose stages wait for its commands to be run, and one waiting on a Resume (paused
   at the usage limit, interrupted, failed; D-259). Each row carries its
   branch pair, project and age, and says which it is: decided-of-total, or
   the stop and the button to press. A row links straight into its review.
@@ -275,7 +275,7 @@ review waits on them too. Read only once the review is complete, and
 while it has not run to its end: running, paused, interrupted, failed or
 cancelled, the section is shown beside the run's detail, saying that they
 are decided once the review has run to its end and that a resume keeps the
-result (the checks run again only where the project's commands were changed since, and with the checks switched off since the result is dropped), or, of a cancelled review, that it is not decided.
+result (the checks run again only where the project's checks were changed since, and with the checks switched off since the result is dropped), or, of a cancelled review, that it is not decided.
 
 Above the queue, and above the report once complete, the finished review in
 its five steps (WP-G; at phone width, while findings wait to be decided, it
@@ -294,8 +294,8 @@ alike, as the queue's n of m does.
 Rendered report (protocol output format), typeset in-app rather than shown
 as raw markdown: title, one bold summary sentence, prose-first finding
 cards grouped by severity with the code excerpt subordinate, and a
-provenance footer (model, effort, profile, ruleset and version, commit,
-merge base, cost equivalent; the markdown's footer alone adds tokens,
+provenance footer (model, effort where one was passed, profile, ruleset and version, commit,
+merge base, cost equivalent, or for an interactive review that tokens and cost were not recorded; the markdown's footer alone adds tokens,
 duration and a linked project).
 Copy and export actions; export writes the markdown and a self-contained
 single-file HTML beside it, so a report can be handed to a colleague whole

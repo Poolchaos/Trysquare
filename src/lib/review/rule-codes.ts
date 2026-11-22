@@ -16,7 +16,7 @@
  *
  * Nothing is invented and nothing is dropped: a code that cannot be resolved
  * is returned exactly as the model wrote it, and the screen says plainly that
- * it is not in the ruleset the review was frozen with.
+ * it is not in the rulesets the review was frozen with.
  */
 
 /** `Rule 11`, `rule: 11`, `#11`, `Rule #2a` all reduce to what follows. */

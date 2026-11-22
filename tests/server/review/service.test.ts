@@ -447,7 +447,7 @@ describe("running a review to the point a human looks at it", () => {
     const input = buildReportInput(db, reviewId);
     // A full-context review leaves no pair out, and its cache writes are read.
     expect(input.coverage.excludedPairs).toBe(0);
-    expect(input.usage.cacheCreationTokens).toBeTypeOf("number");
+    expect(input.usage?.cacheCreationTokens).toBeTypeOf("number");
     expect(input.leftOutUnproven.map((finding) => finding.dismissReason)).toEqual([
       "Could not prove it; left for the next pass.",
     ]);

@@ -147,7 +147,7 @@ on every CI run.
 You add a project by git URL and it is cloned locally. You pick the branch to
 review, the branch to compare against, one or more rulesets, a model, and how
 hard the model should think. You can add a sentence saying what the change was meant to
-do, which is treated as a claim to check rather than as an instruction. Before
+do, which is put to the model as a claim to check rather than as an instruction. Before
 anything is spent, a pre-flight tells you what would be examined: the commits
 it would pin, the file and hunk counts, the sweep hits, and how many model
 requests it expects to make.

@@ -1513,7 +1513,7 @@ test("a review that stopped short shows what the project's checks found", async 
     await expect(section).toContainText(
       "What the project's own checks found on this branch. You decide it with the code " +
         "findings once the review has run to its end. A resume keeps this result. The " +
-        "checks run again only if the project's commands were changed since, and with " +
+        "checks run again only if the project's checks were changed since, and with " +
         "the checks switched off since, the result is dropped.",
     );
     // Read, not decided: nothing here to press.
@@ -4825,6 +4825,51 @@ test("the scoreboard says whose branch each recent review was of", async ({ page
     writeFileSync(GIT_CONFIG, `[user]\n\tname = Fixture\n\temail = ${MY_EMAIL}\n`);
     expect.soft((await keep([])).status(), "the kept emails emptied").toBe(200);
   }
+});
+
+test("the dashboard lists a running interactive review under Needs you, and says its usage is not in the cost", async ({
+  page,
+}) => {
+  // The twentieth grade, AH1 and AH3. "Nothing is waiting on you" stood over
+  // a review that goes on only when the person runs the command its page
+  // prints, and the cost figure summed the zeros recorded for it. No test
+  // here runs a review by hand, so the board's own answer is given one such
+  // review; what the server answers for one is held by the unit tests.
+  const real = (await (await page.request.get("/api/scoreboard")).json()) as {
+    recent: { id: string; projectName: string; fromBranch: string; intoBranch: string }[];
+  };
+  const row = real.recent[0]!;
+  const stop = await routeUntilStopped(page, "**/api/scoreboard", (route) =>
+    route.fulfill({
+      json: {
+        ...real,
+        interactiveReviews: 1,
+        awaitingReviews: [
+          {
+            id: row.id,
+            status: "interactive",
+            projectName: row.projectName,
+            fromBranch: row.fromBranch,
+            intoBranch: row.intoBranch,
+            decided: 0,
+            total: 0,
+            since: null,
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto("/");
+  const needsYou = page.getByRole("list", { name: "Needs you" });
+  await expect(needsYou.getByRole("listitem")).toHaveCount(1, { timeout: 30_000 });
+  await expect(needsYou).toContainText("runs in your terminal: its page prints the command to run");
+  await expect(page.getByText("Nothing is waiting on you.")).toHaveCount(0);
+  const cost = page.getByText("1 interactive review not counted", { exact: true });
+  await expect(cost).toBeVisible();
+  expect(await accessibilityViolations(page)).toEqual([]);
+  await shootAll(page, needsYou.locator(".."), "needs-you-interactive");
+  await shootAll(page, cost.locator(".."), "cost-interactive-not-counted");
+  await stop();
 });
 
 test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {

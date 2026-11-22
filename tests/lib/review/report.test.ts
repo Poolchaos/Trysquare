@@ -244,6 +244,22 @@ describe("the footer that makes a report reproducible", () => {
     expect(renderReportHtml(interactive)).not.toContain("effort");
   });
 
+  it("says an interactive review's tokens and cost were not recorded, where it gave zeros", () => {
+    // The app records zero for a session it cannot see into, and the report
+    // read "Tokens: 0 fresh input ..." and "Cost equivalent: 0.0000 USD" of a
+    // review that spent usage (the twentieth grade, AH1).
+    const interactive = { ...BASE, effort: null, usage: null };
+    const notRecorded =
+      "Tokens and cost: not recorded. This review was answered in your own session, " +
+      "whose usage the app cannot see.";
+    for (const report of [renderReport(interactive), renderReportHtml(interactive)]) {
+      expect(report).toContain(notRecorded);
+      expect(report).not.toContain("Cost equivalent");
+      expect(report).not.toContain("fresh input");
+    }
+    expect(renderReport(BASE)).toContain("Cost equivalent:");
+  });
+
   it("names every ruleset the review ran with, each with its version", () => {
     // One was named whatever the review ran with (RS-2a).
     const two = {

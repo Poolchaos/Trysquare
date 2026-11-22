@@ -19,7 +19,7 @@
 
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { needsAPerson, type NeedsYouStatus } from "@/lib/review/needs-you";
+import { needsYouKind, type NeedsYouKind } from "@/lib/review/needs-you";
 import { ranBefore, runTimeMs } from "@/lib/review/run-time";
 import type { Db } from "../client";
 import { checkFindings, findings, projects, reviewRulesets, reviews } from "../schema";
@@ -63,8 +63,8 @@ export interface RuleYield {
 
 export interface AwaitingReview {
   id: string;
-  /** What it waits on a person for: a decision, or a Resume (D-259). */
-  status: NeedsYouStatus;
+  /** What it waits on a person for: a decision, a Resume (D-259), or its commands run (AH3). */
+  status: NeedsYouKind;
   projectName: string;
   fromBranch: string;
   intoBranch: string;
@@ -98,6 +98,12 @@ export interface ProjectOutcome {
 
 export interface Scoreboard {
   spendUsd: number;
+  /**
+   * Reviews answered in the person's own session that have started. Their
+   * usage is recorded as zero and was never measured, so `spendUsd` is of
+   * the others alone, and the screen says how many it leaves out (AH1).
+   */
+  interactiveReviews: number;
   reviewsCompleted: number;
   reviewsTotal: number;
   /** Confirmed over decided. Null until something has been decided. */
@@ -181,6 +187,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
       intoBranch: reviews.intoBranch,
       fromAuthorName: reviews.fromAuthorName,
       fromAuthorEmail: reviews.fromAuthorEmail,
+      engineMode: reviews.engineMode,
       model: reviews.model,
       status: reviews.status,
       cost: reviews.costEquivalentUsd,
@@ -273,6 +280,9 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
 
   return {
     spendUsd: reviewRows.reduce((total, review) => total + review.cost, 0),
+    interactiveReviews: reviewRows.filter(
+      (review) => review.engineMode === "interactive" && review.status !== "draft",
+    ).length,
     reviewsCompleted: completed.length,
     reviewsTotal: reviewRows.length,
     precision: decided === 0 ? null : confirmed / decided,
@@ -308,12 +318,15 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     // Oldest wait first: the review that has been waiting longest is the one
     // most likely to have been forgotten.
     awaitingReviews: reviewRows
-      .flatMap((review) =>
-        needsAPerson(review.status)
+      .flatMap((review) => {
+        // A running review answered in the person's own session waits on
+        // them at every stage, so it is listed too (AH3).
+        const kind = needsYouKind(review);
+        return kind !== null
           ? [
               {
                 id: review.id,
-                status: review.status,
+                status: kind,
                 projectName: review.projectName,
                 fromBranch: review.fromBranch,
                 intoBranch: review.intoBranch,
@@ -322,8 +335,8 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
                 since: review.runEndedAt,
               },
             ]
-          : [],
-      )
+          : [];
+      })
       // ISO times, so the least string is the oldest. One with no time last.
       .sort((a, b) =>
         a.since === null || b.since === null

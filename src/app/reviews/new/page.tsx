@@ -1125,7 +1125,7 @@ function NewReview() {
 
           <Field
             label="What was this change meant to do? (optional)"
-            hint="Treated as a claim to check against the code, never as instructions. If the change does not do what you describe, that is itself a finding."
+            hint="Put to the model as a claim to check against the code, not as instructions. If the change does not do what you describe, that is itself a finding."
           >
             <Textarea
               rows={3}

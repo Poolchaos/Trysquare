@@ -199,7 +199,7 @@ describe("what each step says it did", () => {
 
   it("says nothing it does not know", () => {
     // A review whose ruleset was never frozen has no count to give.
-    expect(stepCount(0, "now", { ...facts, rules: null })).toBe("Freezing the ruleset");
+    expect(stepCount(0, "now", { ...facts, rules: null })).toBe("Freezing the rulesets");
   });
 });
 

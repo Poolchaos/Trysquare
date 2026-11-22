@@ -57,7 +57,7 @@ export async function POST(
         throw Response.json(
           {
             error:
-              "This review is already frozen with its ruleset, so it cannot be started with another.",
+              "This review is already frozen with its rulesets, so it cannot be started with others.",
             code: "RulesetFrozen",
           },
           { status: 409 },
@@ -66,7 +66,10 @@ export async function POST(
     } else {
       if (named === undefined) {
         throw Response.json(
-          { error: "Choose a ruleset before starting this review.", code: "RulesetRequired" },
+          {
+            error: "Choose at least one ruleset before starting this review.",
+            code: "RulesetRequired",
+          },
           { status: 400 },
         );
       }

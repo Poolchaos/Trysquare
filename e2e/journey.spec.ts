@@ -553,9 +553,9 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     // and its own diff rather than from today's versions of either.
     await page.getByRole("button", { name: /^Rule / }).click();
     // Its read refused once: said, with Try again. Dropped, the panel claimed
-    // the rule was not in the ruleset the review was frozen with (D-137).
+    // the rule was not in the rulesets the review was frozen with (D-137).
     await expect(page.getByText("Refused for this test: the rules.")).toBeVisible();
-    await expect(page.getByText(/not in the ruleset the review was frozen with/)).toHaveCount(0);
+    await expect(page.getByText(/not in the rulesets the review was frozen with/)).toHaveCount(0);
     await stopRefusingRules();
     // The read again is held, so the panel is seen to say it is reading
     // rather than that the rule is missing (D-138, D-139).

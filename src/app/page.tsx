@@ -30,7 +30,7 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
-import { needsYouLine, type NeedsYouStatus } from "@/lib/review/needs-you";
+import { needsYouLine, type NeedsYouKind } from "@/lib/review/needs-you";
 import { runTimeParts } from "@/lib/review/run-time";
 
 interface Row {
@@ -54,7 +54,7 @@ interface Row {
 
 interface AwaitingRow {
   id: string;
-  status: NeedsYouStatus;
+  status: NeedsYouKind;
   projectName: string;
   fromBranch: string;
   intoBranch: string;
@@ -73,6 +73,8 @@ interface ProjectRow {
 
 interface Scoreboard {
   spendUsd: number;
+  /** Started reviews answered in the person's own session, whose usage is not recorded. */
+  interactiveReviews: number;
   reviewsCompleted: number;
   reviewsTotal: number;
   precision: number | null;
@@ -355,7 +357,20 @@ export default function HomePage() {
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {/* What the CLI says the usage would cost at API prices: on a
                   subscription none of it is spent (D-250). */}
-              <StatTile label="Cost equivalent" value={`$${board.spendUsd.toFixed(2)}`}>
+              <StatTile
+                label="Cost equivalent"
+                value={`$${board.spendUsd.toFixed(2)}`}
+                // A review answered in the person's own session records no
+                // usage, so the figure is of the others alone (AH1).
+                {...(board.interactiveReviews > 0
+                  ? {
+                      note:
+                        board.interactiveReviews === 1
+                          ? "1 interactive review not counted"
+                          : `${board.interactiveReviews} interactive reviews not counted`,
+                    }
+                  : {})}
+              >
                 <Sparkline values={board.spendHistory} />
               </StatTile>
               <StatTile

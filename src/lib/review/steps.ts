@@ -10,7 +10,7 @@
 export const STEPS = [
   {
     title: "Understand the rules",
-    what: "The ruleset is frozen for this review, and the mechanical sweeps mark every added line a rule's pattern matches.",
+    what: "The rulesets are frozen for this review, and the mechanical sweeps mark every added line a rule's pattern matches.",
     stages: ["s0_prepare"],
   },
   {
@@ -294,7 +294,7 @@ export function stepCount(
   switch (index) {
     case 0:
       return facts.rules === null
-        ? "Freezing the ruleset"
+        ? "Freezing the rulesets"
         : `${counted(facts.rules, "rule", "rules")} frozen`;
     case 1:
       return state === "done"

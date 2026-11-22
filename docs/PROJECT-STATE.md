@@ -84,9 +84,14 @@ from 2026-11-03.
   as its own, its queue offers a Verify again the server refuses every
   time, and the dashboard says nothing is waiting on the person while a
   stage waits on them. Five immaterial lines and three siblings came with
-  them (AH1 to AH8 in the audit file). Not yet corrected.
-  `./verify.sh --e2e` exits 0 with 1704 unit tests passing, 8 skipped,
-  and 172 browser tests.
+  them (AH1 to AH8 in the audit file). Corrected the same day (D-300), as
+  one pass over what does not reach an interactive review: its report and
+  page say its tokens and cost were not recorded, its queue offers no
+  Verify again, it is listed under Needs you while it runs, and the
+  dashboard's cost says how many such reviews it leaves out. A
+  twenty-first grade is owed.
+  `./verify.sh --e2e` exits 0 with 1711 unit tests passing, 8 skipped,
+  and 173 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
   those awaiting a decision, each row saying which it is and what to press

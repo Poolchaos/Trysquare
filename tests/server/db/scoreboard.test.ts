@@ -21,7 +21,7 @@ import { importProtocol } from "@/lib/rulesets/import";
 import { saveImportedRuleset, writeReviewSnapshot } from "@/server/db/repositories/rulesets";
 import { readScoreboard } from "@/server/db/repositories/scoreboard";
 import { recordAttempt } from "@/server/db/repositories/stage-executions";
-import { transitionReview } from "@/server/db/repositories/reviews";
+import { createReview, transitionReview } from "@/server/db/repositories/reviews";
 import { eq } from "drizzle-orm";
 import { projects, reviews } from "@/server/db/schema";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
@@ -65,6 +65,7 @@ const evidence = { quotedCode: "code", lineStart: 4, lineEnd: 4 };
 
 const EMPTY_BOARD = {
   spendUsd: 0,
+  interactiveReviews: 0,
   reviewsCompleted: 0,
   reviewsTotal: 0,
   precision: null,
@@ -487,5 +488,42 @@ describe("what a project's own checks found", () => {
     // never a quotation to check.
     expect(decided.precision).toBeNull();
     expect(decided.proofsDiscardedRate).toBeNull();
+  });
+});
+
+describe("a review answered in the person's own session (the twentieth grade)", () => {
+  function interactiveReview(): string {
+    const { projectId } = db.select().from(reviews).where(eq(reviews.id, reviewId)).get()!;
+    return createReview(db, {
+      projectId,
+      fromBranch: "feature/by-hand",
+      fromCommit: "a".repeat(40),
+      intoBranch: "main",
+      intoCommit: "b".repeat(40),
+      mergeBaseCommit: "c".repeat(40),
+      model: "claude-fable-5[1m]",
+      profileId: "full-context",
+      engineMode: "interactive",
+    }).id;
+  }
+
+  it("is in Needs you while it runs, since each stage waits for its command", () => {
+    // "Nothing is waiting on you" stood over a review that goes on only when
+    // the person runs what its page prints (AH3).
+    const id = interactiveReview();
+    expect(readScoreboard(db).awaitingReviews).toEqual([]);
+    transitionReview(db, id, "running");
+    expect(readScoreboard(db).awaitingReviews.map((row) => [row.id, row.status])).toEqual([
+      [id, "interactive"],
+    ]);
+  });
+
+  it("is counted apart from the cost, which holds none of its usage", () => {
+    // Its usage is recorded as zero: the total is of the other reviews, and
+    // the screen says how many it leaves out (AH1). A draft has spent nothing.
+    const id = interactiveReview();
+    expect(readScoreboard(db).interactiveReviews).toBe(0);
+    transitionReview(db, id, "running");
+    expect(readScoreboard(db).interactiveReviews).toBe(1);
   });
 });

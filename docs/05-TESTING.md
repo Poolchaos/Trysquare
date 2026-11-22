@@ -63,7 +63,7 @@ fails unless all five read correctly. The check took about 0.3s on Windows
   check, run by pointing the same importer at a path given on the command
   line, never a committed test. Composition snapshot tests per stage.
 - `lib/review`: ledger invariants, finding state machine, report renderer
-  (including the no-em-dash lint), mechanical quote-match check (S5).
+  (including a test that a rendered report holds no em dash of its own), mechanical quote-match check (S5).
 - `server/gitops` (integration, real git in tmp dirs): clone, fetch,
   worktree add/prune, bundle build, worktree-untouched assertion after a
   full pipeline run.

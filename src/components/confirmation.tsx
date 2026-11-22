@@ -116,12 +116,19 @@ export function ConfirmationQueue({
   reviewId,
   model,
   verifierModel,
+  interactive = false,
   findings,
   checks = { total: 0, undecided: 0 },
   onChanged,
   onCheckoutLeft,
 }: {
   reviewId: string;
+  /**
+   * The review was answered in the person's own session. The server refuses
+   * to verify one of its findings again, so the queue offers no such button
+   * (the twentieth grade, AH2).
+   */
+  interactive?: boolean;
   /** The model a verify-again asks, named before it is sent. */
   model: string;
   /** The model that proves each finding again (WP-E), null before the review first ran. */
@@ -173,7 +180,7 @@ export function ConfirmationQueue({
   // from the ruleset (D-138).
   const [rules, setRules] = useState<SnapshotRule[] | null>(null);
   // Why the frozen rules could not be read. Dropped, the panel said a cited
-  // rule "is not in the ruleset the review was frozen with", which was
+  // rule "is not in the rulesets the review was frozen with", which was
   // untrue, on the screen where findings are decided (D-137).
   const [rulesProblem, setRulesProblem] = useState("");
   const [rulesAttempt, setRulesAttempt] = useState(0);
@@ -898,7 +905,7 @@ export function ConfirmationQueue({
                           {rules === null
                             ? "Reading the review's rules..."
                             : (currentRule?.raw ??
-                              "This rule is not in the ruleset the review was frozen with.")}
+                              "This rule is not in the rulesets the review was frozen with.")}
                         </code>
                       </pre>
                     ) : null}
@@ -1103,7 +1110,10 @@ export function ConfirmationQueue({
                         </span>
                         {/* Why is said above it, as every finding's note is. */}
                         <span className="text-[var(--color-ink-muted)]">
-                          Dismiss it with a reason below, or verify it again.
+                          {interactive
+                            ? "Dismiss it with a reason below. A review answered in your own " +
+                              "session cannot verify a finding again from here."
+                            : "Dismiss it with a reason below, or verify it again."}
                         </span>
                       </p>
                     )}
@@ -1139,7 +1149,9 @@ export function ConfirmationQueue({
                       >
                         {showContext ? "Hide code" : "Show code"}
                       </Button>
-                      {current.status === "open_question" && againFor !== current.id ? (
+                      {current.status === "open_question" &&
+                      againFor !== current.id &&
+                      !interactive ? (
                         <Button
                           ref={verifyButtonRef}
                           variant="quiet"

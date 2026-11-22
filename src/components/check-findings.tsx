@@ -254,7 +254,7 @@ export function CheckFindings({
             // the project's checks were changed since (`project-checks.ts`).
             "What the project's own checks found on this branch. You decide it with the code " +
             "findings once the review has run to its end. A resume keeps this result. The " +
-            "checks run again only if the project's commands were changed since, and with " +
+            "checks run again only if the project's checks were changed since, and with " +
             "the checks switched off since, the result is dropped."
           : when === "cancelled"
             ? "What the project's own checks found on this branch before the review was " +
