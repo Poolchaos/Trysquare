@@ -215,9 +215,12 @@ function ReviewsList() {
             {shown.map((review) => (
               <li key={review.id}>
                 <Card className="flex flex-wrap items-center justify-between gap-3 p-3">
+                  {/* The row's width on a phone, the figures under it. Beside
+                      a short line of figures it took what they left, and the
+                      branch pair's own line was cut to "featur..." (CP-11). */}
                   <Link
                     href={`/reviews/${review.id}`}
-                    className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1"
+                    className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-x-2 gap-y-1 sm:basis-0"
                   >
                     <Badge tone={statusTone(review.status)}>{statusLabel(review.status)}</Badge>
                     {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}

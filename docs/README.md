@@ -69,6 +69,7 @@ then `GATES.md`, then only what the active gate needs.
 | [02-DATA-MODEL.md](02-DATA-MODEL.md)                   | SQLite schema, state machines, invariants, deletion rules. RATIFIED 2026-07-30.                                                         |
 | [03-REVIEW-PIPELINE.md](03-REVIEW-PIPELINE.md)         | The engine spec: protocol steps mapped to deterministic code and bounded AI stages. RATIFIED 2026-07-30.                                |
 | [04-UI-DESIGN.md](04-UI-DESIGN.md)                     | Design language, screens, states, accessibility, design proof gate. RATIFIED 2026-07-30.                                                |
+| [DESIGN-NOTES.md](DESIGN-NOTES.md) | The argument for G3's design half: each screen in both themes and at phone width, the template test answered, the builder's grades and the weak points. For the maintainer's acceptance. |
 | [05-TESTING.md](05-TESTING.md)                         | verify.sh spec, unit/e2e strategy, seeded-bug fixture gate. RATIFIED 2026-07-30.                                                        |
 | [06-MODELS-AND-PROFILES.md](06-MODELS-AND-PROFILES.md) | Measured model availability, the probe mechanism, and model-dependent review profiles. RATIFIED 2026-07-30.                             |
 | `docs/private/REVIEW_PROTOCOL.md` | The maintainer private reference protocol used to seed rulesets. Proprietary, gitignored, NOT part of the public repo. |

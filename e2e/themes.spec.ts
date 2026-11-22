@@ -38,6 +38,17 @@ async function photograph(page: import("@playwright/test").Page, file: string): 
   await page.locator("body").screenshot({ path: file, animations: "disabled", caret: "hide" });
 }
 
+/** The width the suite's phone shots are taken at. */
+const PHONE = { width: 360, height: 780 };
+const PHONE_ELSEWHERE = new Set(["projects", "settings"]);
+
+/** Whether the page itself scrolls sideways: wide content scrolls in its own container. */
+function scrollsSideways(page: import("@playwright/test").Page): Promise<boolean> {
+  return page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+}
+
 const SCREENS = [
   // The dashboard is a screen now, so it is photographed and checked like
   // one, including that it marks itself current without lighting every
@@ -93,6 +104,27 @@ for (const screen of SCREENS) {
     expect(overflow, `${screen.path} scrolls horizontally`).toBe(false);
 
     await photograph(page, join(EVIDENCE, `${testInfo.project.name}-${screen.name}.png`));
+
+    // And at a phone's width, where the design notes judge every screen
+    // too (CP-11). Projects and Settings are photographed there by the
+    // test that reads their lines.
+    if (PHONE_ELSEWHERE.has(screen.name)) return;
+    await page.setViewportSize(PHONE);
+    await expect(page.getByRole("heading", { name: screen.title, level: 1 })).toBeVisible();
+    expect(await scrollsSideways(page), `${screen.path} scrolls horizontally on a phone`).toBe(
+      false,
+    );
+    if (screen.name === "reviews") {
+      // A row's branch pair is what the row is, and has the row's width.
+      // Beside a short line of figures it was cut to "featur..." (CP-11).
+      const cut = await page
+        .getByRole("main")
+        .getByRole("listitem")
+        .getByText(/ into /)
+        .evaluateAll((nodes) => nodes.filter((node) => node.scrollWidth > node.clientWidth).length);
+      expect(cut, "branch pairs cut short on a phone").toBe(0);
+    }
+    await photograph(page, join(EVIDENCE, `${testInfo.project.name}-${screen.name}-phone.png`));
   });
 }
 
@@ -113,6 +145,14 @@ test("the detail screens photograph on real content", async ({ page }, testInfo)
   // fetching one clone at a time (review round 15).
   await expect(page.getByRole("main").getByRole("table")).toBeVisible({ timeout: 60_000 });
   await photograph(page, shot("project-detail"));
+  const desk = page.viewportSize();
+  await page.setViewportSize(PHONE);
+  await expect(page.getByRole("heading", { name: "Branches" })).toBeVisible();
+  expect(await scrollsSideways(page), "a project's page scrolls horizontally on a phone").toBe(
+    false,
+  );
+  await photograph(page, shot("project-detail-phone"));
+  if (desk) await page.setViewportSize(desk);
 
   await page.getByRole("link", { name: "New review" }).click();
   await expect(page.getByRole("heading", { name: "New review", level: 1 })).toBeVisible();
@@ -210,6 +250,13 @@ test("a completed review photographs with its report", async ({ page }, testInfo
 
   await expect(page.getByRole("heading", { name: "Report" })).toBeVisible({ timeout: 30_000 });
   await photograph(page, join(EVIDENCE, `${testInfo.project.name}-review.png`));
+
+  await page.setViewportSize(PHONE);
+  await expect(page.getByRole("heading", { name: "Report" })).toBeVisible();
+  expect(await scrollsSideways(page), "a completed review scrolls horizontally on a phone").toBe(
+    false,
+  );
+  await photograph(page, join(EVIDENCE, `${testInfo.project.name}-review-phone.png`));
 });
 
 /**

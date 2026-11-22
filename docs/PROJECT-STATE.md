@@ -540,8 +540,8 @@ from 2026-11-03.
   for a phone was built. The FG-4 design acceptance is now part of
   G3, the public release after the MVP (D-86); its argument was
   `review/2026-08-18-fg4/DESIGN-NOTES.md`, on a machine since given up, and
-  is written again against today's screens in `plans/COMPLETION-PLAN.md`
-  CP-11.
+  is written again against today's screens in `DESIGN-NOTES.md`
+  (2026-11-22, D-306, CP-11), which waits on the maintainer's acceptance.
 - The two external AI plans never arrived. They fold in as spec amendments if
   they do; they did not block the build.
 

@@ -333,6 +333,16 @@ pulled deliberately.
   waiting its turn offers no Start of its own", 120 seconds waiting on
   the Projects page for the link to the project, which the page never
   drew. The run's trace was not read. Recorded and left (D-246).
+- 2026-11-22: weak points seen writing the design notes (`DESIGN-NOTES.md`,
+  D-306), none fixed. On a phone the dashboard's Recent reviews shows its
+  branch pair column alone, the rest reached by scrolling the table
+  sideways with nothing to say so. A ruleset's page shows each rule's
+  severity twice, as a badge and in the picker beside it. The reviews
+  list's figures sit as a ragged cluster at each row's right, not in
+  columns. On a phone the report cuts a long code quote at its card's edge
+  with nothing to say it scrolls, and a long file path runs to the card's
+  border. On a phone Settings' model rows break differently by the length
+  of a model's name. The report says "file(s)" and "hunk(s)".
 
 ## Retired
 

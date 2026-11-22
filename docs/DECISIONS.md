@@ -7754,3 +7754,24 @@ verified evidence, in writing, here.
   session. Proven by a route test that times three headless stages and
   reads both reviews' snapshots: the interactive one held `s1_risk:
   20000` on the old code. No screen was changed, so none was shot.
+- 2026-11-22 D-306 CP-11: the design notes are written against today's
+  screens and kept in `docs/`. G3's design argument was
+  `review/2026-08-18-fg4/DESIGN-NOTES.md`, in a folder git ignores, and
+  went with a machine. It is written again as `docs/DESIGN-NOTES.md`: each
+  screen with the template test answered, the builder's grade of every
+  shot looked at on 2026-11-22, the weak points, and what was not looked
+  at. Decided by the session: the notes are a record a verdict rests on,
+  so they are tracked, and 04 section 5 says where they are. The
+  acceptance stays the maintainer's, and CP-11's row says WRITTEN, not
+  DONE. The suite photographed five screens at desk width alone, so
+  `e2e/themes.spec.ts` now shoots the dashboard, the reviews list, the
+  rulesets list, a project's page and a completed review at 360px too,
+  each checked not to scroll sideways. One fault found by those shots and
+  fixed: on a phone the reviews list cut a row's branch pair to
+  "featur..." wherever the row had few figures, the link taking what the
+  figures left. The link takes the row's width below `sm` and the figures
+  go under it. Proven by the suite's new check that no branch pair is cut
+  at 360px, which counted 4 on the build before the fix. Graded by the
+  builder after the fix: `light-reviews-phone` B (each row reads whole;
+  the figures sit under the pair in a line of their own). The other weak
+  points the notes name are in the inbox, not fixed.

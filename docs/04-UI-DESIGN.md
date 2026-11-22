@@ -411,5 +411,7 @@ buttons.
 Design gate before ship (workspace law: founder is the done-gatekeeper):
 Playwright screenshots of every screen in both themes on a fixture project
 land in `review/<date>-e2e/` on every suite run, with the design review
-notes in `review/<date>-fg4/`, for the maintainer's judgment. The template test is
-answered in writing per screen in the design review notes.
+notes in `docs/DESIGN-NOTES.md` (D-306; they were in `review/<date>-fg4/`,
+which git ignores, and went with a machine), for the maintainer's judgment.
+The template test is answered in writing per screen in the design review
+notes.
