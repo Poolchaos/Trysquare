@@ -89,7 +89,14 @@ from 2026-11-03.
   page say its tokens and cost were not recorded, its queue offers no
   Verify again, it is listed under Needs you while it runs, and the
   dashboard's cost says how many such reviews it leaves out. A
-  twenty-first grade is owed.
+  twenty-first grade, at 80b66eb the same day, was C on three lines: Needs
+  you says an interactive review's page prints the command to run, and a
+  page opened after its stage began waiting shows none, the command
+  being sent live and never kept (a fault in the app, not only in the
+  words); the dashboard's Live scan draws a zero cost for such a review;
+  and 03's contract for every AI stage holds in three lines for a
+  headless review alone. Nine immaterial lines came with them (AI1 to
+  AI12 in the audit file). Not yet corrected.
   `./verify.sh --e2e` exits 0 with 1711 unit tests passing, 8 skipped,
   and 173 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
