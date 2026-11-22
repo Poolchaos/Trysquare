@@ -18,10 +18,12 @@
  */
 
 import { desc, eq } from "drizzle-orm";
+import { z } from "zod";
 import { needsAPerson, type NeedsYouStatus } from "@/lib/review/needs-you";
 import { ranBefore, runTimeMs } from "@/lib/review/run-time";
 import type { Db } from "../client";
-import { checkFindings, findings, projects, reviews } from "../schema";
+import { checkFindings, findings, projects, reviewRulesets, reviews } from "../schema";
+import { parseJsonColumn } from "./json";
 import { firstStageStarts } from "./stage-executions";
 
 export interface ScoreboardRow {
@@ -47,6 +49,12 @@ export interface ScoreboardRow {
 
 export interface RuleYield {
   ruleCode: string;
+  /**
+   * The ruleset the rule is in, by the name the review froze it under. A
+   * number names a rule within one ruleset and not across them, so two
+   * rulesets' rule 1 are two rows. Null where the review froze no ruleset.
+   */
+  rulesetName: string | null;
   /** Findings under this rule that a person put in a report. */
   confirmed: number;
   /** Every finding this rule ever raised, whatever became of it. */
@@ -107,6 +115,63 @@ export interface Scoreboard {
   projects: ProjectOutcome[];
 }
 
+const frozenCodesSchema = z.object({ rules: z.array(z.object({ code: z.string() })) });
+
+/**
+ * Which of a review's frozen rulesets holds a rule, by its number. The
+ * rulesets of one review share no number (RS-2b), so within a review the
+ * number is enough. A review on one ruleset is answered without reading its
+ * frozen copy; one on several has each copy's numbers read once. The newest
+ * review's name for a ruleset is the one used, since a ruleset can be
+ * renamed between reviews.
+ */
+function frozenRuleOwners(
+  db: Db,
+): (reviewId: string, code: string) => { rulesetId: string; rulesetName: string } | null {
+  const rows = db
+    .select({
+      reviewId: reviewRulesets.reviewId,
+      rulesetId: reviewRulesets.rulesetId,
+      rulesetName: reviewRulesets.rulesetName,
+      snapshotJson: reviewRulesets.snapshotJson,
+      createdAt: reviews.createdAt,
+    })
+    .from(reviewRulesets)
+    .innerJoin(reviews, eq(reviewRulesets.reviewId, reviews.id))
+    .orderBy(desc(reviews.createdAt))
+    .all();
+  const names = new Map<string, string>();
+  const frozen = new Map<string, typeof rows>();
+  for (const row of rows) {
+    if (!names.has(row.rulesetId)) names.set(row.rulesetId, row.rulesetName);
+    frozen.set(row.reviewId, [...(frozen.get(row.reviewId) ?? []), row]);
+  }
+  const codes = new Map<string, Map<string, string>>();
+  return (reviewId, code) => {
+    const held = frozen.get(reviewId) ?? [];
+    let rulesetId: string | undefined;
+    if (held.length === 1) {
+      rulesetId = held[0]!.rulesetId;
+    } else if (held.length > 1) {
+      let owners = codes.get(reviewId);
+      if (owners === undefined) {
+        owners = new Map();
+        for (const row of held) {
+          const copy = parseJsonColumn(
+            "review_rulesets.snapshot_json",
+            row.snapshotJson,
+            frozenCodesSchema,
+          );
+          for (const rule of copy.rules) owners.set(rule.code, row.rulesetId);
+        }
+        codes.set(reviewId, owners);
+      }
+      rulesetId = owners.get(code);
+    }
+    return rulesetId === undefined ? null : { rulesetId, rulesetName: names.get(rulesetId) ?? "" };
+  };
+}
+
 export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
   const reviewRows = db
     .select({
@@ -140,6 +205,7 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     .from(findings)
     .all();
 
+  const ownerOf = frozenRuleOwners(db);
   const byReview = new Map<string, { confirmed: number; decided: number; queued: number }>();
   const byRule = new Map<string, RuleYield>();
   let confirmed = 0;
@@ -164,14 +230,19 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     // rule to credit, so it is left out here rather than filed under a made-up
     // code.
     if (row.ruleCode !== null && row.ruleCode !== "") {
-      const yielded = byRule.get(row.ruleCode) ?? {
+      // By ruleset and number: the number alone added rule 1 of one ruleset
+      // to rule 1 of another (the eighteenth grade, AF3).
+      const owner = ownerOf(row.reviewId, row.ruleCode);
+      const key = JSON.stringify([owner?.rulesetId ?? null, row.ruleCode]);
+      const yielded = byRule.get(key) ?? {
         ruleCode: row.ruleCode,
+        rulesetName: owner?.rulesetName ?? null,
         confirmed: 0,
         total: 0,
       };
       yielded.total += 1;
       if (row.status === "confirmed") yielded.confirmed += 1;
-      byRule.set(row.ruleCode, yielded);
+      byRule.set(key, yielded);
     }
   }
 

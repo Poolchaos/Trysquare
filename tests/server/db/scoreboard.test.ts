@@ -17,6 +17,8 @@ import {
   markVerified,
 } from "@/server/db/repositories/findings";
 import { confirmCheckFinding, recordFailedCommand } from "@/server/db/repositories/check-findings";
+import { importProtocol } from "@/lib/rulesets/import";
+import { saveImportedRuleset, writeReviewSnapshot } from "@/server/db/repositories/rulesets";
 import { readScoreboard } from "@/server/db/repositories/scoreboard";
 import { recordAttempt } from "@/server/db/repositories/stage-executions";
 import { transitionReview } from "@/server/db/repositories/reviews";
@@ -182,8 +184,63 @@ describe("which rules earn their keep", () => {
     // Worst yield first: the rule costing the most attention for the least
     // return is the one an author needs to see.
     expect(board.ruleYield.map((rule) => rule.ruleCode)).toEqual(["8", "2"]);
-    expect(board.ruleYield[0]).toEqual({ ruleCode: "8", confirmed: 1, total: 2 });
-    expect(board.ruleYield[1]).toEqual({ ruleCode: "2", confirmed: 1, total: 1 });
+    // The review froze no ruleset here, so the rows name none.
+    expect(board.ruleYield[0]).toEqual({
+      ruleCode: "8",
+      rulesetName: null,
+      confirmed: 1,
+      total: 2,
+    });
+    expect(board.ruleYield[1]).toEqual({
+      ruleCode: "2",
+      rulesetName: null,
+      confirmed: 1,
+      total: 1,
+    });
+  });
+
+  it("keeps one number of two rulesets apart, each under its ruleset's name", () => {
+    // A number names a rule within a ruleset, not across them: rule 1 of two
+    // rulesets was one row, its findings added together (the eighteenth
+    // grade, AF3). Two reviews here, each on its own ruleset, each with a
+    // finding under rule 1; a third review on both keeps the two apart too.
+    const ruleset = (name: string, rule: string) =>
+      saveImportedRuleset(db, {
+        name,
+        tier: "project",
+        imported: importProtocol(`# ${name}\n\n## Rules\n\n### ${rule}\n\n**Rule:** Stated.\n`)
+          .ruleset,
+      }).rulesetId;
+    const general = ruleset("General", "1. Dates");
+    const ours = ruleset("Ours", "1. Names");
+    const both = ruleset("Both beside", "2. Units");
+    const { projectId } = db.select().from(reviews).where(eq(reviews.id, reviewId)).get()!;
+    const on = (...rulesetIds: string[]) => {
+      const id = seedReview(db, projectId).id;
+      writeReviewSnapshot(db, id, ...rulesetIds);
+      return id;
+    };
+    const first = on(general);
+    const second = on(ours);
+    const third = on(general, both);
+    candidate({ reviewId: first, ruleCode: "1", issue: "In General" });
+    candidate({ reviewId: second, ruleCode: "1", issue: "In Ours" });
+    candidate({ reviewId: third, ruleCode: "1", issue: "In General again" });
+    candidate({ reviewId: third, ruleCode: "2", issue: "In the one beside" });
+
+    const rows = readScoreboard(db).ruleYield.map((rule) => [
+      rule.rulesetName,
+      rule.ruleCode,
+      rule.total,
+    ]);
+    expect(rows).toHaveLength(3);
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        ["General", "1", 2],
+        ["Ours", "1", 1],
+        ["Both beside", "2", 1],
+      ]),
+    );
   });
 
   it("leaves a finding that cited no rule out of the rule table", () => {

@@ -755,8 +755,8 @@ export default function SettingsPage() {
           </h2>
           <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
             Deletes every project, review and ruleset, and the clones, worktrees, bundles and logs
-            on disk. Exported reports are kept: a report is the thing a review was for. Refused
-            while a review is running.
+            on disk. Exported reports are kept: a report is the thing a review was for. The settings
+            on this page are kept too. Refused while a review is running.
           </p>
           {wipeError ? (
             <div className="mb-3">
@@ -787,7 +787,7 @@ export default function SettingsPage() {
                     }
                     setWiped(
                       `Deleted ${body.deleted.projects} project(s), ${body.deleted.reviews} ` +
-                        `review(s) and ${body.deleted.rulesets} ruleset(s). Exports were kept.`,
+                        `review(s) and ${body.deleted.rulesets} ruleset(s). Exports and settings were kept.`,
                     );
                     setConfirmingWipe(false);
                     const refreshed = await send<SystemInfo>(

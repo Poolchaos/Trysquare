@@ -2620,7 +2620,7 @@ function ScanTheater({
         >
           {live.length === 0 ? (
             <p className="text-body text-[var(--color-ink-muted)]">
-              Fetching, pinning and checking out the change set...
+              Fetching and checking out the pinned commits...
             </p>
           ) : (
             <ul className="grid gap-0.5 text-dense">
@@ -2654,7 +2654,7 @@ function ScanTheater({
               <span className="font-[family-name:var(--font-mono)] text-heading font-semibold text-[var(--color-ink)] tabular-nums">
                 ${review.costEquivalentUsd.toFixed(2)}
               </span>{" "}
-              so far
+              cost equivalent so far
             </span>
             {coverage.totalFiles > 0 ? (
               <span className="text-dense text-[var(--color-ink-muted)]">

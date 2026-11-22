@@ -191,7 +191,7 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
   one's answer (MVP WP 3.7). It starts no process. Kept behind the same
   interface so a policy change never touches the pipeline.
 - Subprocess hygiene (workspace law, mirrors verify.sh doctrine): every
-  spawn is timeout-guarded (stage-level timeout, configurable), stdout and
+  spawn is timeout-guarded (a timeout on each call to the CLI, configurable), stdout and
   stderr captured to `logs/`, exit status checked separately, and output
   scanned for a narrow error-marker list. A hang is a failure, not a wait.
 - Rate-limit/limit-reached errors from the CLI pause the review in a

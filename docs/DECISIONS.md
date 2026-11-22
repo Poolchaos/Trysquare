@@ -7490,3 +7490,32 @@ verified evidence, in writing, here.
   running changes, not at every four-second poll. Left as it is: the two
   demo commands make their reviews in the store directly and keep no
   author, so such a review shows a dash.
+- 2026-11-22 D-298 The eighteenth grade of the records, and what was
+  done about it. A fresh grader read acef4d1 on a checkout of its own
+  and graded Honest C, on three lines on screens, none inherited, with
+  thirteen immaterial lines and three siblings of the seventeenth's
+  (AF1 to AF16, as it gave them, in `plans/AUDIT-2026-11-17.md`). Each
+  was checked against the code before anything was changed, and each
+  held. Two are words put right: the Delete ruleset card said new
+  reviews would then start with no ruleset chosen, where both screens
+  tick the first listed (so D-266's reason, that a review started with
+  none chosen cannot run on the wrong one, describes a behaviour the
+  app never had: the first listed is ticked, in sight, and a person
+  unticks it); and a paused review's Tests and design line said a
+  resume runs the project's checks again, where it keeps their result
+  for the same commit and commands. The third is a change, decided by
+  the session: Rule yield is tallied by ruleset and rule number, where
+  it was by the number alone, so rule 1 of two rulesets is two rows,
+  each named with its ruleset. Which ruleset a finding's rule is in is
+  read from the review's frozen rulesets, which share no number within
+  one review (RS-2b); a review on one ruleset needs no frozen copy
+  read. Rejected: leaving the tally and saying "a rule number across
+  every ruleset", which is true and measures nothing a person can act
+  on. Also changed with them: the Rulesets list and the picker count
+  "9 of 12 rules on" where rules are switched off, as the ruleset's
+  own page counts them. Proven: the reader's unit test, rule 1 in two
+  rulesets and a review on two, failed on the old tally; the browser
+  test reads each row's ruleset from the scoreboard's own answer. Not
+  seen failing first: the browser test's new line for the row's
+  ruleset, and the reworded sentences, whose tests were changed with
+  them. A nineteenth grade is owed.

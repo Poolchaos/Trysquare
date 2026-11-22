@@ -1033,8 +1033,8 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
           // show nothing said nothing of what a review is then given.
           <p className="mt-6 max-w-2xl text-sm text-[var(--color-ink-muted)]">
             No process directives: the parts of a protocol that are not rules come with an imported
-            document and are not written here. A review on this ruleset is given its rules and the
-            app&apos;s own instructions.
+            document or a template and are not written here. A review on this ruleset is given its
+            rules and the app&apos;s own instructions.
           </p>
         ) : (
           <button
@@ -1082,7 +1082,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
             Removes this ruleset&apos;s rules and directives. A review already run keeps the rules
             it ran with.
             {detail.ruleset.isDefault
-              ? " It is the default for new reviews, which will then start with no ruleset chosen."
+              ? " It is the default for new reviews, which will then tick the first ruleset listed instead."
               : ""}
           </p>
           {/* Said here, beside the control that was refused: the page's own

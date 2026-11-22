@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { RULESET_TIERS } from "@/lib/domain/enums";
+import { ruleCountWords } from "@/lib/rulesets/rule-count";
 import { sharedCodes, sharedCodesRefusal } from "@/lib/rulesets/shared-codes";
 import { Problem } from "@/components/ui";
 
@@ -18,7 +19,10 @@ export interface PickableRuleset {
   name: string;
   tier: string;
   version: number;
+  /** Its rules that are switched on. */
   ruleCount: number;
+  /** Every rule it holds, switched on or off. */
+  ruleTotal: number;
   /** The codes of its rules that are switched on, which a review would freeze. */
   codes: string[];
 }
@@ -144,12 +148,13 @@ export function RulesetPicker({
                         </label>
                         <Link
                           href={`/rulesets/${ruleset.id}`}
-                          aria-label={`${ruleset.ruleCount} rule${
-                            ruleset.ruleCount === 1 ? "" : "s"
-                          } of ${ruleset.name}`}
+                          aria-label={`${ruleset.name}, ${ruleCountWords(
+                            ruleset.ruleCount,
+                            ruleset.ruleTotal,
+                          )}`}
                           className="shrink-0 text-xs text-[var(--color-accent)] tabular-nums hover:underline"
                         >
-                          {ruleset.ruleCount} rule{ruleset.ruleCount === 1 ? "" : "s"}
+                          {ruleCountWords(ruleset.ruleCount, ruleset.ruleTotal)}
                         </Link>
                       </li>
                     );

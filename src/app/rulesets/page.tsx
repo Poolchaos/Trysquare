@@ -27,13 +27,16 @@ import {
   Textarea,
 } from "@/components/ui";
 import { send } from "@/components/request";
+import { ruleCountWords } from "@/lib/rulesets/rule-count";
 
 interface Ruleset {
   id: string;
   name: string;
   tier: string;
   version: number;
+  /** Its rules that are switched on, and every rule it holds. */
   ruleCount: number;
+  ruleTotal: number;
   sourceDoc: string | null;
   updatedAt: string;
 }
@@ -515,7 +518,7 @@ export default function RulesetsPage() {
                                   </span>
                                 ) : null}
                                 <span className="block text-xs text-[var(--color-ink-muted)]">
-                                  {ruleset.ruleCount} rule{ruleset.ruleCount === 1 ? "" : "s"}
+                                  {ruleCountWords(ruleset.ruleCount, ruleset.ruleTotal)}
                                   {ruleset.sourceDoc ? `, from ${ruleset.sourceDoc}` : ""}
                                 </span>
                               </span>

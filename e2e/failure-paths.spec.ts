@@ -1512,8 +1512,8 @@ test("a review that stopped short shows what the project's checks found", async 
     );
     await expect(section).toContainText(
       "What the project's own checks found on this branch. You decide it with the code " +
-        "findings once the review has run to its end, and a run that resumes runs the " +
-        "checks again.",
+        "findings once the review has run to its end. A resume keeps this result: the " +
+        "checks run again only if the project's commands were changed since.",
     );
     // Read, not decided: nothing here to press.
     await expect(section.getByRole("button")).toHaveCount(0);
@@ -2332,7 +2332,7 @@ test("Rule yield says when it lists some of the rules cited and not all", async 
   // first, and said nothing of the rest. The journey's review cites more
   // rules than that, so the card is read against the scoreboard's own
   // answer.
-  type Yield = { ruleCode: string; confirmed: number; total: number };
+  type Yield = { ruleCode: string; rulesetName: string | null; confirmed: number; total: number };
   const board = (await (await page.request.get("/api/scoreboard")).json()) as {
     ruleYield: Yield[];
   };
@@ -2347,6 +2347,10 @@ test("Rule yield says when it lists some of the rules cited and not all", async 
     [rows.last(), board.ruleYield[7]!],
   ] as const) {
     await expect(row.getByText(`Rule ${listed.ruleCode}`, { exact: true })).toBeVisible();
+    // With the ruleset the rule is in: a number names a rule in one ruleset
+    // only (the eighteenth grade, AF3).
+    expect(listed.rulesetName).not.toBeNull();
+    await expect(row.getByText(`in ${listed.rulesetName}`, { exact: true })).toBeVisible();
     await expect(
       row.getByText(`${listed.confirmed}/${listed.total}`, { exact: true }),
     ).toBeVisible();
@@ -4468,7 +4472,7 @@ test("a ruleset with nothing switched on is refused before Start, in the run's w
     await picker.getByRole("checkbox", { checked: true }).uncheck();
     await picker.getByRole("checkbox", { name: /^Zz default sweep v\d+$/ }).check();
     await expect(picker.locator("li").filter({ hasText: "Zz default sweep" })).toContainText(
-      "0 rules",
+      /0 of \d+ rules on/,
     );
     const refusal = page.getByText(
       'Ruleset "Zz default sweep" has no enabled rules, so a review using it would check ' +
@@ -4548,7 +4552,7 @@ test("several rulesets are ticked for one review, and two that share a rule numb
       timeout: 60_000,
     });
     await expect(start).toBeEnabled();
-    await expect(picker.getByRole("link", { name: "2 rules of Zz first of two" })).toHaveAttribute(
+    await expect(picker.getByRole("link", { name: "Zz first of two, 2 rules" })).toHaveAttribute(
       "href",
       `/rulesets/${first}`,
     );
@@ -4684,7 +4688,7 @@ test("a ruleset renumbered or deleted in another tab is on the list again on the
       true,
     );
     await comeBack(page);
-    await expect(picker.getByRole("link", { name: "3 rules of Zz return first" })).toBeVisible();
+    await expect(picker.getByRole("link", { name: "Zz return first, 3 rules" })).toBeVisible();
     await expect.poll(() => preflights.length).toBe(asked + 1);
     expect(preflights.at(-1)).toEqual([...onArrival, first, second]);
     await expect(start).toBeEnabled({ timeout: 60_000 });
@@ -6952,7 +6956,7 @@ test("one ruleset is deleted from its page, asked once, a refusal said beside th
   expect((await page.request.put(`/api/rulesets/${rulesetId}/default`)).status()).toBe(200);
   await page.reload();
   await expect(card).toContainText(
-    "It is the default for new reviews, which will then start with no ruleset chosen.",
+    "It is the default for new reviews, which will then tick the first ruleset listed instead.",
   );
   await shootAll(page, card, "ruleset-delete-default");
 
@@ -7652,7 +7656,7 @@ test("a ruleset is started with no document: a name and a tier, nothing to expor
     // one, where it offered to show "the 0 process directive(s)".
     await expect(
       page.getByText(
-        "No process directives: the parts of a protocol that are not rules come with an imported document and are not written here. A review on this ruleset is given its rules and the app's own instructions.",
+        "No process directives: the parts of a protocol that are not rules come with an imported document or a template and are not written here. A review on this ruleset is given its rules and the app's own instructions.",
       ),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: /process directive/ })).toHaveCount(0);

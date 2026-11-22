@@ -162,7 +162,7 @@ exports as the document it holds, every rule's text and every directive, and
 that document imports back as the same text. What is set beside the text is
 not in it: a rule switched off, and a severity changed with the picker and not
 in the rule's own text. Process directives come only
-with an imported document. A review keeps the rules it started with, so a
+with an imported document or a template. A review keeps the rules it started with, so a
 later change never alters a past review. Each ruleset carries a tier, meaning
 rules for any code, rules for a technology, or rules for one project. A review
 can be judged against several at once, ticked when it is set up, and its

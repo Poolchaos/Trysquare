@@ -130,7 +130,7 @@ precision is a claim about findings somebody judged.
   review cannot be cancelled, so one never resumed is listed until it is
   deleted.
 - **Live scan:** while a review runs, its stage gauge, current stage,
-  elapsed, spend so far, and a way into the scan theater. When nothing runs
+  elapsed, cost equivalent so far, and a way into the scan theater. When nothing runs
   it is absent, not empty: a panel labelled live with nothing in it is the
   dashboard claiming to have something to watch.
 - **Recent reviews:** branch pair with its project and model under it,
@@ -140,7 +140,7 @@ precision is a claim about findings somebody judged.
   findings count, cost equivalent, duration and status chip, with any review
   awaiting a decision highlighted. The pair truncates, whole in its title; the
   model and the status are never broken.
-- **Rule yield:** the eight rules with the lowest share of their findings
+- **Rule yield:** the eight rules, each named with its ruleset since a number names a rule in one ruleset only, with the lowest share of their findings
   that survived to confirmation, worst first, because a rule that only ever
   produces dismissals is costing review attention for nothing. With more
   than eight cited, a line under the list says how many there are.
@@ -274,8 +274,8 @@ findings in n of m decided and in what is left to decide, and Complete
 review waits on them too. Read only once the review is complete, and
 while it has not run to its end: running, paused, interrupted, failed or
 cancelled, the section is shown beside the run's detail, saying that they
-are decided once the review has run to its end and that a resume runs the
-checks again, or, of a cancelled review, that it is not decided.
+are decided once the review has run to its end and that a resume keeps the
+result (the checks run again only where the project's commands were changed since), or, of a cancelled review, that it is not decided.
 
 Above the queue, and above the report once complete, the finished review in
 its five steps (WP-G; at phone width, while findings wait to be decided, it
@@ -380,15 +380,15 @@ badge once its branch is found merged; delete per 02 rules.
   draft's Start, begins on it rather than on the first by name (D-225).
 - Delete ruleset, a card at the foot of a ruleset's page (D-266): it says
   what goes (the rules and directives, never the rules a review already
-  ran with) and, of the default, that new reviews will then start with
-  none chosen. Asked once (Yes, delete, or Keep it), then the list. A
+  ran with) and, of the default, that new reviews will then tick the
+  first ruleset listed. Asked once (Yes, delete, or Keep it), then the list. A
   refusal, a review in line being about to start on it, is said in the
   card.
 
 ### Settings
 
 Data directory (display + open in file manager), model probes and results,
-stage timeout, concurrency, review identities (the git emails that count
+the timeout of each call to the CLI, concurrency, review identities (the git emails that count
 as mine, for the Mine filters and the scoreboard's author column; while
 none is kept, the `user.email` of the person's git config, which the card
 names, D-243), where results are sent (the addresses a result is to be
@@ -400,7 +400,7 @@ D-286), danger zone (delete all data, two-step).
 
 Full keyboard operability, visible focus, WCAG AA contrast in both themes
 (checked in e2e via axe), prefers-reduced-motion honoured. Buttons and
-form fields are at least 40px tall (the `--hit-target` token); the top
+text fields and selects are at least 40px tall (the `--hit-target` token); a bare checkbox, the rule switch on a ruleset's page among them, is the size the browser draws it; the top
 bar's links and the underlined text buttons and links are shorter, the
 height of their text and padding. Screen-reader labels on all icon
 buttons.

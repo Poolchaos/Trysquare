@@ -403,14 +403,23 @@ export function listRulesets(db: Db): RulesetRow[] {
  */
 export function listRulesetSummaries(
   db: Db,
-): (RulesetRow & { ruleCount: number; codes: string[] })[] {
+): (RulesetRow & { ruleCount: number; ruleTotal: number; codes: string[] })[] {
   const codes = new Map<string, string[]>();
+  // Every rule it holds, switched on or off, so a list can say "9 of 12 on"
+  // where the ruleset's own page says 12 rules, 3 switched off.
+  const totals = new Map<string, number>();
   for (const rule of db.select().from(rules).orderBy(asc(rules.sortOrder)).all()) {
+    totals.set(rule.rulesetId, (totals.get(rule.rulesetId) ?? 0) + 1);
     if (rule.enabled) codes.set(rule.rulesetId, [...(codes.get(rule.rulesetId) ?? []), rule.code]);
   }
   return listRulesets(db).map((row) => {
     const enabled = codes.get(row.id) ?? [];
-    return { ...row, ruleCount: enabled.length, codes: enabled };
+    return {
+      ...row,
+      ruleCount: enabled.length,
+      ruleTotal: totals.get(row.id) ?? 0,
+      codes: enabled,
+    };
   });
 }
 
@@ -970,10 +979,9 @@ export function removeRule(
 /**
  * Copies a ruleset into another tier as its own version 1.
  *
- * Through export and re-import rather than row copying, so the duplicate is
- * exactly what a person pasting the exported document would get, and the two
- * cannot drift in what a copy means. Disabled rules come along disabled: the
- * copy is of the ruleset as it stands, not of the original document.
+ * Of the ruleset as it stands, not of its document: a rule switched off
+ * comes along switched off, and a severity changed with the picker comes
+ * along changed, neither of which the exported document holds.
  */
 export function duplicateRuleset(
   db: Db,

@@ -202,7 +202,12 @@ describe("storing an imported protocol", () => {
 
     const on = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"];
     expect(listRulesetSummaries(db)).toEqual([
-      expect.objectContaining({ id: rulesetId, ruleCount: on.length, codes: on }),
+      expect.objectContaining({
+        id: rulesetId,
+        ruleCount: on.length,
+        ruleTotal: on.length + 1,
+        codes: on,
+      }),
     ]);
   });
 });

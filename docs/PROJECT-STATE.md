@@ -5,7 +5,10 @@ fixing it is part of that change. Dates are absolute (YYYY-MM-DD).
 
 Last verified: 2026-11-17, against the code at fe22a19, on the maintainer's
 Linux machine: the structure counts below recounted for the audit of that
-day, the stack read from the machine, and the gate run with `--e2e`. Dated
+day, the stack read from the machine, and the gate run with `--e2e`. A
+line a later change moved, the count of migrations on 2026-11-22 for one,
+was corrected with that change; nothing below was recounted whole since
+that day. Dated
 entries under Status say what was true on their date, and "this machine"
 in one is the machine of that date: Linux for the entries of 2026-07 and
 2026-08, Windows 11 for those from 2026-10-16 to 2026-10-28, Linux again
@@ -63,8 +66,13 @@ from 2026-11-03.
   runs the project's checks again, where it keeps their result; and Rule
   yield is counted by a rule's number across every ruleset. Thirteen
   immaterial lines came with them and three siblings of the
-  seventeenth's. All are logged as AF1 to AF16 in the audit file, not
-  yet checked or corrected.
+  seventeenth's. All are logged as AF1 to AF16 in the audit file and
+  corrected the same day (D-298): the three lines say what the code does,
+  Rule yield is tallied by ruleset and number with the ruleset named on
+  each row, and the Rulesets list and the picker say "9 of 12 rules on"
+  where some are switched off. A nineteenth grade is owed.
+  `./verify.sh --e2e` exits 0 with 1700 unit tests passing, 8 skipped,
+  and 172 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
   those awaiting a decision, each row saying which it is and what to press
@@ -525,7 +533,7 @@ over every screen in both themes, and the shutdown pass, which runs on
 Linux and macOS only). `--e2e` implies `--build` since 2026-08-18, because
 Playwright serves the last build and without it the browser gate can pass
 against output that predates the change under test (D-70). CI runs
-`./verify.sh --build --e2e` and then the fake demo on Ubuntu, Windows and
+`./verify.sh --build --e2e` and then the five fake demos (the seeded fixture and the four templates') on Ubuntu, Windows and
 macOS (MVP WP 3.6); Ubuntu and macOS must pass before a pull request merges
 into `main`, and the maintainer's own pushes are exempt (D-232). The local
 default leaves build and e2e off so it stays fast.
@@ -743,7 +751,7 @@ own now (D-75, D-81).
   changed, its text edited (RA-2, D-267), a rule added (RA-3, D-268) and
   removed (RA-4, D-269), and one ruleset deleted (RA-1, D-266). Process
   directives are not written in the app: they come with an imported
-  document.
+  document or a template.
 - A viewer for a failed stage's transcript: the review page names the file
   and renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
 - The live output of git while a project clones: a failure's stderr is

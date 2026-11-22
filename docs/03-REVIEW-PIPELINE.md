@@ -313,7 +313,7 @@ about that one finding in a fresh session, never replayed from a stored
 answer, and, if S5 proves it, the second verifier too, each held to the
 same checks (proof-and-steps plan, WP-D2). The card says how many requests
 that can be (two, and one more for either whose answer comes back in the
-wrong shape), the models, the billing and the stage timeout, and sends
+wrong shape), the models, the billing and the timeout of each call, and sends
 nothing until Send request is pressed.
 It counts against the reviews at once, and while it runs its finding
 cannot be decided nor its review completed or deleted;

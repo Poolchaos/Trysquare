@@ -250,10 +250,11 @@ export function CheckFindings({
       <h2 className="mb-1 text-heading font-semibold">Tests and design</h2>
       <p className="mb-3 text-sm text-[var(--color-ink-muted)]">
         {when === "pending"
-          ? // Each run deletes what the last one's checks found and runs them again.
+          ? // A resume lists the kept result again and runs no command, unless
+            // the project's checks were changed since (`project-checks.ts`).
             "What the project's own checks found on this branch. You decide it with the code " +
-            "findings once the review has run to its end, and a run that resumes runs the " +
-            "checks again."
+            "findings once the review has run to its end. A resume keeps this result: the " +
+            "checks run again only if the project's commands were changed since."
           : when === "cancelled"
             ? "What the project's own checks found on this branch before the review was " +
               "cancelled. A cancelled review is not decided and has no report."

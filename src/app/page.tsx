@@ -81,7 +81,13 @@ interface Scoreboard {
   awaitingReviews: AwaitingRow[];
   spendHistory: number[];
   recent: Row[];
-  ruleYield: { ruleCode: string; confirmed: number; total: number }[];
+  ruleYield: {
+    ruleCode: string;
+    /** The ruleset the rule is in; null where its review froze none. */
+    rulesetName?: string | null;
+    confirmed: number;
+    total: number;
+  }[];
   projects: ProjectRow[];
   /** Git's words when the emails that count as the person's could not be read. */
   identitiesProblem: string | null;
@@ -601,12 +607,28 @@ export default function HomePage() {
                   </p>
                 ) : (
                   <ul className="mt-3 grid gap-2">
-                    {board.ruleYield.slice(0, RULES_LISTED).map((rule) => {
+                    {board.ruleYield.slice(0, RULES_LISTED).map((rule, index) => {
                       const share = rule.confirmed / rule.total;
                       return (
-                        <li key={rule.ruleCode} className="text-dense">
+                        // The place in the list is the key: a rule is its
+                        // ruleset and its number, and two rulesets since
+                        // deleted can have had one name.
+                        <li key={index} className="text-dense">
                           <div className="flex items-baseline justify-between gap-2">
-                            <span>Rule {rule.ruleCode}</span>
+                            {/* With its ruleset: a number names a rule in
+                                one ruleset, not across them (AF3). */}
+                            <span
+                              className="min-w-0 truncate"
+                              title={rule.rulesetName ? rule.rulesetName : undefined}
+                            >
+                              <span>Rule {rule.ruleCode}</span>
+                              {rule.rulesetName ? (
+                                <span className="text-aside text-[var(--color-ink-muted)]">
+                                  {" "}
+                                  in {rule.rulesetName}
+                                </span>
+                              ) : null}
+                            </span>
                             <span className="text-aside text-[var(--color-ink-muted)] tabular-nums">
                               {rule.confirmed}/{rule.total}
                             </span>

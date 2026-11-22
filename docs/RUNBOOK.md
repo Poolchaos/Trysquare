@@ -227,10 +227,10 @@ Probe press in step 4, a real but tiny paid call.
    (Edit text), added (Add a rule) or removed (Remove rule). Each change
    moves the ruleset's version, and a review already started keeps the rules
    it was frozen with. Process directives come only with an imported
-   document.
+   document or a template.
 4. **Set up the review.** Open the project, pick a branch, and press Review on
-   its row, or go to New review. Choose the branch to compare against, the
-   ruleset, the model, and the effort. The CLI's top effort tier is
+   its row, or go to New review. Choose the branch to compare against, tick the
+   rulesets, and choose the model and the effort. The CLI's top effort tier is
    deliberately not offered and is refused by the server, on cost: the CLI
    prices it at up to 5.59 times high for every call, and a review makes many,
    unattended (D-125). Extra high is offered only for a model that runs it,
@@ -243,7 +243,7 @@ Probe press in step 4, a real but tiny paid call.
    check, never as an instruction, and a change that does not do what it says
    is itself a finding. An Advanced fold offers a deliberate profile
    downgrade with the per-profile request counts beside it.
-5. **Read the pre-flight.** It appears once the branches, ruleset and model
+5. **Read the pre-flight.** It appears once the branches, rulesets and model
    are chosen, and costs nothing: the commits it would pin, after a fetch of
    its own (the time on the branch card above is when the branch list was
    read, not this fetch), file and hunk counts, sweep hits, changed
@@ -300,7 +300,7 @@ used the real CLI:
 - Pressing Probe on the Settings screen, or a probe control in the model
   picker. Each probe is a real call, which is why nothing probes on a timer or
   at startup.
-- `npm run demo:fixture` or `npm run demo:design` with `--real` or
+- `npm run demo:fixture`, `npm run demo:template -- <name>` or `npm run demo:design` with `--real` or
   `--model`. Each says how the CLI is signed in first, and stops, having
   spent nothing, when that bills per token or may, unless `--per-token` is
   passed.
@@ -327,7 +327,7 @@ skipped unless `TRYSQUARE_REAL_CLI=1` is set.
   was, a draft still a draft (D-224). Raise the limit on Settings if you
   accept the sharing.
 - **After a restart, a mid-flight review shows as interrupted.** Open it and
-  press Resume. Do not pick a ruleset again: a resumed review carries the one
+  press Resume. Do not tick rulesets again: a resumed review carries those
   it was frozen with, and stages already paid for replay for free.
 - **A usage limit pauses rather than fails.** The review moves to paused and
   keeps everything it has done. Resume when the limit clears.

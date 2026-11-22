@@ -7,9 +7,25 @@ import { describe, expect, it } from "vitest";
 import { rulesetChoice } from "@/components/ruleset-picker";
 
 const listed = [
-  { id: "a", name: "General", tier: "global", version: 1, ruleCount: 2, codes: ["1", "2"] },
-  { id: "b", name: "TypeScript", tier: "tech", version: 3, ruleCount: 1, codes: ["21"] },
-  { id: "c", name: "Ours", tier: "project", version: 1, ruleCount: 1, codes: ["2"] },
+  {
+    id: "a",
+    name: "General",
+    tier: "global",
+    version: 1,
+    ruleCount: 2,
+    ruleTotal: 2,
+    codes: ["1", "2"],
+  },
+  {
+    id: "b",
+    name: "TypeScript",
+    tier: "tech",
+    version: 3,
+    ruleCount: 1,
+    ruleTotal: 1,
+    codes: ["21"],
+  },
+  { id: "c", name: "Ours", tier: "project", version: 1, ruleCount: 1, ruleTotal: 2, codes: ["2"] },
 ];
 
 describe("the rulesets ticked for a review", () => {
