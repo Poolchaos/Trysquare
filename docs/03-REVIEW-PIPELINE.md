@@ -347,7 +347,7 @@ branch and commit, token usage and the cost equivalent (said as not recorded for
 run took, to when it stopped and not to when the review was completed
 (D-248), said as the last run's where an earlier run asked a model
 anything, the tokens and the cost being every run's. The HTML's footer and the page's leave out the tokens, the
-duration and the linked project. No em dashes in the report's own words
+duration and the linked project. For an interactive review all three footers add an Engine line: that each stage's command was printed for a person to run, which models those commands name, and that the model, a verifier or a grader in the report means the session that answered (D-307). No em dashes in the report's own words
 (the house-style gate over the source, and a unit test of a rendered report); what a finding or a person wrote is carried as written.
 
 ## 4. Prompt composition
@@ -381,11 +381,20 @@ splits the work instead and records the split in the run log.
   Recovery is by resuming the review rather than retrying one stage (D-50):
   stages already answered replay for free from their checkpoints and only
   the failed one runs live, which is the same mechanism as a limit pause.
-- CLI limit/429: review `paused_limit`, CLI message shown verbatim, manual
-  resume asks the stage again: one of S1 to S4 rejoins the session those
-  stages share, with `--resume <sessionId>`, and any other starts a fresh
-  one, as it always does.
-- Cancel: kills the subprocess and marks the review cancelled; the stage
+- CLI limit/429, in a headless review: review `paused_limit`, CLI message
+  shown verbatim, manual resume asks the stage again: one of S1 to S4
+  rejoins the session those stages share, with `--resume <sessionId>`, and
+  any other starts a fresh one, as it always does. An interactive review
+  has no such pause and no session to rejoin: a limit met in the person's
+  session is not seen, the stage fails at its timeout, and a resume prints
+  the stage's command again.
+- An interactive answer the pipeline refuses (a skipped hunk, say) is
+  moved aside in the bundle as well as struck from the checkpoints, so a
+  resume waits for a new answer and never reads the refused file back
+  (D-307).
+- Cancel: kills the subprocess of a headless review, or ends the wait of an
+  interactive one, whose session in the person's terminal goes on, and
+  marks the review cancelled; the stage
   that was running is recorded as failed, with the error class
   `cancelled` (`src/server/review/checkpointing-runner.ts`). The
   completed-stage results are kept and the worktree is removed.

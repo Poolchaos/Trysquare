@@ -13,7 +13,7 @@
  * policy change stop at this file.
  */
 
-import type { EngineMode } from "@/lib/domain/enums";
+import type { EngineMode, ReviewStage } from "@/lib/domain/enums";
 import type { StageRequest, StageResponse } from "@/server/review/pipeline";
 
 export interface ReviewEngine {
@@ -28,4 +28,12 @@ export interface ReviewEngine {
    * has nothing to hand back.
    */
   chainSessionId: () => string | undefined;
+  /**
+   * The pipeline refused a stage's answer after this engine returned it.
+   *
+   * For an engine that keeps the answer somewhere a later run would find
+   * it. The headless engine keeps none, the checkpoints being the only
+   * copy, and has no such method.
+   */
+  discardAnswers?: (stage: ReviewStage) => void;
 }

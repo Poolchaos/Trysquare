@@ -1067,7 +1067,7 @@ describe("the second verifier (WP-E, D-188)", () => {
     ...overrides,
   });
   /** A run whose first verifier says `first` and whose second says `second`. */
-  async function both(second: unknown, first: unknown = proof()) {
+  async function both(second: unknown, first: unknown = proof(), interactive = false) {
     const asked: StageRequest[] = [];
     let duringSecond: ReturnType<typeof listFindings> = [];
     const answers: Record<string, unknown> = {
@@ -1084,6 +1084,7 @@ describe("the second verifier (WP-E, D-188)", () => {
       profile: "full-context",
       systemPromptFor: (stage) => `prompt for ${stage}`,
       secondVerifier: "claude-opus-5-5",
+      interactive,
       run: async (request) => {
         asked.push(request);
         if (request.stage === "s5b_second_verification") duringSecond = listFindings(db, reviewId);
@@ -1117,6 +1118,20 @@ describe("the second verifier (WP-E, D-188)", () => {
     expect(statusOf(finding)).toBe("open_question");
     expect(finding.verificationNote).toBe(
       "The second verifier, claude-opus-5-5, refuted it: The caller parses the body first.",
+    );
+  });
+
+  it("names an interactive review's second verifier by the model its command named", async () => {
+    // The app printed a command and read an answer file: which model
+    // answered is not a thing it knows (the twenty-second grade, AJ5).
+    const { finding } = await both(
+      { verdicts: [{ ref: "C1", verdict: "killed", note: "The caller parses the body first." }] },
+      proof(),
+      true,
+    );
+    expect(finding.verificationNote).toBe(
+      "The second verifier, on the command that named claude-opus-5-5, refuted it: " +
+        "The caller parses the body first.",
     );
   });
 

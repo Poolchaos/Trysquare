@@ -19,6 +19,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { existsSync, readdirSync, renameSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ReviewStage } from "@/lib/domain/enums";
@@ -337,7 +338,27 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
     };
   };
 
-  return { mode: "interactive", run, chainSessionId: () => undefined };
+  // An answer the pipeline refuses was already taken here as well formed: a
+  // skipped hunk, say. Its file is moved aside as the engine's own refusals
+  // are, or the same question on Resume read it back and the review failed
+  // the same way for ever (the twenty-second grade, AJ1). Every batch's:
+  // the pipeline judges them merged and cannot say which was at fault.
+  const discardAnswers = (stage: ReviewStage): void => {
+    if (!existsSync(options.exchangeDir)) return;
+    const answers = new RegExp(`^${stage}(?:-b\\d+)?-[0-9a-f]{12}-output\\.json$`);
+    for (const name of readdirSync(options.exchangeDir)) {
+      if (!answers.test(name)) continue;
+      renameSync(
+        join(options.exchangeDir, name),
+        join(
+          options.exchangeDir,
+          name.replace(/-output\.json$/, `-output.rejected-${Date.now()}.json`),
+        ),
+      );
+    }
+  };
+
+  return { mode: "interactive", run, chainSessionId: () => undefined, discardAnswers };
 }
 
 /**

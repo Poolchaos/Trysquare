@@ -130,7 +130,7 @@ precision is a claim about findings somebody judged.
   review cannot be cancelled, so one never resumed is listed until it is
   deleted.
 - **Live scan:** while a review runs, its stage gauge, current stage,
-  elapsed, cost equivalent so far, and a way into the scan theater. When nothing runs
+  elapsed, cost equivalent so far (none for an interactive review, whose usage is not recorded), and a way into the scan theater. When nothing runs
   it is absent, not empty: a panel labelled live with nothing in it is the
   dashboard claiming to have something to watch.
 - **Recent reviews:** branch pair with its project and model under it,
@@ -241,7 +241,7 @@ refuses one too.
   climbing live. Not built: risk tags per file and the chain files read.
   A run note names the first five risk-tagged files with their tags, and
   nothing shows the chain files.
-- Activity feed: current stage's tool activity (file being read), errors.
+- Activity feed: current stage's tool activity (file being read), errors. An interactive review's feed has the stages and the run's notes alone: its sessions are the person's, and the app sees no tool they use.
 - Usage meter: cumulative tokens and cost-equivalent; for an interactive review, that they were not recorded.
 - Your turn: the command of an interactive stage that waits on the person, with where to save the answer, above the feed and on the review's page whenever either is opened (D-301). The command's box takes the keyboard's focus, so one taller than the box is scrolled to its end without a mouse (D-302). The feed says in a line that the stage is waiting, never the command a second time, and keeps its height under the card (D-304).
 - Controls: cancel, which asks first and says when it failed (5.1); start,
@@ -296,7 +296,7 @@ Rendered report (protocol output format), typeset in-app rather than shown
 as raw markdown: title, one bold summary sentence, prose-first finding
 cards grouped by severity with the code excerpt subordinate, and a
 provenance footer (model, effort where one was passed, profile, ruleset and version, commit,
-merge base, cost equivalent, or for an interactive review that tokens and cost were not recorded; the markdown's footer alone adds tokens,
+merge base, cost equivalent, or for an interactive review that tokens and cost were not recorded, with an Engine line saying how such a review was answered and which models its commands name; the markdown's footer alone adds tokens,
 duration and a linked project).
 Copy and export actions; export writes the markdown and a self-contained
 single-file HTML beside it, so a report can be handed to a colleague whole

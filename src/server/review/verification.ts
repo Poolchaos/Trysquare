@@ -278,6 +278,8 @@ export async function applySecondVerdicts(
   held: readonly HeldProof[],
   verdicts: ReturnType<typeof parseVerdicts>,
   model: string,
+  /** How a note names the second verifier: its model, unless the caller says otherwise. */
+  named: string = model,
 ): Promise<{ verified: number; disagreed: number }> {
   let verified = 0;
   let disagreed = 0;
@@ -305,7 +307,7 @@ export async function applySecondVerdicts(
     markOpenQuestion(
       context.db,
       proven.finding.id,
-      `The second verifier, ${model}, ${why}`,
+      `The second verifier, ${named}, ${why}`,
       proofOf(proven.verdict),
     );
     disagreed += 1;

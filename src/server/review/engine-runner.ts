@@ -27,7 +27,9 @@ export class StageOutputUnreadableError extends Error {
     readonly rawExcerpt: string,
   ) {
     super(
-      `The ${stage} stage did not return a JSON object (${detail}). ` +
+      // An answer of the wrong shape is refused through this too, so it does
+      // not say "not a JSON object", which that answer is (AJ10).
+      `The ${stage} stage's answer could not be read as the JSON it was asked for (${detail}). ` +
         `A stage answer that cannot be read is a failed stage, not an empty result. ` +
         `First 200 characters of what came back: ${rawExcerpt}`,
     );

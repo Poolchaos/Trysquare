@@ -330,7 +330,11 @@ skipped unless `TRYSQUARE_REAL_CLI=1` is set.
   press Resume. Do not tick rulesets again: a resumed review carries those
   it was frozen with, and stages already paid for replay for free.
 - **A usage limit pauses rather than fails.** The review moves to paused and
-  keeps everything it has done. Resume when the limit clears.
+  keeps everything it has done. Resume when the limit clears. That is a
+  headless review, where the app sees the CLI's answer. An interactive
+  review's sessions are yours, and a limit met in one is not seen: its
+  stage waits out the timeout and the review fails, to be resumed the same
+  way.
 - **`./verify.sh --e2e` can fail on port 3417** after an interrupted Playwright
   run. Kill whatever holds the port. Reusing an existing server is refused on
   purpose: it would not have been started with the fake engine, which is

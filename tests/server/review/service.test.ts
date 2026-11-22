@@ -832,6 +832,105 @@ describe("the interactive engine", () => {
     // Mode B passes no effort to anyone, so the record does not claim one.
     expect(note?.message).not.toContain("effort");
   }, 180_000);
+
+  it("asks a stage again on Resume when the pipeline refused its answer, never the same file back", async () => {
+    // The twenty-second grade, AJ1. The hunt's answer skips a hunk: well
+    // formed, so the engine took it, and refused by the pipeline. Its file
+    // stayed in the bundle, the Resume read it back at once, and the
+    // review could never go on.
+    const project = createProject(db, {
+      name: "app",
+      gitUrl: "git@example.com:acme/app.git",
+      defaultBranch: "main",
+      clonePath: appClone,
+    });
+    const reviewId = createReview(db, {
+      projectId: project.id,
+      fromBranch: "feature/rename-prefs",
+      fromCommit: appHead,
+      intoBranch: "main",
+      intoCommit: appBase,
+      mergeBaseCommit: appBase,
+      model: "claude-fable-5[1m]",
+      profileId: "full-context",
+      engineMode: "interactive",
+    }).id;
+    const outputs = buildIdealStageOutputs({
+      files: appFiles.map((file) => ({ repo: "primary" as const, slug: "app", file })),
+      manifest: { ...manifest, defects: manifest.defects.filter((d) => d.kind !== "cross-repo") },
+      worktreeRoot: referenceRoot,
+      rules: PROTOCOL.rules,
+    });
+    const good = answerSequence(outputs);
+    const skipsAHunk = [...good];
+    skipsAHunk[2] = { ...outputs.s3, clearedHunks: outputs.s3.clearedHunks.slice(1) };
+    const bundle = bundleDir(dataDir, reviewId);
+    const stages = [
+      "s1_risk",
+      "s2_comprehension",
+      "s3_adversarial",
+      "s4_deletions",
+      "s5_verification",
+      "s5b_second_verification",
+    ] as const;
+    const promptOf = (stage: string) =>
+      existsSync(bundle)
+        ? readdirSync(bundle).find(
+            (name) => name.startsWith(`${stage}-`) && name.endsWith("-prompt.md"),
+          )
+        : undefined;
+    const huntAnswers = () =>
+      readdirSync(bundle).filter((name) => /^s3_adversarial-.*-output\.json$/.test(name));
+
+    // Stands in for the person, saving each stage's answer once it is
+    // asked for and no answer is there: a stage asked again is answered
+    // again, and an answer the app left in place is left for it to read.
+    const answerWith = (answers: readonly unknown[]) => {
+      let stopped = false;
+      const done = (async () => {
+        for (const [index, stage] of stages.entries()) {
+          for (;;) {
+            if (stopped) return;
+            const promptName = promptOf(stage);
+            if (promptName !== undefined) {
+              const answer = join(bundle, promptName.replace(/-prompt\.md$/, "-output.json"));
+              if (!existsSync(answer)) {
+                writeFileSync(
+                  answer,
+                  resolveCandidateTokens(
+                    JSON.stringify(answers[index]),
+                    readFileSync(join(bundle, promptName), "utf8"),
+                  ),
+                  "utf8",
+                );
+              }
+              break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+        }
+      })();
+      return async () => {
+        stopped = true;
+        await done;
+      };
+    };
+
+    const stopFirst = answerWith(skipsAHunk);
+    const refused = await prepareAndRun(db, reviewId, { dataDir, ruleset: RULESET });
+    await stopFirst();
+    expect(refused.kind, JSON.stringify(refused)).toBe("failed");
+    // The refused answer is not left where the same question would find it.
+    expect(huntAnswers()).toEqual([]);
+    expect(readdirSync(bundle).some((name) => name.includes(".rejected-"))).toBe(true);
+
+    // So a Resume waits for a new answer, and goes on with it.
+    const stopSecond = answerWith(good);
+    const resumed = await prepareAndRun(db, reviewId, { dataDir, ruleset: RULESET });
+    await stopSecond();
+    expect(resumed.kind, JSON.stringify(resumed)).toBe("completed");
+    expect(requireReview(db, reviewId).status).toBe("awaiting_confirmation");
+  }, 180_000);
 });
 
 describe("the commits a review is pinned to", () => {

@@ -20,6 +20,7 @@ import { readReviewSnapshot, readReviewSnapshotMeta } from "../db/repositories/r
 import { reviewProfileSchema } from "@/lib/domain/enums";
 import { excludedPairCount } from "@/lib/rulesets/compose";
 import type { Db } from "../db/client";
+import { interactiveEngineWords } from "@/lib/review/report";
 import type {
   DesignChecked,
   ReportCheck,
@@ -233,6 +234,12 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
     // (the nineteenth grade, AG3).
     effort: review.engineMode === "interactive" ? null : review.effort,
     profile: review.profileId,
+    // Said wherever the model is named: the markdown alone said it, and of
+    // the review's model alone (the twenty-second grade, AJ2, AJ6).
+    engine:
+      review.engineMode === "interactive"
+        ? interactiveEngineWords(review.verifierModel ?? null)
+        : null,
 
     // Not given for an interactive review: its usage is recorded as zero and
     // was never measured (the twentieth grade, AH1).

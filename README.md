@@ -227,7 +227,8 @@ it opened each image stands alone. A project with no e2e is reported as
 - Node 22 or newer
 - git
 - A Claude subscription, signed in to [Claude Code](https://claude.com/claude-code)
-- Claude Code 2.1.301 or newer; reviews refuse an older CLI and say so.
+- Claude Code 2.1.301 or newer; headless reviews refuse an older CLI and say
+  so, and an interactive review's printed command says the version it needs.
 
 `npm install` installs the Claude Code CLI with the app (version 2.1.301,
 about 500MB on Linux as measured on 2026-11-17, where npm brings two builds

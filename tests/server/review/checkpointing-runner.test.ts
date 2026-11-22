@@ -362,7 +362,7 @@ describe("the record it leaves behind", () => {
     const rows = listForReview(db, reviewId);
     expect(rows).toHaveLength(2);
     expect(rows.every((row) => row.status === "failed")).toBe(true);
-    expect(rows[1]?.errorText).toMatch(/did not return a JSON object/);
+    expect(rows[1]?.errorText).toMatch(/could not be read as the JSON it was asked for/);
     expect(usageTotals(db, reviewId).inputTokens).toBe(usage.inputTokens * 2);
   });
 

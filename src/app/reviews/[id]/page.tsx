@@ -140,7 +140,16 @@ const INTERACTIVE_DESCRIPTIONS = new Map<string, string>([
     "s5b_second_verification",
     "Prove each verified finding again, from a command that names the second verifier's model",
   ],
+  [
+    "s5c_design_second",
+    "Grade each screen graded C or D again, from a command that names the second grader's model",
+  ],
 ]);
+
+/** What an interactive review's page means by the words every review's page uses. */
+const INTERACTIVE_MEANS =
+  "This review was answered in your own sessions. Where this page says the model, a verifier " +
+  "or a grader, it means the session you ran on that stage's command.";
 
 function stageDescription(stage: string, interactive: boolean): string | undefined {
   return (
@@ -296,6 +305,8 @@ interface ReportData {
   /** Null for an interactive review, whose commands pass none. */
   effort: string | null;
   profile: string;
+  /** How an interactive review was answered; null or absent for a headless one. */
+  engine?: string | null;
   /** Null for an interactive review, whose usage is not recorded. */
   usage: { costEquivalentUsd: number } | null;
   startedAt: string | null;
@@ -1874,6 +1885,14 @@ function FinishedSummary({ snapshot }: { snapshot: Snapshot }) {
       </Card>
       <div>
         <h2 className="mb-2 text-heading font-medium">The five steps</h2>
+        {/* The steps and the queue speak of the model and the verifiers.
+            For an interactive review the app wrote prompts and read answer
+            files, and saw neither (the twenty-second grade, AJ11). */}
+        {review.engineMode === "interactive" ? (
+          <p className="mb-2 text-xs text-[var(--color-ink-muted)]" data-testid="interactive-means">
+            {INTERACTIVE_MEANS}
+          </p>
+        ) : null}
         <ol className="grid gap-2">
           {STEPS.map((step, index) => {
             const spent = usage[index]!;
@@ -2010,7 +2029,7 @@ function RunDetail({
                   // that timed out with none said it too (review round 27).
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
                     {last.status === "succeeded"
-                      ? "Answered in your own session: its usage is not recorded."
+                      ? "Answered in your own session: its usage is not recorded, and its time includes yours."
                       : "For you to answer in your own session: its usage is not recorded."}
                   </p>
                 ) : last && !DETERMINISTIC_STAGES.has(stage) ? (
@@ -2398,6 +2417,8 @@ function RenderedReport({ data }: { data: ReportData }) {
         {data.usage === null
           ? `Tokens and cost: ${USAGE_NOT_RECORDED}`
           : `Cost equivalent $${data.usage.costEquivalentUsd.toFixed(4)}.`}
+        {/* Said where the model is named, as the markdown says it (AJ6). */}
+        {data.engine ? <span className="mt-1 block">Engine: {data.engine}</span> : null}
       </footer>
     </Card>
   );
@@ -2442,6 +2463,12 @@ function YourTurn({ text }: { text: string }) {
       >
         {text}
       </pre>
+      {/* The commands run with the terminal's own environment, which every
+          screen that prints them says (06, D-176). This card printed them
+          and said nothing of it (the twenty-second grade, AJ9). */}
+      <div className="mt-2">
+        <TerminalEnvironmentNote />
+      </div>
     </div>
   );
 }

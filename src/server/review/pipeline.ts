@@ -171,6 +171,12 @@ export interface PipelineInput {
   /** The model that proves every finding S5 proves again, in S5b (WP-E). */
   secondVerifier: string;
   /**
+   * The review is answered in the person's own sessions. A note then names
+   * the second verifier's model as the one its command named, which is all
+   * the app knows of it (the twenty-second grade, AJ5).
+   */
+  interactive?: boolean | undefined;
+  /**
    * The screenshots the project's own e2e saved, to grade (WP-I step 4), and
    * its design standard; absent when its checks are off or saved none.
    */
@@ -773,6 +779,12 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
   // under the same labels and not shown S5's proof (WP-E, D-188). Before
   // the sweep below, which would take the findings held here for ones
   // nobody ruled on. Nothing proved, nothing to ask.
+  // How a note names the second verifier and the second grader: by the
+  // model, or for an interactive review by the model their command named.
+  const secondNamed =
+    input.interactive === true
+      ? `on the command that named ${input.secondVerifier}`
+      : input.secondVerifier;
   let secondVerifierDisagreed = 0;
   if (held.length > 0) {
     const secondResponse = await input.run({
@@ -788,7 +800,13 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
     const secondVerdicts = rejecting("s5b_second_verification", () =>
       parseVerdicts(secondResponse.output, candidates.length),
     );
-    const second = await applySecondVerdicts(verifying, held, secondVerdicts, input.secondVerifier);
+    const second = await applySecondVerdicts(
+      verifying,
+      held,
+      secondVerdicts,
+      input.secondVerifier,
+      secondNamed,
+    );
     tally.verified = second.verified;
     tally.openQuestions += second.disagreed;
     secondVerifierDisagreed = second.disagreed;
@@ -833,14 +851,14 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
           db,
           row.id,
           "verified",
-          `Graded ${again.grade} again by the second grader, ${input.secondVerifier}: ${again.whatIsOff}`,
+          `Graded ${again.grade} again by the second grader, ${secondNamed}: ${again.whatIsOff}`,
         );
       } else {
         settleDesignCandidate(
           db,
           row.id,
           "open_question",
-          `The second grader, ${input.secondVerifier}, graded it ${again.grade}` +
+          `The second grader, ${secondNamed}, graded it ${again.grade}` +
             (again.whatIsOff.trim() === "" ? "." : `: ${again.whatIsOff}`),
         );
       }

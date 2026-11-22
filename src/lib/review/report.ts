@@ -80,10 +80,25 @@ export interface ReportCheckRun {
   outcome: "passed" | "failed" | "timed out" | "cancelled";
 }
 
-/** How a report says its review was answered by hand, where it names the model. */
-const INTERACTIVE_ENGINE =
-  "interactive. Each stage's command was printed for a person to run in their own session, " +
-  "and the model above is the one those commands named.";
+/**
+ * How a report says its review was answered by hand, where it names the
+ * model. The second verifier's and the second grader's commands name the
+ * paired model, which the first wording left out (the twenty-second grade,
+ * AJ2). The last sentence says what the report's own words mean for such a
+ * review: the app wrote a prompt and read an answer, and saw no model
+ * (AJ11).
+ */
+export function interactiveEngineWords(verifierModel: string | null): string {
+  return (
+    "interactive. Each stage's command was printed for a person to run in their own session. " +
+    "Those commands name the model above" +
+    (verifierModel === null
+      ? ""
+      : `, but for the second verifier's and the second grader's, which name ${verifierModel}`) +
+    ". Where this report says the model, a verifier or a grader, it means the session that " +
+    "answered that stage's command."
+  );
+}
 
 /**
  * What stands where an interactive review's tokens and cost would be. Its
@@ -141,6 +156,8 @@ export interface ReportInput {
   /** Null for an interactive review: its commands pass none, the person's own session deciding. */
   effort: string | null;
   profile: string;
+  /** How an interactive review was answered, said wherever the model is named; null for a headless one. */
+  engine: string | null;
 
   /**
    * Null for an interactive review: its tokens are spent in the person's own
@@ -472,7 +489,7 @@ function footer(input: ReportInput): string[] {
     `- Model: ${input.model}${input.effort === null ? "" : `, effort ${input.effort}`}, profile ${input.profile}`,
     // The app started nothing for an interactive review, so the model is
     // the one its commands named, not one the app saw answer (AI8).
-    ...(input.usage === null ? [`- Engine: ${INTERACTIVE_ENGINE}`] : []),
+    ...(input.engine === null ? [] : [`- Engine: ${input.engine}`]),
     `- Reviewed: ${input.fromCommit} against merge base ${input.mergeBaseCommit}`,
   ];
 
@@ -676,7 +693,7 @@ ${group("Left out unproven", input.leftOutUnproven, "Left out")}
 ${group("Dismissed", input.dismissed)}
 <footer>${escapeHtml(input.model)}${input.effort === null ? "" : ` at effort ${escapeHtml(input.effort)}`}, ${escapeHtml(input.profile)} profile, against ${input.rulesets.map((ruleset) => `${escapeHtml(ruleset.name)} v${ruleset.version}`).join(", ")}.
 Commit ${escapeHtml(input.fromCommit.slice(0, 12))}, merge base ${escapeHtml(input.mergeBaseCommit.slice(0, 12))}.
-${input.usage === null ? `Tokens and cost: ${USAGE_NOT_RECORDED}` : `Cost equivalent $${input.usage.costEquivalentUsd.toFixed(4)}.`}</footer>
+${input.engine === null ? "" : `Engine: ${escapeHtml(input.engine)}\n`}${input.usage === null ? `Tokens and cost: ${USAGE_NOT_RECORDED}` : `Cost equivalent $${input.usage.costEquivalentUsd.toFixed(4)}.`}</footer>
 </body></html>
 `;
 }

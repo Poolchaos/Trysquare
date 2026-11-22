@@ -64,3 +64,14 @@ describe("the usage a report states", () => {
     expect(buildReportInput(ctx.db, reviewRunAs("interactive")).usage).toBeNull();
   });
 });
+
+describe("how a report says its review was answered", () => {
+  it("says so of an interactive review, and nothing of a headless one", () => {
+    // Carried in the report's input, so the markdown, the HTML and the page
+    // all say it where they name the model (the twenty-second grade, AJ6).
+    expect(buildReportInput(ctx.db, reviewRunAs("headless")).engine).toBeNull();
+    expect(buildReportInput(ctx.db, reviewRunAs("interactive")).engine).toMatch(
+      /^interactive\. Each stage's command was printed for a person to run/,
+    );
+  });
+});

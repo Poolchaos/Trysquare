@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   exportFileName,
+  interactiveEngineWords,
   renderReport,
   renderReportHtml,
   type ReportInput,
@@ -49,6 +50,7 @@ const BASE: ReportInput = {
   model: "claude-fable-5[1m]",
   effort: "high",
   profile: "full-context",
+  engine: null,
   usage: {
     inputTokens: 500,
     outputTokens: 100,
@@ -258,13 +260,29 @@ describe("the footer that makes a report reproducible", () => {
       expect(report).not.toContain("fresh input");
     }
     expect(renderReport(BASE)).toContain("Cost equivalent:");
-    // And it says how the review was answered, where it names the model:
-    // the app started nothing, so the model is the one its commands named.
-    expect(renderReport(interactive)).toContain(
-      "- Engine: interactive. Each stage's command was printed for a person to run in their " +
-        "own session, and the model above is the one those commands named.",
-    );
     expect(renderReport(BASE)).not.toContain("Engine:");
+  });
+
+  it("says how an interactive review was answered wherever it names the model, both models named", () => {
+    // The markdown alone said it, and that every command named the review's
+    // model: the second verifier's and the second grader's name the paired
+    // one (the twenty-second grade, AJ2, AJ6).
+    const words = interactiveEngineWords("claude-opus-5-5");
+    expect(words).toBe(
+      "interactive. Each stage's command was printed for a person to run in their own " +
+        "session. Those commands name the model above, but for the second verifier's and " +
+        "the second grader's, which name claude-opus-5-5. Where this report says the model, " +
+        "a verifier or a grader, it means the session that answered that stage's command.",
+    );
+    // A review from before the second verifier names one model.
+    expect(interactiveEngineWords(null)).toContain("Those commands name the model above. Where");
+
+    const interactive = { ...BASE, effort: null, usage: null, engine: words };
+    expect(renderReport(interactive)).toContain(`- Engine: ${words}`);
+    expect(renderReportHtml(interactive)).toContain(`Engine: ${words}`);
+    for (const report of [renderReport(BASE), renderReportHtml(BASE)]) {
+      expect(report).not.toContain("Engine:");
+    }
   });
 
   it("names every ruleset the review ran with, each with its version", () => {

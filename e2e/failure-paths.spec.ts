@@ -5146,6 +5146,12 @@ test("an interactive review answered stage by stage says only what the app knows
     await page.goto(`/reviews/${review.id}`);
     const turn = page.getByTestId("waiting-command");
     await expect(turn).toContainText("s1_risk is waiting for you", { timeout: 30_000 });
+    // The card prints commands, so it says whose environment they run in.
+    const environment = turn.getByTestId("terminal-environment-note");
+    await expect(environment).toContainText(
+      "These commands run in your own terminal, with its environment",
+    );
+    await shootView(page, environment, "interactive-your-turn-note");
 
     // The next stage's command reaches a page that is listening. It is in
     // the card, once: the feed printed it whole a second time, both shells'
@@ -5200,12 +5206,18 @@ test("an interactive review answered stage by stage says only what the app knows
       `Proven in your own sessions, on the commands that named claude-fable-5[1m] and then ${verifier}`,
     );
     await expect(page.getByText("and again by")).toHaveCount(0);
+    // And the page says once what its words mean for such a review.
+    await expect(page.getByTestId("interactive-means")).toHaveText(
+      "This review was answered in your own sessions. Where this page says the model, a " +
+        "verifier or a grader, it means the session you ran on that stage's command.",
+    );
     const agreed = page.getByText("The second verifier's answer, from the command that named");
     await expect(agreed).toHaveText(
       `The second verifier's answer, from the command that named ${verifier}, agreed`,
     );
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, proven.locator(".."), "interactive-proven-in");
+    await shootAll(page, page.getByTestId("interactive-means").locator(".."), "interactive-means");
     await shootAll(
       page,
       page.getByRole("heading", { name: "How the findings were proven" }).locator(".."),
@@ -5232,7 +5244,7 @@ test("an interactive answer in the wrong shape is a failed stage on the review's
 
     await page.goto(`/reviews/${review.id}`);
     const failure = page.getByText(
-      /^invalid_output: The s1_risk stage did not return a JSON object/,
+      /^invalid_output: The s1_risk stage's answer could not be read as the JSON it was asked for/,
     );
     await expect(failure).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/s1_risk\.log/)).toHaveCount(0);
@@ -5241,6 +5253,12 @@ test("an interactive answer in the wrong shape is a failed stage on the review's
     await expect(row).toContainText("For you to answer in your own session");
     await expect(row).not.toContainText("Answered in your own session");
     await expect(page.getByTestId("waiting-command")).toHaveCount(0);
+    // Resume is off until the CLI's check answers, and fades in as it
+    // turns on: scanned mid-fade, its label failed contrast (the Windows
+    // job of CI run 45031876641).
+    await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, failure.locator("../.."), "interactive-refused-answer");
   } finally {

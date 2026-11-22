@@ -196,7 +196,9 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
   scanned for a narrow error-marker list. A hang is a failure, not a wait.
 - Rate-limit/limit-reached errors from the CLI pause the review in a
   `paused_limit` state with the CLI's message surfaced verbatim; resume is
-  manual from the UI. Nothing is retried blindly.
+  manual from the UI. Nothing is retried blindly. A headless review's: the
+  interactive engine starts no CLI and sees no such error, so a limit met
+  in the person's session ends as that stage's timeout and a failed review.
 
 ## 7. Models
 

@@ -298,6 +298,44 @@ describe("when no answer comes", () => {
   });
 });
 
+describe("an answer the pipeline refused after the engine took it", () => {
+  it("is set aside, every batch of its stage, so the stage asked again waits for a new one", async () => {
+    // The twenty-second grade, AJ1. A skipped hunk is the pipeline's
+    // refusal, made of an answer this engine had taken as well formed:
+    // the file stayed, a Resume read it back, and the review failed the
+    // same way for ever.
+    const adversarial = (batchNumber: number): Question => ({
+      stage: "s3_adversarial",
+      systemPrompt: "Rules.",
+      prompt: `Batch ${batchNumber}.`,
+      batchNumber,
+      batchCount: 2,
+    });
+    const reviewer = engine();
+    const hunted = JSON.stringify({ findings: [], clearedHunks: [], sweepDispositions: [] });
+    for (const question of [adversarial(1), adversarial(2)]) {
+      answerLater(hunted, 40, filesFor(question).answer);
+      await reviewer.run(question);
+    }
+    answerLater(JSON.stringify({ files: [] }));
+    await reviewer.run(ask);
+
+    reviewer.discardAnswers?.("s3_adversarial");
+
+    expect(existsSync(filesFor(adversarial(1)).answer)).toBe(false);
+    expect(existsSync(filesFor(adversarial(2)).answer)).toBe(false);
+    expect(
+      readdirSync(join(dir, "bundle")).filter((name) => name.includes(".rejected-")),
+    ).toHaveLength(2);
+    // Another stage's answer is not the one refused.
+    expect(existsSync(filesFor(ask).answer)).toBe(true);
+    // Asked again, the stage waits: the old file is not read back.
+    await expect(engine({ timeoutMs: 200 }).run(adversarial(1))).rejects.toThrow(
+      /No answer appeared at/,
+    );
+  });
+});
+
 describe("one question's files belong to that question", () => {
   it("does not hand a second batch the first batch's answer", async () => {
     // S3 asks several questions under one stage name. Named by stage alone,

@@ -7775,3 +7775,66 @@ verified evidence, in writing, here.
   builder after the fix: `light-reviews-phone` B (each row reads whole;
   the figures sit under the pair in a line of their own). The other weak
   points the notes name are in the inbox, not fixed.
+- 2026-11-22 D-307 The twenty-second grade of the records, and a Resume
+  that goes on after the pipeline refuses an interactive answer. A fresh
+  grader read a503315 and graded Honest C (AJ1 to AJ13, in
+  `plans/AUDIT-2026-11-17.md`): three material lines, none inherited, each
+  true of a headless review and false of an interactive one, and ten
+  immaterial. Each was checked at the code before it was changed, and each
+  held. Decided by the session.
+  AJ1 is a fault in the app, derived by the grader and reproduced here. An
+  interactive answer is a file in the review's bundle, named by a hash of
+  its question. The engine moves the file aside when it refuses the answer
+  itself, for bad JSON or a wrong shape. When the pipeline refused one the
+  engine had taken, a skipped hunk say, only the checkpoint was struck:
+  the file stayed, the same question on Resume named the same file, and
+  the wait read it back within two polls, so the review failed the same
+  way until the file was replaced by hand. An engine may now say how it
+  discards a stage's answers, the interactive one moving every answer file
+  of the stage aside (every batch's, the pipeline judging them merged),
+  and the service calls it wherever the pipeline strikes an answer. The
+  headless engine keeps no answer but the checkpoint and has no such
+  method. Rejected: clearing the bundle on Resume, which would also throw
+  away answers the pipeline accepted and a person would have to give again.
+  The words, each where the grader named it. AJ2, AJ6, AJ11: the report's
+  Engine line says the commands name the review's model but for the second
+  verifier's and the second grader's, which name the paired one, and that
+  where the report says the model, a verifier or a grader it means the
+  session that answered; the HTML's footer and the page's carry the line
+  too, where the markdown alone did; and the review's page says the same
+  once above its five steps. AJ3, AJ12: RUNBOOK, 01 and 03 say the usage
+  limit's pause and the killed subprocess are a headless review's, and what
+  an interactive one does. AJ4: the second grader's stage is said to do
+  what its command does. AJ5: the notes of the second verifier and the
+  second grader name the model as the one their command named. AJ7: 04's
+  Live scan line. AJ8: CP-3's row. AJ9: the Your turn card carries the note
+  on the terminal's environment that every screen printing a command is
+  said to. AJ10: a refused answer is said to be unreadable "as the JSON it
+  was asked for", not "not a JSON object", which an answer of the wrong
+  shape is. AJ13: PROJECT-STATE's line on a failed stage's transcript.
+  From the grader's list of what was unsaid: 03's `--resume` on a limit
+  pause, README's line on an older CLI, the feed's tool activity in 04,
+  and a stage's time, which the Stages card now says includes the
+  person's. Left as it was: README's "in a fresh session", which is what
+  each stage's command starts.
+  Also here: the Windows job of CI run 45031876641 failed in D-304's
+  refused-answer test, on axe's colour contrast of the Resume button.
+  Read before it was parked, as D-302 was: the button is off until the
+  CLI's check answers and fades in, and the scan caught it mid-fade, which
+  a slow machine of any kind can do. The test waits for Resume to be
+  enabled first.
+  Proven: the engine's test, which found both batches' files still there
+  on the old code; a whole interactive review whose hunt skips a hunk,
+  which failed, found the refused file still in the bundle on the old
+  code, and now resumes to its end; the report's tests for the Engine line
+  in the markdown and the HTML, with both models; the pipeline's test for
+  an interactive second verifier's note; and the browser test, which reads
+  the terminal's note in the card and the page's line above the steps.
+  Graded by the builder, `review/2026-11-22-e2e/`:
+  `interactive-your-turn-note` dark and phone B (the note sits whole under
+  the command; the card is a tall block on a phone);
+  `interactive-means` light, dark and phone B (one muted line above the
+  steps). Not looked at: `interactive-your-turn-note-light`. Not driven
+  in the browser: the Engine line in a completed interactive review's
+  typeset footer, and the second grader's stage and notes, since no
+  browser test completes an interactive review or grades screens in one.

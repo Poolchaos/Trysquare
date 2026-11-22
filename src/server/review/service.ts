@@ -457,6 +457,7 @@ export async function prepareAndRun(
       changedSymbols: bundle.inventory.changedExportedSymbols,
       baseContents,
       secondVerifier: verifierModel,
+      interactive,
       // The screens the project's own e2e saved, graded in S4b and S5c (WP-I
       // step 4), only once there are some to grade.
       ...(ranChecks !== undefined && ranChecks.screenshots.length > 0
@@ -852,7 +853,7 @@ function buildRunner(
           onStageComplete: (info) => built.wrapper?.noteAttempt(info),
         });
 
-  built.wrapper = createCheckpointingRunner({
+  const wrapper = createCheckpointingRunner({
     db,
     reviewId,
     inner: engine.run,
@@ -867,6 +868,15 @@ function buildRunner(
           logPathFor: (stage: ReviewStage) => join(logsDirFor(dataDir, reviewId), `${stage}.log`),
         }),
   });
+  // An interactive answer is a file as well as a row. Struck from the
+  // checkpoints alone, the file stayed, and a Resume read it back (AJ1).
+  built.wrapper = {
+    ...wrapper,
+    invalidate: (stage, reason) => {
+      wrapper.invalidate(stage, reason);
+      engine.discardAnswers?.(stage);
+    },
+  };
   return built.wrapper;
 }
 

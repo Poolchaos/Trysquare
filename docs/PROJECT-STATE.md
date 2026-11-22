@@ -116,8 +116,17 @@ from 2026-11-03.
   driven in the browser for the first time, answered stage by stage. And
   an interactive stage in flight is no longer said to usually take what
   headless stages take (D-305).
-  A twenty-second grade is owed.
-  `./verify.sh --e2e` exits 0 with 1717 unit tests passing, 8 skipped,
+  The twenty-second grade, at a503315 the same day, was C on three lines,
+  none inherited: a Resume does not recover an interactive review whose
+  answer the pipeline refused, the answer's file being read straight back
+  (a fault in the app, reproduced since); the report says every command
+  named the review's model, where the second verifier's and the second
+  grader's name the paired one; and three documents say a usage limit
+  pauses every review. Ten immaterial lines came with them (AJ1 to AJ13
+  in the audit file). Corrected the same day (D-307), the first at the
+  code: a refused answer's file is moved aside in the bundle, so a resumed
+  review waits for a new one and goes on. A twenty-third grade is owed.
+  `./verify.sh --e2e` exits 0 with 1722 unit tests passing, 8 skipped,
   and 176 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
@@ -799,7 +808,8 @@ own now (D-75, D-81).
   directives are not written in the app: they come with an imported
   document or a template.
 - A viewer for a failed stage's transcript: the review page names the file
-  and renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
+  of a headless stage (an interactive stage writes none) and renders
+  nothing of it (`01-ARCHITECTURE.md`, Not built yet).
 - The live output of git while a project clones: a failure's stderr is
   shown, the running output is not (`04-UI-DESIGN.md`, Not built yet, which
   lists the screens' other unbuilt parts).
