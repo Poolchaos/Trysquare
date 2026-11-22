@@ -321,7 +321,7 @@ skipped unless `TRYSQUARE_REAL_CLI=1` is set.
 
 - **A queued review is normal.** One review runs at a time by default, because
   two share one usage limit. The queue lives in memory only, so a restart
-  turns a waiting review back into a draft: open it, choose its ruleset and
+  turns a waiting review back into a draft: open it, tick its rulesets and
   press Start review. A review whose start failed is a draft too. Leave the
   line, on a waiting review, takes it out of the line and leaves it as it
   was, a draft still a draft (D-224). Raise the limit on Settings if you

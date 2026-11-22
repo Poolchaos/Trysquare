@@ -36,13 +36,13 @@ import {
   Empty,
   Mono,
   Problem,
-  Select,
   Sha,
   severityTone,
   StatTile,
   statusLabel,
   statusTone,
 } from "@/components/ui";
+import { type PickableRuleset, RulesetPicker, rulesetChoice } from "@/components/ruleset-picker";
 import { asSentence, send } from "@/components/request";
 import {
   BillingNotice,
@@ -545,8 +545,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   // A draft is a review the new-review screen made and then could not start.
   // Nothing is frozen onto it yet, so starting it takes a ruleset; its screen
   // used to offer only Resume, which a draft is not (5.11, U7).
-  const [draftRulesets, setDraftRulesets] = useState<{ id: string; name: string }[] | null>(null);
-  const [draftRuleset, setDraftRuleset] = useState("");
+  const [draftRulesets, setDraftRulesets] = useState<PickableRuleset[] | null>(null);
+  // Null until the list is read: the default is ticked once, and a person
+  // who unticks it is not given it back by a read again.
+  const [draftTicked, setDraftTicked] = useState<string[] | null>(null);
   const [draftReadProblem, setDraftReadProblem] = useState("");
   const [draftReadAttempt, setDraftReadAttempt] = useState(0);
   // Shown once, when completing left the checkout behind; after a reload it
@@ -638,23 +640,23 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   }
 
   /**
-   * Starts a draft with the ruleset chosen for it, or resumes a stopped run,
-   * which sends none: it already carries the ruleset it was frozen with. A
+   * Starts a draft with the rulesets ticked for it, or resumes a stopped run,
+   * which sends none: it already carries the rulesets it was frozen with. A
    * refusal, such as a review another tab already cancelled, is said, and the
    * page shows where the review really is.
    */
-  async function start(rulesetId?: string) {
+  async function start(rulesetIds?: string[]) {
     setActionError("");
     const sent = await send(
       `/api/reviews/${id}/start`,
       {
         method: "POST",
         body: JSON.stringify({
-          ...(rulesetId === undefined ? {} : { rulesetId }),
+          ...(rulesetIds === undefined ? {} : { rulesetIds }),
           ...(billing === null ? {} : { billingShown: billing.state }),
         }),
       },
-      `The review could not be ${rulesetId === undefined ? "resumed" : "started"}`,
+      `The review could not be ${rulesetIds === undefined ? "resumed" : "started"}`,
     );
     if (!sent.ok) {
       if (sent.body.code === "BillingNotShown") {
@@ -868,7 +870,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     let cancelled = false;
     void (async () => {
       const sent = await send<{
-        rulesets: { id: string; name: string }[];
+        rulesets: PickableRuleset[];
         defaultRulesetId?: string | null;
       }>("/api/rulesets", {}, "The rulesets could not be read");
       if (cancelled) return;
@@ -877,7 +879,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       setDraftRulesets(sent.body.rulesets);
       // The default chosen on a ruleset's page, else the first (D-225).
       const preferred = sent.body.rulesets.find((row) => row.id === sent.body.defaultRulesetId);
-      setDraftRuleset((current) => current || (preferred ?? sent.body.rulesets[0])?.id || "");
+      const first = preferred ?? sent.body.rulesets[0];
+      setDraftTicked((current) => current ?? (first ? [first.id] : null));
     })();
     return () => {
       cancelled = true;
@@ -933,6 +936,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
     };
   }, [toStart]);
   const awaitingCheck = interactiveToStart && startCheck === null;
+  const draftChoice = rulesetChoice(draftRulesets ?? [], draftTicked);
 
   if (!snapshot) {
     return (
@@ -1151,53 +1155,6 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                 </span>
               </span>
             ) : null}
-            {isDraft && draftReadProblem ? (
-              <>
-                <span className="text-sm text-[var(--color-critical)]">{draftReadProblem}</span>
-                <Button
-                  onClick={() => {
-                    // Cleared first, so a retry in flight reads as one: the
-                    // old message stayed until the answer came (D-138).
-                    setDraftReadProblem("");
-                    setDraftRulesets(null);
-                    setDraftReadAttempt((attempt) => attempt + 1);
-                  }}
-                >
-                  Try again
-                </Button>
-              </>
-            ) : isDraft && draftRulesets !== null && draftRulesets.length === 0 ? (
-              <span className="text-sm text-[var(--color-ink-muted)]">
-                No ruleset to start it with yet:{" "}
-                <Link href="/rulesets" className="text-[var(--color-accent)] hover:underline">
-                  make one
-                </Link>
-                .
-              </span>
-            ) : isDraft && draftRulesets === null ? (
-              <span className="text-sm text-[var(--color-ink-muted)]">Reading the rulesets...</span>
-            ) : isDraft ? (
-              <>
-                <Select
-                  aria-label="Ruleset to start with"
-                  value={draftRuleset}
-                  onChange={(event) => setDraftRuleset(event.target.value)}
-                >
-                  {(draftRulesets ?? []).map((ruleset) => (
-                    <option key={ruleset.id} value={ruleset.id}>
-                      {ruleset.name}
-                    </option>
-                  ))}
-                </Select>
-                <Button
-                  variant="primary"
-                  disabled={draftRuleset === "" || awaitingCheck}
-                  onClick={() => void start(draftRuleset)}
-                >
-                  Start review
-                </Button>
-              </>
-            ) : null}
             {isResumableReview(review.status as ReviewStatus) ? (
               <Button variant="primary" disabled={awaitingCheck} onClick={() => void start()}>
                 Resume
@@ -1318,6 +1275,66 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         {interactiveToStart ? <TerminalEnvironmentNote /> : null}
         {toStart && startCheck?.managedPolicy ? (
           <ManagedPolicyNotice policy={startCheck.managedPolicy} />
+        ) : null}
+        {isDraft ? (
+          // In the body, not among the header's buttons, where one select
+          // sat: a list of rulesets to tick does not fit beside them (RS-4b).
+          <Card className="mb-6 p-4">
+            <div role="group" aria-labelledby="draft-rules-heading">
+              <h2 id="draft-rules-heading" className="text-heading font-medium">
+                Rules
+              </h2>
+              <p className="mt-1 mb-3 text-xs text-[var(--color-ink-muted)]">
+                This review was set up and not started, so no rules are frozen onto it yet. Tick
+                every ruleset the change is judged against, then start it.
+              </p>
+              {draftReadProblem ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm text-[var(--color-critical)]">{draftReadProblem}</span>
+                  <Button
+                    onClick={() => {
+                      // Cleared first, so a retry in flight reads as one: the
+                      // old message stayed until the answer came (D-138).
+                      setDraftReadProblem("");
+                      setDraftRulesets(null);
+                      setDraftReadAttempt((attempt) => attempt + 1);
+                    }}
+                  >
+                    Try again
+                  </Button>
+                </div>
+              ) : draftRulesets === null ? (
+                <p className="text-sm text-[var(--color-ink-muted)]">Reading the rulesets...</p>
+              ) : draftRulesets.length === 0 ? (
+                <p className="text-sm text-[var(--color-ink-muted)]">
+                  No ruleset to start it with yet:{" "}
+                  <Link href="/rulesets" className="text-[var(--color-accent)] hover:underline">
+                    make one
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <>
+                  <RulesetPicker
+                    rulesets={draftRulesets}
+                    choice={draftChoice}
+                    onChange={setDraftTicked}
+                  />
+                  <div className="mt-3">
+                    <Button
+                      variant="primary"
+                      disabled={
+                        draftChoice.ids.length === 0 || draftChoice.refusal !== "" || awaitingCheck
+                      }
+                      onClick={() => void start(draftChoice.ids)}
+                    >
+                      Start review
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </Card>
         ) : null}
         {review.pausedReason ? (
           <Problem>

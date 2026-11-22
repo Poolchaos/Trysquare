@@ -83,7 +83,8 @@ Stage contracts: `03-REVIEW-PIPELINE.md`. Tables and state machines:
 Shared UI: `src/components/ui.tsx` (buttons, badges, cards, inputs),
 `page.tsx` (page header and body), `request.ts` (`send`, the one fetch
 helper), `topbar.tsx`, `markdown.tsx` (a protocol's markdown, formatted,
-D-227). Pure logic lives in `src/lib/`, by folder; the folder
+D-227), `ruleset-picker.tsx` (the rulesets ticked for a review, on New
+review and on a draft's own Start, D-294, D-295). Pure logic lives in `src/lib/`, by folder; the folder
 list is in `PROJECT-STATE.md`, Structure.
 
 ## Common changes

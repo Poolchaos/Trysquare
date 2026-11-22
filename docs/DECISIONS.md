@@ -7317,3 +7317,23 @@ verified evidence, in writing, here.
   checkboxes because several can be on, which a highlighted row alone
   does not say; the ticked row's accent border is the mark the branch
   and model rows carry on the same screen.
+- 2026-11-22 D-295 A draft's own Start ticks several rulesets (RS-4b).
+  A draft is a review set up and not started; its page offered one
+  select and Start among the header's buttons, so a draft started there
+  had one ruleset. The list New review has is one component now
+  (`src/components/ruleset-picker.tsx`: the rows under their tiers, the
+  refusal for two that share a rule number, the line for none ticked),
+  used by both screens, so the two cannot come to say it differently.
+  On the draft's page it sits in a card in the body, with Start under
+  it: a list does not fit beside the header's buttons, and the choice
+  and the button that acts on it stay together. The states that were
+  in the header moved with it: reading, a read that failed with Try
+  again, and no ruleset yet. Start is off while two ticked share a
+  number or none is ticked; no line is said beside it, the reason being
+  directly above. A resume still sends no ruleset. Proven: the browser
+  test failed on the old page (no list); it ticks a second ruleset and
+  a third that shares rule 91, reads the refusal, unticks all, then
+  reads both ids off Start's request. The test that starts a draft and
+  runs it to the end on the one ticked on arrival still passes. Not
+  proven: a draft run to its report on two rulesets in the browser
+  suite, for the reason D-294 gives.

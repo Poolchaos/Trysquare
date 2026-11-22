@@ -14,11 +14,10 @@ than being edited away. An item of `plans/M4-FINISH-PLAN.md` named beside
 one owned it while that plan ran; the plan is closed, and what is still
 unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
-- Tiers composing per review. A ruleset carries a tier, and a person
-  ticks one or more rulesets for a review on New review since 2026-11-22
-  (RS-4a, D-294; the server since 2026-11-21, RS-2b, RS-3a). Still one
-  ruleset: a draft started from its own page (RS-4b,
-  `plans/RULESETS-TOGETHER-PLAN.md`, D-288).
+- Nothing on this list is open since 2026-11-22. Tiers composing per
+  review, its last item, is built: a person ticks one or more rulesets
+  for a review, on New review and on a draft's own Start (RS-4a, RS-4b,
+  D-294, D-295, `plans/RULESETS-TOGETHER-PLAN.md`).
 
 ## What it is
 

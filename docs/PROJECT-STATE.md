@@ -22,14 +22,17 @@ from 2026-11-03.
   under the list in the words the server refuses them with, with Start
   off and no pre-flight asked, and so is none ticked; the list of
   rulesets carries each one's switched-on rule numbers for that
-  (`GET /api/rulesets`, `codes`). A draft started from its own page still
-  takes one ruleset (RS-4b, next). Not run: a review started from the
+  (`GET /api/rulesets`, `codes`). A draft started from its own page ticks
+  them the same way (RS-4b, D-295): the list is one component
+  (`src/components/ruleset-picker.tsx`), in a card in the page's body
+  with Start under it, where one select sat among the header's buttons.
+  Not run: a review started from the
   screen on two rulesets through to its report in the browser suite, whose
   scripted answers are for one protocol; a review on two against a real
   model. CI run 44932086480 at d5a3d45 failed on Windows alone, the
   loopback fault again (idea inbox, D-246).
   `./verify.sh --e2e` exits 0 with 1688 unit tests passing, 8 skipped,
-  and 169 browser tests.
+  and 170 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
   those awaiting a decision, each row saying which it is and what to press
@@ -171,12 +174,11 @@ from 2026-11-03.
   the same refusal. A review on several gives the model each ruleset's
   directives under that ruleset's name, "General: Review scope" (RS-3b,
   D-293); on one, the headings are the document's own, as before. New
-  review sends every ruleset ticked since 2026-11-22 (RS-4a, D-294); a
-  draft's own Start sends one. No review on two rulesets has been run
-  against a real model. The review pass
+  review sends every ruleset ticked since 2026-11-22 (RS-4a, D-294), and
+  so does a draft's own Start (RS-4b, D-295). No review on two rulesets
+  has been run against a real model. The review pass
   over RS-1 to RS-3b (round 24, in DECISIONS) fixed three faults in what
   was built that day and two records.
-  A draft started from its own page takes one ruleset (Not built, below).
   A sweep row whose pattern holds a pipe gives its rule the pattern
   (D-275): escaped as a table asks, or bare inside its backticks, it was
   cut in two and the rule got none, with every line still counted as
@@ -688,10 +690,6 @@ own now (D-75, D-81).
 
 - More than one dependency per review: the model and the screens take a
   single linked project.
-- More than one ruleset for a draft started from its own page (RS-4b,
-  `plans/RULESETS-TOGETHER-PLAN.md`, D-288): its Start offers one. New
-  review ticks several (RS-4a, D-294), and the server starts, sizes and
-  reports such a review (RS-1 to RS-3b).
 - Emailing a review's result: in scope since D-251, planned in
   `plans/EMAIL-REPORT-PLAN.md` (D-264). The addresses a result goes to are
   kept on Settings (EM-2a, D-286), and the card says nothing is sent yet.

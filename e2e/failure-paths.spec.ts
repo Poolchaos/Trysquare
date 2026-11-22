@@ -4365,11 +4365,17 @@ test("a ruleset chosen as the default is the one a new review starts on", async 
     await expect(page.getByText("Refused for this test.")).toBeVisible();
     await stopRefusing();
     await page.goto(`/reviews/${draft}`);
-    await expect(page.getByLabel("Ruleset to start with")).toHaveValue(rulesetId, {
-      timeout: 30_000,
-    });
+    const draftRules = page.getByTestId("ruleset-picker");
+    await expect(draftRules.getByRole("checkbox", { name: /^Zz default sweep v\d+$/ })).toBeChecked(
+      { timeout: 30_000 },
+    );
+    await expect(draftRules.getByRole("checkbox", { checked: true })).toHaveCount(1);
     expect(await accessibilityViolations(page)).toEqual([]);
-    await shootAll(page, header, "draft-start-default");
+    await shootAll(
+      page,
+      draftRules.locator("xpath=ancestor::div[@role='group']/.."),
+      "draft-start-default",
+    );
 
     // Stopped from its own page, no ruleset is the default.
     await page.goto(`/rulesets/${rulesetId}`);
@@ -5103,7 +5109,9 @@ test("an interactive review's own screen says its commands would cost, before St
   const draftStart = page.getByRole("button", { name: "Start review" });
   await expect(draftStart).toBeVisible({ timeout: 30_000 });
   // The ruleset is read by then, so Start is off for the check alone.
-  await expect(page.getByLabel("Ruleset to start with")).not.toHaveValue("");
+  await expect(
+    page.getByTestId("ruleset-picker").getByRole("checkbox", { checked: true }),
+  ).toHaveCount(1);
   await expect(draftStart).toBeDisabled();
   release();
   await expect(draftStart).toBeEnabled();
@@ -5145,6 +5153,114 @@ test("an interactive review's own screen says its commands would cost, before St
   await expect(notice).toHaveCount(0);
   await stopFailing();
   expect((await page.request.delete(`/api/reviews/${review.id}`)).status()).toBe(200);
+});
+
+test("a draft's own Start ticks several rulesets, and refuses two that share a rule number", async ({
+  page,
+}) => {
+  // RS-4b: the draft's Start was one select beside the header's buttons, so
+  // a draft started from its own page had one ruleset. The same list as New
+  // review's, in the page's body. Two rulesets made here, removed after: the
+  // first shares no number with the example, the second shares 91 with the
+  // first.
+  const imported = async (name: string, markdown: string): Promise<string> => {
+    const made = await page.request.post("/api/rulesets/import", {
+      data: { name, tier: "project", markdown },
+    });
+    expect(made.status()).toBe(201);
+    return ((await made.json()) as { rulesetId: string }).rulesetId;
+  };
+  const first = await imported(
+    "Zz draft first",
+    "# First\n\n## Rules\n\n### 90. Dates\n\n**Rule:** Dates are UTC.\n\n" +
+      "### 91. Names\n\n**Rule:** A name says what the thing holds.\n",
+  );
+  const second = await imported(
+    "Zz draft second",
+    "# Second\n\n## Rules\n\n### 91. Units\n\n**Rule:** A duration says its unit.\n",
+  );
+  const listed = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const made = await page.request.post("/api/reviews", {
+    data: {
+      projectId: app.id,
+      fromBranch: "feature/rename-prefs",
+      intoBranch: "main",
+      model: "claude-fable-5[1m]",
+    },
+  });
+  expect(made.status()).toBe(201);
+  const { review } = (await made.json()) as { review: { id: string } };
+  try {
+    await page.goto(`/reviews/${review.id}`);
+    const picker = page.getByTestId("ruleset-picker");
+    const card = picker.locator("xpath=ancestor::div[@role='group']/..");
+    const start = card.getByRole("button", { name: "Start review" });
+    const tickedRows = picker.locator("li").filter({ has: page.locator("input:checked") });
+    await expect(tickedRows).toHaveCount(1, { timeout: 30_000 });
+    const onArrival = (await tickedRows.getByRole("link").getAttribute("href"))!.split("/").pop()!;
+    // Apart from what follows it: the card sat flush on the Stages card,
+    // which a shot of the card alone does not show (seen grading
+    // draft-no-ruleset-light.png).
+    const cardBox = (await card.boundingBox())!;
+    const nextBox = (await card.locator("xpath=following-sibling::*[1]").boundingBox())!;
+    expect(nextBox.y - (cardBox.y + cardBox.height)).toBeGreaterThanOrEqual(16);
+
+    // A third that shares 91 with the second ticked beside it: said under
+    // the list in the server's words, and Start is off.
+    await picker.getByRole("checkbox", { name: /^Zz draft first v\d+$/ }).check();
+    await expect(start).toBeEnabled();
+    await picker.getByRole("checkbox", { name: /^Zz draft second v\d+$/ }).check();
+    await expect(
+      card.getByText(
+        'These rulesets cannot judge one review together: rule 91 is in "Zz draft first" and ' +
+          '"Zz draft second". A finding names its rule by number alone, so a number may be in ' +
+          "only one of a review's rulesets. Leave one of them out, or change the numbers in one.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(start).toBeDisabled();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, card, "draft-rules-share-a-number");
+
+    // None ticked: said, and Start stays off.
+    const ticked = picker.getByRole("checkbox", { checked: true });
+    while ((await ticked.count()) > 0) await ticked.first().uncheck();
+    await expect(
+      card.getByText(
+        "No ruleset is ticked, and a review needs at least one to judge the change against.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(start).toBeDisabled();
+    await shootAll(page, card, "draft-rules-none-ticked");
+
+    // Two that share nothing: Start sends both, in the list's order. Refused
+    // for this test, so no run is needed to read what was sent.
+    await picker.locator(`li:has(a[href="/rulesets/${onArrival}"]) input`).check();
+    await picker.getByRole("checkbox", { name: /^Zz draft first v\d+$/ }).check();
+    await expect(start).toBeEnabled();
+    await shootAll(page, card, "draft-rules-two-ticked");
+    const stopRefusing = await answerOnce(page, "**/api/reviews/*/start", (route) =>
+      route.fulfill({ status: 500, json: { error: "Refused for this test.", code: "Test" } }),
+    );
+    const starting = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === `/api/reviews/${review.id}/start`,
+    );
+    await start.click();
+    expect((await starting).postDataJSON()).toEqual({ rulesetIds: [onArrival, first] });
+    await expect(page.getByText("Refused for this test.")).toBeVisible();
+    await stopRefusing();
+  } finally {
+    const removed = await page.request.delete(`/api/reviews/${review.id}`);
+    expect.soft(removed.status(), "the draft removed").toBe(200);
+    for (const id of [first, second]) {
+      const gone = await page.request.delete(`/api/rulesets/${id}`);
+      expect.soft(gone.status(), "the ruleset removed").toBe(200);
+    }
+  }
 });
 
 test("a review left as a draft can be started from its own screen", async ({ page }) => {
@@ -5212,7 +5328,13 @@ test("a review left as a draft can be started from its own screen", async ({ pag
   const start = page.getByRole("button", { name: "Start review" });
   await expect(start).toBeVisible({ timeout: 30_000 });
   await stopHolding();
-  const chosen = await page.getByLabel("Ruleset to start with").inputValue();
+  // The one ticked on arrival, read off its row's link to the ruleset.
+  const tickedRow = page
+    .getByTestId("ruleset-picker")
+    .locator("li")
+    .filter({ has: page.locator("input:checked") });
+  await expect(tickedRow).toHaveCount(1);
+  const chosen = (await tickedRow.getByRole("link").getAttribute("href"))!.split("/").pop()!;
   expect(chosen).not.toBe("");
   const started = page.waitForResponse(
     (response) =>
@@ -5232,7 +5354,7 @@ test("a review left as a draft can be started from its own screen", async ({ pag
   await start.click();
   const answer = await started;
   expect(answer.status()).toBe(200);
-  expect(answer.request().postDataJSON()).toEqual({ rulesetId: chosen });
+  expect(answer.request().postDataJSON()).toEqual({ rulesetIds: [chosen] });
   await expect(start).toHaveCount(0);
   // Let the run end, so the screenshots after this suite are of a settled app
   // rather than one mid-run (D-137).
@@ -5320,7 +5442,7 @@ test("a review waiting its turn offers no Start of its own", async ({ page }) =>
     ),
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Start review" })).toHaveCount(0);
-  await expect(page.getByLabel("Ruleset to start with")).toHaveCount(0);
+  await expect(page.getByTestId("ruleset-picker")).toHaveCount(0);
 
   // And the API refuses what the screen no longer offers: a ruleset sent to a
   // review waiting in line was answered 200 and dropped (D-138), and then,

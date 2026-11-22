@@ -22,11 +22,10 @@ chosen per review in the advanced fold.
 
 - Add project: the live git output tail while a clone runs. Failure stderr
   is shown verbatim; the running tail is not.
-- A draft's own Start, on the review's page: choosing more than one
-  ruleset. New review ticks several since 2026-11-22 (RS-4a, D-294,
-  `plans/RULESETS-TOGETHER-PLAN.md`); the draft's Start still offers one
-  (RS-4b). The preview drawer per ruleset that section 3 describes is not
-  built: each ruleset's count of rules links to its page.
+- New review: the preview drawer per ruleset that section 3 describes.
+  Each ruleset's count of rules links to its page. Several rulesets are
+  ticked for one review since 2026-11-22, on New review and on a draft's
+  own Start (RS-4a, RS-4b, D-294, D-295).
 - Rulesets: process directives written or edited in the app (they come
   with an imported document or a template), and a Firebase template,
   which waits on the maintainer's word (`plans/RULESET-TEMPLATES-PLAN.md`). A ruleset is started
@@ -242,7 +241,8 @@ refuses one too.
 - Activity feed: current stage's tool activity (file being read), errors.
 - Usage meter: cumulative tokens and cost-equivalent.
 - Controls: cancel, which asks first and says when it failed (5.1); start,
-  for a draft, with its ruleset chosen there (5.11); resume (paused,
+  for a draft, with its rulesets ticked in a card on its page, the list
+  New review has, the same refusals said under it (5.11, D-295); resume (paused,
   interrupted or failed: one resume stands in for a retry of the failed
   stage, D-50).
 

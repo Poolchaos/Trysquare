@@ -12,12 +12,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import {
-  RULESET_TIERS,
   SELECTABLE_REVIEW_EFFORTS,
   reviewProfileSchema,
   type ReviewEffort,
 } from "@/lib/domain/enums";
-import { sharedCodes, sharedCodesRefusal } from "@/lib/rulesets/shared-codes";
+import { type PickableRuleset, RulesetPicker, rulesetChoice } from "@/components/ruleset-picker";
 import { whatTheModelGets } from "@/lib/review/profiles";
 import { effortRunsOn } from "@/lib/models/effort-support";
 import { pairedVerifierFor, secondVerifierReadiness } from "@/lib/models/pairing";
@@ -63,16 +62,6 @@ interface Branch {
   committedAt: string;
   ahead: number;
   behind: number;
-}
-
-interface Ruleset {
-  id: string;
-  name: string;
-  tier: string;
-  version: number;
-  ruleCount: number;
-  /** The codes of its rules that are switched on, which a review would freeze. */
-  codes: string[];
 }
 
 interface Link {
@@ -198,7 +187,7 @@ function NewReview() {
   const [linkProblem, setLinkProblem] = useState("");
   // Bumped by the Refresh control, so the branch list re-fetches on demand.
   const [refreshCount, setRefreshCount] = useState(0);
-  const [rulesets, setRulesets] = useState<Ruleset[]>([]);
+  const [rulesets, setRulesets] = useState<PickableRuleset[]>([]);
   const [models, setModels] = useState<Model[]>([]);
   const [probing, setProbing] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
@@ -317,7 +306,7 @@ function NewReview() {
           {},
           "The branches could not be listed",
         ),
-        send<{ rulesets: Ruleset[]; defaultRulesetId?: string | null }>(
+        send<{ rulesets: PickableRuleset[]; defaultRulesetId?: string | null }>(
           "/api/rulesets",
           {},
           "The rulesets could not be read",
@@ -514,11 +503,10 @@ function NewReview() {
   // in, and only those still listed. Two that hold a rule under one number
   // cannot judge one review (D-288): said here from the list's own codes, in
   // the words the server refuses the set with, before anything is asked.
-  const chosenRulesets = rulesets.filter((ruleset) => tickedRulesets?.includes(ruleset.id));
-  const rulesetIds = chosenRulesets.map((ruleset) => ruleset.id);
-  const shared = sharedCodes(chosenRulesets);
-  const rulesetsCollide = shared.length > 0;
-  const noRulesetTicked = rulesets.length > 0 && rulesetIds.length === 0;
+  const rulesetsChosen = rulesetChoice(rulesets, tickedRulesets);
+  const rulesetIds = rulesetsChosen.ids;
+  const rulesetsCollide = rulesetsChosen.refusal !== "";
+  const noRulesetTicked = rulesetsChosen.noneTicked;
 
   // The size of the review, recomputed whenever the decisions that change it
   // do. Free, and all it writes is git's fetch, so it can run on every change without a thought.
@@ -952,78 +940,12 @@ function NewReview() {
                   {rulesetReadFailed ? "The rulesets could not be read" : "No rulesets yet"}
                 </p>
               ) : (
-                <div className="grid gap-3" data-testid="ruleset-picker">
-                  {/* The tiers in the order the Rulesets screen lists them, then
-                      any other a ruleset carries: left out, its ruleset could
-                      not be ticked. */}
-                  {[...new Set([...RULESET_TIERS, ...rulesets.map((ruleset) => ruleset.tier)])]
-                    .filter((tier) => rulesets.some((ruleset) => ruleset.tier === tier))
-                    .map((tier) => (
-                      <div key={tier}>
-                        <h3 className="mb-1 text-xs font-semibold tracking-wide text-[var(--color-ink-muted)] uppercase">
-                          {tier}
-                        </h3>
-                        <ul className="grid gap-1">
-                          {rulesets
-                            .filter((ruleset) => ruleset.tier === tier)
-                            .map((ruleset) => {
-                              const ticked = rulesetIds.includes(ruleset.id);
-                              return (
-                                <li
-                                  key={ruleset.id}
-                                  className={`flex items-center gap-3 rounded-md border px-3 ${
-                                    ticked
-                                      ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
-                                      : "border-transparent hover:bg-[var(--color-surface-sunken)]"
-                                  }`}
-                                >
-                                  {/* The label is the row's height, so a thumb
-                                      has the 40px the other controls keep. */}
-                                  <label className="flex min-h-[var(--hit-target)] min-w-0 flex-1 cursor-pointer items-center gap-3 py-1 text-sm">
-                                    <input
-                                      type="checkbox"
-                                      className="shrink-0 scheme-light-dark accent-[var(--color-accent)]"
-                                      checked={ticked}
-                                      onChange={(event) =>
-                                        setTickedRulesets(
-                                          event.target.checked
-                                            ? [...rulesetIds, ruleset.id]
-                                            : rulesetIds.filter((id) => id !== ruleset.id),
-                                        )
-                                      }
-                                    />
-                                    <span className="min-w-0 break-words">{ruleset.name}</span>
-                                    <span className="shrink-0 text-xs text-[var(--color-ink-muted)] tabular-nums">
-                                      v{ruleset.version}
-                                    </span>
-                                  </label>
-                                  <Link
-                                    href={`/rulesets/${ruleset.id}`}
-                                    aria-label={`${ruleset.ruleCount} rule${
-                                      ruleset.ruleCount === 1 ? "" : "s"
-                                    } of ${ruleset.name}`}
-                                    className="shrink-0 text-xs text-[var(--color-accent)] tabular-nums hover:underline"
-                                  >
-                                    {ruleset.ruleCount} rule{ruleset.ruleCount === 1 ? "" : "s"}
-                                  </Link>
-                                </li>
-                              );
-                            })}
-                        </ul>
-                      </div>
-                    ))}
-                </div>
+                <RulesetPicker
+                  rulesets={rulesets}
+                  choice={rulesetsChosen}
+                  onChange={setTickedRulesets}
+                />
               )}
-              {/* Said as a tick changes it, so a screen reader hears it too. */}
-              <div aria-live="polite" className="mt-3 grid gap-2 empty:mt-0">
-                {rulesetsCollide ? <Problem>{sharedCodesRefusal(shared)}</Problem> : null}
-                {noRulesetTicked ? (
-                  <p className="text-sm text-[var(--color-ink-muted)]">
-                    No ruleset is ticked, and a review needs at least one to judge the change
-                    against.
-                  </p>
-                ) : null}
-              </div>
             </div>
           </Card>
 
