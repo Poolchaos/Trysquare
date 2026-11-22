@@ -91,6 +91,13 @@ at the cited lines and forgiving only what carries no meaning, such as line
 endings and the indentation a quote may have lost. A finding with a line number that does not match dies
 regardless of how confident anything was about it.
 
+**In the interactive mode the sessions are yours.** The app starts none: it
+prints each stage's command for you to run and reads the answer you save. A
+fresh session, the model and the read-only tool list are what that command
+asks for, and the app sees none of them. The checks that are the program's
+own, of coverage and of every quoted line, run on your answers as they do on
+a headless review's.
+
 **A human decides what counts.** Surviving findings are presented for you to
 confirm or dismiss with a reason. Only what you confirm is reported as a
 finding; what you dismiss or leave out is listed after the findings, with

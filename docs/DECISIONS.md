@@ -7838,3 +7838,15 @@ verified evidence, in writing, here.
   in the browser: the Engine line in a completed interactive review's
   typeset footer, and the second grader's stage and notes, since no
   browser test completes an interactive review or grades screens in one.
+- 2026-11-22 D-308 The README says once what the interactive mode changes
+  in "The idea". D-307 left "in a fresh session with no access to the
+  reasoning" as it was, the twenty-second grader having named it among
+  what is unsaid of an interactive review, with the model and the
+  read-only tool list beside it. A paragraph after it now says that in
+  the interactive mode the app starts no session, that a fresh session,
+  the model and the tool list are what each printed command asks for and
+  the app sees none of them, and that the program's own checks, of
+  coverage and of every quoted line, run on those answers as on a headless
+  review's (`launchArgsFor` in `src/server/engine/interactive.ts`, the
+  command's flags; the pipeline is the same for both engines). Decided by the
+  session, before the twenty-third grade. Words alone, nothing to run.
