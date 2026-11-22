@@ -140,7 +140,14 @@ from 2026-11-03.
   the hunt was said to resolve the comprehension stage's uncertainties,
   which nothing hands it. Six immaterial lines came with them (AL1 to AL8
   in the audit file). Corrected the same day (D-312): 03 and 02 say both
-  are not built. A twenty-fifth grade is owed.
+  are not built. The twenty-fifth grade, at e10e705 the same day, its
+  grader told to read 01, 02 and 03 against the code, was C on two more
+  lines of 03's linked-review addendum: the changed exports of a linked
+  dependency are found by a lexical scan of TypeScript files alone, and a
+  contract change can be closed by a no-consumers-found verdict on the
+  stage's word. Twelve immaterial lines came with them, two written too
+  wide that day (AM1 to AM14 in the audit file). Corrected the same day
+  (D-313), in words. A twenty-sixth grade is owed.
   `./verify.sh --e2e` exits 0 with 1725 unit tests passing, 8 skipped,
   and 176 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
@@ -801,6 +808,11 @@ own now (D-75, D-81).
 
 ## Not built
 
+- What 03 specifies of the pipeline and the code does not do is listed at
+  the head of `03-REVIEW-PIPELINE.md`, Not built yet: among it, a linked
+  package's imports resolved through `links.json`, S3 resolving S2's
+  uncertainties, and contract changes of a linked dependency outside what
+  a lexical scan of TypeScript files finds.
 - More than one dependency per review: the model and the screens take a
   single linked project.
 - Emailing a review's result: in scope since D-251, planned in

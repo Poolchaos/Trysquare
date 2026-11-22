@@ -56,8 +56,9 @@ export interface InteractiveEngineOptions {
 
 export interface ExchangeFiles {
   /**
-   * The folder these three files are alone in, and the only one the printed
-   * command lets its session read beside the worktree. One per question: in
+   * The folder these three files are alone in, which the printed command
+   * adds to what its session may read beside the worktree (a grading
+   * stage's adds the screenshots' folder too). One per question: in
    * one folder for the whole review, the verifier's session could read the
    * hunt's answer and the second verifier's the first's proofs (the
    * twenty-third grade, AK1).

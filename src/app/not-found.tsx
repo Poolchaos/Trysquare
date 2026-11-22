@@ -17,9 +17,9 @@ export default function NotFound() {
       <PageBody>
         <Card className="max-w-2xl p-4">
           <p className="text-sm text-[var(--color-ink-muted)]">
-            The page may name a review, project or ruleset that has since been deleted. Deleting one
-            removes its worktrees, bundle and logs; an exported report outlives all of that and
-            stays under your data directory.
+            The page may name a review, project or ruleset that has since been deleted. Deleting a
+            review removes its run folder, with its worktrees, bundle and logs; an exported report
+            outlives all of that and stays under your data directory.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href="/projects">

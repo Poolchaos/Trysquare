@@ -5157,7 +5157,7 @@ test("an interactive review answered stage by stage says only what the app knows
     await expect(page.getByTestId("interactive-means-running")).toHaveText(
       "This review is answered in your own sessions. Where this view says the model, a " +
         "verifier or a grader, it means the session you run on that stage's command. A " +
-        "request is one such command, and every time given includes yours.",
+        "request is one such command, and the time a stage or the run took includes yours.",
     );
 
     // The next stage's command reaches a page that is listening. It is in
@@ -5217,7 +5217,7 @@ test("an interactive review answered stage by stage says only what the app knows
     await expect(page.getByTestId("interactive-means")).toHaveText(
       "This review was answered in your own sessions. Where this page says the model, a " +
         "verifier or a grader, it means the session you ran on that stage's command. A " +
-        "request is one such command, and every time given includes yours.",
+        "request is one such command, and the time a stage or the run took includes yours.",
     );
     const agreed = page.getByText("The second verifier's answer, from the command that named");
     await expect(agreed).toHaveText(

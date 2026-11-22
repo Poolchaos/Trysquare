@@ -273,7 +273,7 @@ describe("the footer that makes a report reproducible", () => {
         "session. Those commands name the model above, but for any the second verifier or " +
         "the second grader was given, which name claude-opus-5-5. Where this report says the " +
         "model, a verifier or a grader, it means the session that answered that stage's command, " +
-        "and the time the run took includes that person's.",
+        "and a time given for the run includes that person's.",
     );
     // A review from before the second verifier names one model.
     expect(interactiveEngineWords(null)).toContain("Those commands name the model above. Where");

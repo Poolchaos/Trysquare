@@ -48,7 +48,8 @@ What a template could not have decided: every figure is counted from this
 machine's reviews and says its own denominator ("confirmed of the proven
 findings decided", "by the quotation check, of findings raised"). Needs you
 lists what goes on only when a person acts, oldest wait first (a running
-interactive review last, with no age), each row saying what it waits for. Rule yield is sorted with the rules confirmed
+interactive review and one a restart interrupted last, with no age), each
+row saying what it waits for. Rule yield is sorted with the rules confirmed
 least often first, because the question it answers is which rule costs
 attention for nothing.
 

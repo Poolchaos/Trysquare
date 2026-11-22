@@ -356,8 +356,8 @@ pulled deliberately.
   the lists, the report); "requests" there are commands the app printed
   and never sent; and it holds its place in the line for as long as the
   person takes, up to the timeout of each stage. DONE 2026-11-22 (D-311):
-  the review's page, its scan view and its report say the first two, and
-  the new review form the third. The reviews list and the dashboard's
+  the review's page and its scan view say the first two, its report the
+  first alone, and the new review form the third. The reviews list and the dashboard's
   rows give a time with no such word.
 - 2026-11-22: a linked package's imports are not resolved through
   `links.json`: the file is written to the bundle and nothing reads it,
@@ -379,6 +379,12 @@ pulled deliberately.
   left to be read back. Not reachable on Linux or macOS as far as reading
   shows (the twenty-third grade, on AJ1); Windows is not looked after
   (D-232).
+- 2026-11-22: a linked dependency's contract changes are found only in
+  TypeScript files, by a lexical scan (`src/lib/git/symbols.ts`): one in
+  another language, or a change the scan's patterns miss, gets no symbol
+  and no accounting, and the pre-flight shows its "Changed exports" row
+  only above zero, so a person is not told that none was found (the
+  twenty-fifth grade, AM1; 03, Not built yet).
 
 ## Retired
 

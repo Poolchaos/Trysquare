@@ -86,7 +86,7 @@ src/
                   claude CLI runner, model probing
     gitops/       clone/fetch/worktree/bundle execution (only git spawning)
     projectrun/   a project's own commands, in its throwaway copy (WP-I)
-    jobs/         job manager, stage orchestration, SSE hub
+    jobs/         job manager, SSE hub (stage orchestration is server/review/pipeline.ts)
   app/            routes, pages, api handlers
   components/     UI components
 tests/            unit + integration; fixtures under tests/fixtures
@@ -168,7 +168,8 @@ interface ReviewEngine { mode; run(request); chainSessionId(); discardAnswers?(s
 // Underneath it, Mode A still calls:
 runStage(options: StageRunOptions): Promise<StageOutcome>
 // Events reach the caller through an optional onEvent callback rather
-// than an async iterable: progress | tool-activity | result | error
+// than an async iterable: init | text | waiting | answered | tool-use |
+// rate-limit | result | unknown (lib/engine/events.ts)
 ```
 
 - **HeadlessEngine (Mode A, default):** spawns

@@ -110,7 +110,7 @@ d dismiss with reason, enter open file context).
 
 The first screen, replacing the bare redirect to Projects. It is a fixed
 composition of widgets (D-82), ordered so that what needs a person comes
-before what merely happened: needs-you before history, live before archive.
+before what merely happened: under the four totals and the live scan, needs-you before history.
 Everything on it is measured, never estimated, and a rate with no
 denominator renders as a dash rather than as zero, because zero percent
 precision is a claim about findings somebody judged.

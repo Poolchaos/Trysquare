@@ -266,7 +266,7 @@ invariant: no pending sweep hits past S6.
 | raisedSeverity                   | text null | the finder's, kept beside it; null on rows from before 0012      |
 | ruleCode                         | text null | which rule it violates, if rule-based                            |
 | issue                            | text      | one-line statement                                               |
-| comment                          | text      | protocol finding format, <= 4 sentences                          |
+| comment                          | text      | the finding's comment, in plain language; no length is checked   |
 | editedComment                    | text null | the person's rewrite at confirm time; the report prefers it       |
 | mechanism                        | text      | traced input -> wrong output path (internal, shown in UI)        |
 | quotedCode                       | text      | exact lines quoted at verification time                          |

@@ -7954,3 +7954,39 @@ verified evidence, in writing, here.
   the index's changelog line for `plans/RULESETS-TOGETHER-PLAN.md`.
   Proven: the steps' test for one rule. The rest are words, read against
   the code named.
+- 2026-11-22 D-313 The twenty-fifth grade of the records. A fresh grader,
+  told to read 01, 02 and 03 against the code section by section, read
+  e10e705 and graded Honest C (AM1 to AM14, in
+  `plans/AUDIT-2026-11-17.md`): two material lines, both older than the
+  day's changes and both in 03's linked-review addendum, and twelve
+  immaterial. Each was checked at the code before it was changed, and
+  each held. Decided by the session. All of it is words: nothing was
+  built.
+  AM1: 03 and the brief said every changed export of a linked dependency
+  is accounted for. The changed exports are found by a lexical scan of
+  TypeScript files alone, and with none found the addendum is not sent.
+  03 says so in the addendum and under "Not built yet", the brief says it
+  as built, and it is in the inbox with the pre-flight's row that shows
+  only above zero. AM2: 03 names the third verdict, no consumers found,
+  taken on the stage's reason (decided 2026-07-30, T5).
+  The rest. AM3: 03's common contract says the scope rule is the
+  protocol's own and that the two grading stages are sent no ruleset.
+  AM4, AM5, AM10: D-312 said "no stage can read the bundle" and that five
+  documents say a read elsewhere is the CLI's to refuse. An interactive
+  stage's own folder is in the bundle, and the README and 03 are the two
+  that say it: 03 now says no command adds the bundle's root, and the
+  engine's comment says what its folder is. AM6: the not-found page says
+  what deleting a review removes. AM7: 04 on the home's order. AM8, AM9:
+  D-311's "every time given includes yours" was too wide, a project's
+  check giving its own time; the line says the time a stage or the run
+  took, the report "a time given for the run", and the inbox's DONE line
+  is corrected. AM11: 03 says its numbering of S0 is not the order run.
+  AM12, AM13: 01's event kinds and its line on `jobs/`. AM14: 02 on a
+  comment's length. Its notes: 03's list of the Engine line, a pointer
+  from PROJECT-STATE's "Not built" to 03's, and the design notes on an
+  interrupted review's row.
+  Three grades in a row a correction's own sentence said more than the
+  code does. Read before writing one: what the code does, and no "every",
+  "only" or "can" it does not earn.
+  Proven: the report's test and the browser test hold the two narrowed
+  sentences. The rest are words, read against the code named.

@@ -54,7 +54,9 @@ Think "local PR reviewer": no hosting, no login, single user.
    package, mostly TS interfaces/typings). When a change set includes
    package changes, both repos' branch pairs are reviewed together as one
    review: combined ledger, and every changed exported type/signature in
-   the package verified against its consumers in the main app. The package
+   the package verified against its consumers in the main app (as built:
+   the changed exports the app finds are those of TypeScript files, by a
+   lexical scan; 03, Not built yet). The package
    is not always part of a PR; including it is optional per review.
 6. **Finding confirmation before final output.** Every finding is re-verified
    against the checked-out branch: is it a real issue, do file and line

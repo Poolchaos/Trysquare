@@ -21,9 +21,17 @@ than being edited away.
   and did not take this on.
 - Resolving a linked package's imports through `links.json` (sections 0
   and 1). The file is written to the bundle and nothing reads it: no stage
-  is given the mapping or the package's name, and no stage can read the
-  bundle. A stage is given the changed symbols and their paths and finds
-  the consumers by its own search. Unowned (the twenty-fourth grade, AL7).
+  is given the mapping or the package's name, and no stage's command adds
+  the bundle's root, where the file is, to what its session may read. A
+  stage is given the changed symbols and their paths and finds the
+  consumers by its own search. Unowned (the twenty-fourth grade, AL7).
+- Contract changes of a linked dependency that is not TypeScript, or that
+  the scan misses (section 1, the linked-review addendum). The changed
+  exports are found by a lexical scan of `.ts`, `.tsx`, `.mts`, `.cts` and
+  `.d.ts` files alone (`lib/git/symbols.ts`): a dependency in another
+  language, or a TypeScript change the scan's line patterns do not match,
+  gets no symbol, no disposition is expected of it, and with no symbol at
+  all the addendum is not sent. Unowned (the twenty-fifth grade, AM1).
 - S3 resolving S2's uncertainties (section 1). S2's answer carries them
   and the pipeline keeps only the files it says it read: no instruction
   hands them to S3 and S3's answer has no place for them. In an
@@ -120,7 +128,10 @@ S1 work its risk-tagged files first (U12).
    A command that fails, or stops at its limit, is a check finding
    (D-197), proven by the app from its exit code and its output.
 
-Failure of any S0 step fails the review with the git/filesystem error.
+Failure of any S0 step fails the review with the git/filesystem error. The
+numbers above are not the order the code runs in: the snapshot is frozen
+first, and a set refused there for a shared rule number leaves the review a
+draft; the project's checks run before the sweeps.
 
 ## 1. Stage contracts (AI stages)
 
@@ -137,8 +148,12 @@ that grades screens their folder (D-310). A read anywhere else is the
 person's CLI's to refuse, which the app does not see.
 
 - cwd = worktree; tools = Read, Grep, Glob only (no Edit, no Bash, no web).
-- System prompt = composed ruleset snapshot + stage instruction + the
-  protocol's scope rule (review changed code only) + output contract. On
+- System prompt = composed ruleset snapshot + stage instruction + output
+  contract. The scope rule (review changed code only) is the protocol's
+  own, among its directives: the app adds none, so a ruleset started with
+  no document sends none. The two grading stages, S4b and S5c, are sent no
+  ruleset at all: their prompt is the scale, the design standard and the
+  output contract. On
   a review with several rulesets the snapshot is theirs put together in
   the order of their names, each one's directives under its name (D-293).
 - Output = one JSON document matching the stage's zod schema. Invalid output
@@ -192,14 +207,18 @@ in the dependency repo is a cross-repo contract change. For each one, the
 stage must enumerate its consumers in the primary repo (Grep the primary
 worktree, by its own search: the `links.json` mapping is not given to it, Not built yet above), verify each
 consumer against the new contract, and disposition the contract change like
-a hunk: findings or an explicit all-consumers-verified clear naming the
-consumer files checked. A finding at a consumer the branch never touched is
+a hunk: findings, an explicit all-consumers-verified clear naming the
+consumer files checked, or a no-consumers-found verdict, which names none
+and is taken on the stage's reason alone (DECISIONS, 2026-07-30, T5). A
+finding at a consumer the branch never touched is
 kept when a symbol whose verdict is finding names that file among its
 consumers checked; it accounts for no hunk and faces the quote check like
 any other (D-181, amending D-60). The protocol's backwards-compatibility section
 applies across the repo boundary exactly as within one repo. App code
-enforces completeness: S0 extracts the list of changed exported symbols
-from the dependency diff, and S3's output must disposition every symbol.
+enforces completeness over the symbols it finds: S0 extracts the list of
+changed exported symbols from the dependency diff, and S3's output must
+disposition every one. The list is of TypeScript files alone, found by a
+lexical scan (Not built yet, above).
 
 ### S4 Deletion review (protocol step 5)
 
@@ -364,7 +383,7 @@ branch and commit, token usage and the cost equivalent (said as not recorded for
 run took, to when it stopped and not to when the review was completed
 (D-248), said as the last run's where an earlier run asked a model
 anything, the tokens and the cost being every run's. The HTML's footer and the page's leave out the tokens, the
-duration and the linked project. For an interactive review all three footers add an Engine line: that each stage's command was printed for a person to run, which models those commands name, and that the model, a verifier or a grader in the report means the session that answered (D-307). No em dashes in the report's own words
+duration and the linked project. For an interactive review all three footers add an Engine line: that each stage's command was printed for a person to run, which models those commands name, that the model, a verifier or a grader in the report means the session that answered (D-307), and that a time given for the run includes the person's (D-311). No em dashes in the report's own words
 (the house-style gate over the source, and a unit test of a rendered report); what a finding or a person wrote is carried as written.
 
 ## 4. Prompt composition
