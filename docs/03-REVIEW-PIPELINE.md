@@ -79,7 +79,10 @@ S1 work its risk-tagged files first (U12).
    coverage is asserted by unit tests against fixtures with known hits. The
    AI never runs its own sweeps.
 5. Compose the **ruleset snapshot**: process directives + enabled rules,
-   full verbatim text, ordered; freeze into review_rulesets.snapshotJson.
+   full verbatim text, ordered; freeze into review_rulesets.snapshotJson,
+   one row for each ruleset the review was started with. A set in which
+   two rulesets hold a rule under one code is refused before any row is
+   written, naming the codes and the rulesets (D-288, D-291).
 6. Run the **project's own checks**, when a person turned them on for the
    project (WP-I, D-191, D-192, D-196): a throwaway clone of the project's
    clone, checked out at fromCommit, apart from the review's read-only
@@ -114,7 +117,9 @@ Common contract for every AI stage:
 
 - cwd = worktree; tools = Read, Grep, Glob only (no Edit, no Bash, no web).
 - System prompt = composed ruleset snapshot + stage instruction + the
-  protocol's scope rule (review changed code only) + output contract.
+  protocol's scope rule (review changed code only) + output contract. On
+  a review with several rulesets the snapshot is theirs put together in
+  the order of their names, each one's directives under its name (D-293).
 - Output = one JSON document matching the stage's zod schema. Invalid output
   triggers exactly one repair round (same session, told what was wrong with
   the answer's shape and to change no judgement) and then fails the stage.
@@ -330,7 +335,7 @@ the human already made). Dismissed findings appear in an appendix with
 their reasons, those left out unproven (dismissed open questions) under
 their own heading, apart from the ones a person rejected (D-190). Export: markdown file to `exports/`
 and clipboard, with a single-file HTML written beside it. The markdown's
-footer records: the ruleset's name and version, the model with its effort
+footer records: each ruleset's name and version, the model with its effort
 and profile, the commit reviewed and its merge base, a linked project's
 branch and commit, token usage, the cost equivalent, and how long the
 run took, to when it stopped and not to when the review was completed

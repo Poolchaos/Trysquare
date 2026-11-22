@@ -192,15 +192,18 @@ are enforced in one repository function, unit-tested; no ad hoc writes.
 
 ### review_rulesets
 
-(reviewId, rulesetId, rulesetName, rulesetVersion, snapshotJson).
+(reviewId, rulesetId, rulesetName, rulesetVersion, snapshotJson). One row
+for each ruleset the review was started with, one or more (D-288); they
+are read in the order of their names, and no two hold a rule under one
+code (D-291).
 snapshotJson freezes the composed ruleset content at start time so later
 ruleset edits never change what a past review was judged against; the name
-and version are kept beside it, so a report says which ruleset and version
-that was. The row goes with its review. `rulesetId` is the id the ruleset
+and version are kept beside it, so a report says which rulesets and
+versions those were. The row goes with its review. `rulesetId` is the id the ruleset
 had and no key onto it (migration 0019, D-266): a ruleset deleted leaves
 the copy with every review that ran with it. Start time is when the run
-starts: a review waiting in line holds its ruleset's id and nothing of its
-rules, so it runs with the ruleset as it stands when its turn comes
+starts: a review waiting in line holds its rulesets' ids and nothing of
+their rules, so it runs with each as it stands when its turn comes
 (D-270).
 
 ### stage_executions

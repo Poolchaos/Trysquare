@@ -31,6 +31,10 @@ from 2026-11-03.
   scripted answers are for one protocol; a review on two against a real
   model. CI run 44932086480 at d5a3d45 failed on Windows alone, the
   loopback fault again (idea inbox, D-246).
+  The data model and the pipeline spec say a review's rulesets in the
+  plural since the same day (02, 03). Not done: the plan's review pass
+  over RS-1 to RS-4b; round 24 read RS-1 to RS-3b, and nobody but their
+  author has read RS-4a and RS-4b.
   `./verify.sh --e2e` exits 0 with 1688 unit tests passing, 8 skipped,
   and 170 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
