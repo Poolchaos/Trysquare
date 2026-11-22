@@ -4770,6 +4770,40 @@ test("the scoreboard says whose branch each recent review was of", async ({ page
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, card, "scoreboard-authors-theirs");
 
+    // The widest the row gets: a long name, a run after an earlier one, and
+    // a review awaiting a decision. The board's own answer with those three
+    // put on its rows, since no review here has a long-named author. The
+    // table stays inside its card at desk width, the name cut and its email
+    // in its title. Held because the pair's column gives: a longer name
+    // takes its room from the pair, and the table does not widen.
+    const longName = "Alexandria Featherstonehaugh-Montgomery";
+    const real = (await (await page.request.get("/api/scoreboard")).json()) as {
+      recent: Record<string, unknown>[];
+    };
+    const stopWidest = await routeUntilStopped(page, "**/api/scoreboard", (route) =>
+      route.fulfill({
+        json: {
+          ...real,
+          recent: real.recent.map((row) => ({
+            ...row,
+            author: { name: longName, email: "alexandria@example.invalid" },
+            mine: false,
+            status: "awaiting_confirmation",
+            ranBefore: true,
+            durationMs: 754_000,
+          })),
+        },
+      }),
+    );
+    await page.reload();
+    await expect(authors.first()).toHaveText(longName, { timeout: 30_000 });
+    expect(await card.evaluate((box) => box.scrollWidth - box.clientWidth)).toBeLessThanOrEqual(0);
+    const cut = authors.first().locator("span");
+    expect(await cut.evaluate((name) => name.scrollWidth > name.clientWidth)).toBe(true);
+    await expect(cut).toHaveAttribute("title", "alexandria@example.invalid");
+    await shootAll(page, card, "scoreboard-authors-widest");
+    await stopWidest();
+
     // Nothing kept and a git config that cannot be read: said under the
     // table in git's words, the board and the names there all the same.
     expect((await keep([])).status()).toBe(200);

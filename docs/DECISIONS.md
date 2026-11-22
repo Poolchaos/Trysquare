@@ -7474,3 +7474,19 @@ verified evidence, in writing, here.
   its edge. All nine were looked at before the layout changed, and one
   of each kind after it (mine light, unknown dark, theirs phone). The three new strings (Author, You, the line under the
   table) were written without the antislop copywriting file read.
+- 2026-11-22 Review round 26, over WP-L's second and third slices
+  (10ec45a, 02cd558), by the session that wrote them, so worth less than
+  round 25's reading: the next round by another session should read them
+  again. No fault found in the code. Looked at, each against the code or
+  in the browser. The widest row of Recent reviews, a long author's name
+  with a run after an earlier one and a review awaiting a decision: the
+  session expected it to stand past the card and it does not, the pair's
+  column giving the room; the browser test now puts that row on the
+  board's own answer and holds the table inside its card, the name cut
+  and its email in its title (`scoreboard-authors-widest`, light looked
+  at, B: the pair and the name both cut, each whole in its title). How
+  often git is asked for the person's email: once for each read of the
+  scoreboard, which the dashboard reads as it opens and when what is
+  running changes, not at every four-second poll. Left as it is: the two
+  demo commands make their reviews in the store directly and keep no
+  author, so such a review shows a dash.
