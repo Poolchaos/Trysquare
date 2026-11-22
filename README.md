@@ -145,8 +145,8 @@ on every CI run.
 ## How it works
 
 You add a project by git URL and it is cloned locally. You pick the branch to
-review, the branch to compare against, one ruleset, a model, and how hard the
-model should think. You can add a sentence saying what the change was meant to
+review, the branch to compare against, one or more rulesets, a model, and how
+hard the model should think. You can add a sentence saying what the change was meant to
 do, which is treated as a claim to check rather than as an instruction. Before
 anything is spent, a pre-flight tells you what would be examined: the commits
 it would pin, the file and hunk counts, the sweep hits, and how many model
@@ -164,9 +164,12 @@ not in it: a rule switched off, and a severity changed with the picker and not
 in the rule's own text. Process directives come only
 with an imported document. A review keeps the rules it started with, so a
 later change never alters a past review. Each ruleset carries a tier, meaning
-rules for any code, rules for a technology, or rules for one project. Choosing
-several rulesets so the tiers compose in one review is designed but not built:
-today a review uses one.
+rules for any code, rules for a technology, or rules for one project. A review
+can be judged against several at once, ticked when it is set up, and its
+report names each with its version. A finding names its rule by number alone,
+so two rulesets that hold a rule under the same number are refused together:
+the screen says which numbers and which rulesets, and one of them is left out
+or renumbered. The templates the app ships share no number.
 
 The review then runs as a sequence of stages, mirroring a rigorous manual
 review: build the change inventory, classify risk, understand the code
@@ -345,7 +348,7 @@ platform. Run `npm run doctor` on its own if that step fails.
 
 ### Seeding your company's rules
 
-A fresh install has no rulesets, and a review is judged against one. On the
+A fresh install has no rulesets, and a review needs at least one. On the
 Rulesets screen, start one from a template the app ships (General, twelve
 rules for any change in any language; TypeScript, nine on where a change
 makes the compiler prove less; React, eight on hooks, state and what people

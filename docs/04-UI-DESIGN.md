@@ -22,12 +22,11 @@ chosen per review in the advanced fold.
 
 - Add project: the live git output tail while a clone runs. Failure stderr
   is shown verbatim; the running tail is not.
-- New review: choosing more than one ruleset at once. Deferred on
-  2026-08-04 for want of a design for colliding rule codes, and planned
-  since in `plans/RULESETS-TOGETHER-PLAN.md` (D-288): a set that shares a
-  code is refused. The preview drawer per ruleset that section 3
-  describes is not built either: the screen has one select and a link to
-  the chosen ruleset's page.
+- A draft's own Start, on the review's page: choosing more than one
+  ruleset. New review ticks several since 2026-11-22 (RS-4a, D-294,
+  `plans/RULESETS-TOGETHER-PLAN.md`); the draft's Start still offers one
+  (RS-4b). The preview drawer per ruleset that section 3 describes is not
+  built: each ruleset's count of rules links to its page.
 - Rulesets: process directives written or edited in the app (they come
   with an imported document or a template), and a Firebase template,
   which waits on the maintainer's word (`plans/RULESET-TEMPLATES-PLAN.md`). A ruleset is started
@@ -183,7 +182,10 @@ choose rules, run).
 One screen, four decisions, in order: from-branch (filterable picker with the same Mine filter as the project detail),
 into-branch (default: detected default branch), rulesets (grouped
 global/tech/project, multi-select with rule counts and per-ruleset preview
-drawer), model (a list, one row a model, family by family, a family with a
+drawer; the default ticked on arrival, else the first; two ticked that
+hold a rule under one number are said under the list in the server's
+words, as is none ticked, and Start stays off, D-294), model (a list, one
+row a model, family by family, a family with a
 recommended model first and that model first in it
 (`src/lib/models/availability.ts`): the models a fresh probe vouches for,
 each showing its context window, the review profile it will run and the

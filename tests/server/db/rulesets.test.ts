@@ -8,6 +8,7 @@ import {
   deleteRuleset,
   duplicateRuleset,
   hasReviewSnapshot,
+  listRulesetSummaries,
   listRulesets,
   loadEnabledRulesets,
   loadRuleset,
@@ -191,6 +192,18 @@ describe("storing an imported protocol", () => {
     });
 
     expect(loadRuleset(db, rulesetId).rules.some((rule) => rule.code === "3")).toBe(false);
+  });
+
+  it("is listed with the numbers of its rules that are switched on, in the document's order", () => {
+    // What a screen needs to say that two rulesets share a number before
+    // anything is started: the numbers a review would freeze, no others.
+    const { rulesetId } = save();
+    setRuleEnabled(db, rulesetId, "2a", false);
+
+    const on = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"];
+    expect(listRulesetSummaries(db)).toEqual([
+      expect.objectContaining({ id: rulesetId, ruleCount: on.length, codes: on }),
+    ]);
   });
 });
 

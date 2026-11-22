@@ -12,10 +12,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import {
+  RULESET_TIERS,
   SELECTABLE_REVIEW_EFFORTS,
   reviewProfileSchema,
   type ReviewEffort,
 } from "@/lib/domain/enums";
+import { sharedCodes, sharedCodesRefusal } from "@/lib/rulesets/shared-codes";
 import { whatTheModelGets } from "@/lib/review/profiles";
 import { effortRunsOn } from "@/lib/models/effort-support";
 import { pairedVerifierFor, secondVerifierReadiness } from "@/lib/models/pairing";
@@ -69,6 +71,8 @@ interface Ruleset {
   tier: string;
   version: number;
   ruleCount: number;
+  /** The codes of its rules that are switched on, which a review would freeze. */
+  codes: string[];
 }
 
 interface Link {
@@ -201,7 +205,9 @@ function NewReview() {
 
   const [fromBranch, setFromBranch] = useState(prefilledBranch);
   const [chosenInto, setChosenInto] = useState("");
-  const [rulesetId, setRulesetId] = useState("");
+  // Null until the list is read: the default is ticked once, and a person
+  // who unticks it is not given it back by the next read.
+  const [tickedRulesets, setTickedRulesets] = useState<string[] | null>(null);
   const [model, setModel] = useState("");
   const [effort, setEffort] = useState("high");
   // Extra high chosen and then a model that does not run it: what is shown
@@ -377,7 +383,8 @@ function NewReview() {
         setRulesets(listed);
         // The default chosen on a ruleset's page, else the first (D-225).
         const preferred = listed.find((row) => row.id === rulesetList.body.defaultRulesetId);
-        setRulesetId((current) => current || (preferred ?? listed[0])?.id || "");
+        const first = preferred ?? listed[0];
+        setTickedRulesets((current) => current ?? (first ? [first.id] : null));
       }
 
       // Only a model a probe currently vouches for is picked by default: the
@@ -503,10 +510,25 @@ function NewReview() {
       ? (linkBranches.find((branch) => branch.name !== linkFrom)?.name ?? "")
       : linkInto;
 
+  // The ticked rulesets, in the list's order whatever order they were ticked
+  // in, and only those still listed. Two that hold a rule under one number
+  // cannot judge one review (D-288): said here from the list's own codes, in
+  // the words the server refuses the set with, before anything is asked.
+  const chosenRulesets = rulesets.filter((ruleset) => tickedRulesets?.includes(ruleset.id));
+  const rulesetIds = chosenRulesets.map((ruleset) => ruleset.id);
+  const shared = sharedCodes(chosenRulesets);
+  const rulesetsCollide = shared.length > 0;
+  const noRulesetTicked = rulesets.length > 0 && rulesetIds.length === 0;
+
   // The size of the review, recomputed whenever the decisions that change it
   // do. Free, and all it writes is git's fetch, so it can run on every change without a thought.
   const readyToPreflight =
-    projectId !== "" && fromBranch !== "" && intoBranch !== "" && rulesetId !== "" && model !== "";
+    projectId !== "" &&
+    fromBranch !== "" &&
+    intoBranch !== "" &&
+    rulesetIds.length > 0 &&
+    !rulesetsCollide &&
+    model !== "";
 
   // What the pre-flight is asked about. An answer shows only while it is
   // the answer to the question asked now: the one for the choices before
@@ -519,7 +541,7 @@ function NewReview() {
     projectId,
     fromBranch,
     intoBranch,
-    rulesetId,
+    rulesetIds,
     model,
     ...(intentSized === "" ? {} : { intent: intentSized }),
     ...(profileOverride === "" ? {} : { profileId: profileOverride }),
@@ -658,7 +680,7 @@ function NewReview() {
         {
           method: "POST",
           body: JSON.stringify({
-            rulesetId,
+            rulesetIds,
             ...(billing === null ? {} : { billingShown: billing.state }),
           }),
         },
@@ -689,7 +711,7 @@ function NewReview() {
   const linkIncomplete =
     included !== "" &&
     (!linkRead || linkProblem !== "" || linkFrom === "" || linkIntoBranch === "");
-  const baseReady = fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetId !== "";
+  const baseReady = fromBranch !== "" && intoBranch !== "" && model !== "" && rulesetIds.length > 0;
   // The profile the chosen model is registered for, from the models read:
   // taken from the pre-flight, it went whenever an answer was pending, and
   // the downgrade list widened to profiles the server refuses (D-147).
@@ -726,6 +748,7 @@ function NewReview() {
     !linkIncomplete &&
     emptyHalves.length === 0 &&
     !wouldRefuse &&
+    !rulesetsCollide &&
     !verifierMissing &&
     !preflightPending;
 
@@ -904,39 +927,6 @@ function NewReview() {
               </Select>
             </Field>
 
-            <Field
-              label="Rules"
-              hint="What the change is judged against, frozen when the review starts."
-            >
-              <Select value={rulesetId} onChange={(event) => setRulesetId(event.target.value)}>
-                {rulesets.length === 0 ? (
-                  <option value="">
-                    {rulesetReadFailed ? "The rulesets could not be read" : "No rulesets yet"}
-                  </option>
-                ) : null}
-                {[...new Set(rulesets.map((ruleset) => ruleset.tier))].map((tier) => (
-                  <optgroup key={tier} label={tier}>
-                    {rulesets
-                      .filter((ruleset) => ruleset.tier === tier)
-                      .map((ruleset) => (
-                        <option key={ruleset.id} value={ruleset.id}>
-                          {ruleset.name} (v{ruleset.version}, {ruleset.ruleCount} rule
-                          {ruleset.ruleCount === 1 ? "" : "s"})
-                        </option>
-                      ))}
-                  </optgroup>
-                ))}
-              </Select>
-              {rulesetId ? (
-                <Link
-                  href={`/rulesets/${rulesetId}`}
-                  className="text-xs text-[var(--color-accent)] hover:underline"
-                >
-                  See which rules apply
-                </Link>
-              ) : null}
-            </Field>
-
             <Field label="Effort" hint="How hard the model thinks. Fixed once the review starts.">
               <Select value={chosenEffort} onChange={(event) => setEffort(event.target.value)}>
                 {efforts.map((option) => (
@@ -947,6 +937,95 @@ function NewReview() {
               </Select>
             </Field>
           </div>
+
+          <Card className="p-4">
+            <div role="group" aria-labelledby="rules-heading">
+              <h2 id="rules-heading" className="text-heading font-medium">
+                Rules
+              </h2>
+              <p className="mt-1 mb-3 text-xs text-[var(--color-ink-muted)]">
+                What the change is judged against, frozen when the review starts. Tick every ruleset
+                that applies to it.
+              </p>
+              {rulesets.length === 0 ? (
+                <p className="text-sm text-[var(--color-ink-muted)]">
+                  {rulesetReadFailed ? "The rulesets could not be read" : "No rulesets yet"}
+                </p>
+              ) : (
+                <div className="grid gap-3" data-testid="ruleset-picker">
+                  {/* The tiers in the order the Rulesets screen lists them, then
+                      any other a ruleset carries: left out, its ruleset could
+                      not be ticked. */}
+                  {[...new Set([...RULESET_TIERS, ...rulesets.map((ruleset) => ruleset.tier)])]
+                    .filter((tier) => rulesets.some((ruleset) => ruleset.tier === tier))
+                    .map((tier) => (
+                      <div key={tier}>
+                        <h3 className="mb-1 text-xs font-semibold tracking-wide text-[var(--color-ink-muted)] uppercase">
+                          {tier}
+                        </h3>
+                        <ul className="grid gap-1">
+                          {rulesets
+                            .filter((ruleset) => ruleset.tier === tier)
+                            .map((ruleset) => {
+                              const ticked = rulesetIds.includes(ruleset.id);
+                              return (
+                                <li
+                                  key={ruleset.id}
+                                  className={`flex items-center gap-3 rounded-md border px-3 ${
+                                    ticked
+                                      ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
+                                      : "border-transparent hover:bg-[var(--color-surface-sunken)]"
+                                  }`}
+                                >
+                                  {/* The label is the row's height, so a thumb
+                                      has the 40px the other controls keep. */}
+                                  <label className="flex min-h-[var(--hit-target)] min-w-0 flex-1 cursor-pointer items-center gap-3 py-1 text-sm">
+                                    <input
+                                      type="checkbox"
+                                      className="shrink-0 scheme-light-dark accent-[var(--color-accent)]"
+                                      checked={ticked}
+                                      onChange={(event) =>
+                                        setTickedRulesets(
+                                          event.target.checked
+                                            ? [...rulesetIds, ruleset.id]
+                                            : rulesetIds.filter((id) => id !== ruleset.id),
+                                        )
+                                      }
+                                    />
+                                    <span className="min-w-0 break-words">{ruleset.name}</span>
+                                    <span className="shrink-0 text-xs text-[var(--color-ink-muted)] tabular-nums">
+                                      v{ruleset.version}
+                                    </span>
+                                  </label>
+                                  <Link
+                                    href={`/rulesets/${ruleset.id}`}
+                                    aria-label={`${ruleset.ruleCount} rule${
+                                      ruleset.ruleCount === 1 ? "" : "s"
+                                    } of ${ruleset.name}`}
+                                    className="shrink-0 text-xs text-[var(--color-accent)] tabular-nums hover:underline"
+                                  >
+                                    {ruleset.ruleCount} rule{ruleset.ruleCount === 1 ? "" : "s"}
+                                  </Link>
+                                </li>
+                              );
+                            })}
+                        </ul>
+                      </div>
+                    ))}
+                </div>
+              )}
+              {/* Said as a tick changes it, so a screen reader hears it too. */}
+              <div aria-live="polite" className="mt-3 grid gap-2 empty:mt-0">
+                {rulesetsCollide ? <Problem>{sharedCodesRefusal(shared)}</Problem> : null}
+                {noRulesetTicked ? (
+                  <p className="text-sm text-[var(--color-ink-muted)]">
+                    No ruleset is ticked, and a review needs at least one to judge the change
+                    against.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </Card>
 
           <Card className="p-4">
             <h2 className="text-heading font-medium">Model</h2>
@@ -1426,7 +1505,9 @@ function NewReview() {
                   Rulesets
                 </Link>
               </span>
-            ) : wouldRefuse ||
+            ) : noRulesetTicked ||
+              rulesetsCollide ||
+              wouldRefuse ||
               emptyHalves.length > 0 ||
               (baseReady && linkIncomplete) ||
               (baseReady && verifierMissing) ? (
@@ -1437,6 +1518,10 @@ function NewReview() {
               // or a model not yet chosen it read as the only reason.
               <span className="text-sm text-[var(--color-ink-muted)]">
                 {[
+                  ...(noRulesetTicked ? ["No ruleset is ticked: see Rules above."] : []),
+                  ...(rulesetsCollide
+                    ? ["The ticked rulesets share a rule number: see Rules above."]
+                    : []),
                   ...(wouldRefuse
                     ? ["The pre-flight says this review would refuse to start: see above."]
                     : []),

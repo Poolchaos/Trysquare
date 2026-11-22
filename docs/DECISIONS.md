@@ -7286,3 +7286,34 @@ verified evidence, in writing, here.
   screens offer one and the server takes several. Not looked at by
   anyone but the author. The plan's next pass is RS-5's, over RS-1 to
   RS-4, after the screens.
+- 2026-11-22 D-294 New review ticks several rulesets (RS-4a). The Rules
+  picker was one select, so from the screens a review had one ruleset
+  whatever the server took (RS-2b). It is a list in a card of its own,
+  as Model is: the rulesets under their tiers in the Rulesets screen's
+  order, each with a checkbox, its version and its count of rules
+  switched on. The count is the link to the ruleset's page and replaces
+  "See which rules apply". The default is ticked on arrival, else the
+  first, as the select chose, and a person who unticks it is not given
+  it back by the next read. The pre-flight and Start send `rulesetIds`
+  in the list's order. Two ticked rulesets that hold a rule under one
+  number are said under the list in the words the server refuses the
+  set with (`sharedCodesRefusal`), Start is off with the reason beside
+  it, and no pre-flight is asked. For that, `GET /api/rulesets` lists
+  each ruleset's switched-on rule numbers (`codes`), so the screen
+  knows before it asks. None ticked is said the same way. Rejected:
+  leaving the collision to the pre-flight's 409, which is asked only
+  once a branch pair and a model are chosen, and which a draft's own
+  Start does not have. Split from RS-4 by the session: the draft's
+  Start sits in the review page's header beside its other buttons, a
+  list does not fit there, and it is RS-4b. Proven: the browser test
+  failed on the old screen (no list to tick); it ticks a second
+  ruleset, reads both ids off the pre-flight's request and off Start's,
+  then ticks a third that shares rule 91 and reads the refusal, and
+  unticks all. Not proven: a review started from the screen on two
+  rulesets and run to its report in the browser suite, whose scripted
+  answers are written for one protocol. The server's run on two is held
+  by the service test (D-291, D-293). Design read: one decision on a
+  setup form, in 04's language, ENERGY 1, RHYTHM 1, MOTION 1; visible
+  checkboxes because several can be on, which a highlighted row alone
+  does not say; the ticked row's accent border is the mark the branch
+  and model rows carry on the same screen.

@@ -393,17 +393,25 @@ export function listRulesets(db: Db): RulesetRow[] {
 }
 
 /**
- * The list with each ruleset's rule count, for screens that group by tier.
+ * The list with each ruleset's rule count and rule codes, for screens that
+ * group by tier.
  *
- * The count is of enabled rules, because it sits beside a picker deciding
+ * Both are of enabled rules, because they sit beside a picker deciding
  * what a review will be judged against, and a disabled rule will not be.
+ * The codes let that picker say two ticked rulesets share one before
+ * anything is asked of the server (`sharedCodes`).
  */
-export function listRulesetSummaries(db: Db): (RulesetRow & { ruleCount: number })[] {
-  const counts = new Map<string, number>();
-  for (const rule of db.select().from(rules).all()) {
-    if (rule.enabled) counts.set(rule.rulesetId, (counts.get(rule.rulesetId) ?? 0) + 1);
+export function listRulesetSummaries(
+  db: Db,
+): (RulesetRow & { ruleCount: number; codes: string[] })[] {
+  const codes = new Map<string, string[]>();
+  for (const rule of db.select().from(rules).orderBy(asc(rules.sortOrder)).all()) {
+    if (rule.enabled) codes.set(rule.rulesetId, [...(codes.get(rule.rulesetId) ?? []), rule.code]);
   }
-  return listRulesets(db).map((row) => ({ ...row, ruleCount: counts.get(row.id) ?? 0 }));
+  return listRulesets(db).map((row) => {
+    const enabled = codes.get(row.id) ?? [];
+    return { ...row, ruleCount: enabled.length, codes: enabled };
+  });
 }
 
 /** Two of the rulesets chosen for one review hold a rule under one code (RS-2b). */

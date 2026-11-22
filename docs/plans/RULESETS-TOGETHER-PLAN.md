@@ -93,8 +93,9 @@ shown by the pre-flight before Start. Evidence: the code lines above.
 | RS-2b | The server takes a set: the start route and the service accept `rulesetIds`, one or more, the single `rulesetId` still read; a set whose codes collide is refused with a 409 that names each shared code and the rulesets it is in, before any row is written; one snapshot row per ruleset. Built with it, since the type it changes is the one the line holds: a review waiting in line holds its set, and a ruleset in any waiting set is not deleted. | RS-2a | DONE 2026-11-21, 59c7496 (D-291) |
 | RS-3a | The pre-flight sizes the set, read as a run's snapshot is read, and refuses the same collision in the same words. | RS-2b | DONE 2026-11-21, 46685fb (D-292) |
 | RS-3b | The model is given each ruleset's directives under that ruleset's name (section 3), when the review has more than one: they were given one after another, unnamed. Proven by a run on two rulesets with the fake engine, the system prompt its first stage was sent read back; the demo script takes one ruleset, so no demo on two exists yet. | RS-3a | DONE 2026-11-21, d1fc787 (D-293) |
-| RS-4 | The screens: on New review the Rules picker is a list of the rulesets by tier, each one ticked or not, the default ticked; the collision said beside it with Start off; a draft's own Start the same; the review's page and the report name the rulesets it ran with. | RS-3b | TODO |
-| RS-5 | Records: README (How it works), RUNBOOK, 00-BRIEF's unowned line, 02, 03, 04, `PROJECT-STATE.md`. A review pass over RS-1 to RS-4. | RS-4 | TODO |
+| RS-4a | New review: the Rules picker is a list of the rulesets by tier, each one ticked or not, the default ticked; the collision said under it with Start off, known from the rule numbers the rulesets list now carries; none ticked said the same way. Split from RS-4 by the session: the draft's Start sits in the review page's header and wants its own layout. The review's page and the report name the rulesets since RS-2a. | RS-3b | DONE 2026-11-22 (D-294) |
+| RS-4b | A draft's own Start, on the review's page: the same list, the collision and none ticked said the same way, Start off. | RS-4a | TODO |
+| RS-5 | Records: README (How it works), RUNBOOK, 00-BRIEF's unowned line, 02, 03, 04, `PROJECT-STATE.md`. A review pass over RS-1 to RS-4b. | RS-4b | TODO |
 
 ## 3. What can go wrong, and what holds it
 
@@ -130,4 +131,4 @@ templates' codes are made disjoint so they compose.
 
 ## 5. Review cadence
 
-A structured review pass after RS-2 and after RS-4.
+A structured review pass after RS-2 and after RS-4b.

@@ -554,7 +554,7 @@ test("Enter on the Advanced fold or a link in the new review form does what it s
   await page.keyboard.press("Enter");
   await expect(engine).toBeVisible();
 
-  await page.getByRole("link", { name: "See which rules apply" }).focus();
+  await page.getByTestId("ruleset-picker").getByRole("link").first().focus();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/rulesets\/[A-Z0-9]+$/i, { timeout: 30_000 });
 });
@@ -4342,11 +4342,12 @@ test("a ruleset chosen as the default is the one a new review starts on", async 
     await shootAll(page, row, "rulesets-default-row");
 
     await page.goto(`/reviews/new?projectId=${app.id}`);
-    // The select that offers the copy: "Rules" also names the profile picker.
-    const rules = page
-      .locator("select")
-      .filter({ has: page.locator(`option[value="${rulesetId}"]`) });
-    await expect(rules).toHaveValue(rulesetId, { timeout: 30_000 });
+    // The copy is ticked, and nothing else is.
+    const picker = page.getByTestId("ruleset-picker");
+    await expect(picker.getByRole("checkbox", { name: /^Zz default sweep v\d+$/ })).toBeChecked({
+      timeout: 30_000,
+    });
+    await expect(picker.getByRole("checkbox", { checked: true })).toHaveCount(1);
 
     // A draft's Start begins on it too (review round 15): a new review whose
     // start is refused for this test, removed after.
@@ -4426,12 +4427,12 @@ test("a ruleset with nothing switched on is refused before Start, in the run's w
   await switchAll(false);
   try {
     await fillANewReview(page);
-    const rules = page
-      .locator("select")
-      .filter({ has: page.locator(`option[value="${rulesetId}"]`) });
-    await rules.selectOption(rulesetId);
-    await expect(rules.locator("option:checked")).toHaveText(
-      /^Zz default sweep \(v\d+, 0 rules\)$/,
+    // The copy alone: the one ticked on arrival is unticked first.
+    const picker = page.getByTestId("ruleset-picker");
+    await picker.getByRole("checkbox", { checked: true }).uncheck();
+    await picker.getByRole("checkbox", { name: /^Zz default sweep v\d+$/ }).check();
+    await expect(picker.locator("li").filter({ hasText: "Zz default sweep" })).toContainText(
+      "0 rules",
     );
     const refusal = page.getByText(
       'Ruleset "Zz default sweep" has no enabled rules, so a review using it would check ' +
@@ -4452,6 +4453,132 @@ test("a ruleset with nothing switched on is refused before Start, in the run's w
     await shootAll(page, beside, "preflight-nothing-switched-on-start");
   } finally {
     await switchAll(true);
+  }
+});
+
+test("several rulesets are ticked for one review, and two that share a rule number are refused beside the list", async ({
+  page,
+}) => {
+  // RS-4 (D-288): the Rules picker was one select, so a review had one
+  // ruleset whatever the server took. Two rulesets made here, removed after:
+  // the first shares no number with the example, the second shares 91 with
+  // the first.
+  const imported = async (name: string, markdown: string): Promise<string> => {
+    const made = await page.request.post("/api/rulesets/import", {
+      data: { name, tier: "project", markdown },
+    });
+    expect(made.status()).toBe(201);
+    return ((await made.json()) as { rulesetId: string }).rulesetId;
+  };
+  const first = await imported(
+    "Zz first of two",
+    "# First\n\n## Rules\n\n### 90. Dates\n\n**Rule:** Dates are UTC.\n\n" +
+      "### 91. Names\n\n**Rule:** A name says what the thing holds.\n",
+  );
+  const second = await imported(
+    "Zz second of two",
+    "# Second\n\n## Rules\n\n### 91. Units\n\n**Rule:** A duration says its unit.\n",
+  );
+  let draft: string | undefined;
+  try {
+    const preflights: string[][] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname !== "/api/reviews/preflight") return;
+      preflights.push((request.postDataJSON() as { rulesetIds: string[] }).rulesetIds);
+    });
+    await fillANewReview(page);
+    const picker = page.getByTestId("ruleset-picker");
+    const start = page.getByRole("button", { name: "Start review" });
+    const beside = start.locator("..");
+    const card = picker.locator("xpath=ancestor::div[@role='group']/..");
+
+    // One ticked on arrival, as before: the default, else the first.
+    await expect(picker.getByRole("checkbox", { checked: true })).toHaveCount(1);
+    const onArrival = preflights.at(-1)!;
+    expect(onArrival).toHaveLength(1);
+
+    // A second ticked: the pre-flight is asked about both, in the list's
+    // order, and answers, and Start is on.
+    const sized = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/reviews/preflight" &&
+        (response.request().postDataJSON() as { rulesetIds: string[] }).rulesetIds.length === 2,
+    );
+    await picker.getByRole("checkbox", { name: /^Zz first of two v\d+$/ }).check();
+    expect((await sized).status()).toBe(200);
+    const both = [...onArrival, first];
+    expect(preflights.at(-1)).toEqual(both);
+    await expect(page.getByText("What this review will examine", { exact: true })).toBeVisible({
+      timeout: 60_000,
+    });
+    await expect(start).toBeEnabled();
+    await expect(picker.getByRole("link", { name: "2 rules of Zz first of two" })).toHaveAttribute(
+      "href",
+      `/rulesets/${first}`,
+    );
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, card, "rules-two-ticked");
+
+    // Start sends both. Refused for this test, so no run is needed to read
+    // what was sent; the draft it leaves is removed after.
+    const stopRefusing = await answerOnce(page, "**/api/reviews/*/start", (route) =>
+      route.fulfill({ status: 500, json: { error: "Refused for this test.", code: "Test" } }),
+    );
+    const creation = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/reviews" &&
+        response.request().method() === "POST",
+    );
+    const starting = page.waitForRequest((request) =>
+      /\/api\/reviews\/[^/]+\/start$/.test(new URL(request.url()).pathname),
+    );
+    await start.click();
+    draft = ((await (await creation).json()) as { review: { id: string } }).review.id;
+    expect(((await starting).postDataJSON() as { rulesetIds: string[] }).rulesetIds).toEqual(both);
+    await expect(page.getByText("Refused for this test.")).toBeVisible();
+    await stopRefusing();
+
+    // A third that shares 91 with the second: said under the list in the
+    // words the server refuses the set with, nothing asked of the pre-flight,
+    // and Start off with the reason beside it.
+    const asked = preflights.length;
+    await picker.getByRole("checkbox", { name: /^Zz second of two v\d+$/ }).check();
+    const refusal = card.getByText(
+      'These rulesets cannot judge one review together: rule 91 is in "Zz first of two" and ' +
+        '"Zz second of two". A finding names its rule by number alone, so a number may be in ' +
+        "only one of a review's rulesets. Leave one of them out, or change the numbers in one.",
+      { exact: true },
+    );
+    await expect(refusal).toBeVisible();
+    await expect(start).toBeDisabled();
+    await expect(beside).toContainText("The ticked rulesets share a rule number: see Rules above.");
+    await expect(page.getByText("What this review will examine", { exact: true })).toHaveCount(0);
+    expect(preflights).toHaveLength(asked);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, card, "rules-share-a-number");
+    await shootAll(page, beside, "rules-share-a-number-start");
+
+    // None ticked: said, and Start stays off.
+    const ticked = picker.getByRole("checkbox", { checked: true });
+    while ((await ticked.count()) > 0) await ticked.first().uncheck();
+    await expect(
+      card.getByText(
+        "No ruleset is ticked, and a review needs at least one to judge the change against.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(start).toBeDisabled();
+    await expect(beside).toContainText("No ruleset is ticked: see Rules above.");
+    await shootAll(page, card, "rules-none-ticked");
+  } finally {
+    if (draft) {
+      const removed = await page.request.delete(`/api/reviews/${draft}`);
+      expect.soft(removed.status(), "the draft removed").toBe(200);
+    }
+    for (const id of [first, second]) {
+      const removed = await page.request.delete(`/api/rulesets/${id}`);
+      expect.soft(removed.status(), "the ruleset removed").toBe(200);
+    }
   }
 });
 
@@ -7360,10 +7487,11 @@ test("with no ruleset yet, a new review and the dashboard say to start one, wher
     route.fulfill({ json: { rulesets: [], defaultRulesetId: null } }),
   );
   await page.goto(`/reviews/new?projectId=${app.id}`);
-  // The picker holds one choice, which says there is none to pick.
-  await expect(page.locator("option", { hasText: "No rulesets yet" })).toHaveCount(1, {
+  // Where the list would be, the card says there is none to tick.
+  await expect(page.getByText("No rulesets yet", { exact: true })).toBeVisible({
     timeout: 30_000,
   });
+  await expect(page.getByTestId("ruleset-picker")).toHaveCount(0);
   await expect(page.getByText("Start a ruleset first:")).toBeVisible();
   await expect(
     page.getByRole("main").getByRole("link", { name: "Rulesets", exact: true }),
