@@ -1,0 +1,43 @@
+/**
+ * What a list of ticks comes to, before anything is asked of the server
+ * (RS-4a, review round 25).
+ */
+
+import { describe, expect, it } from "vitest";
+import { rulesetChoice } from "@/components/ruleset-picker";
+
+const listed = [
+  { id: "a", name: "General", tier: "global", version: 1, ruleCount: 2, codes: ["1", "2"] },
+  { id: "b", name: "TypeScript", tier: "tech", version: 3, ruleCount: 1, codes: ["21"] },
+  { id: "c", name: "Ours", tier: "project", version: 1, ruleCount: 1, codes: ["2"] },
+];
+
+describe("the rulesets ticked for a review", () => {
+  it("go in the list's order, whatever order they were ticked in", () => {
+    // One set, one request: ticked the other way round, the pre-flight was
+    // otherwise asked again about the same rulesets.
+    expect(rulesetChoice(listed, ["b", "a"])).toEqual({
+      ids: ["a", "b"],
+      refusal: "",
+      noneTicked: false,
+    });
+  });
+
+  it("leave out one that is no longer listed", () => {
+    expect(rulesetChoice(listed, ["gone", "b"]).ids).toEqual(["b"]);
+    expect(rulesetChoice(listed, ["gone"])).toEqual({ ids: [], refusal: "", noneTicked: true });
+  });
+
+  it("are refused in the server's words when two hold a rule under one number", () => {
+    expect(rulesetChoice(listed, ["a", "c"]).refusal).toBe(
+      'These rulesets cannot judge one review together: rule 2 is in "General" and "Ours". ' +
+        "A finding names its rule by number alone, so a number may be in only one of a " +
+        "review's rulesets. Leave one of them out, or change the numbers in one.",
+    );
+  });
+
+  it("are said to be none only where there is a list to tick", () => {
+    expect(rulesetChoice(listed, []).noneTicked).toBe(true);
+    expect(rulesetChoice([], null).noneTicked).toBe(false);
+  });
+});

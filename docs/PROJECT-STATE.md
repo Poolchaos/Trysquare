@@ -32,11 +32,19 @@ from 2026-11-03.
   model. CI run 44932086480 at d5a3d45 failed on Windows alone, the
   loopback fault again (idea inbox, D-246).
   The data model and the pipeline spec say a review's rulesets in the
-  plural since the same day (02, 03). Not done: the plan's review pass
-  over RS-1 to RS-4b; round 24 read RS-1 to RS-3b, and nobody but their
-  author has read RS-4a and RS-4b.
-  `./verify.sh --e2e` exits 0 with 1688 unit tests passing, 8 skipped,
-  and 170 browser tests.
+  plural since the same day (02, 03). The plan's review pass over RS-4a
+  and RS-4b is run (round 25, in DECISIONS), four findings fixed: both
+  screens read the list of rulesets again each time the window is come
+  back to, where it was read once and a ruleset renumbered or deleted in
+  another tab stayed as it was; a ticked ruleset at a new version asks
+  the pre-flight again; New review's Start is off beside a pre-flight
+  that refused the set for a ruleset gone or two that share a number;
+  and what a review's page says above its body (a refusal, the billing
+  notice, the terminal note, a managed policy, a pause's reason) stands
+  apart, where each sat flush on the next and on the card under it. The
+  plan is built.
+  `./verify.sh --e2e` exits 0 with 1692 unit tests passing, 8 skipped,
+  and 171 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
   those awaiting a decision, each row saying which it is and what to press
@@ -182,7 +190,8 @@ from 2026-11-03.
   so does a draft's own Start (RS-4b, D-295). No review on two rulesets
   has been run against a real model. The review pass
   over RS-1 to RS-3b (round 24, in DECISIONS) fixed three faults in what
-  was built that day and two records.
+  was built that day and two records; the pass over RS-4a and RS-4b
+  (round 25, 2026-11-22) fixed four more, in the entry of that day.
   A sweep row whose pattern holds a pipe gives its rule the pattern
   (D-275): escaped as a table asks, or bare inside its backticks, it was
   cut in two and the rule got none, with every line still counted as

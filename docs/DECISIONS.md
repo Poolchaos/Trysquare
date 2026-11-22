@@ -7337,3 +7337,57 @@ verified evidence, in writing, here.
   runs it to the end on the one ticked on arrival still passes. Not
   proven: a draft run to its report on two rulesets in the browser
   suite, for the reason D-294 gives.
+- 2026-11-22 Review round 25, the plan's pass after RS-4b
+  (`plans/RULESETS-TOGETHER-PLAN.md` section 5), over RS-4a and RS-4b
+  (15a0295, 8e1fa66), by a session that did not write them, reading the
+  source diff and the pictures. Four findings, all fixed, each code
+  fault with a test that failed first.
+  1. Each screen read the list of rulesets once, as it opened. A
+  ruleset renumbered in another tab, which is what the refusal for a
+  shared number says to do, kept its old numbers on the list, so the
+  refusal stood and Start stayed off until the page was loaded again;
+  one deleted stayed listed and ticked, and a start on it answered
+  "Ruleset 01... was not found", an id no screen shows. Both screens
+  read the list again each time the window is come back to
+  (`useReadOnReturn`: the window focused after it lost the focus, or the
+  tab shown after it was hidden, one read for both). On New review the
+  rulesets alone, not the branches, whose read fetches from the remote.
+  With it, a ticked ruleset at a new version asks the pre-flight again:
+  every change to a ruleset's rules moves its version, and the answer on
+  screen was for the rules as they were. Proven in the browser: the
+  refusal went after a renumbering, the pre-flight was asked again
+  about the same rulesets after one was given a rule, and a deleted
+  ruleset's row went from both screens. Not driven: a real change of
+  tab. Playwright keeps every page focused, so the test sends the
+  window's blur and focus itself. Rejected: reading again only once the
+  server refuses, which never happens for the commonest case, a list
+  that still says two collide after one was renumbered.
+  2. New review left Start on beside a pre-flight that refused the set,
+  for a ruleset deleted since the list was read (404) or two changed
+  since to share a number (409). Pressed, it made a review, pinned its
+  commits, was refused by the start in the same words and left a draft.
+  Start counted one refusal, a ruleset with nothing switched on; it
+  counts the three. Since finding 1 a person reaches this only through
+  a change made without leaving the window, a script say.
+  3. On a review's page nothing said above the body carried space of
+  its own: a refusal, the billing notice, the terminal note, a managed
+  policy's notice, a pause's reason. Each sat flush on the next, and
+  the last on the card under it: 0 px measured between the billing
+  notice, the terminal note and the draft's Rules card. Older than
+  RS-4b, which put a card under them. They are one column now, 12 px
+  apart and 24 px above what follows, drawn only when it holds
+  something. Measured on an interactive draft with a per-token sign-in
+  and on a draft whose start was refused; a paused review's reason is
+  in the same column and was not measured. Graded by the builder,
+  `review/2026-11-22-e2e/`: `draft-notices-over-rules` light B, dark B,
+  phone B (apart now; the terminal note is still a bare line between
+  two boxes), `rules-set-refused-start` light A, dark A, phone A.
+  4. No test held that the ticked rulesets go in the list's order
+  whatever order they were ticked in, which is what keeps one set from
+  being sized twice: both browser tests ticked in the list's order. A
+  unit test of `rulesetChoice` holds it, and failed with the ids in
+  tick order; the draft's test ticks the lower one first.
+  Left as it is: a draft's page says the server's words for a start
+  refused over a set its list took for one that can run, and reads
+  nothing again then. One idea to the inbox: the count beside a ruleset
+  opens it in the same tab, and New review's choices go with it.

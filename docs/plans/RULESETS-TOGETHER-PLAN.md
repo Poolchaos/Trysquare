@@ -1,6 +1,7 @@
 # Rulesets together plan
 
-Status: DRAFT. Written 2026-11-21, for what D-251 asks of templates: "use
+Status: BUILT 2026-11-22, RS-1 to RS-5, both review passes run (section
+5). Written 2026-11-21, for what D-251 asks of templates: "use
 or add config rules" from "templates" worth starting from. Decided by the
 session (D-288); the maintainer reverses what he does not want.
 
@@ -95,7 +96,7 @@ shown by the pre-flight before Start. Evidence: the code lines above.
 | RS-3b | The model is given each ruleset's directives under that ruleset's name (section 3), when the review has more than one: they were given one after another, unnamed. Proven by a run on two rulesets with the fake engine, the system prompt its first stage was sent read back; the demo script takes one ruleset, so no demo on two exists yet. | RS-3a | DONE 2026-11-21, d1fc787 (D-293) |
 | RS-4a | New review: the Rules picker is a list of the rulesets by tier, each one ticked or not, the default ticked; the collision said under it with Start off, known from the rule numbers the rulesets list now carries; none ticked said the same way. Split from RS-4 by the session: the draft's Start sits in the review page's header and wants its own layout. The review's page and the report name the rulesets since RS-2a. | RS-3b | DONE 2026-11-22, 15a0295 (D-294) |
 | RS-4b | A draft's own Start, on the review's page: the same list, the collision and none ticked said the same way, Start off. | RS-4a | DONE 2026-11-22, 8e1fa66 (D-295) |
-| RS-5 | Records: README (How it works), RUNBOOK, 00-BRIEF's unowned line, 02, 03, 04, `PROJECT-STATE.md`. A review pass over RS-1 to RS-4b. | RS-4b | Records DONE 2026-11-22: README, RUNBOOK, 00-BRIEF, 04 and `PROJECT-STATE.md` with RS-4a and RS-4b, 02 and 03 after them. The review pass: TODO, and it covers RS-4a and RS-4b, which round 24 did not. |
+| RS-5 | Records: README (How it works), RUNBOOK, 00-BRIEF's unowned line, 02, 03, 04, `PROJECT-STATE.md`. A review pass over RS-1 to RS-4b. | RS-4b | Records DONE 2026-11-22: README, RUNBOOK, 00-BRIEF, 04 and `PROJECT-STATE.md` with RS-4a and RS-4b, 02 and 03 after them. The review pass: DONE 2026-11-22, round 25 in DECISIONS, over RS-4a and RS-4b, which round 24 did not read; four findings, fixed. |
 
 ## 3. What can go wrong, and what holds it
 
@@ -131,4 +132,6 @@ templates' codes are made disjoint so they compose.
 
 ## 5. Review cadence
 
-A structured review pass after RS-2 and after RS-4b.
+A structured review pass after RS-2 and after RS-4b. Run: round 24 over
+RS-1 to RS-3b (2026-11-21) and round 25 over RS-4a and RS-4b
+(2026-11-22), both in DECISIONS.

@@ -1261,10 +1261,31 @@ for (const held of [
  * page so the fixed top bar is not drawn across it, the phone measured for
  * anything past its edge while it is there.
  */
+/** The space, in pixels, between the bottom of one element and the top of the one under it. */
+async function gapBetween(above: Locator, below: Locator): Promise<number> {
+  const upper = (await above.boundingBox())!;
+  const lower = (await below.boundingBox())!;
+  return lower.y - (upper.y + upper.height);
+}
+
+/**
+ * The window left and come back to, as when a ruleset is changed in another
+ * tab. Sent by hand: Playwright keeps every page focused, so opening a
+ * second one takes the focus from none.
+ */
+async function comeBack(page: import("@playwright/test").Page): Promise<void> {
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("blur"));
+    window.dispatchEvent(new Event("focus"));
+  });
+}
+
 async function shootAll(
   page: import("@playwright/test").Page,
   region: Locator,
   name: string,
+  /** The last element of the picture, when it is of several one under another. */
+  through?: Locator,
 ): Promise<void> {
   const evidence = join(
     fileURLToPath(new URL("..", import.meta.url)),
@@ -1274,12 +1295,15 @@ async function shootAll(
   mkdirSync(evidence, { recursive: true });
   const shoot = async (file: string) => {
     await page.evaluate(() => window.scrollTo(0, 0));
-    const box = await region.boundingBox();
-    if (!box) throw new Error(`${name} has no box to photograph.`);
+    const first = await region.boundingBox();
+    const last = through ? await through.boundingBox() : first;
+    if (!first || !last) throw new Error(`${name} has no box to photograph.`);
+    const left = Math.min(first.x, last.x);
+    const right = Math.max(first.x + first.width, last.x + last.width);
     await page.screenshot({
       path: join(evidence, `${file}.png`),
       fullPage: true,
-      clip: box,
+      clip: { x: left, y: first.y, width: right - left, height: last.y + last.height - first.y },
       animations: "disabled",
     });
   };
@@ -4588,6 +4612,127 @@ test("several rulesets are ticked for one review, and two that share a rule numb
   }
 });
 
+test("a ruleset renumbered or deleted in another tab is on the list again on the way back, and Start is off beside a set the server refuses", async ({
+  page,
+}) => {
+  // Review round 25. The list of rulesets was read once, as the screen
+  // opened, so the refusal for two that share a number stood after one was
+  // renumbered in another tab, which is what its own words say to do. And a
+  // set the pre-flight refused, for a ruleset deleted since say, left Start
+  // on: pressed, it made a review and was refused again in the same words.
+  const imported = async (name: string, markdown: string, replace = false): Promise<string> => {
+    const made = await page.request.post("/api/rulesets/import", {
+      data: { name, tier: "project", markdown, ...(replace ? { replace: true } : {}) },
+    });
+    expect(made.status()).toBe(201);
+    return ((await made.json()) as { rulesetId: string }).rulesetId;
+  };
+  const firstDoc =
+    "# First\n\n## Rules\n\n### 90. Dates\n\n**Rule:** Dates are UTC.\n\n" +
+    "### 91. Names\n\n**Rule:** A name says what the thing holds.\n";
+  const secondDoc = (code: number) =>
+    `# Second\n\n## Rules\n\n### ${code}. Units\n\n**Rule:** A duration says its unit.\n`;
+  const first = await imported("Zz return first", firstDoc);
+  const second = await imported("Zz return second", secondDoc(91));
+  let secondGone = false;
+  try {
+    const preflights: string[][] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname !== "/api/reviews/preflight") return;
+      preflights.push((request.postDataJSON() as { rulesetIds: string[] }).rulesetIds);
+    });
+    await fillANewReview(page);
+    const picker = page.getByTestId("ruleset-picker");
+    const start = page.getByRole("button", { name: "Start review" });
+    const beside = start.locator("..");
+    const card = picker.locator("xpath=ancestor::div[@role='group']/..");
+    const refusal = card.getByText(/^These rulesets cannot judge one review together/);
+    const examined = page.getByText("What this review will examine", { exact: true });
+    const onArrival = preflights.at(-1)!;
+    expect(onArrival).toHaveLength(1);
+
+    await picker.getByRole("checkbox", { name: /^Zz return first v\d+$/ }).check();
+    await picker.getByRole("checkbox", { name: /^Zz return second v\d+$/ }).check();
+    await expect(refusal).toBeVisible();
+    await expect(start).toBeDisabled();
+
+    // Renumbered in another tab, as the refusal says to: on the way back
+    // the list is read again, the refusal goes, and the three are sized.
+    await imported("Zz return second", secondDoc(92), true);
+    await comeBack(page);
+    await expect(refusal).toHaveCount(0);
+    await expect(
+      picker.getByRole("checkbox", { name: "Zz return second v2", exact: true }),
+    ).toBeChecked();
+    await expect(examined).toBeVisible({ timeout: 60_000 });
+    expect(preflights.at(-1)).toEqual([...onArrival, first, second]);
+    await expect(start).toBeEnabled();
+
+    // A ticked ruleset given a rule in another tab: the answer on screen
+    // was for its rules as they were, so on the way back it is asked again
+    // though the same rulesets are ticked.
+    const asked = preflights.length;
+    await imported(
+      "Zz return first",
+      `${firstDoc}\n### 93. Money\n\n**Rule:** An amount says its currency.\n`,
+      true,
+    );
+    await comeBack(page);
+    await expect(picker.getByRole("link", { name: "3 rules of Zz return first" })).toBeVisible();
+    await expect.poll(() => preflights.length).toBe(asked + 1);
+    expect(preflights.at(-1)).toEqual([...onArrival, first, second]);
+    await expect(start).toBeEnabled({ timeout: 60_000 });
+
+    // A set the list on screen takes for one that can run, asked about
+    // before the window is come back to, as a script that changes a ruleset
+    // leaves it: the pre-flight refuses it as a start would, and Start is
+    // off beside the refusal. First the second given 91 again.
+    const wouldRefuse = "The pre-flight says this review would refuse to start: see above.";
+    const arrived = picker.locator(`li:has(a[href="/rulesets/${onArrival[0]}"]) input`);
+    await imported("Zz return second", secondDoc(91), true);
+    await arrived.uncheck();
+    await expect(
+      page.getByText(
+        'These rulesets cannot judge one review together: rule 91 is in "Zz return first" and ' +
+          '"Zz return second". A finding names its rule by number alone, so a number may be in ' +
+          "only one of a review's rulesets. Leave one of them out, or change the numbers in one.",
+        { exact: true },
+      ),
+    ).toBeVisible({ timeout: 60_000 });
+    await expect(refusal).toHaveCount(0);
+    await expect(start).toBeDisabled();
+    await expect(beside).toContainText(wouldRefuse);
+    // Come back to, the list says it itself, under the rulesets.
+    await comeBack(page);
+    await expect(refusal).toBeVisible();
+
+    // Then the second deleted, and asked about alone.
+    const deleted = await page.request.delete(`/api/rulesets/${second}`);
+    expect(deleted.status()).toBe(200);
+    secondGone = true;
+    await picker.getByRole("checkbox", { name: /^Zz return first v\d+$/ }).uncheck();
+    await expect(page.getByText(`Ruleset ${second} was not found.`, { exact: true })).toBeVisible({
+      timeout: 60_000,
+    });
+    await expect(start).toBeDisabled();
+    await expect(beside).toContainText(wouldRefuse);
+    await shootAll(page, beside, "rules-set-refused-start");
+
+    // Come back to, the list no longer holds it, and none is ticked.
+    await comeBack(page);
+    await expect(picker.getByRole("checkbox", { name: /^Zz return second/ })).toHaveCount(0);
+    await expect(beside).toContainText("No ruleset is ticked: see Rules above.");
+    await arrived.check();
+    await expect(start).toBeEnabled({ timeout: 60_000 });
+    expect(preflights.at(-1)).toEqual(onArrival);
+  } finally {
+    for (const id of secondGone ? [first] : [first, second]) {
+      const removed = await page.request.delete(`/api/rulesets/${id}`);
+      expect.soft(removed.status(), "the ruleset removed").toBe(200);
+    }
+  }
+});
+
 test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {
   // Number("") is 0, and zero removes the ceiling: clearing the field and
   // leaving it lifted the cap on every model call without a word (5.3).
@@ -5118,6 +5263,16 @@ test("an interactive review's own screen says its commands would cost, before St
   await expect(notice).toContainText(
     "The commands this review prints will cost API usage, billed per token.",
   );
+  // Apart from each other and from the Rules card under them: nothing said
+  // above a review's body carried space of its own, so each sat flush on
+  // the next (review round 25).
+  const terminalNote = page.getByTestId("terminal-environment-note");
+  const rulesCard = page
+    .getByTestId("ruleset-picker")
+    .locator("xpath=ancestor::div[@role='group']/..");
+  expect(await gapBetween(notice, terminalNote)).toBeGreaterThanOrEqual(12);
+  expect(await gapBetween(terminalNote, rulesCard)).toBeGreaterThanOrEqual(16);
+  await shootAll(page, notice, "draft-notices-over-rules", rulesCard);
   await stop();
 
   // On the suite's subscription, once the check has answered, nothing.
@@ -5193,6 +5348,7 @@ test("a draft's own Start ticks several rulesets, and refuses two that share a r
   });
   expect(made.status()).toBe(201);
   const { review } = (await made.json()) as { review: { id: string } };
+  let secondGone = false;
   try {
     await page.goto(`/reviews/${review.id}`);
     const picker = page.getByTestId("ruleset-picker");
@@ -5204,9 +5360,9 @@ test("a draft's own Start ticks several rulesets, and refuses two that share a r
     // Apart from what follows it: the card sat flush on the Stages card,
     // which a shot of the card alone does not show (seen grading
     // draft-no-ruleset-light.png).
-    const cardBox = (await card.boundingBox())!;
-    const nextBox = (await card.locator("xpath=following-sibling::*[1]").boundingBox())!;
-    expect(nextBox.y - (cardBox.y + cardBox.height)).toBeGreaterThanOrEqual(16);
+    expect(
+      await gapBetween(card, card.locator("xpath=following-sibling::*[1]")),
+    ).toBeGreaterThanOrEqual(16);
 
     // A third that shares 91 with the second ticked beside it: said under
     // the list in the server's words, and Start is off.
@@ -5237,10 +5393,11 @@ test("a draft's own Start ticks several rulesets, and refuses two that share a r
     await expect(start).toBeDisabled();
     await shootAll(page, card, "draft-rules-none-ticked");
 
-    // Two that share nothing: Start sends both, in the list's order. Refused
-    // for this test, so no run is needed to read what was sent.
-    await picker.locator(`li:has(a[href="/rulesets/${onArrival}"]) input`).check();
+    // Two that share nothing: Start sends both, in the list's order though
+    // the lower one was ticked first. Refused for this test, so no run is
+    // needed to read what was sent.
     await picker.getByRole("checkbox", { name: /^Zz draft first v\d+$/ }).check();
+    await picker.locator(`li:has(a[href="/rulesets/${onArrival}"]) input`).check();
     await expect(start).toBeEnabled();
     await shootAll(page, card, "draft-rules-two-ticked");
     const stopRefusing = await answerOnce(page, "**/api/reviews/*/start", (route) =>
@@ -5251,12 +5408,31 @@ test("a draft's own Start ticks several rulesets, and refuses two that share a r
     );
     await start.click();
     expect((await starting).postDataJSON()).toEqual({ rulesetIds: [onArrival, first] });
-    await expect(page.getByText("Refused for this test.")).toBeVisible();
+    const refused = page.getByText("Refused for this test.");
+    await expect(refused).toBeVisible();
     await stopRefusing();
+    // What the page says above the card stands apart from it (review round
+    // 25): it sat flush on the card.
+    expect(await gapBetween(refused, card)).toBeGreaterThanOrEqual(16);
+
+    // The list is read again on the way back to the window (review round
+    // 25). It was read once, so a ruleset deleted in another tab stayed
+    // listed and ticked, and the refusal for the two stood over a ruleset
+    // that was no longer there.
+    await picker.getByRole("checkbox", { name: /^Zz draft second v\d+$/ }).check();
+    await expect(start).toBeDisabled();
+    const deleted = await page.request.delete(`/api/rulesets/${second}`);
+    expect(deleted.status()).toBe(200);
+    secondGone = true;
+    await comeBack(page);
+    await expect(picker.getByRole("checkbox", { name: /^Zz draft second v\d+$/ })).toHaveCount(0);
+    await expect(card.getByText(/^These rulesets cannot judge one review together/)).toHaveCount(0);
+    await expect(picker.getByRole("checkbox", { checked: true })).toHaveCount(2);
+    await expect(start).toBeEnabled();
   } finally {
     const removed = await page.request.delete(`/api/reviews/${review.id}`);
     expect.soft(removed.status(), "the draft removed").toBe(200);
-    for (const id of [first, second]) {
+    for (const id of secondGone ? [first] : [first, second]) {
       const gone = await page.request.delete(`/api/rulesets/${id}`);
       expect.soft(gone.status(), "the ruleset removed").toBe(200);
     }

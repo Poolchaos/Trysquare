@@ -380,3 +380,7 @@ the line entirely would lose the trail.
   page never hydrated: the loopback fault Windows CI has shown before
   (D-104, D-105). The three runs before it, from 59c7496 where the test
   was added, passed on Windows. Recorded and left (D-246).
+- 2026-11-22: the count beside a ruleset in the Rules picker opens that
+  ruleset in the same tab, and New review's choices (branch, model,
+  intent, ticks) go with the page. The refusal for a shared number sends
+  a person there to renumber (review round 25).

@@ -16,7 +16,12 @@ import {
   reviewProfileSchema,
   type ReviewEffort,
 } from "@/lib/domain/enums";
-import { type PickableRuleset, RulesetPicker, rulesetChoice } from "@/components/ruleset-picker";
+import {
+  type PickableRuleset,
+  RulesetPicker,
+  rulesetChoice,
+  useReadOnReturn,
+} from "@/components/ruleset-picker";
 import { whatTheModelGets } from "@/lib/review/profiles";
 import { effortRunsOn } from "@/lib/models/effort-support";
 import { pairedVerifierFor, secondVerifierReadiness } from "@/lib/models/pairing";
@@ -293,6 +298,36 @@ function NewReview() {
     };
   }, []);
 
+  function takeRulesets(read: { rulesets: PickableRuleset[]; defaultRulesetId?: string | null }) {
+    setRulesets(read.rulesets);
+    // The default chosen on a ruleset's page, else the first (D-225).
+    const preferred = read.rulesets.find((row) => row.id === read.defaultRulesetId);
+    const first = preferred ?? read.rulesets[0];
+    setTickedRulesets((current) => current ?? (first ? [first.id] : null));
+  }
+
+  // The rulesets alone, on the way back to the window: one renumbered or
+  // deleted in another tab stayed on the list as it was, so the refusal for
+  // a shared number stood after the number was changed (review round 25).
+  // Not the branches, whose read fetches from the remote. A read that fails
+  // leaves the list as it is and is said with the other reads.
+  useReadOnReturn(() => {
+    if (!projectId) return;
+    void (async () => {
+      const sent = await send<{ rulesets: PickableRuleset[]; defaultRulesetId?: string | null }>(
+        "/api/rulesets",
+        {},
+        "The rulesets could not be read",
+      );
+      setRulesetReadFailed(!sent.ok);
+      setReadProblems((problems) => [
+        ...problems.filter((problem) => problem.read !== "Rulesets"),
+        ...(sent.ok ? [] : [{ read: "Rulesets", error: sent.error }]),
+      ]);
+      if (sent.ok) takeRulesets(sent.body);
+    })();
+  });
+
   // One effect, one guarded async body. Everything this screen needs is
   // fetched together so the form does not appear a field at a time.
   useEffect(() => {
@@ -367,14 +402,7 @@ function NewReview() {
         setStale(null);
       }
 
-      if (rulesetList.ok) {
-        const listed = rulesetList.body.rulesets;
-        setRulesets(listed);
-        // The default chosen on a ruleset's page, else the first (D-225).
-        const preferred = listed.find((row) => row.id === rulesetList.body.defaultRulesetId);
-        const first = preferred ?? listed[0];
-        setTickedRulesets((current) => current ?? (first ? [first.id] : null));
-      }
+      if (rulesetList.ok) takeRulesets(rulesetList.body);
 
       // Only a model a probe currently vouches for is picked by default: the
       // one used last, else the first in the picker; with none probed, nothing
@@ -538,8 +566,13 @@ function NewReview() {
       : {}),
   });
   // A Refresh asks again: a branch pushed to since keeps its name, and an
-  // answer from before it, "changes nothing" say, stood (D-146).
-  const preflightKey = JSON.stringify([preflightBody, refreshCount]);
+  // answer from before it, "changes nothing" say, stood (D-146). So does a
+  // ticked ruleset at a new version, which every change to its rules gives
+  // it: the answer was for its rules as they were (review round 25).
+  const tickedVersions = rulesets
+    .filter((ruleset) => rulesetIds.includes(ruleset.id))
+    .map((ruleset) => ruleset.version);
+  const preflightKey = JSON.stringify([preflightBody, refreshCount, tickedVersions]);
   const answered = preflightAnswer?.key === preflightKey ? preflightAnswer : null;
   const preflight = answered?.body ?? null;
   const preflightError = answered?.error ?? "";
@@ -726,9 +759,15 @@ function NewReview() {
   // Started anyway, the run stopped at its sweep, which will not pass a
   // pattern it could not run (5.14, audit U11), or before it, on a ruleset
   // with nothing switched on, which the pre-flight refuses as a run does.
+  // So it does a ruleset deleted since the list was read, and two changed
+  // since to share a number: Start was on beside either refusal, and
+  // pressed, made a review that was refused in the same words (review
+  // round 25).
   const wouldRefuse =
     (preflight !== null && preflight.sweepProblems.length > 0) ||
-    answered?.refusal === "NoEnabledRulesError";
+    ["NoEnabledRulesError", "RulesetNotFoundError", "RulesetCodesSharedError"].includes(
+      answered?.refusal ?? "",
+    );
   // And not before the pre-flight for these choices has answered: on beside
   // "Working out...", Start offered a review nothing had yet sized (D-147).
   const ready =

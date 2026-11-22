@@ -42,7 +42,12 @@ import {
   statusLabel,
   statusTone,
 } from "@/components/ui";
-import { type PickableRuleset, RulesetPicker, rulesetChoice } from "@/components/ruleset-picker";
+import {
+  type PickableRuleset,
+  RulesetPicker,
+  rulesetChoice,
+  useReadOnReturn,
+} from "@/components/ruleset-picker";
 import { asSentence, send } from "@/components/request";
 import {
   BillingNotice,
@@ -886,6 +891,11 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       cancelled = true;
     };
   }, [isDraft, draftReadAttempt]);
+  // And again on the way back to the window: a ruleset deleted or renumbered
+  // in another tab stayed on this list as it was, ticked (review round 25).
+  useReadOnReturn(() => {
+    if (isDraft) setDraftReadAttempt((attempt) => attempt + 1);
+  });
 
   // Asked as the screen opens while the review can still be started or
   // resumed, for a managed policy every review runs under (D-174 item 3).
@@ -1249,33 +1259,50 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         }
       />
       <PageBody>
-        {actionError ? <Problem>{actionError}</Problem> : null}
-        {actionError !== "" && refusedSignIn?.error === actionError ? (
-          <SignInLine signIn={refusedSignIn.signIn} />
-        ) : null}
-        {billing === null ? null : <BillingNotice billing={billing} />}
-        {interactiveToStart && startCheck?.error ? (
-          <Problem>
-            {asSentence(startCheck.error)} Whether the commands this review prints would cost API
-            usage is not known.
-          </Problem>
-        ) : null}
-        {/* Said for a headless review too, which the check asks for a policy
-            alone: taken as none, a failure said nothing (review of D-174's
-            changes). */}
-        {toStart && !interactiveToStart && startCheck?.error ? (
-          <Problem>
-            {asSentence(startCheck.error)} Whether this review would run under a managed Claude Code
-            policy is not known.
-          </Problem>
-        ) : null}
-        {interactiveToStart && startCheck?.billing ? (
-          <BillingNotice billing={startCheck.billing} what="interactive" />
-        ) : null}
-        {interactiveToStart ? <TerminalEnvironmentNote /> : null}
-        {toStart && startCheck?.managedPolicy ? (
-          <ManagedPolicyNotice policy={startCheck.managedPolicy} />
-        ) : null}
+        {/* What the page says above the review itself. None of these carries
+            space of its own, so each sat flush on the next and the last on
+            the card under it (review round 25). */}
+        <div className="mb-6 flex flex-col gap-3 empty:hidden">
+          {actionError ? <Problem>{actionError}</Problem> : null}
+          {actionError !== "" && refusedSignIn?.error === actionError ? (
+            <SignInLine signIn={refusedSignIn.signIn} />
+          ) : null}
+          {billing === null ? null : <BillingNotice billing={billing} />}
+          {interactiveToStart && startCheck?.error ? (
+            <Problem>
+              {asSentence(startCheck.error)} Whether the commands this review prints would cost API
+              usage is not known.
+            </Problem>
+          ) : null}
+          {/* Said for a headless review too, which the check asks for a policy
+              alone: taken as none, a failure said nothing (review of D-174's
+              changes). */}
+          {toStart && !interactiveToStart && startCheck?.error ? (
+            <Problem>
+              {asSentence(startCheck.error)} Whether this review would run under a managed Claude
+              Code policy is not known.
+            </Problem>
+          ) : null}
+          {interactiveToStart && startCheck?.billing ? (
+            <BillingNotice billing={startCheck.billing} what="interactive" />
+          ) : null}
+          {interactiveToStart ? <TerminalEnvironmentNote /> : null}
+          {toStart && startCheck?.managedPolicy ? (
+            <ManagedPolicyNotice policy={startCheck.managedPolicy} />
+          ) : null}
+          {review.pausedReason ? (
+            <Problem>
+              {review.pausedReason}
+              {review.pausedResetsAt === null ? null : (
+                <>
+                  {" "}
+                  The limit clears at {formatResetTime(review.pausedResetsAt)}; resuming before then
+                  will pause again.
+                </>
+              )}
+            </Problem>
+          ) : null}
+        </div>
         {isDraft ? (
           // In the body, not among the header's buttons, where one select
           // sat: a list of rulesets to tick does not fit beside them (RS-4b).
@@ -1335,18 +1362,6 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               )}
             </div>
           </Card>
-        ) : null}
-        {review.pausedReason ? (
-          <Problem>
-            {review.pausedReason}
-            {review.pausedResetsAt === null ? null : (
-              <>
-                {" "}
-                The limit clears at {formatResetTime(review.pausedResetsAt)}; resuming before then
-                will pause again.
-              </>
-            )}
-          </Problem>
         ) : null}
         {review.mergedDetectedAt ? (
           <p className="mb-4 text-sm text-[var(--color-ink-muted)]">

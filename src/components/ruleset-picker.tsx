@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * The rulesets a review is judged against, ticked one or more (D-288, D-294).
  *
@@ -6,6 +8,7 @@
  */
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { RULESET_TIERS } from "@/lib/domain/enums";
 import { sharedCodes, sharedCodesRefusal } from "@/lib/rulesets/shared-codes";
 import { Problem } from "@/components/ui";
@@ -44,6 +47,43 @@ export function rulesetChoice(
     refusal: shared.length > 0 ? sharedCodesRefusal(shared) : "",
     noneTicked: rulesets.length > 0 && chosen.length === 0,
   };
+}
+
+/**
+ * Runs `read` each time the window is come back to, from another tab or
+ * another window.
+ *
+ * A screen reads the list of rulesets once, and a ruleset is changed
+ * somewhere else: renumbered in another tab, as the refusal for a shared
+ * number says to, it kept its old numbers here, and the refusal stood until
+ * the page was loaded again (review round 25).
+ */
+export function useReadOnReturn(read: () => void): void {
+  const latest = useRef(read);
+  useEffect(() => {
+    latest.current = read;
+  });
+  useEffect(() => {
+    // A tab come back to is both shown and focused: one read, not two.
+    let away = false;
+    const left = () => {
+      away = true;
+    };
+    const back = () => {
+      if (!away || document.visibilityState !== "visible") return;
+      away = false;
+      latest.current();
+    };
+    const shownOrHidden = () => (document.visibilityState === "visible" ? back() : left());
+    window.addEventListener("blur", left);
+    window.addEventListener("focus", back);
+    document.addEventListener("visibilitychange", shownOrHidden);
+    return () => {
+      window.removeEventListener("blur", left);
+      window.removeEventListener("focus", back);
+      document.removeEventListener("visibilitychange", shownOrHidden);
+    };
+  }, []);
 }
 
 export function RulesetPicker({
