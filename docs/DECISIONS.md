@@ -7594,3 +7594,49 @@ verified evidence, in writing, here.
   in the browser, as the rest of an interactive review's page is not.
   The reviews list and the dashboard's Recent reviews already show no
   cost where it is zero.
+- 2026-11-22 D-301 The twenty-first grade of the records, and an
+  interactive stage's command kept for whoever opens the page. A fresh
+  grader read 80b66eb and graded Honest C (AI1 to AI12, in
+  `plans/AUDIT-2026-11-17.md`). Its first line was about the words D-300
+  put on the Needs you row, "its page prints the command to run", and
+  behind them a fault in the app older than the words: the command went
+  out once as a line of the live feed, the bus keeps nothing and a stream
+  replays no engine line, so a page opened or reloaded after the stage
+  began waiting showed no command, said "Fetching and checking out the
+  pinned commits", and the stage ran out its timeout. Fixed at the code,
+  decided by the session. The engine says "waiting" and "answered" as
+  events of their own; the job manager keeps the waiting command, in
+  memory, until the wait is over or the run ends; the review's snapshot
+  carries it; and the page draws it in a "Your turn" card, above the
+  feed in the scan view that a running review's page opens on, and on
+  the page behind it. A restart ends the wait, and a Resume prints the
+  command again. Rejected: writing each command as a run note, which
+  keeps every stage's command on the page for ever and never says which
+  one is waited on. The grader's wider point is taken as true: D-300 was
+  a pass over usage figures and two actions, not over the engine. From
+  its list, done here: the Live scan and the cost's history leave an
+  interactive review's zero out; the medians behind "usually" leave out
+  stages answered by hand; 03 says its stage contract is a headless
+  review's and what an interactive stage keeps of it (no repair round,
+  no usage or session recorded, a session of its own for each stage),
+  and 01 that the toolset check is a headless review's; the form says an
+  interactive answer in the wrong shape fails its stage; the header and
+  the report say the review was interactive where they name the model.
+  Left open, in the inbox: an interactive stage's row names a log file
+  nothing writes, and a refused answer writes no failed row (AI5); the
+  queue's "Proven by" and the Stages card's "in a fresh session" still
+  speak as of a headless review. Proven: the engine's and the manager's
+  unit tests, the manager's failing when the command is not kept; the
+  medians' test failing on the old query; and a browser test that starts
+  an interactive review before any page is open, then finds the command
+  on its page, again after a reload, and on a phone, the first time an
+  interactive review's own page has been driven. The first run of that
+  test is what showed the card had been put in the wrong layout: a
+  running review's page is the scan view. Graded by the builder,
+  `review/2026-11-22-e2e/`: `interactive-your-turn` light B (the command
+  is all there, as one dense block for both shells, with no copy button
+  and the stage named by its id; in the inbox) and
+  `interactive-your-turn-phone-view` B (whole, scrolling within its
+  box); the dark shot was not looked at, and `interactive-your-turn-phone`
+  shows only what was in sight of a view with a scroll of its own. A
+  twenty-second grade is owed.

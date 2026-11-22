@@ -110,6 +110,14 @@ export type ResultEvent = z.infer<typeof resultEventSchema>;
 export type EngineEvent =
   | { kind: "init"; sessionId: string; model: string; tools: string[]; cwd: string }
   | { kind: "text"; text: string }
+  /**
+   * An interactive stage has printed its command and waits for the person
+   * to run it and save the answer. Its own kind, so the command can be kept
+   * for a page opened after it was said (the twenty-first grade, AI1).
+   */
+  | { kind: "waiting"; text: string }
+  /** That wait is over: an answer arrived, or the wait was given up or cancelled. */
+  | { kind: "answered" }
   | { kind: "tool-use"; tool: string; input: unknown }
   | { kind: "rate-limit"; status: string; resetsAt?: number; limitType?: string }
   | { kind: "result"; result: ResultEvent }

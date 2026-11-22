@@ -4872,6 +4872,116 @@ test("the dashboard lists a running interactive review under Needs you, and says
   await stop();
 });
 
+test("an interactive review's command is on its page whenever the page is opened", async ({
+  page,
+}) => {
+  // The twenty-first grade, AI1. The command an interactive stage waits on
+  // was said once, to whoever was listening: a page opened afterwards, or
+  // reloaded, showed none, and the stage ran out its timeout. Started here
+  // before any page is open, so nothing was listening when it was said.
+  const listed = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const rulesets = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string; name: string }[];
+  };
+  const made = await page.request.post("/api/reviews", {
+    data: {
+      projectId: app.id,
+      fromBranch: "feature/rename-prefs",
+      intoBranch: "main",
+      model: "claude-fable-5[1m]",
+      engineMode: "interactive",
+    },
+  });
+  expect(made.status()).toBe(201);
+  const { review } = (await made.json()) as { review: { id: string } };
+  try {
+    const started = await page.request.post(`/api/reviews/${review.id}/start`, {
+      data: {
+        rulesetIds: [rulesets.rulesets.find((row) => row.name === "Example protocol")!.id],
+      },
+    });
+    expect(started.status()).toBe(200);
+    // The first stage that asks a model is waiting before the page opens.
+    await expect
+      .poll(
+        async () =>
+          (
+            (await (await page.request.get(`/api/reviews/${review.id}`)).json()) as {
+              waiting: { stage: string } | null;
+            }
+          ).waiting?.stage ?? null,
+        { timeout: 60_000 },
+      )
+      .toBe("s1_risk");
+
+    await page.goto(`/reviews/${review.id}`);
+    const turn = page.getByTestId("waiting-command");
+    await expect(turn).toBeVisible({ timeout: 30_000 });
+    await expect(turn).toContainText("s1_risk is waiting for you");
+    await expect(turn).toContainText("'--model' 'claude-fable-5[1m]'");
+    await expect(turn).toContainText("then save the JSON answer to");
+    await page.reload();
+    await expect(turn).toContainText("s1_risk is waiting for you", { timeout: 30_000 });
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, turn.locator(".."), "interactive-your-turn");
+    // On a phone the command can be scrolled to and read whole. The view is
+    // a fixed column with a scroll of its own, so the shot above shows only
+    // what was in sight; this one is of the phone's screen with the command
+    // scrolled to.
+    const desk = page.viewportSize();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const command = turn.locator("pre");
+    await command.scrollIntoViewIfNeeded();
+    await expect(command).toBeInViewport();
+    expect((await command.boundingBox())!.height).toBeGreaterThan(100);
+    await page.screenshot({
+      path: join(
+        fileURLToPath(new URL("..", import.meta.url)),
+        "review",
+        `${new Date().toISOString().slice(0, 10)}-e2e`,
+        "interactive-your-turn-phone-view.png",
+      ),
+      animations: "disabled",
+    });
+    if (desk) await page.setViewportSize(desk);
+
+    // And the dashboard sends the person there, as a review that needs them.
+    await page.goto("/");
+    await expect(page.getByRole("list", { name: "Needs you" })).toContainText(
+      "runs in your terminal: its page prints the command to run",
+      { timeout: 30_000 },
+    );
+
+    // Cancelled, nothing is waited on and the card goes.
+    expect((await page.request.post(`/api/reviews/${review.id}/cancel`)).status()).toBe(200);
+    await page.goto(`/reviews/${review.id}`);
+    await expect(page.getByText("cancelled", { exact: true }).first()).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(turn).toHaveCount(0);
+  } finally {
+    await page.request.post(`/api/reviews/${review.id}/cancel`);
+    // A cancel is asked of a run and takes a moment to end it; a review
+    // still running is refused its removal.
+    await expect
+      .poll(
+        async () =>
+          (
+            (await (await page.request.get(`/api/reviews/${review.id}`)).json()) as {
+              running: boolean;
+            }
+          ).running,
+        { timeout: 30_000 },
+      )
+      .toBe(false);
+    const removed = await page.request.delete(`/api/reviews/${review.id}`);
+    expect.soft(removed.status(), "the review removed").toBe(200);
+  }
+});
+
 test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {
   // Number("") is 0, and zero removes the ceiling: clearing the field and
   // leaving it lifted the cap on every model call without a word (5.3).

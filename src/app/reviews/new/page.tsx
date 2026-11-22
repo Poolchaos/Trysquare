@@ -1375,8 +1375,12 @@ function NewReview() {
                       {REQUEST_STAGES.map(
                         ([stage, label]) => `${label} ${preflight.requestsByStage[stage] ?? 0}`,
                       ).join(", ")}
-                      . The second verifier is asked only if verification proves a finding, and any
-                      request can need one more if its answer comes back in the wrong shape.
+                      . The second verifier is asked only if verification proves a finding
+                      {/* An interactive stage is not asked again: an answer in
+                          the wrong shape fails it (AI4). */}
+                      {engineMode === "interactive"
+                        ? ". An answer you save in the wrong shape fails its stage, which a Resume asks again."
+                        : ", and any request can need one more if its answer comes back in the wrong shape."}
                     </p>
                   </div>
 

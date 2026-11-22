@@ -86,6 +86,11 @@ export interface ReportCheckRun {
  * them: shown as figures, the zeros read as a review that spent nothing
  * (the twentieth grade, AH1).
  */
+/** How a report says its review was answered by hand, where it names the model. */
+const INTERACTIVE_ENGINE =
+  "interactive. Each stage's command was printed for a person to run in their own session, " +
+  "and the model above is the one those commands named.";
+
 export const USAGE_NOT_RECORDED =
   "not recorded. This review was answered in your own session, whose usage the app cannot see.";
 
@@ -465,6 +470,9 @@ function footer(input: ReportInput): string[] {
       .map((ruleset) => `${md(ruleset.name)} version ${ruleset.version}`)
       .join(", ")}`,
     `- Model: ${input.model}${input.effort === null ? "" : `, effort ${input.effort}`}, profile ${input.profile}`,
+    // The app started nothing for an interactive review, so the model is
+    // the one its commands named, not one the app saw answer (AI8).
+    ...(input.usage === null ? [`- Engine: ${INTERACTIVE_ENGINE}`] : []),
     `- Reviewed: ${input.fromCommit} against merge base ${input.mergeBaseCommit}`,
   ];
 

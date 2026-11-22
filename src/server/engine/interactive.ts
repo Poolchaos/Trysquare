@@ -266,7 +266,7 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
       }),
     );
     options.onEvent?.(request.stage, {
-      kind: "text",
+      kind: "waiting",
       text:
         `${request.stage} is waiting for you. In PowerShell:\n${commands.powershell}\n` +
         `In bash or zsh:\n${commands.posix}\n` +
@@ -274,12 +274,19 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
         `${MINIMUM_CLI_VERSION} or newer, for --system-prompt-file.`,
     });
 
-    const raw = await waitForAnswer(answerPath, {
-      timeoutMs: options.timeoutMs,
-      pollMs,
-      stage: request.stage,
-      ...(options.signal === undefined ? {} : { signal: options.signal }),
-    });
+    let raw: string;
+    try {
+      raw = await waitForAnswer(answerPath, {
+        timeoutMs: options.timeoutMs,
+        pollMs,
+        stage: request.stage,
+        ...(options.signal === undefined ? {} : { signal: options.signal }),
+      });
+    } finally {
+      // However the wait ended, the command is no longer what the person is
+      // asked to run: kept on, it stood on the page of a stage already done.
+      options.onEvent?.(request.stage, { kind: "answered" });
+    }
 
     // An answer that is refused is moved aside, or the same question asked
     // again on resume would read it back and fail the same way for ever.

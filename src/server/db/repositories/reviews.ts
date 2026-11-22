@@ -361,6 +361,9 @@ export function listInFlightReviews(db: Db) {
       currentStage: reviews.currentStage,
       startedAt: reviews.startedAt,
       costEquivalentUsd: reviews.costEquivalentUsd,
+      // An interactive review's cost is recorded as zero and never measured:
+      // what draws the figure leaves it out for one (AI2).
+      engineMode: reviews.engineMode,
     })
     .from(reviews)
     .innerJoin(projects, eq(reviews.projectId, projects.id))

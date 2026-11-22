@@ -289,7 +289,12 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
     proofsDiscardedRate: raised === 0 ? null : discarded / raised,
     awaiting: reviewRows.filter((review) => review.status === "awaiting_confirmation").length,
     // Oldest first, so the shape reads left to right the way time does.
-    spendHistory: [...completed].reverse().map((review) => review.cost),
+    // Of the reviews the app measured: an interactive one, recorded as zero,
+    // was a point at nothing in a line the tile says leaves it out (AI6).
+    spendHistory: [...completed]
+      .reverse()
+      .filter((review) => review.engineMode !== "interactive")
+      .map((review) => review.cost),
     recent: reviewRows.slice(0, recentLimit).map((review) => ({
       id: review.id,
       projectName: review.projectName,

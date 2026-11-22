@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { importProtocol } from "@/lib/rulesets/import";
 import { isResumableReview, type ReviewStatus } from "@/lib/domain/state-machines";
 import { logsDir, worktreeRootDir } from "@/lib/paths";
@@ -744,5 +744,43 @@ describe("the CLI a run goes through", () => {
       expect.stringContaining(`Engine: ${FAKE_CLI} (2.1.301`),
     );
     await fresh.drain();
+  }, 120_000);
+});
+
+describe("an interactive review's command (the twenty-first grade, AI1)", () => {
+  it("is kept for a page opened after it was said, and gone once the wait is over", async () => {
+    // The command went out once on the bus, which keeps nothing: a page
+    // opened or reloaded after the stage began waiting showed none, and the
+    // stage ran out its timeout. The snapshot carries it while the wait
+    // lasts.
+    const reviewId = createReview(db, {
+      projectId,
+      fromBranch: "feature/rename-prefs",
+      fromCommit: fixture.appHead,
+      intoBranch: "main",
+      intoCommit: fixture.appBase,
+      mergeBaseCommit: fixture.appBase,
+      model: "claude-fable-5[1m]",
+      profileId: "full-context",
+      engineMode: "interactive",
+    }).id;
+    expect(manager.snapshot(reviewId).waiting).toBeNull();
+    start(reviewId);
+
+    // Nobody is listening to the bus here: only the snapshot is read.
+    await vi.waitFor(() => expect(manager.snapshot(reviewId).waiting).not.toBeNull(), {
+      timeout: 60_000,
+      interval: 50,
+    });
+    const waiting = manager.snapshot(reviewId).waiting!;
+    expect(waiting.stage).toBe("s1_risk");
+    expect(waiting.text).toContain("s1_risk is waiting for you");
+    expect(waiting.text).toContain("--model");
+    expect(waiting.text).toContain("then save the JSON answer to");
+
+    // Cancelled, the wait ends and with it the command.
+    expect(manager.cancel(reviewId)).toBe(true);
+    await manager.drain();
+    expect(manager.snapshot(reviewId).waiting).toBeNull();
   }, 120_000);
 });

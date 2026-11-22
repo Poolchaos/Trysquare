@@ -226,6 +226,8 @@ interface Snapshot {
   rules?: number | null;
   running: boolean;
   queued: boolean;
+  /** The command an interactive stage waits for the person to run; null or absent when none does. */
+  waiting?: { stage: string; text: string } | null;
 }
 
 interface ReportFinding {
@@ -735,6 +737,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         status?: string;
         note?: { message: string };
         detail?: string;
+        event?: string;
         batchNumber?: number;
         batchCount?: number;
       };
@@ -790,6 +793,12 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       // status alone the page named Risk while the later stages ran
       // (proof-and-steps plan, WP-A).
       if (parsed.kind === "status" || parsed.kind === "done" || parsed.kind === "stage") {
+        void reload();
+      }
+      // An interactive stage began or stopped waiting on the person: the
+      // command to run is in the snapshot, kept there for a page opened
+      // later too (AI1).
+      if (parsed.kind === "engine" && (parsed.event === "waiting" || parsed.event === "answered")) {
         void reload();
       }
     });
@@ -1115,6 +1124,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}
             <Sha value={review.fromCommit} />
             <span>{review.model}</span>
+            {/* Said where the model is: for an interactive review it is the
+                model its commands name, the person's own session answering
+                (AI8). */}
+            {review.engineMode === "interactive" ? <span>interactive</span> : null}
             {/* Not said of an interactive review: its commands pass no
                 effort, the session in the terminal deciding (AG3). */}
             {review.engineMode === "interactive" ? null : <span>effort {review.effort}</span>}
@@ -1309,6 +1322,15 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             </Problem>
           ) : null}
         </div>
+        {snapshot.waiting ? (
+          // The one thing an interactive review needs of the person, above
+          // everything else on the page. It was said once in the live feed,
+          // and a page opened or reloaded after that showed no command while
+          // the stage ran out its timeout (the twenty-first grade, AI1).
+          <Card className="mb-6 p-4">
+            <YourTurn text={snapshot.waiting.text} />
+          </Card>
+        ) : null}
         {isDraft ? (
           // In the body, not among the header's buttons, where one select
           // sat: a list of rulesets to tick does not fit beside them (RS-4b).
@@ -2349,6 +2371,29 @@ function RenderedReport({ data }: { data: ReportData }) {
  * It covers the top bar deliberately. Watching a scan is a mode, not a
  * page, and Escape or Hide steps back out without touching the run.
  */
+/**
+ * The command an interactive stage waits for the person to run, with where
+ * to save the answer. Drawn on the review's page and in the scan view, which
+ * is what a running review's page opens on.
+ */
+function YourTurn({ text }: { text: string }) {
+  return (
+    <div role="group" aria-labelledby="your-turn-heading" data-testid="waiting-command">
+      <h2 id="your-turn-heading" className="text-heading font-medium">
+        Your turn
+      </h2>
+      <p className="mt-1 mb-3 text-xs text-[var(--color-ink-muted)]">
+        This stage waits for you to run its command in your own terminal and save the answer where
+        it says. The review goes on when the answer is there, and the stage fails if none comes
+        within the timeout.
+      </p>
+      <pre className="max-h-64 overflow-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 font-[family-name:var(--font-mono)] text-xs break-all whitespace-pre-wrap">
+        {text}
+      </pre>
+    </div>
+  );
+}
+
 function ScanTheater({
   snapshot,
   live,
@@ -2648,6 +2693,16 @@ function ScanTheater({
             The live stream dropped and is being opened again. The run itself is unaffected.
           </p>
         )}
+        {/* An interactive stage waiting on the person: its command, above the
+            feed, whenever this view is opened. It was one line of the feed,
+            said once, and a view opened after it showed none (AI1). */}
+        {snapshot.waiting ? (
+          // Never squeezed by the view's column: the command keeps its height
+          // and the view scrolls.
+          <div className="mt-5 shrink-0 rounded-lg border border-[var(--color-accent)] bg-[var(--color-surface-raised)] p-4">
+            <YourTurn text={snapshot.waiting.text} />
+          </div>
+        ) : null}
         {/* The work itself, streaming. This is the panel the whole mode exists
           for: files being opened, stages turning over, the run narrating. */}
         <div
@@ -2659,8 +2714,10 @@ function ScanTheater({
         >
           {live.length === 0 ? (
             <p className="text-body text-[var(--color-ink-muted)]">
-              Fetching and checking out the pinned commits, then the project&apos;s own checks where
-              they are on...
+              {/* With a stage waiting on the person, the fetch is long done. */}
+              {snapshot.waiting
+                ? "Waiting for your answer to the command above."
+                : "Fetching and checking out the pinned commits, then the project's own checks where they are on..."}
             </p>
           ) : (
             <ul className="grid gap-0.5 text-dense">

@@ -10,6 +10,8 @@ import {
   usageTotals,
 } from "@/server/db/repositories/stage-executions";
 import { createReview } from "@/server/db/repositories/reviews";
+import { eq } from "drizzle-orm";
+import { reviews } from "@/server/db/schema";
 import { makeTestDb, seedProject, seedReview, type TestDb } from "./helpers";
 
 let ctx: TestDb;
@@ -325,6 +327,27 @@ describe("how long a stage usually takes here", () => {
     expect(stageDurationMedians(db, "claude-fable-5[1m]").has("s1_risk")).toBe(false);
 
     timed(reviewId, "s1_risk", 30);
+    expect(stageDurationMedians(db, "claude-fable-5[1m]").get("s1_risk")).toBe(20_000);
+  });
+
+  it("leaves out a stage a person answered in their own session, which took as long as they did", () => {
+    // Counted in, an hour at someone's terminal was what a stage "usually"
+    // takes on a headless run (the twenty-first grade, AI9).
+    const byHand = createReview(db, {
+      projectId: db.select().from(reviews).where(eq(reviews.id, reviewId)).get()!.projectId,
+      fromBranch: "feature/by-hand",
+      fromCommit: "a".repeat(40),
+      intoBranch: "main",
+      intoCommit: "b".repeat(40),
+      mergeBaseCommit: "c".repeat(40),
+      model: "claude-fable-5[1m]",
+      profileId: "full-context",
+      engineMode: "interactive",
+    }).id;
+    for (const seconds of [3600, 3600, 3600]) timed(byHand, "s1_risk", seconds);
+    expect(stageDurationMedians(db, "claude-fable-5[1m]").has("s1_risk")).toBe(false);
+
+    for (const seconds of [10, 20, 30]) timed(reviewId, "s1_risk", seconds);
     expect(stageDurationMedians(db, "claude-fable-5[1m]").get("s1_risk")).toBe(20_000);
   });
 

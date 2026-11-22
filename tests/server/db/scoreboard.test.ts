@@ -525,5 +525,11 @@ describe("a review answered in the person's own session (the twentieth grade)", 
     expect(readScoreboard(db).interactiveReviews).toBe(0);
     transitionReview(db, id, "running");
     expect(readScoreboard(db).interactiveReviews).toBe(1);
+    // Completed, it is no point in the cost's history either: it was one at
+    // zero, in a tile that says it is not counted (AI6).
+    for (const to of ["verifying", "awaiting_confirmation", "complete"] as const) {
+      transitionReview(db, id, to);
+    }
+    expect(readScoreboard(db).spendHistory).toEqual([]);
   });
 });

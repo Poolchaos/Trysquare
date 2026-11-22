@@ -96,9 +96,19 @@ from 2026-11-03.
   words); the dashboard's Live scan draws a zero cost for such a review;
   and 03's contract for every AI stage holds in three lines for a
   headless review alone. Nine immaterial lines came with them (AI1 to
-  AI12 in the audit file). Not yet corrected.
-  `./verify.sh --e2e` exits 0 with 1711 unit tests passing, 8 skipped,
-  and 173 browser tests.
+  AI12 in the audit file). Corrected the same day (D-301), the first at the
+  code: the job manager keeps an interactive stage's command while it
+  waits, the review's snapshot carries it, and the page draws it in a
+  "Your turn" card whenever it is opened, in the scan view and behind
+  it; an interactive review's own page is driven in the browser for the
+  first time. The Live scan and the cost's history leave such a review's
+  zero out, the medians leave out stages answered by hand, and 03 says
+  its stage contract is a headless review's. One line is left open, in
+  the inbox: an interactive stage's row names a log file nothing writes,
+  and a refused answer writes no failed row (AI5). A twenty-second grade
+  is owed.
+  `./verify.sh --e2e` exits 0 with 1714 unit tests passing, 8 skipped,
+  and 174 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
   those awaiting a decision, each row saying which it is and what to press

@@ -396,3 +396,11 @@ the line entirely would lose the trail.
   stands through the whole of a project's checks, up to 20 minutes each,
   since run notes reach the feed only at a stage's lifecycle. Neither is
   reproduced.
+- 2026-11-22: an interactive stage's row records the path of a log file
+  that only a headless stage writes, so a timed-out interactive stage
+  names a file that is not there; and an answer it refuses writes no
+  failed stage row, the failure standing in a run note alone (the
+  twenty-first grade, AI5; `src/server/review/service.ts:861`,
+  `src/server/review/checkpointing-runner.ts:163, 252-286`). Open.
+- 2026-11-22: the "Your turn" card gives the command for both shells as
+  one block with no copy button, and names the stage by its id.

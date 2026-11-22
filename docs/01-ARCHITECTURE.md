@@ -235,7 +235,7 @@ verified by experiment against the real CLI on 2026-07-30:
 - **A repository must not be writable by the review.** Stages get the tool
   allowlist Read, Grep, Glob and nothing else, and the CLI reports the
   effective toolset back in its init event, so `assertToolsAreReadOnly`
-  checks that claim rather than trusting the flag. Combined with bare clones,
+  checks that claim rather than trusting the flag, in a headless review; an interactive review prints the flag in a command the person runs, and the app sees no init event to check. Combined with bare clones,
   detached worktrees, and the post-run worktree-clean assertion, reviewed
   code is read-only by three independent mechanisms.
 

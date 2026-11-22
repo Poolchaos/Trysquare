@@ -9,7 +9,7 @@
  * that place is the checkpointing runner.
  */
 
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { newId, nowIso } from "@/lib/ids";
 import type { ReviewStage, StageErrorClass, StageStatus } from "@/lib/domain/enums";
 import type { Db } from "../client";
@@ -276,6 +276,10 @@ export function stageDurationMedians(db: Db, model: string): Map<string, number>
         eq(stageExecutions.status, "succeeded"),
         // One finding verified again is seconds of work, not the stage's.
         isNull(stageExecutions.findingId),
+        // A stage answered in a person's own session took as long as the
+        // person did: counted in, it was what a stage "usually" takes (the
+        // twenty-first grade, AI9).
+        ne(reviews.engineMode, "interactive"),
       ),
     )
     .all();

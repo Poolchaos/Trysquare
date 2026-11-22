@@ -120,7 +120,7 @@ describe("the file a person is handed", () => {
       pollMs: 25,
       claudePath: FAKE_CLI,
       onEvent: (_stage, event) => {
-        if (event.kind === "text") said.push(event.text);
+        if (event.kind === "waiting") said.push(event.text);
       },
     });
     answerLater(JSON.stringify({ files: [] }));
@@ -128,6 +128,32 @@ describe("the file a person is handed", () => {
 
     expect(said[0]).toContain("claude-opus-5-5");
     expect(said[0]).not.toContain("claude-fable-5[1m]");
+  });
+
+  it("says when it starts waiting on the person and when that wait is over, answered or not", async () => {
+    // Two events of their own, so what is watching can keep the command
+    // while the wait lasts and drop it after (the twenty-first grade, AI1).
+    const kinds: string[] = [];
+    const make = (timeoutMs: number) =>
+      createInteractiveEngine({
+        exchangeDir: join(dir, "bundle"),
+        worktreeRoot: join(dir, "worktree"),
+        model: "claude-fable-5[1m]",
+        directives: [],
+        rules: [],
+        timeoutMs,
+        pollMs: 25,
+        claudePath: FAKE_CLI,
+        onEvent: (_stage, event) => kinds.push(event.kind),
+      });
+    answerLater(JSON.stringify({ files: [] }));
+    await make(5_000).run(ask);
+    expect(kinds).toEqual(["waiting", "answered"]);
+
+    // Nobody answers: the wait is given up, and that is said too.
+    kinds.length = 0;
+    await expect(make(100).run({ ...ask, prompt: `${ask.prompt} again` })).rejects.toThrow();
+    expect(kinds).toEqual(["waiting", "answered"]);
   });
 
   it("tells the person the command and the CLI version it needs, starting nothing itself", async () => {
@@ -144,7 +170,7 @@ describe("the file a person is handed", () => {
       pollMs: 25,
       claudePath: FAKE_CLI,
       onEvent: (_stage, event) => {
-        if (event.kind === "text") said.push(event.text);
+        if (event.kind === "waiting") said.push(event.text);
       },
     });
     answerLater(JSON.stringify({ files: [] }));

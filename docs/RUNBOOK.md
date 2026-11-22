@@ -254,8 +254,8 @@ Probe press in step 4, a real but tiny paid call.
    stage: one each, the adversarial stage's rule batches split to fit the
    model's window (an estimate when it splits, since the run orders files by
    the risk its first stage finds), a file too large for the window said, and
-   the second verifier's, made only when the first proves a finding. Any
-   request can need one more if its answer comes back in the wrong shape.
+   the second verifier's, made only when the first proves a finding. In a headless review any
+   request can need one more if its answer comes back in the wrong shape; an interactive stage is not asked again, an answer in the wrong shape failing it until a Resume.
    With the project's checks on, it names the commands that will run first,
    and says that grading's requests are counted only once the e2e has saved
    its screenshots.
@@ -269,7 +269,7 @@ Probe press in step 4, a real but tiny paid call.
 6. **Start the review.** This is the step that spends usage. The run screen
    shows which stages have finished, a live activity log, and a running tally
    of fresh input tokens, cached reads, cache writes, output tokens and cost
-   equivalent, which the report gives too.
+   equivalent, which the report gives too. An interactive review shows there the command of the stage waiting on you and no tally, its usage not being recorded.
 7. **Decide every finding.** When the run reaches awaiting confirmation, the
    findings become a queue grouped by severity, worst first. Keyboard: `j` and
    `k` to move, Shift+C to confirm (a bare `c` does nothing, D-132), `d` to

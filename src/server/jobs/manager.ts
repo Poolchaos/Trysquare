@@ -108,6 +108,11 @@ export interface ReviewSnapshot {
   rules: number | null;
   running: boolean;
   queued: boolean;
+  /**
+   * The command an interactive stage is waiting for the person to run, with
+   * where to save the answer; null when no stage is waiting on them.
+   */
+  waiting: { stage: ReviewStage; text: string } | null;
 }
 
 interface ActiveRun {
@@ -118,6 +123,14 @@ interface ActiveRun {
 export class JobManager {
   private readonly bus = createReviewBus();
   private readonly active = new Map<string, ActiveRun>();
+  /**
+   * The command an interactive stage is waiting on, for each review that has
+   * one. Held here because the bus keeps nothing: said once to whoever was
+   * listening, it was gone for a page opened or reloaded afterwards, and the
+   * stage then ran out its timeout (the twenty-first grade, AI1). In memory
+   * only: a restart ends the wait, and a Resume prints the command again.
+   */
+  private readonly waiting = new Map<string, { stage: ReviewStage; text: string }>();
   private readonly queue: { reviewId: string; options: PrepareAndRunOptions }[] = [];
   /** Reviews a delete has claimed; see beginDelete. */
   private readonly deleting = new Set<string>();
@@ -440,6 +453,7 @@ export class JobManager {
       rules: hasReviewSnapshot(db, reviewId) ? readReviewSnapshot(db, reviewId).rules.length : null,
       running: this.active.has(reviewId),
       queued: this.queue.some((entry) => entry.reviewId === reviewId),
+      waiting: this.waiting.get(reviewId) ?? null,
     };
   }
 
@@ -530,6 +544,8 @@ export class JobManager {
       })
       .finally(() => {
         this.active.delete(reviewId);
+        // No run, no wait: whatever ended it, no command is being waited on.
+        this.waiting.delete(reviewId);
         this.startQueued();
       });
 
@@ -548,6 +564,18 @@ export class JobManager {
     }
     if (event.kind === "text") {
       this.bus.emit(reviewId, { kind: "engine", stage, event: "text", detail: event.text });
+      return;
+    }
+    // Kept before it is announced, as every durable fact is: a page that
+    // reads the snapshot on hearing it finds the command there.
+    if (event.kind === "waiting") {
+      this.waiting.set(reviewId, { stage, text: event.text });
+      this.bus.emit(reviewId, { kind: "engine", stage, event: "waiting", detail: event.text });
+      return;
+    }
+    if (event.kind === "answered") {
+      this.waiting.delete(reviewId);
+      this.bus.emit(reviewId, { kind: "engine", stage, event: "answered", detail: "" });
       return;
     }
     if (event.kind === "rate-limit") {

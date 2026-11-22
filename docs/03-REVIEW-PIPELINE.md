@@ -113,7 +113,13 @@ Failure of any S0 step fails the review with the git/filesystem error.
 
 ## 1. Stage contracts (AI stages)
 
-Common contract for every AI stage:
+Common contract for every AI stage. It is the contract of a headless
+review, where the app makes the calls. An interactive review prints each
+stage's command for a person to run in their own session, and keeps the
+first two lines alone: an answer in the wrong shape fails the stage with no
+repair round, its usage and session are recorded as zero and empty since
+the app cannot see them, and each stage starts a session of its own, so
+nothing carries from one to the next.
 
 - cwd = worktree; tools = Read, Grep, Glob only (no Edit, no Bash, no web).
 - System prompt = composed ruleset snapshot + stage instruction + the

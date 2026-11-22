@@ -258,6 +258,13 @@ describe("the footer that makes a report reproducible", () => {
       expect(report).not.toContain("fresh input");
     }
     expect(renderReport(BASE)).toContain("Cost equivalent:");
+    // And it says how the review was answered, where it names the model:
+    // the app started nothing, so the model is the one its commands named.
+    expect(renderReport(interactive)).toContain(
+      "- Engine: interactive. Each stage's command was printed for a person to run in their " +
+        "own session, and the model above is the one those commands named.",
+    );
+    expect(renderReport(BASE)).not.toContain("Engine:");
   });
 
   it("names every ruleset the review ran with, each with its version", () => {

@@ -426,8 +426,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <Card className="p-4">
               <h2 className="mb-1 text-heading font-semibold">Name and default branch</h2>
               <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
-                A new review compares against the default branch unless told otherwise. It was
-                guessed from the remote when the project was added.
+                A new review compares against the default branch unless told otherwise. It is
+                guessed from the remote when the project is added, and is what you save here after.
               </p>
               <ProjectEditForm
                 key={`${project.name}\u0000${project.defaultBranch}`}

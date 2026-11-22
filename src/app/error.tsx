@@ -40,8 +40,8 @@ export default function ErrorScreen({
             </p>
           ) : null}
           <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
-            Nothing was written by the attempt to draw this page. A review already running is
-            unaffected; only this view failed.
+            Only this view failed. A review already running is unaffected, and nothing you decided
+            was changed by the attempt to draw the page.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="primary" onClick={reset}>

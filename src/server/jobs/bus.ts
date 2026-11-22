@@ -40,7 +40,14 @@ export type ReviewEvent =
       usage?: StageUsage | undefined;
       errorClass?: StageErrorClass | undefined;
     }
-  | { kind: "engine"; stage: ReviewStage; event: "tool-use" | "text"; detail: string }
+  // "waiting" carries the command an interactive stage waits on, and
+  // "answered" says that wait is over; a page reads its snapshot on either.
+  | {
+      kind: "engine";
+      stage: ReviewStage;
+      event: "tool-use" | "text" | "waiting" | "answered";
+      detail: string;
+    }
   | { kind: "rate-limit"; status: string; resetsAt?: number | undefined }
   | { kind: "note"; note: RunNote }
   | {

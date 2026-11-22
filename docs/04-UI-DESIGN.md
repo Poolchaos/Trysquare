@@ -115,7 +115,7 @@ Everything on it is measured, never estimated, and a rate with no
 denominator renders as a dash rather than as zero, because zero percent
 precision is a claim about findings somebody judged.
 
-- **Stat tiles:** the cost equivalent of every review (what the CLI says
+- **Stat tiles:** the cost equivalent of every review the app made the calls for, an interactive review's usage not being recorded and the tile saying how many it leaves out (what the CLI says
   the usage would cost at API prices, D-250), reviews completed, precision (confirmed vs
   dismissed, a finding left out unproven counting as neither, D-190) and proofs discarded (the quotation check's kills, of the findings raised; named "Invention rate" until D-252), in large tabular
   numerals. The cost equivalent alone has a sparkline, from this machine's own
@@ -236,13 +236,14 @@ refuses one too.
   begun says Waiting. While proving, the findings so far: proven by the
   first verifier, refuted, discarded by the quotation check,
   open question, still to prove, which add up to what was raised.
-- Stage timeline (S0-S6) with per-stage status, duration, token usage.
+- Stage timeline (S0-S6) with per-stage status, duration, token usage (said as not recorded for an interactive review).
 - Coverage panel: files, hunks and sweep hits accounted for, the counters
   climbing live. Not built: risk tags per file and the chain files read.
   A run note names the first five risk-tagged files with their tags, and
   nothing shows the chain files.
 - Activity feed: current stage's tool activity (file being read), errors.
-- Usage meter: cumulative tokens and cost-equivalent.
+- Usage meter: cumulative tokens and cost-equivalent; for an interactive review, that they were not recorded.
+- Your turn: the command of an interactive stage that waits on the person, with where to save the answer, above the feed and on the review's page whenever either is opened (D-301).
 - Controls: cancel, which asks first and says when it failed (5.1); start,
   for a draft, with its rulesets ticked in a card on its page, the list
   New review has, the same refusals said under it (5.11, D-295); resume (paused,

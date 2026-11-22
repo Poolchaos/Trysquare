@@ -104,6 +104,8 @@ interface LiveRun {
   currentStage: string | null;
   startedAt: string | null;
   costEquivalentUsd: number;
+  /** "interactive" for a review answered in the person's own session, whose cost is not recorded. */
+  engineMode?: string;
 }
 
 /** The pipeline, for the live widget's gauge. Mirrors the review screen's. */
@@ -437,9 +439,13 @@ export default function HomePage() {
                       {elapsed(scan.startedAt, now)} elapsed
                     </span>
                   ) : null}
-                  <span className="font-[family-name:var(--font-mono)] text-body tabular-nums">
-                    ${scan.costEquivalentUsd.toFixed(2)}
-                  </span>
+                  {/* No figure for an interactive review: its cost is recorded
+                      as zero and was never measured (AI2). */}
+                  {scan.engineMode === "interactive" ? null : (
+                    <span className="font-[family-name:var(--font-mono)] text-body tabular-nums">
+                      ${scan.costEquivalentUsd.toFixed(2)}
+                    </span>
+                  )}
                 </div>
                 <div className="mt-3 flex gap-1.5" aria-hidden>
                   {STAGE_ORDER.map((stage, index) => {
