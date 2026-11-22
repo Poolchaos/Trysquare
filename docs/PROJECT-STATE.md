@@ -113,9 +113,11 @@ from 2026-11-03.
   failed interactive stage is not called answered, and the queue, the
   Proven by both tile and two stages' descriptions say of an interactive
   review only what its commands did. A whole interactive review is
-  driven in the browser for the first time, answered stage by stage.
+  driven in the browser for the first time, answered stage by stage. And
+  an interactive stage in flight is no longer said to usually take what
+  headless stages take (D-305).
   A twenty-second grade is owed.
-  `./verify.sh --e2e` exits 0 with 1716 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1717 unit tests passing, 8 skipped,
   and 176 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside

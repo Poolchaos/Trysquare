@@ -145,6 +145,52 @@ describe("noticing that a branch has merged", () => {
   }, 120_000);
 });
 
+describe("what a stage usually takes, in a review's snapshot", () => {
+  it("is said of a headless review and not of an interactive one", async () => {
+    // The medians are of headless stages (AI9). Handed to an interactive
+    // review too, its page said "usually 20s here" of a stage that takes as
+    // long as the person answering it does.
+    const { db } = (await import("@/server/runtime")).runtime();
+    const { createReview } = await import("@/server/db/repositories/reviews");
+    const { recordAttempt } = await import("@/server/db/repositories/stage-executions");
+    const make = (engineMode: "headless" | "interactive") =>
+      createReview(db, {
+        projectId,
+        fromBranch: `feature/usual-${engineMode}`,
+        fromCommit: "a".repeat(40),
+        intoBranch: "main",
+        intoCommit: "b".repeat(40),
+        mergeBaseCommit: "c".repeat(40),
+        model: "claude-usual-test[1m]",
+        profileId: "full-context",
+        engineMode,
+      }).id;
+    const headless = make("headless");
+    const interactive = make("interactive");
+    const startedAt = "2026-08-17T10:00:00.000Z";
+    for (const seconds of [10, 20, 30]) {
+      recordAttempt(db, {
+        reviewId: headless,
+        stage: "s1_risk",
+        promptHash: `usual-${seconds}`,
+        attempt: 1,
+        status: "succeeded",
+        startedAt,
+        endedAt: new Date(Date.parse(startedAt) + seconds * 1000).toISOString(),
+      });
+    }
+    const medians = async (id: string) =>
+      (
+        (await (await routes.review.GET(new Request("http://localhost"), params(id))).json()) as {
+          stageMedians: Record<string, number>;
+        }
+      ).stageMedians;
+
+    expect(await medians(headless)).toEqual({ s1_risk: 20_000 });
+    expect(await medians(interactive)).toEqual({});
+  });
+});
+
 describe("deleting a review", () => {
   it("removes the row and the run directory", async () => {
     // Not the feature branch, which the merge test above merged into main:

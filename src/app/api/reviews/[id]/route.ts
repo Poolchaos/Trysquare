@@ -37,8 +37,13 @@ export async function GET(
       ranBefore: ranBefore(review.startedAt, firstStageStarts(db, id).get(id)),
       // What this machine has actually measured for this model, so a stage in
       // flight can say what it usually takes instead of only that it is still
-      // going. Empty until a stage has been timed enough times to mean it.
-      stageMedians: Object.fromEntries(stageDurationMedians(db, review.model)),
+      // going. Empty until a stage has been timed enough times to mean it,
+      // and for an interactive review, whose stages take as long as the
+      // person answering them: the medians are of headless stages (D-305).
+      stageMedians:
+        review.engineMode === "interactive"
+          ? {}
+          : Object.fromEntries(stageDurationMedians(db, review.model)),
     });
   });
 }

@@ -7742,3 +7742,15 @@ verified evidence, in writing, here.
   `interactive-refused-answer` light, dark and phone B (the refusal's
   words are the error's own, long and exact). Not looked at:
   `interactive-verification-stage-light`.
+- 2026-11-22 D-305 An interactive review's stage in flight is not said to
+  usually take what a headless stage takes. Found by the session's own
+  sweep before the twenty-second grade, as a sibling of AI9. D-301 took
+  stages answered by hand out of the medians, and a review's snapshot
+  still handed those medians to an interactive review: its Stages card
+  said "usually 20s" of the stage in flight and its scan view "usually
+  20s here", of a stage that takes as long as the person answering it.
+  The snapshot now gives an interactive review no medians, so neither
+  line is drawn (`src/app/api/reviews/[id]/route.ts`). Decided by the
+  session. Proven by a route test that times three headless stages and
+  reads both reviews' snapshots: the interactive one held `s1_risk:
+  20000` on the old code. No screen was changed, so none was shot.
