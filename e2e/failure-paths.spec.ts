@@ -4937,16 +4937,52 @@ test("an interactive review's command is on its page whenever the page is opened
     await command.scrollIntoViewIfNeeded();
     await expect(command).toBeInViewport();
     expect((await command.boundingBox())!.height).toBeGreaterThan(100);
+    // At this width the command is taller than its box and scrolls in it,
+    // and a box that scrolls has to take the keyboard's focus. A scan at
+    // desk width alone met one only where the paths ran longer (the macOS
+    // job of run 45020353625).
+    expect(
+      await command.evaluate((node) => node.scrollHeight > node.clientHeight),
+      "the command scrolls in its box at this width",
+    ).toBe(true);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    const evidence = join(
+      fileURLToPath(new URL("..", import.meta.url)),
+      "review",
+      `${new Date().toISOString().slice(0, 10)}-e2e`,
+    );
     await page.screenshot({
-      path: join(
-        fileURLToPath(new URL("..", import.meta.url)),
-        "review",
-        `${new Date().toISOString().slice(0, 10)}-e2e`,
-        "interactive-your-turn-phone-view.png",
-      ),
+      path: join(evidence, "interactive-your-turn-phone-view.png"),
       animations: "disabled",
     });
+    // By the keyboard: End takes the box to the command's last line, and
+    // the ring says where the focus is.
+    await command.focus();
+    await page.keyboard.press("End");
+    await expect
+      .poll(() =>
+        command.evaluate((node) => node.scrollTop + node.clientHeight >= node.scrollHeight - 1),
+      )
+      .toBe(true);
+    expect(await command.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe("solid");
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.screenshot({
+        path: join(evidence, `interactive-your-turn-focused-phone-${scheme}.png`),
+        animations: "disabled",
+      });
+    }
     if (desk) await page.setViewportSize(desk);
+    await command.scrollIntoViewIfNeeded();
+    await expect(command).toBeFocused();
+    for (const scheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.screenshot({
+        path: join(evidence, `interactive-your-turn-focused-${scheme}.png`),
+        animations: "disabled",
+      });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
 
     // And the dashboard sends the person there, as a review that needs them.
     await page.goto("/");

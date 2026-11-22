@@ -404,3 +404,5 @@ the line entirely would lose the trail.
   `src/server/review/checkpointing-runner.ts:163, 252-286`). Open.
 - 2026-11-22: the "Your turn" card gives the command for both shells as
   one block with no copy button, and names the stage by its id.
+  And it gives the PowerShell command before the bash one on a Linux
+  machine (seen in `review/2026-11-22-e2e/interactive-your-turn-focused-light.png`).

@@ -7640,3 +7640,27 @@ verified evidence, in writing, here.
   box); the dark shot was not looked at, and `interactive-your-turn-phone`
   shows only what was in sight of a view with a scroll of its own. A
   twenty-second grade is owed.
+- 2026-11-22 D-302 The "Your turn" command takes the keyboard's focus,
+  and a failure one platform's job shows is read before it is parked.
+  CI run 45020353625 on a56b369 passed on Ubuntu and Windows and failed
+  on macOS, in D-301's browser test: axe's `scrollable-region-focusable`
+  on the card's `pre`. D-246 parks a failure only the macOS job shows.
+  This one was read first and is not macOS's: the box holds a command
+  to 16rem and scrolls past that, and it could not be focused, so a
+  command taller than the box could not be read to its end by keyboard
+  on any machine. The test scanned at desk width alone, where this
+  machine's command fits the box and the macOS runner's longer paths do
+  not. Reproduced on Linux before the fix: at 390px wide the command
+  scrolls in its box and the same scan failed on the old build. Fixed in
+  the card: the `pre` is a focusable group named "Command to run", as
+  the page's untypeset report already is. Decided by the session, and
+  D-246 stands for a failure that is the platform's own. Proven by the
+  same browser test, which now also scans at the phone's width with the
+  command scrolling, takes it to its last line with End, and reads the
+  focus ring as drawn. Graded by the builder, `review/2026-11-22-e2e/`:
+  `interactive-your-turn-focused-light` and `-dark` B, and
+  `interactive-your-turn-focused-phone-light` and `-dark` B (the ring is
+  whole and clear of the box in each; it is the card's own border colour
+  and sits 2px inside it, which reads as a doubled edge). And
+  `interactive-your-turn-dark`, which D-301 left unlooked at: B, as its
+  light twin.

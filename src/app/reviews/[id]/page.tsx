@@ -2387,7 +2387,14 @@ function YourTurn({ text }: { text: string }) {
         it says. The review goes on when the answer is there, and the stage fails if none comes
         within the timeout.
       </p>
-      <pre className="max-h-64 overflow-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 font-[family-name:var(--font-mono)] text-xs break-all whitespace-pre-wrap">
+      {/* Focusable because it scrolls: a command taller than the box could
+          not be read to its end by keyboard. */}
+      <pre
+        tabIndex={0}
+        role="group"
+        aria-label="Command to run"
+        className="max-h-64 overflow-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 font-[family-name:var(--font-mono)] text-xs break-all whitespace-pre-wrap"
+      >
         {text}
       </pre>
     </div>
