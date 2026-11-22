@@ -186,8 +186,8 @@ Ruleset-scoped non-rule content composed into every review prompt.
 
 Review status machine:
 `draft -> running -> verifying -> awaiting_confirmation -> complete`,
-with `paused_limit`, `interrupted`, `failed`, `cancelled` reachable from any
-running state; `paused_limit/interrupted/failed -> running` on resume, a
+with `paused_limit`, `interrupted`, `failed`, `cancelled` reachable from `running` and `verifying`;
+`draft` and `awaiting_confirmation` can be cancelled, and `paused_limit` and `interrupted` can fail or be cancelled; `paused_limit/interrupted/failed -> running` on resume, a
 failed review being resumed like a paused one (D-50). Transitions
 are enforced in one repository function, unit-tested; no ad hoc writes.
 

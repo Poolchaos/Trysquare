@@ -18,6 +18,7 @@ import {
 } from "@/lib/domain/enums";
 import {
   type PickableRuleset,
+  firstListed,
   RulesetPicker,
   rulesetChoice,
   useReadOnReturn,
@@ -307,9 +308,9 @@ function NewReview() {
 
   function takeRulesets(read: { rulesets: PickableRuleset[]; defaultRulesetId?: string | null }) {
     setRulesets(read.rulesets);
-    // The default chosen on a ruleset's page, else the first (D-225).
+    // The default chosen on a ruleset's page, else the first the list draws (D-225).
     const preferred = read.rulesets.find((row) => row.id === read.defaultRulesetId);
-    const first = preferred ?? read.rulesets[0];
+    const first = preferred ?? firstListed(read.rulesets);
     setTickedRulesets((current) => current ?? (first ? [first.id] : null));
   }
 
@@ -979,7 +980,15 @@ function NewReview() {
               </Select>
             </Field>
 
-            <Field label="Effort" hint="How hard the model thinks. Fixed once the review starts.">
+            <Field
+              label="Effort"
+              hint={
+                // An interactive review's commands pass no effort (AG3).
+                engineMode === "interactive"
+                  ? "Not passed to an interactive review: the session in your terminal decides how hard it thinks."
+                  : "How hard the model thinks. Fixed once the review starts."
+              }
+            >
               <Select value={chosenEffort} onChange={(event) => setEffort(event.target.value)}>
                 {efforts.map((option) => (
                   <option key={option.value} value={option.value}>

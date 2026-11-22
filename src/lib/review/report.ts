@@ -124,7 +124,8 @@ export interface ReportInput {
   /** Every ruleset the review ran with, one or more. */
   rulesets: { name: string; version: number }[];
   model: string;
-  effort: string;
+  /** Null for an interactive review: its commands pass none, the person's own session deciding. */
+  effort: string | null;
   profile: string;
 
   usage: {
@@ -449,7 +450,7 @@ function footer(input: ReportInput): string[] {
     `- ${input.rulesets.length === 1 ? "Ruleset" : "Rulesets"}: ${input.rulesets
       .map((ruleset) => `${md(ruleset.name)} version ${ruleset.version}`)
       .join(", ")}`,
-    `- Model: ${input.model}, effort ${input.effort}, profile ${input.profile}`,
+    `- Model: ${input.model}${input.effort === null ? "" : `, effort ${input.effort}`}, profile ${input.profile}`,
     `- Reviewed: ${input.fromCommit} against merge base ${input.mergeBaseCommit}`,
   ];
 
@@ -647,7 +648,7 @@ ${group("Confirmed", input.confirmed)}
 ${checksSection}
 ${group("Left out unproven", input.leftOutUnproven, "Left out")}
 ${group("Dismissed", input.dismissed)}
-<footer>${escapeHtml(input.model)} at effort ${escapeHtml(input.effort)}, ${escapeHtml(input.profile)} profile, against ${input.rulesets.map((ruleset) => `${escapeHtml(ruleset.name)} v${ruleset.version}`).join(", ")}.
+<footer>${escapeHtml(input.model)}${input.effort === null ? "" : ` at effort ${escapeHtml(input.effort)}`}, ${escapeHtml(input.profile)} profile, against ${input.rulesets.map((ruleset) => `${escapeHtml(ruleset.name)} v${ruleset.version}`).join(", ")}.
 Commit ${escapeHtml(input.fromCommit.slice(0, 12))}, merge base ${escapeHtml(input.mergeBaseCommit.slice(0, 12))}.
 Cost equivalent $${input.usage.costEquivalentUsd.toFixed(4)}.</footer>
 </body></html>

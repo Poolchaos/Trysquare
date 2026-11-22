@@ -7,7 +7,7 @@
  * repositories and never once said what any of the work had produced. Every
  * measurement on this screen was already in the database and shown nowhere:
  * what the reviews cost, how often a finding survived a person's judgment,
- * how often the engine cited code that was not there, and which rules of a
+ * how often the quotation check discarded a proof, and which rules of a
  * protocol ever earn a place in a report.
  *
  * The rule this screen is built under (D-68): a figure not measured from

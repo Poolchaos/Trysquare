@@ -121,9 +121,8 @@ const frozenCodesSchema = z.object({ rules: z.array(z.object({ code: z.string() 
  * Which of a review's frozen rulesets holds a rule, by its number. The
  * rulesets of one review share no number (RS-2b), so within a review the
  * number is enough. A review on one ruleset is answered without reading its
- * frozen copy; one on several has each copy's numbers read once. The newest
- * review's name for a ruleset is the one used, since a ruleset can be
- * renamed between reviews.
+ * frozen copy; one on several has each copy's numbers read once. The name
+ * is the one its newest review froze it under.
  */
 function frozenRuleOwners(
   db: Db,

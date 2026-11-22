@@ -57,7 +57,7 @@ Built the fixture: 8 planted defect(s), 2 file(s) that are deliberately fine.
   8/8 planted defect(s) found.
   No findings in the files that are deliberately fine.
   outcome            completed
-  discarded quotes   0 (cited code that was not there)
+  discarded quotes   0 (proofs the quotation check discarded)
   open questions     0
 ```
 
@@ -102,9 +102,9 @@ Judge these, in this order:
 2. **False positives.** Findings raised in `src/utils/format.ts` or
    `README.md`, which are deliberately correct. A review that cries wolf is
    worse than one that misses.
-3. **Discarded quotes.** Findings killed because they cited code that was not
-   at those lines. A non-zero count means the model fabricated, and the app
-   caught it; a large count means the prompts need work.
+3. **Discarded quotes.** Findings killed by the quotation check: a proof that never passes through the cited file, one whose steps sit off the cited lines, or a step that is not the code
+   at its lines (D-252). The first two can quote true code, so a non-zero count is not of inventions alone.
+   A large count means the prompts need work.
 4. **Are the findings readable?** Open the run's `findings.json`. Each
    finding gives file, lines, issue, comment, mechanism and the quoted code.
    The comment is meant to be plain language someone who did not write the

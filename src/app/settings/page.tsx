@@ -91,7 +91,7 @@ const FIELDS = [
   {
     key: "stageMaxBudgetUsd",
     label: "Budget per call (USD)",
-    hint: "A ceiling on any single model call. Zero removes the ceiling.",
+    hint: "A ceiling on each model call the app makes in a headless review. Zero removes the ceiling. A probe has none, and the commands an interactive review prints carry none.",
   },
 ] as const;
 
@@ -802,7 +802,7 @@ export default function SettingsPage() {
                   }
                 }}
               >
-                {wiping ? "Deleting..." : "Yes, delete everything"}
+                {wiping ? "Deleting..." : "Yes, delete them"}
               </Button>
               <Button
                 variant="quiet"
@@ -812,7 +812,7 @@ export default function SettingsPage() {
                   setWipeError("");
                 }}
               >
-                Keep it all
+                Keep them
               </Button>
               <span className="text-xs text-[var(--color-ink-muted)]">
                 {system
@@ -821,7 +821,9 @@ export default function SettingsPage() {
               </span>
             </div>
           ) : (
-            <Button onClick={() => setConfirmingWipe(true)}>Delete all data</Button>
+            <Button onClick={() => setConfirmingWipe(true)}>
+              Delete projects, reviews and rulesets
+            </Button>
           )}
         </Card>
       </PageBody>

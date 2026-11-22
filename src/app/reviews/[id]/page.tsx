@@ -44,6 +44,7 @@ import {
 } from "@/components/ui";
 import {
   type PickableRuleset,
+  firstListed,
   RulesetPicker,
   rulesetChoice,
   useReadOnReturn,
@@ -268,7 +269,8 @@ interface ReportData {
   chainFilesRead: number;
   rulesets: { name: string; version: number }[];
   model: string;
-  effort: string;
+  /** Null for an interactive review, whose commands pass none. */
+  effort: string | null;
   profile: string;
   usage: { costEquivalentUsd: number };
   startedAt: string | null;
@@ -882,9 +884,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
       setDraftReadProblem(sent.ok ? "" : sent.error);
       if (!sent.ok) return;
       setDraftRulesets(sent.body.rulesets);
-      // The default chosen on a ruleset's page, else the first (D-225).
+      // The default chosen on a ruleset's page, else the first the list draws (D-225).
       const preferred = sent.body.rulesets.find((row) => row.id === sent.body.defaultRulesetId);
-      const first = preferred ?? sent.body.rulesets[0];
+      const first = preferred ?? firstListed(sent.body.rulesets);
       setDraftTicked((current) => current ?? (first ? [first.id] : null));
     })();
     return () => {
@@ -1111,7 +1113,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             {review.mergedDetectedAt ? <Badge tone="good">merged</Badge> : null}
             <Sha value={review.fromCommit} />
             <span>{review.model}</span>
-            <span>effort {review.effort}</span>
+            {/* Not said of an interactive review: its commands pass no
+                effort, the session in the terminal deciding (AG3). */}
+            {review.engineMode === "interactive" ? null : <span>effort {review.effort}</span>}
             {/* Where the run is and how long it has been there. A five-minute
                 wait used to offer one pulsing dot and no way to tell a slow
                 stage from a stuck one. */}
@@ -2288,7 +2292,8 @@ function RenderedReport({ data }: { data: ReportData }) {
       ) : null}
 
       <footer className="mt-6 border-t border-[var(--color-border)] pt-3 text-aside text-[var(--color-ink-faint)]">
-        <Mono>{data.model}</Mono> at effort {data.effort}, {data.profile} profile, against{" "}
+        <Mono>{data.model}</Mono>
+        {data.effort === null ? "" : ` at effort ${data.effort}`}, {data.profile} profile, against{" "}
         {data.rulesets.map((ruleset) => `${ruleset.name} v${ruleset.version}`).join(", ")}. Commit{" "}
         <Sha value={data.fromCommit} />, merge base <Sha value={data.mergeBaseCommit} />. Cost
         equivalent ${data.usage.costEquivalentUsd.toFixed(4)}.
@@ -2620,7 +2625,8 @@ function ScanTheater({
         >
           {live.length === 0 ? (
             <p className="text-body text-[var(--color-ink-muted)]">
-              Fetching and checking out the pinned commits...
+              Fetching and checking out the pinned commits, then the project&apos;s own checks where
+              they are on...
             </p>
           ) : (
             <ul className="grid gap-0.5 text-dense">

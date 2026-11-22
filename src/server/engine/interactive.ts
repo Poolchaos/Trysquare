@@ -348,8 +348,8 @@ async function writeWhole(path: string, text: string): Promise<void> {
 /**
  * Waits for the answer file, and gives up rather than waiting forever.
  *
- * A hang is a failure, not a wait (01 section 6). The timeout is the same
- * stage timeout Mode A uses, which is generous for a person but finite, and
+ * A hang is a failure, not a wait (01 section 6). The timeout is the one
+ * Mode A gives each call, which is generous for a person but finite, and
  * cancelling the review stops the wait immediately rather than after it.
  */
 async function waitForAnswer(

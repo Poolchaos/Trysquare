@@ -72,7 +72,7 @@ export function NoBranchOfYours({ identities }: { identities: readonly string[] 
           </span>
         );
       })}{" "}
-      The emails that count as yours are kept in {settings}.
+      The emails that count as yours are set in {settings}.
     </Empty>
   );
 }

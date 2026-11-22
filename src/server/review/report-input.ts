@@ -229,7 +229,9 @@ export function buildReportInput(db: Db, reviewId: string, dataDir?: string): Re
 
     rulesets: meta,
     model: review.model,
-    effort: review.effort,
+    // Not said of an interactive review: no effort is passed to its commands
+    // (the nineteenth grade, AG3).
+    effort: review.engineMode === "interactive" ? null : review.effort,
     profile: review.profileId,
 
     usage: {

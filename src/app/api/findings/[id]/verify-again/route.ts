@@ -4,7 +4,7 @@
  *
  * Paid requests, so refused unless the page said so first, and answered
  * when they are: the first verifier and, if it proves the finding, the
- * second, each under the stage timeout, which a closed tab aborts. The job manager counts it against the reviews at once, as they
+ * second, each under the timeout of one call, which a closed tab aborts. The job manager counts it against the reviews at once, as they
  * share one usage limit, and stops it with a drain (review round 2).
  */
 

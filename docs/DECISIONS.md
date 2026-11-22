@@ -7519,3 +7519,35 @@ verified evidence, in writing, here.
   seen failing first: the browser test's new line for the row's
   ruleset, and the reworded sentences, whose tests were changed with
   them. A nineteenth grade is owed.
+- 2026-11-22 D-299 The nineteenth grade of the records, and what was
+  done about it. A fresh grader read d878af3 and graded Honest C on two
+  lines, with nine immaterial and three left of the eighteenth's (AG1 to
+  AG11, in `plans/AUDIT-2026-11-17.md`). The first is this session's own
+  error: D-298 corrected the Delete ruleset card to say new reviews then
+  tick "the first ruleset listed", and wrote that both screens tick the
+  first listed, without reading how the list is ordered. The server
+  lists rulesets by name alone and the screens draw them tier by tier,
+  so with rulesets in two tiers the one ticked was not the one listed
+  first. Fixed at the code, not the words: both screens tick the first
+  ruleset the list draws (`firstListed`), since what is ticked unasked
+  should be what a person sees first. Rejected: saying "the first by
+  name", which is true and leaves a ruleset further down the list ticked.
+  The second: Settings' budget per call is on the calls the app makes in
+  a headless review; a probe has none and the commands an interactive
+  review prints carry none, and the hint says so. Decided with the
+  third: an interactive review states no effort (header, report, the
+  form's hint), since none is passed to its commands; the report's input
+  holds null for it. The delete buttons on Settings are renamed for what
+  they delete. Proven: the report's input gives no effort for an
+  interactive review, by a test that failed on the old input. That edit
+  had not applied the first time, a line number having moved, and
+  nothing said so until the changed files were listed for the commit;
+  the test is what holds it now. The renderer's test and the one for the
+  first ruleset drawn, with a project-tier ruleset first by name, were
+  written with their code and not seen failing. The sentences changed
+  are held by their tests' text. Two things the grader derived by reading are in the
+  inbox, not reproduced. A twentieth grade is owed. What the two grades
+  of today show: a sentence corrected in a hurry is as likely to be
+  wrong as the one it replaced, so a correction of what a control does
+  is read against the code path of every screen that does it, not
+  against the line the grader cited.

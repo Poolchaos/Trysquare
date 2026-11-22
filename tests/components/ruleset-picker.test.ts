@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { rulesetChoice } from "@/components/ruleset-picker";
+import { firstListed, rulesetChoice } from "@/components/ruleset-picker";
 
 const listed = [
   {
@@ -55,5 +55,20 @@ describe("the rulesets ticked for a review", () => {
   it("are said to be none only where there is a list to tick", () => {
     expect(rulesetChoice(listed, []).noneTicked).toBe(true);
     expect(rulesetChoice([], null).noneTicked).toBe(false);
+  });
+});
+
+describe("the ruleset ticked on arrival where no default is set", () => {
+  it("is the first the list draws, tier by tier, not the first by name", () => {
+    // The server lists by name alone: "Company base rules" comes before
+    // "General", and was ticked while the list drew General first.
+    const byName = [
+      { ...listed[2]!, id: "p", name: "Company base rules", tier: "project" },
+      { ...listed[0]!, id: "g", name: "General", tier: "global" },
+      { ...listed[1]!, id: "t", name: "TypeScript", tier: "tech" },
+    ];
+    expect(firstListed(byName)?.name).toBe("General");
+    expect(firstListed(byName.slice(0, 1))?.name).toBe("Company base rules");
+    expect(firstListed([])).toBeUndefined();
   });
 });

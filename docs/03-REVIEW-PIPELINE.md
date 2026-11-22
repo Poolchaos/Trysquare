@@ -341,8 +341,8 @@ branch and commit, token usage, the cost equivalent, and how long the
 run took, to when it stopped and not to when the review was completed
 (D-248), said as the last run's where an earlier run asked a model
 anything, the tokens and the cost being every run's. The HTML's footer and the page's leave out the tokens, the
-duration and the linked project. No em dashes anywhere in
-generated output (enforced by a lint on the renderer and a unit test).
+duration and the linked project. No em dashes in the report's own words
+(the house-style gate over the source, and a unit test of a rendered report); what a finding or a person wrote is carried as written.
 
 ## 4. Prompt composition
 

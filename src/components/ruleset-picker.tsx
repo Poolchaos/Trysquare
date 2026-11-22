@@ -36,6 +36,27 @@ export interface RulesetChoice {
 }
 
 /**
+ * The tiers in the order the Rulesets screen lists them, then any other a
+ * ruleset carries: left out, its ruleset could not be ticked.
+ */
+function listedTiers(rulesets: readonly PickableRuleset[]): string[] {
+  return [...new Set([...RULESET_TIERS, ...rulesets.map((ruleset) => ruleset.tier)])].filter(
+    (tier) => rulesets.some((ruleset) => ruleset.tier === tier),
+  );
+}
+
+/**
+ * The ruleset the list draws first: the one ticked on arrival where no
+ * default is set. The answer's own first is the first by name, which is
+ * another ruleset once two tiers hold any, and "the first listed" was said
+ * of it (the nineteenth grade, AG1).
+ */
+export function firstListed<T extends PickableRuleset>(rulesets: readonly T[]): T | undefined {
+  const [tier] = listedTiers(rulesets);
+  return rulesets.find((ruleset) => ruleset.tier === tier);
+}
+
+/**
  * What a list of ticks comes to: only rulesets still listed, and the
  * refusal for two that hold a rule under one number, known from the list's
  * own codes before anything is asked of the server.
@@ -102,66 +123,61 @@ export function RulesetPicker({
   return (
     <>
       <div className="grid gap-3" data-testid="ruleset-picker">
-        {/* The tiers in the order the Rulesets screen lists them, then any
-            other a ruleset carries: left out, its ruleset could not be
-            ticked. */}
-        {[...new Set([...RULESET_TIERS, ...rulesets.map((ruleset) => ruleset.tier)])]
-          .filter((tier) => rulesets.some((ruleset) => ruleset.tier === tier))
-          .map((tier) => (
-            <div key={tier}>
-              <h3 className="mb-1 text-xs font-semibold tracking-wide text-[var(--color-ink-muted)] uppercase">
-                {tier}
-              </h3>
-              <ul className="grid gap-1">
-                {rulesets
-                  .filter((ruleset) => ruleset.tier === tier)
-                  .map((ruleset) => {
-                    const ticked = choice.ids.includes(ruleset.id);
-                    return (
-                      <li
-                        key={ruleset.id}
-                        className={`flex items-center gap-3 rounded-md border px-3 ${
-                          ticked
-                            ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
-                            : "border-transparent hover:bg-[var(--color-surface-sunken)]"
-                        }`}
-                      >
-                        {/* The label is the row's height, so a thumb has the
+        {listedTiers(rulesets).map((tier) => (
+          <div key={tier}>
+            <h3 className="mb-1 text-xs font-semibold tracking-wide text-[var(--color-ink-muted)] uppercase">
+              {tier}
+            </h3>
+            <ul className="grid gap-1">
+              {rulesets
+                .filter((ruleset) => ruleset.tier === tier)
+                .map((ruleset) => {
+                  const ticked = choice.ids.includes(ruleset.id);
+                  return (
+                    <li
+                      key={ruleset.id}
+                      className={`flex items-center gap-3 rounded-md border px-3 ${
+                        ticked
+                          ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)]"
+                          : "border-transparent hover:bg-[var(--color-surface-sunken)]"
+                      }`}
+                    >
+                      {/* The label is the row's height, so a thumb has the
                             40px the other controls keep. */}
-                        <label className="flex min-h-[var(--hit-target)] min-w-0 flex-1 cursor-pointer items-center gap-3 py-1 text-sm">
-                          <input
-                            type="checkbox"
-                            className="shrink-0 scheme-light-dark accent-[var(--color-accent)]"
-                            checked={ticked}
-                            onChange={(event) =>
-                              onChange(
-                                event.target.checked
-                                  ? [...choice.ids, ruleset.id]
-                                  : choice.ids.filter((id) => id !== ruleset.id),
-                              )
-                            }
-                          />
-                          <span className="min-w-0 break-words">{ruleset.name}</span>
-                          <span className="shrink-0 text-xs text-[var(--color-ink-muted)] tabular-nums">
-                            v{ruleset.version}
-                          </span>
-                        </label>
-                        <Link
-                          href={`/rulesets/${ruleset.id}`}
-                          aria-label={`${ruleset.name}, ${ruleCountWords(
-                            ruleset.ruleCount,
-                            ruleset.ruleTotal,
-                          )}`}
-                          className="shrink-0 text-xs text-[var(--color-accent)] tabular-nums hover:underline"
-                        >
-                          {ruleCountWords(ruleset.ruleCount, ruleset.ruleTotal)}
-                        </Link>
-                      </li>
-                    );
-                  })}
-              </ul>
-            </div>
-          ))}
+                      <label className="flex min-h-[var(--hit-target)] min-w-0 flex-1 cursor-pointer items-center gap-3 py-1 text-sm">
+                        <input
+                          type="checkbox"
+                          className="shrink-0 scheme-light-dark accent-[var(--color-accent)]"
+                          checked={ticked}
+                          onChange={(event) =>
+                            onChange(
+                              event.target.checked
+                                ? [...choice.ids, ruleset.id]
+                                : choice.ids.filter((id) => id !== ruleset.id),
+                            )
+                          }
+                        />
+                        <span className="min-w-0 break-words">{ruleset.name}</span>
+                        <span className="shrink-0 text-xs text-[var(--color-ink-muted)] tabular-nums">
+                          v{ruleset.version}
+                        </span>
+                      </label>
+                      <Link
+                        href={`/rulesets/${ruleset.id}`}
+                        aria-label={`${ruleset.name}, ${ruleCountWords(
+                          ruleset.ruleCount,
+                          ruleset.ruleTotal,
+                        )}`}
+                        className="shrink-0 text-xs text-[var(--color-accent)] tabular-nums hover:underline"
+                      >
+                        {ruleCountWords(ruleset.ruleCount, ruleset.ruleTotal)}
+                      </Link>
+                    </li>
+                  );
+                })}
+            </ul>
+          </div>
+        ))}
       </div>
       {/* Said as a tick changes it, so a screen reader hears it too. */}
       <div aria-live="polite" className="mt-3 grid gap-2 empty:mt-0">

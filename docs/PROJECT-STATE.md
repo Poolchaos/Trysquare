@@ -70,8 +70,15 @@ from 2026-11-03.
   corrected the same day (D-298): the three lines say what the code does,
   Rule yield is tallied by ruleset and number with the ruleset named on
   each row, and the Rulesets list and the picker say "9 of 12 rules on"
-  where some are switched off. A nineteenth grade is owed.
-  `./verify.sh --e2e` exits 0 with 1700 unit tests passing, 8 skipped,
+  where some are switched off.
+  The nineteenth grade, at d878af3 the same day, was C on two lines: the
+  sentence that corrected the Delete ruleset card said "the first ruleset
+  listed" where the first by name was ticked, and Settings' budget per
+  call covers a headless review's calls alone. Nine immaterial lines came
+  with them (AG1 to AG11). Corrected the same day (D-299): both screens
+  tick the first ruleset the list draws, an interactive review states no
+  effort, and the words say the rest. A twentieth grade is owed.
+  `./verify.sh --e2e` exits 0 with 1704 unit tests passing, 8 skipped,
   and 172 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
@@ -574,7 +581,7 @@ are accepted; anything else is refused by name.
 
 - `maxConcurrentReviews` (default 1). Two reviews share one usage limit.
 - `stageTimeoutMinutes` (default 20).
-- `stageMaxBudgetUsd` (default 15). A ceiling on any single model call; zero
+- `stageMaxBudgetUsd` (default 15). A ceiling on each model call the app makes in a headless review (a probe has none, and the commands an interactive review prints carry none); zero
   removes the ceiling.
 - `claudePath` (default empty). The CLI reviews run through, which
   `TRYSQUARE_CLAUDE_PATH` wins over (D-152).

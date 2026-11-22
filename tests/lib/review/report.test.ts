@@ -235,6 +235,15 @@ describe("the footer that makes a report reproducible", () => {
     expect(report).toContain(`Reviewed: ${"a".repeat(40)} against merge base ${"b".repeat(40)}`);
   });
 
+  it("states no effort for an interactive review, whose commands pass none", () => {
+    // It said "effort high" of a review the person's own session ran at
+    // whatever effort that session had (the nineteenth grade, AG3).
+    const interactive = { ...BASE, effort: null };
+    expect(renderReport(interactive)).toContain("Model: claude-fable-5[1m], profile full-context");
+    expect(renderReport(interactive)).not.toContain("effort");
+    expect(renderReportHtml(interactive)).not.toContain("effort");
+  });
+
   it("names every ruleset the review ran with, each with its version", () => {
     // One was named whatever the review ran with (RS-2a).
     const two = {

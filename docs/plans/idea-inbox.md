@@ -387,3 +387,12 @@ the line entirely would lose the trail.
 - 2026-11-22: in a new review's branch picker, a branch chosen and then
   hidden by Mine or by the text filter stays the branch to review, and
   nothing on the screen says which it is (D-296).
+- 2026-11-22: two things the nineteenth grader derived by reading and
+  did not run (AG4, AG5). A review resumed after its project's checks
+  were switched off drops the check findings, and the report may still
+  read the kept result file and say the tests failed with no finding
+  listed (`src/server/review/report-input.ts:37-71`,
+  `src/server/review/service.ts:401-407`). And the scan's first line
+  stands through the whole of a project's checks, up to 20 minutes each,
+  since run notes reach the feed only at a stage's lifecycle. Neither is
+  reproduced.

@@ -275,7 +275,7 @@ review waits on them too. Read only once the review is complete, and
 while it has not run to its end: running, paused, interrupted, failed or
 cancelled, the section is shown beside the run's detail, saying that they
 are decided once the review has run to its end and that a resume keeps the
-result (the checks run again only where the project's commands were changed since), or, of a cancelled review, that it is not decided.
+result (the checks run again only where the project's commands were changed since, and with the checks switched off since the result is dropped), or, of a cancelled review, that it is not decided.
 
 Above the queue, and above the report once complete, the finished review in
 its five steps (WP-G; at phone width, while findings wait to be decided, it
@@ -377,7 +377,7 @@ badge once its branch is found merged; delete per 02 rules.
 - Duplicate-to-tier action (e.g. copy a project rule into global).
 - Use by default for new reviews, on a ruleset's page (Stop using by
   default undoes it); the list marks the default, and a new review, or a
-  draft's Start, begins on it rather than on the first by name (D-225).
+  draft's Start, begins on it rather than on the first the list draws (D-225).
 - Delete ruleset, a card at the foot of a ruleset's page (D-266): it says
   what goes (the rules and directives, never the rules a review already
   ran with) and, of the default, that new reviews will then tick the

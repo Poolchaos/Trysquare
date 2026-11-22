@@ -278,7 +278,7 @@ Probe press in step 4, a real but tiny paid call.
    citation, `g g` for the first finding and `G` for the last. The shortcuts
    are printed at the foot of the queue. Dismissing needs a written reason;
    confirming does not. The rule a finding names expands to the author's
-   verbatim markdown from the ruleset the review was frozen with.
+   verbatim markdown from the rulesets the review was frozen with.
 8. **Complete and export.** The Complete button unlocks only when every
    finding is decided, and the server refuses otherwise. Completing renders
    the report: what was found, what was examined, and what was dismissed and
@@ -322,7 +322,7 @@ skipped unless `TRYSQUARE_REAL_CLI=1` is set.
 - **A queued review is normal.** One review runs at a time by default, because
   two share one usage limit. The queue lives in memory only, so a restart
   turns a waiting review back into a draft: open it, tick its rulesets and
-  press Start review. A review whose start failed is a draft too. Leave the
+  press Start review. One that was waiting after a Resume is as it was before, paused, interrupted or failed: open it and press Resume. A review whose start failed is a draft too. Leave the
   line, on a waiting review, takes it out of the line and leaves it as it
   was, a draft still a draft (D-224). Raise the limit on Settings if you
   accept the sharing.

@@ -449,7 +449,7 @@ function renderScore(
   log();
   log(`The run`);
   log(`  outcome            ${outcome}`);
-  log(`  discarded quotes   ${score.killedByQuoteCheck} (cited code that was not there)`);
+  log(`  discarded quotes   ${score.killedByQuoteCheck} (proofs the quotation check discarded)`);
   log(`  open questions     ${score.openQuestions}`);
   // Cache writes are charged and were missing from every run captured as gate
   // evidence, so two runs could not be compared on what they actually spent.

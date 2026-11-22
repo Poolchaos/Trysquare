@@ -1512,8 +1512,9 @@ test("a review that stopped short shows what the project's checks found", async 
     );
     await expect(section).toContainText(
       "What the project's own checks found on this branch. You decide it with the code " +
-        "findings once the review has run to its end. A resume keeps this result: the " +
-        "checks run again only if the project's commands were changed since.",
+        "findings once the review has run to its end. A resume keeps this result. The " +
+        "checks run again only if the project's commands were changed since, and with " +
+        "the checks switched off since, the result is dropped.",
     );
     // Read, not decided: nothing here to press.
     await expect(section.getByRole("button")).toHaveCount(0);
@@ -4268,8 +4269,8 @@ test("an error page for an answer is said, and the button comes back", async ({ 
     };
     await page.route("**/api/system/data", refuse);
     try {
-      await page.getByRole("button", { name: "Delete all data" }).click();
-      await page.getByRole("button", { name: "Yes, delete everything" }).click();
+      await page.getByRole("button", { name: "Delete projects, reviews and rulesets" }).click();
+      await page.getByRole("button", { name: "Yes, delete them" }).click();
       // In the Danger zone, beside the button pressed.
       const danger = page
         .getByRole("main")
@@ -4278,14 +4279,14 @@ test("an error page for an answer is said, and the button comes back", async ({ 
         .last();
       await expect(danger.getByText("The data could not be deleted.")).toBeVisible();
       expect(answered).toBe(1);
-      await expect(page.getByRole("button", { name: "Yes, delete everything" })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Yes, delete them" })).toBeEnabled();
       expect(await accessibilityViolations(page)).toEqual([]);
       await shootAll(page, danger, "gateway-settings");
     } finally {
       await page.unroute("**/api/system/data", refuse);
     }
     // Kept, the message goes with the question it answered.
-    await page.getByRole("button", { name: "Keep it all" }).click();
+    await page.getByRole("button", { name: "Keep them" }).click();
     await expect(page.getByText("The data could not be deleted.")).toHaveCount(0);
   });
 });
