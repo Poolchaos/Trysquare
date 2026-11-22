@@ -107,9 +107,16 @@ from 2026-11-03.
   interactive stage's row naming a log file nothing writes and a refused
   answer writing no failed row (AI5), was closed the same day (D-303),
   after the command's box was made to take the keyboard's focus (D-302).
+  A review round by a session that wrote none of the day's code followed
+  (round 27, D-304): the feed says a line where it printed a waiting
+  stage's command a second time and keeps its height under the card, a
+  failed interactive stage is not called answered, and the queue, the
+  Proven by both tile and two stages' descriptions say of an interactive
+  review only what its commands did. A whole interactive review is
+  driven in the browser for the first time, answered stage by stage.
   A twenty-second grade is owed.
   `./verify.sh --e2e` exits 0 with 1716 unit tests passing, 8 skipped,
-  and 174 browser tests.
+  and 176 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
   those awaiting a decision, each row saying which it is and what to press

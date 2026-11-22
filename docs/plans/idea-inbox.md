@@ -322,6 +322,17 @@ pulled deliberately.
   one block with no copy button, and names the stage by its id.
   And it gives the PowerShell command before the bash one on a Linux
   machine (seen in `review/2026-11-22-e2e/interactive-your-turn-focused-light.png`).
+- 2026-11-22: Rule yield files a rule number that a review's one ruleset
+  does not hold under that ruleset's name: a review on one ruleset is
+  answered without reading its frozen copy (`frozenRuleOwners`,
+  `src/server/db/repositories/scoreboard.ts`), so a code the model wrote
+  that resolves to no rule reads as a rule of that ruleset. On several
+  rulesets it is filed under none (review round 27).
+- 2026-11-22: only the Windows job failed in CI run 45027321596 at d40a707
+  (Ubuntu and macOS passed): `e2e/failure-paths.spec.ts`, "a review
+  waiting its turn offers no Start of its own", 120 seconds waiting on
+  the Projects page for the link to the project, which the page never
+  drew. The run's trace was not read. Recorded and left (D-246).
 
 ## Retired
 

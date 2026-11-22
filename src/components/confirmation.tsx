@@ -993,14 +993,27 @@ export function ConfirmationQueue({
                         {currentProof.guardsSearched.join("; ")}
                       </span>
                     </p>
-                    {/* Both verifiers, each in a session of its own (WP-E). */}
+                    {/* Both verifiers, each in a session of its own (WP-E). An
+                        interactive review's were the person's sessions: the
+                        app knows the model each command named, not what
+                        answered (the twenty-first grade, AI8). */}
                     {secondProof && verifierModel ? (
-                      <p className="mt-2">
-                        <span className="font-medium">Proven by </span>
-                        <span className="text-[var(--color-ink-muted)]">
-                          <Mono>{model}</Mono> and again by <Mono>{verifierModel}</Mono>
-                        </span>
-                      </p>
+                      interactive ? (
+                        <p className="mt-2">
+                          <span className="font-medium">Proven in </span>
+                          <span className="text-[var(--color-ink-muted)]">
+                            your own sessions, on the commands that named <Mono>{model}</Mono> and
+                            then <Mono>{verifierModel}</Mono>
+                          </span>
+                        </p>
+                      ) : (
+                        <p className="mt-2">
+                          <span className="font-medium">Proven by </span>
+                          <span className="text-[var(--color-ink-muted)]">
+                            <Mono>{model}</Mono> and again by <Mono>{verifierModel}</Mono>
+                          </span>
+                        </p>
+                      )
                     ) : null}
                   </section>
                 ) : null}

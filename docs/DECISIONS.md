@@ -7690,3 +7690,55 @@ verified evidence, in writing, here.
   now refuses a line under Retired that does not say how it ended, and a
   file with no such heading: run on the file as it was, it names the
   eleven. Decided by the session.
+- 2026-11-22 Review round 27, over the code changed on 2026-11-22
+  (`git diff 6b2bb8c a56b369 -- src tests e2e drizzle`), by a session that
+  wrote none of it, and D-304, what it fixed. Read whole: the job
+  manager's waiting map (set before it is announced, dropped when the
+  wait or the run ends, carried in the snapshot), the bus, the engine's
+  two events, the page's re-read on each, `firstListed`, the scoreboard's
+  rule owners, the report's words, the picker and the Mine filter. No
+  fault found in those. Found, numbered, and fixed here unless it says
+  otherwise, each decided by the session:
+  1. A page that was listening when a stage began to wait showed its
+     command twice: in the "Your turn" card, and again as a line of the
+     feed, both shells' commands as one unbroken run. The feed now says
+     "Comprehension is waiting for you: run the command in Your turn."
+  2. Under that card the scan view's feed took what the column had left
+     at desk width, 34px at 1280 by 720, and cut its one line. Found in
+     the first shot of fix 1. It keeps its height while a command waits,
+     and the view scrolls.
+  3. A failed interactive stage's row said "Answered in your own session:
+     its usage is not recorded" whether or not an answer was taken, a
+     timed-out stage included. It says "For you to answer in your own
+     session" of a stage that did not succeed.
+  4. The lines AI8 left as they were (D-301), with one sibling. Of an
+     interactive review the queue says "Proven in your own sessions, on
+     the commands that named" the two models, where it said "Proven by"
+     them; the Proven by both tile says the second verifier's answer came
+     from the command that named its model; and Verification and the
+     Second verifier are said to do what their commands do ("from a
+     command that starts a session of its own", "from a command that
+     names the second verifier's model"), not "in a fresh session" and
+     "on the other strong family".
+  5. `USAGE_NOT_RECORDED`'s comment stood above another constant
+     (`src/lib/review/report.ts`). Moved.
+  6. Not fixed, in the inbox: Rule yield files a rule number that a
+     review's one ruleset does not hold under that ruleset's name.
+  Proven in the browser by two tests that answer an interactive review as
+  a person would, reading the prompt each command names and saving the
+  answer where it says: one through all six stages to the queue, the
+  first time a whole interactive review is driven, and one whose first
+  answer is refused, which is also D-303's failed row and missing log
+  path seen on the page. Each new assertion failed on the build before
+  its fix: the feed's line (the command printed instead), the feed's
+  height (34), and "For you to answer" (the row said Answered). Fix 4's
+  words were not run against the old build. Graded by the builder,
+  `review/2026-11-22-e2e/`: `interactive-feed-waiting` light, dark and
+  phone B (the line is whole; the feed under it is mostly empty while a
+  stage waits); `interactive-verification-stage` dark and phone B;
+  `interactive-proven-in` light, dark and phone B;
+  `interactive-second-agreed` light, dark and phone B (the sentence runs
+  to four lines on a phone where its neighbours run to three);
+  `interactive-refused-answer` light, dark and phone B (the refusal's
+  words are the error's own, long and exact). Not looked at:
+  `interactive-verification-stage-light`.

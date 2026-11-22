@@ -129,6 +129,27 @@ const NOT_ASKED = new Map<string, string>([
 const STAGE_LABELS = new Map<string, string>(STAGES.map(([stage, label]) => [stage, label]));
 
 /**
+ * What a stage does, in a line. Two of the lines say what the app arranges
+ * for a headless review alone, a fresh session and the model that answers.
+ * Of an interactive review it knows only what the printed command does (the
+ * twenty-first grade, AI8).
+ */
+const INTERACTIVE_DESCRIPTIONS = new Map<string, string>([
+  ["s5_verification", "Re-check every candidate, from a command that starts a session of its own"],
+  [
+    "s5b_second_verification",
+    "Prove each verified finding again, from a command that names the second verifier's model",
+  ],
+]);
+
+function stageDescription(stage: string, interactive: boolean): string | undefined {
+  return (
+    (interactive ? INTERACTIVE_DESCRIPTIONS.get(stage) : undefined) ??
+    STAGES.find(([id]) => id === stage)?.[2]
+  );
+}
+
+/**
  * A stage as a person would say it.
  *
  * The feed printed the internal id, so a five-minute wait was narrated in
@@ -779,7 +800,18 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
         );
       }
       if (parsed.kind === "engine" && parsed.detail) {
-        push({ kind: "engine", detail: parsed.detail });
+        // A stage's command is drawn in the Your turn card for as long as
+        // it is waited on. Printed here too, a page that was listening
+        // showed both shells' commands twice, the second as one unbroken
+        // run (review round 27).
+        push(
+          parsed.event === "waiting"
+            ? {
+                kind: "note",
+                message: `${parsed.stage ? stageLabel(parsed.stage) : "A stage"} is waiting for you: run the command in Your turn.`,
+              }
+            : { kind: "engine", detail: parsed.detail },
+        );
       }
       if (parsed.kind === "note" && parsed.note?.message) {
         push({ kind: "note", message: parsed.note.message });
@@ -1775,10 +1807,19 @@ function FinishedSummary({ snapshot }: { snapshot: Snapshot }) {
           [
             "Proven by both",
             tallies.provenTwice,
-            <>
-              The second verifier, <Mono className="whitespace-nowrap">{review.verifierModel}</Mono>
-              , agreed
-            </>,
+            // Of an interactive review the app knows the model the second
+            // command named, not what answered it (AI8).
+            review.engineMode === "interactive" ? (
+              <>
+                The second verifier&apos;s answer, from the command that named{" "}
+                <Mono className="whitespace-nowrap">{review.verifierModel}</Mono>, agreed
+              </>
+            ) : (
+              <>
+                The second verifier,{" "}
+                <Mono className="whitespace-nowrap">{review.verifierModel}</Mono>, agreed
+              </>
+            ),
             "bg-[var(--color-good)]",
           ],
         ] as [string, number, ReactNode, string][])
@@ -1900,7 +1941,7 @@ function RunDetail({
       <Card className="mb-6 p-4">
         <h2 className="mb-3 text-heading font-medium">Stages</h2>
         <ol className="grid grid-cols-[minmax(0,1fr)] gap-1">
-          {STAGES.map(([stage, label, description]) => {
+          {STAGES.map(([stage, label]) => {
             // A row is one request. A stage that splits its work sends
             // several, so the line's time, tokens and cost are all of them
             // summed: it gave the last request's as the stage's, and called
@@ -1965,8 +2006,12 @@ function RunDetail({
                 snapshot.review.engineMode === "interactive" ? (
                   // Zeros here read as a stage that spent nothing: its usage
                   // is recorded as zero and was never measured (AH1).
+                  // "Answered" only of a stage whose answer was taken: one
+                  // that timed out with none said it too (review round 27).
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
-                    Answered in your own session: its usage is not recorded.
+                    {last.status === "succeeded"
+                      ? "Answered in your own session: its usage is not recorded."
+                      : "For you to answer in your own session: its usage is not recorded."}
                   </p>
                 ) : last && !DETERMINISTIC_STAGES.has(stage) ? (
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
@@ -1981,7 +2026,7 @@ function RunDetail({
                       ? stage === "s5b_second_verification" && !snapshot.review.verifierModel
                         ? "Not asked: this review is from before the second verifier."
                         : NOT_ASKED.get(stage)
-                      : description}
+                      : stageDescription(stage, snapshot.review.engineMode === "interactive")}
                   </p>
                 )}
 
@@ -2624,7 +2669,7 @@ function ScanTheater({
           ) : null}
           {stageIndex !== -1 ? (
             <span className="text-body text-[var(--color-ink-faint)]">
-              {STAGES[stageIndex]?.[2]}
+              {stageDescription(STAGES[stageIndex]![0], review.engineMode === "interactive")}
             </span>
           ) : null}
         </div>
@@ -2717,7 +2762,12 @@ function ScanTheater({
           tabIndex={0}
           role="log"
           aria-label="Scan activity"
-          className="mt-5 min-h-64 flex-1 overflow-x-hidden overflow-y-auto rounded-lg sm:min-h-0 border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-4 shadow-[inset_0_1px_0_0_var(--color-edge)]"
+          // At desk width the feed takes what the column has left. With a
+          // command waiting above it that was a sliver, its one line cut:
+          // it keeps its height then, and the view scrolls (review round 27).
+          className={`mt-5 min-h-64 flex-1 overflow-x-hidden overflow-y-auto rounded-lg ${
+            snapshot.waiting ? "" : "sm:min-h-0"
+          } border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-4 shadow-[inset_0_1px_0_0_var(--color-edge)]`}
         >
           {live.length === 0 ? (
             <p className="text-body text-[var(--color-ink-muted)]">

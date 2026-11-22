@@ -5018,6 +5018,236 @@ test("an interactive review's command is on its page whenever the page is opened
   }
 });
 
+/**
+ * The screen itself in light, dark and at a phone's width, with a part of
+ * it scrolled into sight first. For the scan view, a fixed column with a
+ * scroll of its own, which `shootAll`'s clip of the whole page cannot reach.
+ */
+async function shootView(
+  page: import("@playwright/test").Page,
+  target: Locator,
+  name: string,
+): Promise<void> {
+  const evidence = join(
+    fileURLToPath(new URL("..", import.meta.url)),
+    "review",
+    `${new Date().toISOString().slice(0, 10)}-e2e`,
+  );
+  mkdirSync(evidence, { recursive: true });
+  const shoot = async (file: string) => {
+    await target.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(evidence, `${file}.png`), animations: "disabled" });
+  };
+  const desktop = page.viewportSize();
+  for (const scheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await shoot(`${name}-${scheme}`);
+  }
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const sideways = await sidewaysOverflow(page);
+  expect(sideways.by, sideways.culprits.join("\n")).toBeLessThanOrEqual(0);
+  await shoot(`${name}-phone`);
+  if (desktop) await page.setViewportSize(desktop);
+}
+
+/** Where an interactive stage's command says to save its answer. */
+function answerPathIn(command: string): string {
+  const found = /then save the JSON answer to (.+-output\.json)\. The command needs/.exec(command);
+  if (!found) throw new Error(`The command names no answer file: ${command}`);
+  return found[1]!;
+}
+
+/** An interactive review of the fixture's branch, with what a test needs to answer it as a person would. */
+async function interactiveReview(page: import("@playwright/test").Page) {
+  const listed = (await (await page.request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app")!;
+  const rulesets = (await (await page.request.get("/api/rulesets")).json()) as {
+    rulesets: { id: string; name: string }[];
+  };
+  const made = await page.request.post("/api/reviews", {
+    data: {
+      projectId: app.id,
+      fromBranch: "feature/rename-prefs",
+      intoBranch: "main",
+      model: "claude-fable-5[1m]",
+      engineMode: "interactive",
+    },
+  });
+  expect(made.status()).toBe(201);
+  const { review } = (await made.json()) as { review: { id: string } };
+  const read = async () =>
+    (await (await page.request.get(`/api/reviews/${review.id}`)).json()) as {
+      running: boolean;
+      review: { status: string; verifierModel: string | null };
+      waiting: { stage: string; text: string } | null;
+    };
+  return {
+    id: review.id,
+    read,
+    start: async () => {
+      const started = await page.request.post(`/api/reviews/${review.id}/start`, {
+        data: {
+          rulesetIds: [rulesets.rulesets.find((row) => row.name === "Example protocol")!.id],
+        },
+      });
+      expect(started.status()).toBe(200);
+    },
+    /** The command of a stage, once that stage waits on the person. */
+    waitingOn: async (stage: string): Promise<string> => {
+      let command = "";
+      await expect
+        .poll(
+          async () => {
+            const waiting = (await read()).waiting;
+            command = waiting?.text ?? "";
+            return waiting?.stage ?? null;
+          },
+          { timeout: 60_000 },
+        )
+        .toBe(stage);
+      return command;
+    },
+    /** Ended and deleted, whatever the test left it doing. */
+    remove: async () => {
+      await page.request.post(`/api/reviews/${review.id}/cancel`);
+      // A cancel is asked of a run and takes a moment to end it; a review
+      // still running is refused its removal.
+      await expect.poll(async () => (await read()).running, { timeout: 30_000 }).toBe(false);
+      const removed = await page.request.delete(`/api/reviews/${review.id}`);
+      expect.soft(removed.status(), "the review removed").toBe(200);
+    },
+  };
+}
+
+test("an interactive review answered stage by stage says only what the app knows of who answered", async ({
+  page,
+}) => {
+  // Review round 27 and the lines the twenty-first grade's AI8 left. Each
+  // stage is answered as a person would: the prompt its command names is
+  // read, and the answer saved where the command says.
+  const { resolveCandidateTokens } = await import("../tests/helpers/ideal-answers");
+  const numbered = (n: number) => join(ANSWERS_DIR, `${String(n).padStart(3, "0")}.json`);
+  const answer = (command: string, index: number) => {
+    const path = answerPathIn(command);
+    const prompt = readFileSync(path.replace(/-output\.json$/, "-prompt.md"), "utf8");
+    writeFileSync(
+      path,
+      resolveCandidateTokens(readFileSync(numbered(index), "utf8"), prompt),
+      "utf8",
+    );
+  };
+  const review = await interactiveReview(page);
+  try {
+    await review.start();
+    const risk = await review.waitingOn("s1_risk");
+    await page.goto(`/reviews/${review.id}`);
+    const turn = page.getByTestId("waiting-command");
+    await expect(turn).toContainText("s1_risk is waiting for you", { timeout: 30_000 });
+
+    // The next stage's command reaches a page that is listening. It is in
+    // the card, once: the feed printed it whole a second time, both shells'
+    // commands as one unbroken run.
+    answer(risk, 1);
+    const comprehension = await review.waitingOn("s2_comprehension");
+    await expect(turn).toContainText("s2_comprehension is waiting for you", { timeout: 30_000 });
+    const feed = page.getByRole("log", { name: "Scan activity" });
+    await expect(feed).toContainText(
+      "Comprehension is waiting for you: run the command in Your turn.",
+    );
+    expect(await feed.innerText()).not.toContain("--model");
+    // And the line can be read. Under the card the feed took what the
+    // column had left at desk width, a sliver that cut it.
+    const line = feed.getByText("Comprehension is waiting for you: run the command in Your turn.");
+    await line.scrollIntoViewIfNeeded();
+    const feedBox = (await feed.boundingBox())!;
+    const lineBox = (await line.boundingBox())!;
+    expect(feedBox.height).toBeGreaterThanOrEqual(200);
+    expect(lineBox.y).toBeGreaterThanOrEqual(feedBox.y);
+    expect(lineBox.y + lineBox.height).toBeLessThanOrEqual(feedBox.y + feedBox.height);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootView(page, feed, "interactive-feed-waiting");
+
+    answer(comprehension, 2);
+    answer(await review.waitingOn("s3_adversarial"), 3);
+    answer(await review.waitingOn("s4_deletions"), 4);
+
+    // Verification is said to do what its command does. "In a fresh
+    // session" is what the app arranges for a headless review alone.
+    const verification = await review.waitingOn("s5_verification");
+    const does = page.getByText(
+      "Re-check every candidate, from a command that starts a session of its own",
+    );
+    await expect(does).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("in a fresh session")).toHaveCount(0);
+    await shootView(page, does, "interactive-verification-stage");
+    answer(verification, 5);
+    answer(await review.waitingOn("s5b_second_verification"), 6);
+    await expect
+      .poll(async () => (await review.read()).review.status, { timeout: 60_000 })
+      .toBe("awaiting_confirmation");
+    const verifier = (await review.read()).review.verifierModel;
+    expect(verifier).not.toBeNull();
+
+    // The queue names the models as the ones the commands named, and the
+    // sessions as the person's: the app saw neither answer.
+    await page.goto(`/reviews/${review.id}`);
+    const proven = page.getByText("your own sessions, on the commands that named");
+    await expect(proven).toBeVisible({ timeout: 30_000 });
+    await expect(proven.locator("..")).toHaveText(
+      `Proven in your own sessions, on the commands that named claude-fable-5[1m] and then ${verifier}`,
+    );
+    await expect(page.getByText("and again by")).toHaveCount(0);
+    const agreed = page.getByText("The second verifier's answer, from the command that named");
+    await expect(agreed).toHaveText(
+      `The second verifier's answer, from the command that named ${verifier}, agreed`,
+    );
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, proven.locator(".."), "interactive-proven-in");
+    await shootAll(
+      page,
+      page.getByRole("heading", { name: "How the findings were proven" }).locator(".."),
+      "interactive-second-agreed",
+    );
+  } finally {
+    await review.remove();
+  }
+});
+
+test("an interactive answer in the wrong shape is a failed stage on the review's page, naming no log", async ({
+  page,
+}) => {
+  // The twenty-first grade, AI5. A refused answer left no stage row, the
+  // failure standing in a run note alone, and a failed interactive stage
+  // named a transcript only a headless stage writes.
+  const review = await interactiveReview(page);
+  try {
+    await review.start();
+    writeFileSync(answerPathIn(await review.waitingOn("s1_risk")), "{oops", "utf8");
+    await expect
+      .poll(async () => (await review.read()).review.status, { timeout: 60_000 })
+      .toBe("failed");
+
+    await page.goto(`/reviews/${review.id}`);
+    const failure = page.getByText(
+      /^invalid_output: The s1_risk stage did not return a JSON object/,
+    );
+    await expect(failure).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/s1_risk\.log/)).toHaveCount(0);
+    // Nor does the row call the stage answered: no answer was taken.
+    const row = failure.locator("../..");
+    await expect(row).toContainText("For you to answer in your own session");
+    await expect(row).not.toContainText("Answered in your own session");
+    await expect(page.getByTestId("waiting-command")).toHaveCount(0);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootAll(page, failure.locator("../.."), "interactive-refused-answer");
+  } finally {
+    await review.remove();
+  }
+});
+
 test("an emptied budget field keeps its ceiling rather than removing it", async ({ page }) => {
   // Number("") is 0, and zero removes the ceiling: clearing the field and
   // leaving it lifted the cap on every model call without a word (5.3).

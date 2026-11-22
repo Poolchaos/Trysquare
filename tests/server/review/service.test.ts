@@ -93,6 +93,7 @@ import {
   answerSequence,
   buildIdealStageOutputs,
   candidateToken,
+  resolveCandidateTokens,
   verdictAnswer,
   writeAnswersDir,
   type VerdictByLine,
@@ -567,36 +568,6 @@ describe("running a review to the point a human looks at it", () => {
     expect(found).toBeDefined();
   }, 180_000);
 });
-
-/**
- * Turns `<<candidate:path:line>>` placeholders into the labels the prompt
- * actually used, which is what a person reading the prompt would type.
- */
-function resolveCandidateTokens(answer: string, prompt: string): string {
-  // Only the question, never the whole document: the instructions above it
-  // carry the output contract, which is itself JSON, and scanning from the
-  // first brace in the file finds that instead of the candidate list.
-  const question = prompt.slice(prompt.indexOf("## The question"));
-  const start = question.indexOf("{");
-  const end = question.lastIndexOf("}");
-  if (start === -1 || end <= start) return answer;
-
-  let candidates: { ref: string; path: string; lineStart: number }[] = [];
-  try {
-    candidates =
-      (JSON.parse(question.slice(start, end + 1)) as { candidates?: typeof candidates })
-        .candidates ?? [];
-  } catch {
-    return answer;
-  }
-
-  return answer.replace(/<<candidate:(.+?):(\d+)>>/g, (whole, path: string, line: string) => {
-    const match = candidates.find(
-      (candidate) => candidate.path === path && String(candidate.lineStart) === line,
-    );
-    return match ? match.ref : whole;
-  });
-}
 
 describe("verifying an open question again (proof-and-steps plan, WP-D2)", () => {
   /**

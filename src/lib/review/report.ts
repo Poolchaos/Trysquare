@@ -80,17 +80,17 @@ export interface ReportCheckRun {
   outcome: "passed" | "failed" | "timed out" | "cancelled";
 }
 
+/** How a report says its review was answered by hand, where it names the model. */
+const INTERACTIVE_ENGINE =
+  "interactive. Each stage's command was printed for a person to run in their own session, " +
+  "and the model above is the one those commands named.";
+
 /**
  * What stands where an interactive review's tokens and cost would be. Its
  * commands run in the person's own session, and the app records zero for
  * them: shown as figures, the zeros read as a review that spent nothing
  * (the twentieth grade, AH1).
  */
-/** How a report says its review was answered by hand, where it names the model. */
-const INTERACTIVE_ENGINE =
-  "interactive. Each stage's command was printed for a person to run in their own session, " +
-  "and the model above is the one those commands named.";
-
 export const USAGE_NOT_RECORDED =
   "not recorded. This review was answered in your own session, whose usage the app cannot see.";
 
