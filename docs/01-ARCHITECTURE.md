@@ -11,8 +11,8 @@ than being edited away. An item of `plans/M4-FINISH-PLAN.md` named beside
 one owned it while that plan ran; the plan is closed, and what is still
 unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
-- The read-only log viewer (section 8). A failed stage now names its
-  transcript path, but nothing renders the file. U10.
+- The read-only log viewer (section 8). A failed headless stage now names
+  its transcript path, but nothing renders the file. U10.
 
 ## 1. Overview
 
@@ -249,8 +249,10 @@ is reported as one.
 ## 8. Errors and observability
 
 - Every stage failure stores: stage, attempt, error class (spawn, timeout,
-  limit, invalid_output, git, cancelled, unknown), error text, and the log
-  file path; the UI shows the real error, never a generic toast. The exit
+  limit, invalid_output, git, cancelled, unknown), error text, and, for a
+  headless stage, the log file path (an interactive stage writes no log and
+  its row names none, D-303); the UI shows the real error, never a generic
+  toast. The exit
   code and stderr tail are carried inside the error text rather than in
   columns of their own.
 - Structured logs per review under `runs/<id>/logs/`; a debug view in the UI

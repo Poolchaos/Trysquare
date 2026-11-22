@@ -7664,3 +7664,29 @@ verified evidence, in writing, here.
   and sits 2px inside it, which reads as a doubled edge). And
   `interactive-your-turn-dark`, which D-301 left unlooked at: B, as its
   light twin.
+- 2026-11-22 D-303 An interactive stage's row names no log and keeps its
+  refused answer, and the inbox's order is held by the gate. AI5, the one
+  line of the twenty-first grade D-301 left open, checked at the code and
+  true in both halves. The checkpointing runner was told where a stage's
+  log is for every review, and only a headless stage writes one, so a
+  failed interactive stage printed the path of a file that was never
+  there: the path is now given to the runner for a headless review alone.
+  And the runner wrote a failed row for an unreadable answer only on a
+  call the engine had reported, which an interactive stage never does, its
+  answer being a file a person saved: refused, it left no row, and the
+  failure stood in a run note alone. An unreadable answer no call reported
+  now gets its own failed row, class `invalid_output`, with the refusal's
+  words. A headless stage is unchanged: it reports every call before it
+  can refuse an answer. 01 section 8, 03's line on what an interactive
+  stage keeps, and 04's line on errors say so. Proven: the runner's test
+  for the row, which found none on the old code; the service's
+  interactive review asserting no row names a log, which found six on the
+  old code; and the headless one asserting each row's log file exists.
+  Found while closing AI5's line in the inbox: every line added there
+  since 2026-11-21 had been appended to the end of the file, which is
+  under its Retired heading, eleven of them with no ending said, AI5's
+  own among them (CP-3 fixed the same once before). The other ten are
+  moved above the heading, no line changed, and `scripts/check-style.mjs`
+  now refuses a line under Retired that does not say how it ended, and a
+  file with no such heading: run on the file as it was, it names the
+  eleven. Decided by the session.

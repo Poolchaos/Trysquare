@@ -366,6 +366,43 @@ describe("the record it leaves behind", () => {
     expect(usageTotals(db, reviewId).inputTokens).toBe(usage.inputTokens * 2);
   });
 
+  it("records an unreadable answer that no call reported, as one a person saved is", async () => {
+    // An interactive stage reports no attempt: its answer is a file a person
+    // saved. Refused, it left no row at all, and the failure stood in a run
+    // note alone (the twenty-first grade, AI5).
+    const engine = fakeEngine(() => {
+      throw new StageOutputUnreadableError("s1_risk", "the shape was wrong", "{oops");
+    });
+    const runner = createCheckpointingRunner({ db, reviewId, inner: engine.inner });
+
+    await expect(runner.run(ask())).rejects.toBeInstanceOf(StageOutputUnreadableError);
+
+    const rows = listForReview(db, reviewId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.status).toBe("failed");
+    expect(rows[0]?.errorClass).toBe("invalid_output");
+    expect(rows[0]?.errorText).toContain("the shape was wrong");
+    expect(rows[0]?.inputTokens).toBe(0);
+    // And no log is named where the caller says none is written.
+    expect(rows[0]?.logPath).toBeNull();
+  });
+
+  it("names the stage's log on its row where the caller says one is written", async () => {
+    const engine = fakeEngine(() => {
+      throw new StageFailedError("timeout", "It took too long.");
+    });
+    const runner = createCheckpointingRunner({
+      db,
+      reviewId,
+      inner: engine.inner,
+      logPathFor: (stage) => `/logs/${stage}.log`,
+    });
+
+    await expect(runner.run(ask())).rejects.toThrow();
+
+    expect(listForReview(db, reviewId)[0]?.logPath).toBe("/logs/s1_risk.log");
+  });
+
   it("records the cost of a call that answered before a later one died", async () => {
     const engine = fakeEngine(
       () => {

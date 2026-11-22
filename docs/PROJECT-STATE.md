@@ -103,11 +103,12 @@ from 2026-11-03.
   it; an interactive review's own page is driven in the browser for the
   first time. The Live scan and the cost's history leave such a review's
   zero out, the medians leave out stages answered by hand, and 03 says
-  its stage contract is a headless review's. One line is left open, in
-  the inbox: an interactive stage's row names a log file nothing writes,
-  and a refused answer writes no failed row (AI5). A twenty-second grade
-  is owed.
-  `./verify.sh --e2e` exits 0 with 1714 unit tests passing, 8 skipped,
+  its stage contract is a headless review's. The line left open then, an
+  interactive stage's row naming a log file nothing writes and a refused
+  answer writing no failed row (AI5), was closed the same day (D-303),
+  after the command's box was made to take the keyboard's focus (D-302).
+  A twenty-second grade is owed.
+  `./verify.sh --e2e` exits 0 with 1716 unit tests passing, 8 skipped,
   and 174 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside

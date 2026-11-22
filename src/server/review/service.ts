@@ -858,7 +858,14 @@ function buildRunner(
     inner: engine.run,
     onLiveAttempt: (stage, batch) => noteStage(stage, "live", batch),
     onReplay: (stage) => noteStage(stage, "replayed"),
-    logPathFor: (stage) => join(logsDirFor(dataDir, reviewId), `${stage}.log`),
+    // Only a headless stage writes a transcript. Named on an interactive
+    // stage's row too, a stage that timed out pointed at a file that was
+    // never there (the twenty-first grade, AI5).
+    ...(engine.mode === "interactive"
+      ? {}
+      : {
+          logPathFor: (stage: ReviewStage) => join(logsDirFor(dataDir, reviewId), `${stage}.log`),
+        }),
   });
   return built.wrapper;
 }

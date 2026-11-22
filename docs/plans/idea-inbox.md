@@ -277,6 +277,51 @@ pulled deliberately.
   completion time on a review still waiting. Each staging now gives what
   the server can, and each test asserts the figures agree
   (`e2e/failure-paths.spec.ts`).
+- 2026-11-21: the Delete ruleset card loses the keyboard focus when Delete
+  is pressed and again at Keep it, the button pressed being taken off the
+  page. Remove rule (RA-4) puts the focus on Keep it and back on the
+  control; the card could do the same.
+- 2026-11-21: a sweep row is any table row whose first cell holds a
+  pattern in backticks, and every number in its second cell is taken as a
+  rule's code (`parseSweepTable`), so a row reading "radix 10" gives rule
+  10 a pattern. Narrowing it changes what an imported document means:
+  check the maintainer's protocol first.
+- 2026-11-21: the sweep table edited in the app, so a rule's code can
+  change and a removed rule's rows go with it (D-271 holds both back).
+- 2026-11-21: no `color-scheme` is declared, so native checkboxes, selects
+  and scrollbars are drawn for the light theme on the dark one. Declaring
+  it changes every screen's dark shots. RA-6's two radios declare their own.
+- 2026-11-21: a ruleset with no directive is given to a model with an
+  empty `# Protocol` section (`composeSystemPrompt`). Leaving the heading
+  out changes a prompt, so it wants a measured run.
+- 2026-11-22: only the Windows job failed in CI run 44932086480 at d5a3d45
+  (Ubuntu and macOS passed): `e2e/journey.spec.ts`, "a report's last line
+  names every ruleset its review ran with", 5 seconds waiting for the
+  footer on a page still at "Loading...". The run's trace has one script
+  chunk of the review page refused with net::ERR_NO_BUFFER_SPACE, so the
+  page never hydrated: the loopback fault Windows CI has shown before
+  (D-104, D-105). The three runs before it, from 59c7496 where the test
+  was added, passed on Windows. Recorded and left (D-246).
+- 2026-11-22: the count beside a ruleset in the Rules picker opens that
+  ruleset in the same tab, and New review's choices (branch, model,
+  intent, ticks) go with the page. The refusal for a shared number sends
+  a person there to renumber (review round 25).
+- 2026-11-22: in a new review's branch picker, a branch chosen and then
+  hidden by Mine or by the text filter stays the branch to review, and
+  nothing on the screen says which it is (D-296).
+- 2026-11-22: two things the nineteenth grader derived by reading and
+  did not run (AG4, AG5). A review resumed after its project's checks
+  were switched off drops the check findings, and the report may still
+  read the kept result file and say the tests failed with no finding
+  listed (`src/server/review/report-input.ts:37-71`,
+  `src/server/review/service.ts:401-407`). And the scan's first line
+  stands through the whole of a project's checks, up to 20 minutes each,
+  since run notes reach the feed only at a stage's lifecycle. Neither is
+  reproduced.
+- 2026-11-22: the "Your turn" card gives the command for both shells as
+  one block with no copy button, and names the stage by its id.
+  And it gives the PowerShell command before the bash one on a Linux
+  machine (seen in `review/2026-11-22-e2e/interactive-your-turn-focused-light.png`).
 
 ## Retired
 
@@ -347,23 +392,6 @@ the line entirely would lose the trail.
   a rule's title opens to its text from the document, formatted (D-227).
   Left open, and listed above: directive bodies still show their markdown
   raw.
-- 2026-11-21: the Delete ruleset card loses the keyboard focus when Delete
-  is pressed and again at Keep it, the button pressed being taken off the
-  page. Remove rule (RA-4) puts the focus on Keep it and back on the
-  control; the card could do the same.
-- 2026-11-21: a sweep row is any table row whose first cell holds a
-  pattern in backticks, and every number in its second cell is taken as a
-  rule's code (`parseSweepTable`), so a row reading "radix 10" gives rule
-  10 a pattern. Narrowing it changes what an imported document means:
-  check the maintainer's protocol first.
-- 2026-11-21: the sweep table edited in the app, so a rule's code can
-  change and a removed rule's rows go with it (D-271 holds both back).
-- 2026-11-21: no `color-scheme` is declared, so native checkboxes, selects
-  and scrollbars are drawn for the light theme on the dark one. Declaring
-  it changes every screen's dark shots. RA-6's two radios declare their own.
-- 2026-11-21: a ruleset with no directive is given to a model with an
-  empty `# Protocol` section (`composeSystemPrompt`). Leaving the heading
-  out changes a prompt, so it wants a measured run.
 - 2026-11-21: the ruleset's page says the export holds every rule,
   switched off or not, and not that a severity changed with the picker is
   left out of it (review round 19; README says it). Done 2026-11-21
@@ -372,37 +400,11 @@ the line entirely would lose the trail.
   imported yet", "Import a ruleset first"), a draft review ("import one")
   and the dashboard's first line name importing alone; a ruleset is also
   started with no document (RA-6). Done 2026-11-21 (D-285).
-- 2026-11-22: only the Windows job failed in CI run 44932086480 at d5a3d45
-  (Ubuntu and macOS passed): `e2e/journey.spec.ts`, "a report's last line
-  names every ruleset its review ran with", 5 seconds waiting for the
-  footer on a page still at "Loading...". The run's trace has one script
-  chunk of the review page refused with net::ERR_NO_BUFFER_SPACE, so the
-  page never hydrated: the loopback fault Windows CI has shown before
-  (D-104, D-105). The three runs before it, from 59c7496 where the test
-  was added, passed on Windows. Recorded and left (D-246).
-- 2026-11-22: the count beside a ruleset in the Rules picker opens that
-  ruleset in the same tab, and New review's choices (branch, model,
-  intent, ticks) go with the page. The refusal for a shared number sends
-  a person there to renumber (review round 25).
-- 2026-11-22: in a new review's branch picker, a branch chosen and then
-  hidden by Mine or by the text filter stays the branch to review, and
-  nothing on the screen says which it is (D-296).
-- 2026-11-22: two things the nineteenth grader derived by reading and
-  did not run (AG4, AG5). A review resumed after its project's checks
-  were switched off drops the check findings, and the report may still
-  read the kept result file and say the tests failed with no finding
-  listed (`src/server/review/report-input.ts:37-71`,
-  `src/server/review/service.ts:401-407`). And the scan's first line
-  stands through the whole of a project's checks, up to 20 minutes each,
-  since run notes reach the feed only at a stage's lifecycle. Neither is
-  reproduced.
 - 2026-11-22: an interactive stage's row records the path of a log file
   that only a headless stage writes, so a timed-out interactive stage
   names a file that is not there; and an answer it refuses writes no
   failed stage row, the failure standing in a run note alone (the
   twenty-first grade, AI5; `src/server/review/service.ts:861`,
-  `src/server/review/checkpointing-runner.ts:163, 252-286`). Open.
-- 2026-11-22: the "Your turn" card gives the command for both shells as
-  one block with no copy button, and names the stage by its id.
-  And it gives the PowerShell command before the bash one on a Linux
-  machine (seen in `review/2026-11-22-e2e/interactive-your-turn-focused-light.png`).
+  `src/server/review/checkpointing-runner.ts:163, 252-286`). DONE
+  2026-11-22 (D-303): an interactive stage's row names no log, and a
+  refused answer writes its failed row.

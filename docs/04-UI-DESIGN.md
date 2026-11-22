@@ -83,7 +83,7 @@ chosen per review in the advanced fold.
   none of it blocking. Live states (running review) use a steady pulse, not
   spinners scattered per widget.
 - **States:** every screen designs empty, loading, error, and long-content
-  states explicitly. Errors show the real message and the log path.
+  states explicitly. Errors show the real message, and the log path where a log was written.
   First-run empty state teaches the flow (add project, pick branches,
   choose rules, run).
 

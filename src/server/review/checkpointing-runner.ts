@@ -73,7 +73,10 @@ export interface CheckpointingRunnerOptions {
     ((stage: ReviewStage, batch?: { number: number; count: number }) => void) | undefined;
   /** Called instead when a stored answer is replayed, which costs nothing. */
   onReplay?: ((stage: ReviewStage) => void) | undefined;
-  /** Where log files for a stage are written, recorded on the row. */
+  /**
+   * Where a stage's log file is written, recorded on the row. Left out
+   * where none is written, as for an interactive stage.
+   */
   logPathFor?: ((stage: ReviewStage) => string) | undefined;
 }
 
@@ -255,6 +258,9 @@ export function createCheckpointingRunner(
       // answer was the problem, so the last row carries the failure. Any other
       // failure means a call died without reporting, so it gets a row of its
       // own with no usage: the CLI produced no result to take usage from.
+      // An unreadable answer that no call reported gets that row too. It is
+      // an interactive stage's, a file a person saved, and refused it left
+      // no row at all (the twenty-first grade, AI5).
       pending.forEach((report, index) => {
         const isLast = index === pending.length - 1;
         writeRow({
@@ -273,7 +279,7 @@ export function createCheckpointingRunner(
         });
       });
 
-      if (!unreadable) {
+      if (!unreadable || pending.length === 0) {
         writeRow({
           stage: request.stage,
           promptHash,

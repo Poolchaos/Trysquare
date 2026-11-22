@@ -407,6 +407,35 @@ function clientReadLines(path, text) {
   return found;
 }
 
+/**
+ * The idea inbox keeps its closed lines under "## Retired", and a line
+ * there says how it ended. A new line appended to the end of the file lands
+ * under that heading while still open, which happened twice (CP-3, and
+ * again from 2026-11-21 to D-303).
+ */
+const INBOX_LAW =
+  "A line under the inbox's Retired heading says how it ended (DONE, BUILT, PULLED, ...); an open line goes above the heading";
+const INBOX_PATH = "docs/plans/idea-inbox.md";
+const INBOX_ENDED = /\b(?:DONE|Done|BUILT|PULLED|ROOT-CAUSED|TRACED|DECIDED|RETIRED|SUPERSEDED)\b/;
+
+function inboxLines(path, text) {
+  if (path !== INBOX_PATH) return [];
+  const lines = text.split("\n");
+  const heading = lines.indexOf("## Retired");
+  // Found none, the rule would check nothing and say it was clean.
+  if (heading === -1) return [1];
+  const found = [];
+  for (let index = heading + 1; index < lines.length; index += 1) {
+    if (!lines[index].startsWith("- ")) continue;
+    let end = index + 1;
+    while (end < lines.length && !lines[end].startsWith("- ") && !lines[end].startsWith("#")) {
+      end += 1;
+    }
+    if (!INBOX_ENDED.test(lines.slice(index, end).join("\n"))) found.push(index + 1);
+  }
+  return found;
+}
+
 function collectFiles(entryPath, acc) {
   let stats;
   try {
@@ -485,6 +514,9 @@ for (const file of files) {
   }
   for (const line of clientReadLines(path, text)) {
     violations.push(`${path}:${line}: ${CLIENT_READS_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
+  }
+  for (const line of inboxLines(path, text)) {
+    violations.push(`${path}:${line}: ${INBOX_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);
   }
   for (const line of managerErrorLines(path, text)) {
     violations.push(`${path}:${line}: ${MANAGER_ERRORS_LAW}\n    ${lines[line - 1]?.trim() ?? ""}`);

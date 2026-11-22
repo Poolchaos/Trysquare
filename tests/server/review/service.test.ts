@@ -529,6 +529,11 @@ describe("running a review to the point a human looks at it", () => {
     ]);
     expect(rows.every((row) => row.status === "succeeded")).toBe(true);
     expect(rows.every((row) => row.promptHash.length === 64)).toBe(true);
+    // Each row names its stage's transcript, and the file is there.
+    for (const row of rows) {
+      expect(row.logPath, row.stage).toMatch(new RegExp(`${row.stage}\\.log$`));
+      expect(existsSync(row.logPath!), row.logPath!).toBe(true);
+    }
 
     const review = requireReview(db, reviewId);
     expect(review.usageInputTokens).toBe(600);
@@ -841,6 +846,9 @@ describe("the interactive engine", () => {
     expect(listFindingsByStatus(db, reviewId, ["verified"]).length).toBeGreaterThan(0);
     // Nothing was spent here: the tokens belong to the session the person ran.
     expect(requireReview(db, reviewId).usageInputTokens).toBe(0);
+    // And no row names a transcript: the app wrote none, the session being
+    // the person's (the twenty-first grade, AI5).
+    expect(listForReview(db, reviewId).map((row) => row.logPath)).toEqual(stages.map(() => null));
     // And the prompt a person was handed is on disk for every stage.
     for (const stage of stages) {
       expect(promptOf(stage), stage).toBeDefined();
