@@ -63,6 +63,7 @@ import {
   managedPolicyOf,
   type ManagedPolicy,
 } from "@/components/managed-policy-notice";
+import type { WaitingAsk } from "@/lib/engine/events";
 import type { SignIn } from "@/lib/engine/sign-in-command";
 import {
   STEPS,
@@ -264,7 +265,7 @@ interface Snapshot {
   running: boolean;
   queued: boolean;
   /** The command an interactive stage waits for the person to run; null or absent when none does. */
-  waiting?: { stage: string; text: string } | null;
+  waiting?: ({ stage: string } & WaitingAsk) | null;
 }
 
 interface ReportFinding {
@@ -817,19 +818,17 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
             : null,
         );
       }
-      if (parsed.kind === "engine" && parsed.detail) {
+      if (parsed.kind === "engine" && parsed.event === "waiting") {
         // A stage's command is drawn in the Your turn card for as long as
         // it is waited on. Printed here too, a page that was listening
         // showed both shells' commands twice, the second as one unbroken
-        // run (review round 27).
-        push(
-          parsed.event === "waiting"
-            ? {
-                kind: "note",
-                message: `${parsed.stage ? stageLabel(parsed.stage) : "A stage"} is waiting for you: run the command in Your turn.`,
-              }
-            : { kind: "engine", detail: parsed.detail },
-        );
+        // run (review round 27). The event carries none since D-315.
+        push({
+          kind: "note",
+          message: `${parsed.stage ? stageLabel(parsed.stage) : "A stage"} is waiting for you: run the command in Your turn.`,
+        });
+      } else if (parsed.kind === "engine" && parsed.detail) {
+        push({ kind: "engine", detail: parsed.detail });
       }
       if (parsed.kind === "note" && parsed.note?.message) {
         push({ kind: "note", message: parsed.note.message });
@@ -1378,7 +1377,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
           // and a page opened or reloaded after that showed no command while
           // the stage ran out its timeout (the twenty-first grade, AI1).
           <Card className="mb-6 p-4">
-            <YourTurn text={snapshot.waiting.text} />
+            <YourTurn waiting={snapshot.waiting} />
           </Card>
         ) : null}
         {isDraft ? (
@@ -2449,11 +2448,14 @@ function RenderedReport({ data }: { data: ReportData }) {
  * to save the answer. Drawn on the review's page and in the scan view, which
  * is what a running review's page opens on.
  */
-function YourTurn({ text }: { text: string }) {
+function YourTurn({ waiting }: { waiting: { stage: string } & WaitingAsk }) {
+  const other = waiting.lead === "posix" ? "powershell" : "posix";
   return (
     <div role="group" aria-labelledby="your-turn-heading" data-testid="waiting-command">
+      {/* The stage by the name the rest of the page gives it: the card led
+          with its id, s1_risk (D-315). */}
       <h2 id="your-turn-heading" className="text-heading font-medium">
-        Your turn
+        Your turn: {stageLabel(waiting.stage)}
       </h2>
       <p className="mt-1 mb-3 text-xs text-[var(--color-ink-muted)]">
         This stage waits for you to run its command in your own terminal and save the answer where
@@ -2461,16 +2463,34 @@ function YourTurn({ text }: { text: string }) {
         within the timeout. Cancelling the review ends the wait; the session in your terminal is
         yours to close.
       </p>
-      {/* Focusable because it scrolls: a command taller than the box could
-          not be read to its end by keyboard. */}
-      <pre
-        tabIndex={0}
-        role="group"
-        aria-label="Command to run"
-        className="max-h-64 overflow-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 font-[family-name:var(--font-mono)] text-xs break-all whitespace-pre-wrap"
-      >
-        {text}
-      </pre>
+      {/* Keyed by the command, so a Copied said of one stage's command is
+          not still said of the next one's. */}
+      <ShellCommand
+        key={waiting[waiting.lead]}
+        shell={waiting.lead}
+        command={waiting[waiting.lead]}
+        lead
+      />
+      {/* The other shell's command is one the machine's own terminal seldom
+          runs, so it is a line to open and not a second block to read past. */}
+      <details className="mt-2">
+        {/* Left as a list item, so the browser's own marker says it opens:
+            drawn as a flex row it lost the marker and read as a caption. */}
+        <summary className="cursor-pointer py-3 text-xs text-[var(--color-ink-muted)]">
+          The same command for {SHELL_NAMES[other]}
+        </summary>
+        <ShellCommand key={waiting[other]} shell={other} command={waiting[other]} />
+      </details>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3">
+        <p className="text-xs">Then save the JSON answer to</p>
+        <CopyButton key={waiting.answerPath} text={waiting.answerPath} what="the answer's path" />
+      </div>
+      <p className="text-xs">
+        <Mono className="break-all">{waiting.answerPath}</Mono>
+      </p>
+      <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+        The command needs Claude Code {waiting.minimumCli} or newer, for --system-prompt-file.
+      </p>
       {/* The commands run with the terminal's own environment, which every
           screen that prints them says (06, D-176). This card printed them
           and said nothing of it (the twenty-second grade, AJ9). */}
@@ -2478,6 +2498,85 @@ function YourTurn({ text }: { text: string }) {
         <TerminalEnvironmentNote />
       </div>
     </div>
+  );
+}
+
+const SHELL_NAMES = { posix: "bash or zsh", powershell: "PowerShell" } as const;
+
+/** One shell's command, named, with a Copy that takes the command and nothing around it. */
+function ShellCommand({
+  shell,
+  command,
+  lead = false,
+}: {
+  shell: "posix" | "powershell";
+  command: string;
+  lead?: boolean;
+}) {
+  const name = SHELL_NAMES[shell];
+  return (
+    <div>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-x-3">
+        <p className="text-xs">In {name}</p>
+        <CopyButton text={command} what={`the command for ${name}`} lead={lead} />
+      </div>
+      {/* Focusable because it scrolls: a command taller than the box could
+          not be read to its end by keyboard. */}
+      <pre
+        tabIndex={0}
+        role="group"
+        aria-label={`Command to run in ${name}`}
+        className="max-h-64 overflow-auto rounded-md border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 font-[family-name:var(--font-mono)] text-xs break-all whitespace-pre-wrap"
+      >
+        {command}
+      </pre>
+    </div>
+  );
+}
+
+/**
+ * Copies a text and says whether it did. A browser gives the clipboard only
+ * to a page it holds secure, and can refuse a write besides: either is said
+ * and stays said, since the text is then copied by hand. `lead` marks the
+ * card's one outlined Copy, the command a person on this machine wants.
+ */
+function CopyButton({ text, what, lead = false }: { text: string; what: string; lead?: boolean }) {
+  const [said, setSaid] = useState<"" | "copied" | "refused">("");
+  useEffect(() => {
+    if (said !== "copied") return;
+    const timer = setTimeout(() => setSaid(""), 2000);
+    return () => clearTimeout(timer);
+  }, [said]);
+  return (
+    // Positioned, so the words kept for a screen reader are placed inside
+    // it. Placed against the scan view's dialog, which is what they found
+    // without it, they lay below the dialog's edge and gave it a scroll of
+    // its own, into blank screen under the view.
+    <span className="relative flex flex-wrap items-center justify-end gap-x-2">
+      <span role="status" className={said === "refused" ? "text-xs" : "sr-only"}>
+        {said === "copied"
+          ? `Copied ${what}.`
+          : said === "refused"
+            ? "This browser refused the copy: select the text and copy it by hand."
+            : ""}
+      </span>
+      <Button
+        variant={lead ? "secondary" : "quiet"}
+        onClick={() => {
+          if (!navigator.clipboard) {
+            setSaid("refused");
+            return;
+          }
+          void navigator.clipboard.writeText(text).then(
+            () => setSaid("copied"),
+            () => setSaid("refused"),
+          );
+        }}
+      >
+        {said === "copied" ? "Copied" : "Copy"}
+        <span className="sr-only"> {what}</span>
+      </Button>
+    </span>
   );
 }
 
@@ -2799,7 +2898,7 @@ function ScanTheater({
           // Never squeezed by the view's column: the command keeps its height
           // and the view scrolls.
           <div className="mt-5 shrink-0 rounded-lg border border-[var(--color-accent)] bg-[var(--color-surface-raised)] p-4">
-            <YourTurn text={snapshot.waiting.text} />
+            <YourTurn waiting={snapshot.waiting} />
           </div>
         ) : null}
         {/* The work itself, streaming. This is the panel the whole mode exists

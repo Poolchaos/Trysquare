@@ -318,10 +318,6 @@ pulled deliberately.
   stands through the whole of a project's checks, up to 20 minutes each,
   since run notes reach the feed only at a stage's lifecycle. Neither is
   reproduced.
-- 2026-11-22: the "Your turn" card gives the command for both shells as
-  one block with no copy button, and names the stage by its id.
-  It gave the PowerShell command before the bash one on a Linux machine;
-  that part is done, the machine's own shell coming first (D-309).
 - 2026-11-22: Rule yield files a rule number that a review's one ruleset
   does not hold under that ruleset's name: a review on one ruleset is
   answered without reading its frozen copy (`frozenRuleOwners`,
@@ -472,3 +468,9 @@ the line entirely would lose the trail.
   `src/server/review/checkpointing-runner.ts:163, 252-286`). DONE
   2026-11-22 (D-303): an interactive stage's row names no log, and a
   refused answer writes its failed row.
+- 2026-11-22: the "Your turn" card gives the command for both shells as
+  one block with no copy button, and names the stage by its id. It gave
+  the PowerShell command before the bash one on a Linux machine (that
+  part done under D-309). DONE 2026-11-23 (D-315): each command in a box
+  of its own with a Copy, the other shell's folded under a line, the
+  answer's path with a Copy, and the stage by its name.

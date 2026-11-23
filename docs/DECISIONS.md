@@ -8011,3 +8011,28 @@ verified evidence, in writing, here.
   checkout is still there after the failure, which found it gone on the
   old code; the headless failure test asserts it is removed, which held on
   the old code and holds now.
+- 2026-11-23 D-315 The "Your turn" card gives each command a box and a
+  Copy of its own. The inbox line of 2026-11-22: the card gave both
+  shells' commands, the answer's path and the CLI version as one run of
+  words in one box, with no way to copy a command but selecting it out of
+  that run by hand, and led with the stage's id (`s1_risk`). The engine's
+  `waiting` event now carries the parts (`WaitingAsk` in
+  `src/lib/engine/events.ts`: the two commands, which one is the
+  machine's own shell's, the answer's path, the oldest CLI the command
+  runs on), the job manager keeps them, and the card draws them: the
+  stage by the name the page gives it, the machine's own shell's command
+  in its box with a Copy, the other shell's command folded under a line
+  with a Copy, the path with a Copy. A copy the browser refuses, or a
+  page it gives no clipboard, is said on the card with what to do, and
+  stays said. Rejected: a tab per shell, which hides one command behind a
+  choice the app can already make (D-309); one Copy for whichever shell
+  leads and none for the other, since a person on WSL or a remote
+  terminal runs the other. Found by this change's own shots and fixed in
+  it: the words a Copy keeps for a screen reader were placed against the
+  scan view's dialog, lay below its edge and gave the dialog a scroll of
+  its own, 871 px into blank screen at phone width; the Copy is now
+  their containing block. Decided by the session. Proven: the card's
+  browser test reads the clipboard after each Copy and finds the one
+  command, opens the fold, has a refused copy said, and asserts the
+  dialog has nothing to scroll, which failed with 871 on the build
+  without the fix; grades in `DESIGN-NOTES.md`.

@@ -103,11 +103,18 @@ card above the feed for as long as it is waited on.
 Grades, from the interactive review's shots (D-302, D-304):
 `interactive-your-turn-focused-light` B, `-dark` B,
 `interactive-feed-waiting-light` B, `-dark` B, `-phone` B,
-`interactive-verification-stage-dark` B, `-phone` B. The card gives both
-shells' commands as one block with no way to copy one (the machine's own
-shell first since D-309; the shots graded here were taken before it, with
-PowerShell first), and the feed under it is mostly empty while a stage
-waits.
+`interactive-verification-stage-dark` B, `-phone` B. The feed under the
+card is mostly empty while a stage waits.
+
+The card as rebuilt on 2026-11-23 (D-315), from that day's shots:
+`interactive-your-turn-closed-light` B, `-dark` B, `-phone` B: the stage
+by its name, one command in its box with the card's one outlined Copy,
+the other shell's a line to open. `interactive-your-turn-open-light` B,
+`-dark` B, `-phone` B: both commands open and a refused copy said beside
+the path; on a phone the refusal wraps under the path's label and its
+Copy stands alone on the next line. `interactive-your-turn-focused-phone-light`
+B, `-dark` B. Short of A: the path's Copy is on its label's line at the
+far edge, a card's width from the path it copies at desk width.
 A headless review's scan view was not looked at for these notes.
 
 ### Confirmation (a review awaiting its decisions)

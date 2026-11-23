@@ -185,8 +185,8 @@ runStage(options: StageRunOptions): Promise<StageOutcome>
   they are built in `src/lib/engine/command.ts` and held by its tests.
 - **InteractiveEngine (Mode B, fallback):** materialises the same prompt to
   `runs/<id>/bundle/<stage>[-b<n>]-<call id>/<stage>[-b<n>]-<call id>-prompt.md`, a folder of the call's own, which is the one its command adds to what the session may read (with the screenshots' folder for a stage that grades them), so that the command gives no session another stage's answer (D-310), with the system
-  prompt beside it as `-system.md`, prints a launch command for PowerShell
-  and for bash or zsh, the one for the machine's own platform first (D-309) (read-only tools, no settings file at all, no MCP servers,
+  prompt beside it as `-system.md`, hands the screen a launch command for PowerShell
+  and one for bash or zsh, each on its own, saying which is the machine's own platform's, which the card leads with (D-309, D-315) (read-only tools, no settings file at all, no MCP servers,
   `--system-prompt-file`, the prompt itself read from the file rather than
   passed in argv), and watches for that call's own `-output.json`. Each call
   names its own files, so a batch or a resumed attempt never reads another

@@ -4920,22 +4920,79 @@ test("an interactive review's command is on its page whenever the page is opened
     await page.goto(`/reviews/${review.id}`);
     const turn = page.getByTestId("waiting-command");
     await expect(turn).toBeVisible({ timeout: 30_000 });
-    await expect(turn).toContainText("s1_risk is waiting for you");
-    await expect(turn).toContainText("'--model' 'claude-fable-5[1m]'");
-    await expect(turn).toContainText("then save the JSON answer to");
+    // The stage by its name, and the command for this machine's own shell
+    // alone in its box: the card led with the stage's id and gave both
+    // shells' commands and the path as one run of words (D-315).
+    const asked = (
+      (await (await page.request.get(`/api/reviews/${review.id}`)).json()) as {
+        waiting: { posix: string; powershell: string; answerPath: string };
+      }
+    ).waiting;
+    const [own, other] =
+      process.platform === "win32"
+        ? ([
+            ["PowerShell", asked.powershell],
+            ["bash or zsh", asked.posix],
+          ] as const)
+        : ([
+            ["bash or zsh", asked.posix],
+            ["PowerShell", asked.powershell],
+          ] as const);
+    await expect(turn.getByRole("heading", { name: "Your turn: Risk" })).toBeVisible();
+    const command = turn.getByRole("group", { name: `Command to run in ${own[0]}` });
+    await expect(command).toHaveText(own[1]);
+    await expect(command).toContainText("'--model' 'claude-fable-5[1m]'");
+    await expect(turn).toContainText("Then save the JSON answer to");
+    await expect(turn).toContainText(asked.answerPath);
     await page.reload();
-    await expect(turn).toContainText("s1_risk is waiting for you", { timeout: 30_000 });
+    await expect(turn.getByRole("heading", { name: "Your turn: Risk" })).toBeVisible({
+      timeout: 30_000,
+    });
     expect(await accessibilityViolations(page)).toEqual([]);
     await shootAll(page, turn.locator(".."), "interactive-your-turn");
+    // The card whole, as it is first met: the picture above is cut where
+    // the view's own scroll begins.
+    await shootView(page, turn, "interactive-your-turn-closed");
+
+    // Copy takes the command and nothing around it, and says it did.
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await turn.getByRole("button", { name: `Copy the command for ${own[0]}` }).click();
+    await expect(turn.getByRole("status").first()).toHaveText(`Copied the command for ${own[0]}.`);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(own[1]);
+    // The other shell's command is folded under a line, with a Copy of its own.
+    const folded = turn.getByRole("group", { name: `Command to run in ${other[0]}` });
+    await expect(folded).toBeHidden();
+    await turn.getByText(`The same command for ${other[0]}`).click();
+    await expect(folded).toHaveText(other[1]);
+    await turn.getByRole("button", { name: `Copy the command for ${other[0]}` }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(other[1]);
+    // A browser that refuses the clipboard is said to have, and what to do.
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = () => Promise.reject(new Error("refused"));
+    });
+    await turn.getByRole("button", { name: "Copy the answer's path" }).click();
+    const refused = turn.getByText(
+      "This browser refused the copy: select the text and copy it by hand.",
+    );
+    await expect(refused).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(other[1]);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    await shootView(page, refused, "interactive-your-turn-open");
     // On a phone the command can be scrolled to and read whole. The view is
     // a fixed column with a scroll of its own, so the shot above shows only
     // what was in sight; this one is of the phone's screen with the command
     // scrolled to.
     const desk = page.viewportSize();
     await page.setViewportSize({ width: 390, height: 844 });
-    const command = turn.locator("pre");
     await command.scrollIntoViewIfNeeded();
     await expect(command).toBeInViewport();
+    // The view scrolls in its column and the dialog around it does not:
+    // words kept for a screen reader, placed against the dialog, gave it a
+    // scroll of its own into blank screen (D-315).
+    expect(
+      await page.getByRole("dialog").evaluate((node) => node.scrollHeight - node.clientHeight),
+      "the dialog has nothing to scroll",
+    ).toBe(0);
     expect((await command.boundingBox())!.height).toBeGreaterThan(100);
     // At this width the command is taller than its box and scrolls in it,
     // and a box that scrolls has to take the keyboard's focus. A scan at
@@ -5051,13 +5108,6 @@ async function shootView(
   if (desktop) await page.setViewportSize(desktop);
 }
 
-/** Where an interactive stage's command says to save its answer. */
-function answerPathIn(command: string): string {
-  const found = /then save the JSON answer to (.+-output\.json)\. The command needs/.exec(command);
-  if (!found) throw new Error(`The command names no answer file: ${command}`);
-  return found[1]!;
-}
-
 /** An interactive review of the fixture's branch, with what a test needs to answer it as a person would. */
 async function interactiveReview(page: import("@playwright/test").Page) {
   const listed = (await (await page.request.get("/api/projects")).json()) as {
@@ -5082,7 +5132,7 @@ async function interactiveReview(page: import("@playwright/test").Page) {
     (await (await page.request.get(`/api/reviews/${review.id}`)).json()) as {
       running: boolean;
       review: { status: string; verifierModel: string | null };
-      waiting: { stage: string; text: string } | null;
+      waiting: { stage: string; answerPath: string } | null;
     };
   return {
     id: review.id,
@@ -5095,20 +5145,20 @@ async function interactiveReview(page: import("@playwright/test").Page) {
       });
       expect(started.status()).toBe(200);
     },
-    /** The command of a stage, once that stage waits on the person. */
+    /** Where a stage's answer is to be saved, once that stage waits on the person. */
     waitingOn: async (stage: string): Promise<string> => {
-      let command = "";
+      let answerPath = "";
       await expect
         .poll(
           async () => {
             const waiting = (await read()).waiting;
-            command = waiting?.text ?? "";
+            answerPath = waiting?.answerPath ?? "";
             return waiting?.stage ?? null;
           },
           { timeout: 60_000 },
         )
         .toBe(stage);
-      return command;
+      return answerPath;
     },
     /** Ended and deleted, whatever the test left it doing. */
     remove: async () => {
@@ -5130,8 +5180,7 @@ test("an interactive review answered stage by stage says only what the app knows
   // read, and the answer saved where the command says.
   const { resolveCandidateTokens } = await import("../tests/helpers/ideal-answers");
   const numbered = (n: number) => join(ANSWERS_DIR, `${String(n).padStart(3, "0")}.json`);
-  const answer = (command: string, index: number) => {
-    const path = answerPathIn(command);
+  const answer = (path: string, index: number) => {
     const prompt = readFileSync(path.replace(/-output\.json$/, "-prompt.md"), "utf8");
     writeFileSync(
       path,
@@ -5145,7 +5194,9 @@ test("an interactive review answered stage by stage says only what the app knows
     const risk = await review.waitingOn("s1_risk");
     await page.goto(`/reviews/${review.id}`);
     const turn = page.getByTestId("waiting-command");
-    await expect(turn).toContainText("s1_risk is waiting for you", { timeout: 30_000 });
+    await expect(turn.getByRole("heading", { name: "Your turn: Risk" })).toBeVisible({
+      timeout: 30_000,
+    });
     // The card prints commands, so it says whose environment they run in.
     const environment = turn.getByTestId("terminal-environment-note");
     await expect(environment).toContainText(
@@ -5165,7 +5216,9 @@ test("an interactive review answered stage by stage says only what the app knows
     // commands as one unbroken run.
     answer(risk, 1);
     const comprehension = await review.waitingOn("s2_comprehension");
-    await expect(turn).toContainText("s2_comprehension is waiting for you", { timeout: 30_000 });
+    await expect(turn.getByRole("heading", { name: "Your turn: Comprehension" })).toBeVisible({
+      timeout: 30_000,
+    });
     const feed = page.getByRole("log", { name: "Scan activity" });
     await expect(feed).toContainText(
       "Comprehension is waiting for you: run the command in Your turn.",
@@ -5245,7 +5298,7 @@ test("an interactive answer in the wrong shape is a failed stage on the review's
   const review = await interactiveReview(page);
   try {
     await review.start();
-    writeFileSync(answerPathIn(await review.waitingOn("s1_risk")), "{oops", "utf8");
+    writeFileSync(await review.waitingOn("s1_risk"), "{oops", "utf8");
     await expect
       .poll(async () => (await review.read()).review.status, { timeout: 60_000 })
       .toBe("failed");

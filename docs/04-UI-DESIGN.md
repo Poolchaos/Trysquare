@@ -243,7 +243,7 @@ refuses one too.
   nothing shows the chain files.
 - Activity feed: current stage's tool activity (file being read), errors. An interactive review's feed has the stages and the run's notes alone: its sessions are the person's, and the app sees no tool they use.
 - Usage meter: cumulative tokens and cost-equivalent; for an interactive review, that they were not recorded.
-- Your turn: the command of an interactive stage that waits on the person, with where to save the answer, above the feed and on the review's page whenever either is opened (D-301). The command's box takes the keyboard's focus, so one taller than the box is scrolled to its end without a mouse (D-302). The feed says in a line that the stage is waiting, never the command a second time, and keeps its height under the card (D-304).
+- Your turn: the command of an interactive stage that waits on the person, with where to save the answer, above the feed and on the review's page whenever either is opened (D-301). The card names the stage as the rest of the page does, gives the command for the machine's own shell in a box of its own with a Copy, folds the other shell's command under a line with a Copy of its own, and gives the answer's path a Copy too; a copy the browser refuses is said, with what to do (D-315). The command's box takes the keyboard's focus, so one taller than the box is scrolled to its end without a mouse (D-302). The feed says in a line that the stage is waiting, never the command a second time, and keeps its height under the card (D-304).
 - Controls: cancel, which asks first and says when it failed (5.1); start,
   for a draft, with its rulesets ticked in a card on its page, the list
   New review has, the same refusals said under it (5.11, D-295); resume (paused,

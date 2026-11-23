@@ -14,7 +14,7 @@
  */
 
 import { z } from "zod";
-import type { EngineEvent } from "@/lib/engine/events";
+import type { EngineEvent, WaitingAsk } from "@/lib/engine/events";
 import type { ReviewStage } from "@/lib/domain/enums";
 import { canTransitionReview, type ReviewStatus } from "@/lib/domain/state-machines";
 import { resolveDataDir } from "@/lib/paths";
@@ -112,7 +112,7 @@ export interface ReviewSnapshot {
    * The command an interactive stage is waiting for the person to run, with
    * where to save the answer; null when no stage is waiting on them.
    */
-  waiting: { stage: ReviewStage; text: string } | null;
+  waiting: ({ stage: ReviewStage } & WaitingAsk) | null;
 }
 
 interface ActiveRun {
@@ -130,7 +130,7 @@ export class JobManager {
    * stage then ran out its timeout (the twenty-first grade, AI1). In memory
    * only: a restart ends the wait, and a Resume prints the command again.
    */
-  private readonly waiting = new Map<string, { stage: ReviewStage; text: string }>();
+  private readonly waiting = new Map<string, { stage: ReviewStage } & WaitingAsk>();
   private readonly queue: { reviewId: string; options: PrepareAndRunOptions }[] = [];
   /** Reviews a delete has claimed; see beginDelete. */
   private readonly deleting = new Set<string>();
@@ -569,8 +569,8 @@ export class JobManager {
     // Kept before it is announced, as every durable fact is: a page that
     // reads the snapshot on hearing it finds the command there.
     if (event.kind === "waiting") {
-      this.waiting.set(reviewId, { stage, text: event.text });
-      this.bus.emit(reviewId, { kind: "engine", stage, event: "waiting", detail: event.text });
+      this.waiting.set(reviewId, { stage, ...event.ask });
+      this.bus.emit(reviewId, { kind: "engine", stage, event: "waiting", detail: "" });
       return;
     }
     if (event.kind === "answered") {

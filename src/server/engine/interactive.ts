@@ -23,7 +23,7 @@ import { existsSync, readdirSync, renameSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ReviewStage } from "@/lib/domain/enums";
-import type { EngineEvent } from "@/lib/engine/events";
+import type { EngineEvent, WaitingAsk } from "@/lib/engine/events";
 import { composeSystemPrompt } from "@/lib/rulesets/compose";
 import type { ImportedDirective, ImportedRule } from "@/lib/rulesets/model";
 import { outputContractFor, stageSchemaFor } from "@/lib/review/stage-schemas";
@@ -209,24 +209,21 @@ export function launchCommandsFor(
 }
 
 /**
- * What a person is told to run, the command for this machine's own shell
- * first. The app is local, so the platform it runs on is the one the
- * terminal is on: PowerShell led on a Linux machine (D-309).
+ * What a person is asked to run, and which shell's command leads. The app is
+ * local, so the platform it runs on is the one the terminal is on:
+ * PowerShell led on a Linux machine (D-309).
  */
-export function waitingWords(input: {
-  stage: ReviewStage;
+export function waitingAsk(input: {
   commands: { posix: string; powershell: string };
   answerPath: string;
   platform: NodeJS.Platform;
-}): string {
-  const posix = `In bash or zsh:\n${input.commands.posix}\n`;
-  const powershell = `In PowerShell:\n${input.commands.powershell}\n`;
-  return (
-    `${input.stage} is waiting for you. ` +
-    (input.platform === "win32" ? powershell + posix : posix + powershell) +
-    `then save the JSON answer to ${input.answerPath}. The command needs Claude Code ` +
-    `${MINIMUM_CLI_VERSION} or newer, for --system-prompt-file.`
-  );
+}): WaitingAsk {
+  return {
+    ...input.commands,
+    lead: input.platform === "win32" ? "powershell" : "posix",
+    answerPath: input.answerPath,
+    minimumCli: MINIMUM_CLI_VERSION,
+  };
 }
 
 export function createInteractiveEngine(options: InteractiveEngineOptions): ReviewEngine {
@@ -300,12 +297,7 @@ export function createInteractiveEngine(options: InteractiveEngineOptions): Revi
     );
     options.onEvent?.(request.stage, {
       kind: "waiting",
-      text: waitingWords({
-        stage: request.stage,
-        commands,
-        answerPath,
-        platform: process.platform,
-      }),
+      ask: waitingAsk({ commands, answerPath, platform: process.platform }),
     });
 
     let raw: string;

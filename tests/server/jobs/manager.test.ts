@@ -774,9 +774,10 @@ describe("an interactive review's command (the twenty-first grade, AI1)", () => 
     });
     const waiting = manager.snapshot(reviewId).waiting!;
     expect(waiting.stage).toBe("s1_risk");
-    expect(waiting.text).toContain("s1_risk is waiting for you");
-    expect(waiting.text).toContain("--model");
-    expect(waiting.text).toContain("then save the JSON answer to");
+    expect(waiting.posix).toContain("--model");
+    expect(waiting.powershell).toContain("--model");
+    expect(waiting.lead).toBe(process.platform === "win32" ? "powershell" : "posix");
+    expect(waiting.answerPath).toMatch(/s1_risk-[0-9a-f]{12}-output\.json$/);
 
     // Cancelled, the wait ends and with it the command.
     expect(manager.cancel(reviewId)).toBe(true);

@@ -40,8 +40,9 @@ export type ReviewEvent =
       usage?: StageUsage | undefined;
       errorClass?: StageErrorClass | undefined;
     }
-  // "waiting" carries the command an interactive stage waits on, and
-  // "answered" says that wait is over; a page reads its snapshot on either.
+  // "waiting" says an interactive stage waits on its command, and "answered"
+  // that the wait is over; a page reads its snapshot, which has the command,
+  // on either.
   | {
       kind: "engine";
       stage: ReviewStage;

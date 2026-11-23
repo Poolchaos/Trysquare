@@ -26,10 +26,11 @@ import {
   callIdFor,
   createInteractiveEngine,
   exchangeFilesFor,
-  waitingWords,
+  waitingAsk,
   launchArgsFor,
   launchCommandsFor,
 } from "@/server/engine/interactive";
+import type { WaitingAsk } from "@/lib/engine/events";
 import { StageFailedError } from "@/server/engine/headless";
 import { StageOutputUnreadableError } from "@/server/review/engine-runner";
 
@@ -110,7 +111,7 @@ describe("the file a person is handed", () => {
 
   it("prints a request's own model over the review's", async () => {
     // The second verifier runs on the other strong family (WP-E).
-    const said: string[] = [];
+    const said: WaitingAsk[] = [];
     const reviewer = createInteractiveEngine({
       exchangeDir: join(dir, "bundle"),
       worktreeRoot: join(dir, "worktree"),
@@ -121,14 +122,16 @@ describe("the file a person is handed", () => {
       pollMs: 25,
       claudePath: FAKE_CLI,
       onEvent: (_stage, event) => {
-        if (event.kind === "waiting") said.push(event.text);
+        if (event.kind === "waiting") said.push(event.ask);
       },
     });
     answerLater(JSON.stringify({ files: [] }));
     await reviewer.run({ ...ask, model: "claude-opus-5-5" });
 
-    expect(said[0]).toContain("claude-opus-5-5");
-    expect(said[0]).not.toContain("claude-fable-5[1m]");
+    for (const command of [said[0]!.posix, said[0]!.powershell]) {
+      expect(command).toContain("claude-opus-5-5");
+      expect(command).not.toContain("claude-fable-5[1m]");
+    }
   });
 
   it("says when it starts waiting on the person and when that wait is over, answered or not", async () => {
@@ -160,7 +163,7 @@ describe("the file a person is handed", () => {
   it("tells the person the command and the CLI version it needs, starting nothing itself", async () => {
     // Mode B spawns nothing, a version check included: it names the CLI and
     // says what the command needs, and the person runs it.
-    const said: string[] = [];
+    const said: WaitingAsk[] = [];
     const reviewer = createInteractiveEngine({
       exchangeDir: join(dir, "bundle"),
       worktreeRoot: join(dir, "worktree"),
@@ -171,40 +174,38 @@ describe("the file a person is handed", () => {
       pollMs: 25,
       claudePath: FAKE_CLI,
       onEvent: (_stage, event) => {
-        if (event.kind === "waiting") said.push(event.text);
+        if (event.kind === "waiting") said.push(event.ask);
       },
     });
     answerLater(JSON.stringify({ files: [] }));
     await reviewer.run(ask);
 
     expect(said).toHaveLength(1);
-    expect(said[0]).toContain("Set-Location -LiteralPath");
-    expect(said[0]).toContain("fake-claude.mjs");
-    expect(said[0]).toContain("2.1.301 or newer");
-    expect(said[0]).toContain(filesFor(ask).answer);
+    expect(said[0]!.powershell).toContain("Set-Location -LiteralPath");
+    expect(said[0]!.posix).toMatch(/^cd '/);
+    expect(said[0]!.posix).toContain("fake-claude.mjs");
+    expect(said[0]!.powershell).toContain("fake-claude.mjs");
+    expect(said[0]!.minimumCli).toBe("2.1.301");
+    expect(said[0]!.answerPath).toBe(filesFor(ask).answer);
   });
 
-  it("gives the command for this machine's own shell first", () => {
+  it("leads with the command for this machine's own shell, each command on its own", () => {
     // The app is local: the platform it runs on is the terminal's. On a
-    // Linux machine PowerShell's command led (D-309).
-    const said = (platform: NodeJS.Platform) =>
-      waitingWords({
-        stage: "s1_risk",
-        commands: { posix: "cd '/w' && 'claude'", powershell: "Set-Location '/w'; & 'claude'" },
-        answerPath: "/b/s1_risk-output.json",
-        platform,
-      });
+    // Linux machine PowerShell's command led (D-309). And each command is
+    // a part of its own, so a screen can copy one without the other or the
+    // words around it (D-315).
+    const commands = { posix: "cd '/w' && 'claude'", powershell: "Set-Location '/w'; & 'claude'" };
+    const asked = (platform: NodeJS.Platform) =>
+      waitingAsk({ commands, answerPath: "/b/s1_risk-output.json", platform });
     for (const platform of ["linux", "darwin"] as const) {
-      expect(said(platform)).toBe(
-        "s1_risk is waiting for you. In bash or zsh:\ncd '/w' && 'claude'\n" +
-          "In PowerShell:\nSet-Location '/w'; & 'claude'\n" +
-          "then save the JSON answer to /b/s1_risk-output.json. The command needs Claude Code " +
-          "2.1.301 or newer, for --system-prompt-file.",
-      );
+      expect(asked(platform)).toEqual({
+        ...commands,
+        lead: "posix",
+        answerPath: "/b/s1_risk-output.json",
+        minimumCli: "2.1.301",
+      });
     }
-    expect(said("win32")).toContain(
-      "is waiting for you. In PowerShell:\nSet-Location '/w'; & 'claude'\nIn bash or zsh:\n",
-    );
+    expect(asked("win32").lead).toBe("powershell");
   });
 
   it("refuses to hand out a command for a model alias", async () => {
@@ -327,7 +328,7 @@ describe("what a stage's session may read of the review", () => {
     // The twenty-third grade, AK1. Every answer was a file in one folder,
     // and each command added that folder: a later stage's session could
     // read every earlier answer, the first verifier's proofs among them.
-    const said: string[] = [];
+    const said: WaitingAsk[] = [];
     const reviewer = createInteractiveEngine({
       exchangeDir: join(dir, "bundle"),
       worktreeRoot: join(dir, "worktree"),
@@ -338,7 +339,7 @@ describe("what a stage's session may read of the review", () => {
       pollMs: 25,
       claudePath: FAKE_CLI,
       onEvent: (_stage, event) => {
-        if (event.kind === "waiting") said.push(event.text);
+        if (event.kind === "waiting") said.push(event.ask);
       },
     });
     const later: Question = { ...ask, stage: "s3_adversarial", prompt: "Hunt." };
@@ -356,9 +357,11 @@ describe("what a stage's session may read of the review", () => {
     expect(laterFiles.dir).not.toBe(earlier.dir);
     // The later command names its own folder and not the earlier one, nor
     // the folder both are in.
-    expect(said[1]).toContain(`'--add-dir' '${laterFiles.dir}'`);
-    expect(said[1]).not.toContain(`'${earlier.dir}'`);
-    expect(said[1]).not.toContain(`'${join(dir, "bundle")}'`);
+    for (const command of [said[1]!.posix, said[1]!.powershell]) {
+      expect(command).toContain(`'--add-dir' '${laterFiles.dir}'`);
+      expect(command).not.toContain(`'${earlier.dir}'`);
+      expect(command).not.toContain(`'${join(dir, "bundle")}'`);
+    }
     // And the earlier answer is outside what it names.
     expect(earlier.answer.startsWith(`${laterFiles.dir}/`)).toBe(false);
     expect(readdirSync(laterFiles.dir).sort()).toEqual(

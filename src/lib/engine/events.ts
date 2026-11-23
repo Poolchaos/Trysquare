@@ -106,6 +106,22 @@ export const resultEventSchema = z
 
 export type ResultEvent = z.infer<typeof resultEventSchema>;
 
+/**
+ * What an interactive stage asks of the person, in parts, so the screen can
+ * give each command a Copy of its own. It was one run of words, both shells'
+ * commands and the path in it, and a person selected a command out of it by
+ * hand (D-315).
+ */
+export interface WaitingAsk {
+  posix: string;
+  powershell: string;
+  /** The shell of the machine the app runs on, which is the terminal's too (D-309). */
+  lead: "posix" | "powershell";
+  answerPath: string;
+  /** The oldest Claude Code the command runs on. */
+  minimumCli: string;
+}
+
 /** What the job manager consumes. Raw CLI events are narrowed into these. */
 export type EngineEvent =
   | { kind: "init"; sessionId: string; model: string; tools: string[]; cwd: string }
@@ -115,7 +131,7 @@ export type EngineEvent =
    * to run it and save the answer. Its own kind, so the command can be kept
    * for a page opened after it was said (the twenty-first grade, AI1).
    */
-  | { kind: "waiting"; text: string }
+  | { kind: "waiting"; ask: WaitingAsk }
   /** That wait is over: an answer arrived, or the wait was given up or cancelled. */
   | { kind: "answered" }
   | { kind: "tool-use"; tool: string; input: unknown }
