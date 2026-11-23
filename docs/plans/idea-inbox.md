@@ -372,7 +372,8 @@ pulled deliberately.
   the checkout the person's session may still be reading
   (`src/server/review/service.ts`, `recordFailure`), and the timeout's
   words say only to save the answer and resume. Derived by the
-  twenty-fourth grader by reading, not reproduced.
+  twenty-fourth grader by reading, not reproduced. DONE 2026-11-23
+  (D-314): an interactive review that fails keeps its checkout.
 - 2026-11-22: an interactive answer the pipeline refuses is moved aside
   with a rename that is not guarded (D-307): on Windows a file an editor
   holds open can refuse it, the row being struck already and the file

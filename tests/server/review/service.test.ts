@@ -930,6 +930,9 @@ describe("the interactive engine", () => {
     // The refused answer is not left where the same question would find it.
     expect(huntFiles().filter((name) => name.endsWith("-output.json"))).toEqual([]);
     expect(huntFiles().some((name) => name.includes(".rejected-"))).toBe(true);
+    // And the checkout stays (D-314): a person's session may still be
+    // reading it, as at a stage's timeout, and the Resume below uses it.
+    expect(existsSync(worktreeRepoDir(dataDir, reviewId, "app"))).toBe(true);
 
     // So a Resume waits for a new answer, and goes on with it.
     const stopSecond = answerWith(good);
@@ -1038,6 +1041,9 @@ describe("the commits a review is pinned to", () => {
     expect(outcome.kind).toBe("failed");
     expect(outcome.kind === "failed" && outcome.reason).toMatch(/modified|meddled/i);
     expect(requireReview(db, reviewId).status).toBe("failed");
+    // A headless review's checkout goes when it fails (D-33); an interactive
+    // one's stays (D-314, the interactive engine's tests).
+    expect(existsSync(worktreeRootDir(dataDir, reviewId))).toBe(false);
   }, 120_000);
 });
 

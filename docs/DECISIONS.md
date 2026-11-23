@@ -7990,3 +7990,24 @@ verified evidence, in writing, here.
   "only" or "can" it does not earn.
   Proven: the report's test and the browser test hold the two narrowed
   sentences. The rest are words, read against the code named.
+- 2026-11-23 D-314 An interactive review that fails keeps its checkout,
+  amending D-33 for that engine. D-33 (2026-07-31) removes a run's
+  worktrees when it settles cancelled or failed, before the interactive
+  engine existed. The new evidence, read in the code: an interactive stage
+  fails at its timeout while the person's session may still be reading the
+  checkout in their terminal, and the timeout's words tell them to save
+  the answer and resume, which asks the same question of the same files
+  (`waitForAnswer` in `src/server/engine/interactive.ts`); removing the
+  checkout under that session broke the very recovery the words describe.
+  The twenty-fourth grader derived it by reading; it is now proven. A
+  failed interactive review keeps its worktrees, and a resume reuses them
+  when they are still at the pinned commit with a readable baseline, as
+  it already did after an interruption (`ensureWorktree`). A headless
+  review's failure removes them as before, and a cancel of either still
+  does: the person chose to stop. Deleting the review removes them in
+  every case. Rejected: keeping them only at a timeout, since a refused
+  answer is recovered by the same Resume on the same files. Decided by the
+  session. Proven: the interactive refused-answer test asserts the
+  checkout is still there after the failure, which found it gone on the
+  old code; the headless failure test asserts it is removed, which held on
+  the old code and holds now.

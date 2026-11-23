@@ -417,6 +417,10 @@ splits the work instead and records the split in the run log.
   Recovery is by resuming the review rather than retrying one stage (D-50):
   stages already answered replay for free from their checkpoints and only
   the failed one runs live, which is the same mechanism as a limit pause.
+  A headless review's checkout is removed when it fails, and a resume checks
+  it out again (D-33). An interactive review's is kept: its stage may have
+  failed at the timeout while the person's session still reads the
+  checkout, and a resume uses it (D-314).
 - CLI limit/429, in a headless review: review `paused_limit`, CLI message
   shown verbatim, manual resume asks the stage again: one of S1 to S4
   rejoins the session those stages share, with `--resume <sessionId>`, and

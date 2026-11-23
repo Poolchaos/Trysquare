@@ -947,13 +947,20 @@ async function recordFailure(
     message: logPath ? `${message} The stage log is at ${logPath}.` : message,
   });
   settle(db, reviewId, "failed");
-  await discardWorktrees(db, reviewId, dataDir);
+  // An interactive review keeps its checkout (D-314). Its stage may have
+  // failed at the timeout while the person's session is still reading the
+  // checkout, and the timeout's words tell them to save the answer and
+  // resume, which asks the same question of the same files.
+  if (engineModeSchema.parse(requireReview(db, reviewId).engineMode) !== "interactive") {
+    await discardWorktrees(db, reviewId, dataDir);
+  }
   return { kind: "failed", reason: message, logPath };
 }
 
 /**
  * Removes the checked-out copies after a run that will not resume (D-12:
- * cancelled and failed here, complete when the confirmation flow lands).
+ * cancelled and failed here, complete when the confirmation flow lands; an
+ * interactive review's failure keeps them, D-314).
  * Best effort on purpose: a cleanup failure becomes a note, never a mask
  * over the outcome that actually matters.
  */
