@@ -9,7 +9,9 @@ idea here. An AI can produce a review that reads well and is quietly wrong: a
 line number that drifted, a bug that a guard clause upstream already handles, a
 quotation of code that is not there. Trysquare is built so those failures are
 checked for rather than trusted away: the program holds every quotation to the
-file, and a finding stands only when two independent verifiers each prove it.
+file, and a finding in the code stands only when two independent verifiers
+each prove it. (A project's own command that fails, where you have turned
+those on, is a finding by its exit code or its time limit, with no verifier.)
 
 ## Status
 
@@ -230,7 +232,8 @@ it opened each image stands alone. A project with no e2e is reported as
   on Trysquare uses it. The app was built to run there and ran real reviews
   there on 2026-10-22, and CI still runs the suite on `windows-latest`
   beside them, but that job gates nothing, and a failure only it shows is
-  recorded and left (one was fixed on 2026-11-18, before that was settled).
+  recorded and left (one was fixed on 2026-11-18, the day before the
+  maintainer's answer that such a failure is left, D-246).
   Its runner sometimes refuses a browser test's
   connection with `net::ERR_NO_BUFFER_SPACE` before the app answers
   (D-105). If you need Windows, open an issue. Set `TRYSQUARE_CLAUDE_PATH`
@@ -441,8 +444,9 @@ The test runs are sized so they cannot take a laptop down. The unit tests use
 at most 4 workers, however many cores the machine has, and each worker stops
 at a 1 GB heap. Measured on 2026-11-03 on Linux with 3 workers: 0.8 GB at the
 peak for the whole run, and 64 seconds. The browser tests run one at a time
-against one server. Run one gate at a time: two at once share the machine and
-the browser tests' port.
+against one server, bar the shutdown tests (`e2e/shutdown.spec.ts`), which
+start servers of their own beside it. Run one gate at a time: two at once
+share the machine and the browser tests' port.
 
 ## Options under discussion
 

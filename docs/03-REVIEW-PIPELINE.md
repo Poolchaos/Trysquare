@@ -33,10 +33,28 @@ than being edited away.
   gets no symbol, no disposition is expected of it, and with no symbol at
   all the addendum is not sent. Unowned (the twenty-fifth grade, AM1).
 - S3 resolving S2's uncertainties (section 1). S2's answer carries them
-  and the pipeline keeps only the files it says it read: no instruction
-  hands them to S3 and S3's answer has no place for them. In an
+  and they are stored with it in the stage's row
+  (`stage_executions.output_json`); of the answer the pipeline uses the
+  files it says it read: no instruction
+  hands the uncertainties to S3 and S3's answer has no place for them. In an
   interactive review S3's session does not see S2's answer at all. Unowned
   (AL8).
+- The junior-dev checklist and the devil's advocate lenses in S3's
+  instruction (section 1). The app's instruction to S3 asks for the rule
+  walk and a reason for each hunk it clears (`STAGE_INSTRUCTIONS` in
+  `lib/rulesets/compose.ts`) and names neither: S3 is sent them where
+  a ruleset's own directives hold them. Unowned (the sweep at D-317).
+- A procedure picked for the stage (section 4). S1, S2, S3, S4, S5 and
+  S5b are each sent the directives frozen on the review, with no selection
+  by stage or by section (`composeSystemPrompt`, called in
+  `server/review/service.ts`): S1 is sent the same directives as S3.
+  Unowned (the sweep at D-317).
+- Removing the worktree when a review with no run in flight is cancelled
+  (section 5). Such a cancel marks the review cancelled and does not
+  remove its worktree (`JobManager.cancel` in `server/jobs/manager.ts`):
+  that of a review paused at a limit, interrupted or awaiting confirmation
+  is left on disk, and deleting the review removes it. Unowned (the sweep
+  at D-317).
 
 Trued up 2026-10-23: three items listed here since 2026-08-03 are built and
 gone from this list. S4 reads each deleted file's pre-change copy from
@@ -58,9 +76,12 @@ S1 work its risk-tagged files first (U12).
    subdirectory per repo, named by project slug:
    `runs/<id>/worktree/<primary>/` and `runs/<id>/worktree/<linked>/`;
    AI stages get cwd = `runs/<id>/worktree/` so both trees are readable,
-   and every path in inventory, ledger, and findings is qualified as
-   `<slug>/<repo-relative-path>`. What each checkout reports changed when
-   it is made, and those files' content, is kept in
+   and a changed file's path is qualified as
+   `<slug>/<repo-relative-path>` in the ledger, in a sweep hit and in the
+   prompts of S1 to S4, and a finding is matched to a changed file by that
+   form; `inventory.json` keeps the slug in a field of its own beside the
+   repo-relative path. What each checkout reports changed when
+   it is made, and a sha256 of the bytes of each file it names, is kept in
    `runs/<id>/worktree-baseline/<slug>.json` for the end check (D-107).
 3. Build the **bundle** under `runs/<id>/bundle/`:
    - `diff.patch` (and `diff-linked.patch`): full text per repo, taken
@@ -69,16 +90,19 @@ S1 work its risk-tagged files first (U12).
      names exactly the files `git diff --name-only` lists (D-108, D-110)
    - submodule pointers and Git LFS pointer files in the change set are
      named in the run notes as not reviewed: the diff holds only the pointer
-     (4.23). An LFS file is known by either side of its first hunk reading
-     as a whole pointer from line 1 (version line first, an oid and a size,
-     nothing else), not by a line mentioning the spec (D-119 review)
+     (4.23). An LFS file is known by either side reading as a whole
+     pointer in the hunk that starts at that side's line 1 (version line
+     first, then key-value lines with an oid and a size among them,
+     nothing else, under 1024 characters), not by a line mentioning the
+     spec (D-119 review)
    - `inventory.json`: every changed file and hunk across both repos
      (parsed by `lib/git`), repo-tagged, including renames and deletions,
      and a typechange (a symlink becoming a file, or the reverse) as one
      modified file rather than git's deletion and addition at one path (D-127);
      this seeds ledger_files/ledger_hunks
-   - `base/<slug>/<path>`: pre-change copies of every modified and deleted
-     file (from each repo's merge base)
+   - `base/<slug>/<path>`: a pre-change copy of each modified, renamed or
+     deleted file that is not binary and that `git show` reads at the
+     repo's merge base, under the path it had before the change
    - `links.json`: package-to-worktree mapping from project_links, e.g.
      `{"@acme/shared-core": "shared-core/"}`, written for stages to resolve
      imports of the package to the linked worktree source instead of
@@ -90,7 +114,8 @@ S1 work its risk-tagged files first (U12).
    one per rule and line, named by the first of its patterns that matched:
    a hit is dispositioned by path, line and rule, so a second pattern's hit
    could never be reached (audit finding 11, D-204).
-   Sweeps are implemented in Node (read the file, apply the regex), NOT by
+   Sweeps are implemented in Node (the regexes run over the added lines of
+   the parsed diff), NOT by
    shelling out to ripgrep: `rg` is not guaranteed to exist as a binary (on
    the maintainer's machine it is a shell function from an editor integration and is
    absent in non-interactive processes), and a sweep that silently returns
@@ -190,10 +215,15 @@ uncertainty entry. S3 resolving it or converting it to an open question is the t
 
 ### S3 Adversarial pass (protocol step 4)
 
-Instruction: per hunk, walk the rule database explicitly (which rules could
-apply, confirm each was checked), apply the junior-dev checklist (types,
-data flow, bindings, state/effects, edge cases) and the four devil's
-advocate lenses. Disposition every sweep_hit: finding or cleared with
+Instruction: for every hunk, walk each rule sent explicitly and state
+whether it applies. The answer's fields name a rule on a finding and on a
+sweep disposition, and none says whether each rule applies, so that walk
+is asked for and has no field to be recorded in. The junior-dev checklist
+(types, data flow, bindings, state/effects, edge cases) and the four
+devil's advocate lenses are not in the app's instruction: S3 is sent them
+where a ruleset's own directives hold them (Not built yet, above).
+Disposition every
+sweep_hit: finding or cleared with
 reason. Output: candidate findings (protocol finding format fields +
 mechanism + ruleCode), per-hunk clears with reasons, sweep dispositions.
 App code cross-checks: every hunk and every sweep hit dispositioned, else
@@ -318,7 +348,9 @@ checkpointed, replayed on resume and named in the run view.
 Every screenshot S4b graded C or D, graded again by the paired model under
 the same names, not shown the first grades, with the same folder readable.
 Both C or D proves it: verified, the first grade standing, the second's
-noted ("Graded D again by the second grader, <model>: ..."). An A or B
+noted ("Graded D again by the second grader, <model>: ...", or in an
+interactive review "Graded D again by the second grader, on the command
+that named <model>: ..."). An A or B
 leaves it an open question naming the second grade, one grader not
 overriding the other (D-188). Not asked when nothing was graded C or D.
 
@@ -355,8 +387,10 @@ about that one finding in a fresh session, never replayed from a stored
 answer, and, if S5 proves it, the second verifier too, each held to the
 same checks (proof-and-steps plan, WP-D2). The card says how many requests
 that can be (two, and one more for either whose answer comes back in the
-wrong shape), the models, the billing and the timeout of each call, and sends
-nothing until Send request is pressed.
+wrong shape), the models, the billing and the timeout of each call.
+Opening the card runs the sign-in check, which is given no prompt and
+whose `auth status` call asks Anthropic's API (D-244); the request to
+verify is sent when Send request is pressed.
 It counts against the reviews at once, and while it runs its finding
 cannot be decided nor its review completed or deleted;
 the card shows the
@@ -381,15 +415,19 @@ footer records: each ruleset's name and version, the model with its effort (none
 and profile, the commit reviewed and its merge base, a linked project's
 branch and commit, token usage and the cost equivalent (said as not recorded for an interactive review, whose usage the app cannot see), and how long the
 run took, to when it stopped and not to when the review was completed
-(D-248), said as the last run's where an earlier run asked a model
-anything, the tokens and the cost being every run's. The HTML's footer and the page's leave out the tokens, the
+(D-248), said as the last run's where a stage row is older than this
+run's start (left by an earlier run for a stage it asked, or for one that
+failed before the CLI started), the tokens and the cost being every run's. The HTML's footer and the page's leave out the tokens, the
 duration and the linked project. For an interactive review all three footers add an Engine line: that each stage's command was printed for a person to run, which models those commands name, that the model, a verifier or a grader in the report means the session that answered (D-307), and that a time given for the run includes the person's (D-311). No em dashes in the report's own words
 (the house-style gate over the source, and a unit test of a rendered report); what a finding or a person wrote is carried as written.
 
 ## 4. Prompt composition
 
-Order: (1) process directives (prime directive, junior-dev standard,
-procedure for this stage, scope rule, severity model), (2) rule database
+Order: (1) the ruleset's process directives, the same for S1, S2, S3, S4,
+S5 and S5b: the sections of its protocol document that are not rules,
+such as a prime directive, a procedure, a scope rule, a severity model and
+an output format (picking out a procedure for the stage is not built, Not
+built yet above), (2) rule database
 verbatim (S3 only; S1/S2/S4/S5 get the directives plus the rule index of
 codes+titles, and S5 the text of each rule a candidate cites in its prompt), (3) stage instruction, (4) output contract with the JSON
 schema inlined. Composition is a pure function, `composeSystemPrompt` in
@@ -437,7 +475,12 @@ splits the work instead and records the split in the run log.
   marks the review cancelled; the stage
   that was running is recorded as failed, with the error class
   `cancelled` (`src/server/review/checkpointing-runner.ts`). The
-  completed-stage results are kept and the worktree is removed.
+  completed-stage results are kept. A run the cancel stops has its
+  worktree removed, a removal that fails being said in a run note. A
+  cancel of a review with no run in flight (paused at a limit,
+  interrupted, or awaiting confirmation) marks it cancelled and leaves its
+  worktree, which deleting the review removes; removing it at the cancel
+  is the design (D-314) and is not built (Not built yet, above).
 - Server restart: running reviews become `interrupted`; resume re-runs the
   interrupted stage only.
 - A resume reuses the ledger seeded on the first run only when it is the
@@ -452,8 +495,10 @@ splits the work instead and records the split in the run log.
 A fixture repository with a seeded feature branch is built by
 `tests/fixtures/build-seeded-repos.mjs` into a directory its caller names;
 only the builder is committed. Seeded defects map to expected
-findings (the seed manifest). The pipeline gate (run in e2e with the fake
-engine, and manually pre-release with the real engine):
+findings (the seed manifest). The pipeline gate
+(`tests/server/review/quality-gate.test.ts`, run in process in the unit
+suite with a reviewer built from the seed manifest, and manually
+pre-release with the real engine):
 
 - every seeded defect is found or explicitly surfaced as an open question;
 - zero findings survive S5 whose quoted code does not match the file;

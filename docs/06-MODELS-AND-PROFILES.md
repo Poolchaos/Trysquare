@@ -8,12 +8,17 @@ the bundled 2.1.301 by reading its binary and running its commands that take no 
 not by probing: the probe table and the probe's cost in section 1 were not
 measured again, since a probe spends usage (MVP 7.2).
 
-Every part of this document is built but one. The item this section
-listed on 2026-08-03, choosing the profile on the new-review screen,
+Every part of this document is built but what this section lists. The
+item this section listed on 2026-08-03, choosing the profile on the
+new-review screen,
 shipped with U8 on 2026-08-04 as the Profile control in its advanced fold.
 Not built: any helper that would give a `mechanical-only` model the
 non-judgment work its row in section 3 allows it. Such a model is refused
-for a review, and no other code asks for one.
+for a review, and no other code asks for one. Not built either, and said
+where each falls in section 2 (2026-11-23): refusing max on a review
+stored at it when that review is started, resumed or verified again, and
+pairing the second verifier by a model's id where the registry has no row
+for it.
 
 ## 1. Measured facts (evidence, 2026-07-30)
 
@@ -60,11 +65,14 @@ that may (an `oauth_token`, which 2.1.301 reports both for a token
 `claude setup-token` made and for a Console profile, an unknown method, or
 none said: a warning that says "may"), and a subscription.
 An API key, a paid provider's selector or key, another API's address,
-another model, another thinking budget: none reaches a CLI the app starts,
+another model, another thinking budget: a variable for one in the server's
+environment is not passed to a CLI the app starts (`buildChildEnv`),
 so reviews draw on the subscription sign-in by default; what is left to
 bill per token is how the CLI itself is signed in, and the app warns of it
-(D-161, D-174). The app never reads, copies, or logs the credentials
-themselves.
+(D-161, D-174). A managed policy is not kept out (below). Of the CLI's
+credentials the app's code names one, a `CLAUDE_CODE_OAUTH_TOKEN` in the
+server's environment, whose value it copies as it is into the environment
+of a CLI it starts (below); it names no credential file.
 
 **A spawned `claude` process must not inherit the parent shell's Claude Code
 session variables.** A review is an independent program that may have been
@@ -76,13 +84,17 @@ configuration (D-174), so the environment a CLI the app starts gets is
 closed: only what it needs to run (system paths, home and app-data
 directories, temp, locale, proxy and certificate settings, where Windows
 finds Git Bash) and the sign-in (`CLAUDE_CONFIG_DIR`,
-`CLAUDE_CODE_OAUTH_TOKEN`), whatever their case, exactly as it sets an
-explicit working directory rather than inheriting one. It was a list of what
+`CLAUDE_CODE_OAUTH_TOKEN`), whatever their case, exactly as a stage is
+given an explicit working directory rather than inheriting one; a probe,
+the sign-in check and the version check are given none. It was a list of what
 to keep out, a session's markers (D-120), the settings that outrank the
 `--effort` every stage passes (D-121, D-124), the keys and paid providers
-(D-161), which let every variable it did not name through. No settings file
-is read at all, a person's included, for the same reason (D-124). Older
-CLIs refused to start at all under `CLAUDECODE`; 2.1.301 does not.
+(D-161), which let every variable it did not name through. A stage, a
+probe, the sign-in check and an interactive review's printed command each
+pass `--setting-sources` empty, so no settings file is asked for, a
+person's included, for the same reason (D-124); a managed policy's is read
+all the same (below). Older CLIs refused to start at all under
+`CLAUDECODE`; 2.1.301 does not.
 
 **A managed policy is the one tier no flag keeps out.** The bundled 2.1.301
 binary adds it to whatever `--setting-sources` allows, as 2.1.306 does, so every review runs under
@@ -149,7 +161,9 @@ list, never inheriting defaults.
 
 ## 2. Model registry
 
-The app ships a candidate list (the ids in section 1 plus any the maintainer adds)
+The app ships a candidate list (`DEFAULT_MODEL_CANDIDATES` in
+`server/engine/probe.ts`: nine ids that section 1 names, three each of Fable,
+Opus and Sonnet, with no Haiku and no alias, plus any the maintainer adds to it)
 and probes it only when someone presses a probe control, never on first run
 and never on a timer (D-31: a probe is a real call that spends usage). Each
 result stores resolved id, context window, availability, error text, and
@@ -162,8 +176,14 @@ new-review picker says unknown, and Settings prints its state, `stale`.
 
 Recommended-for-review flags (the maintainer 2026-07-30: Opus and Fable are the
 reliable ones; 2026-10-22: Opus 5.5 recommended, D-184) mark `claude-opus-5-5`,
-first and so the default, and `claude-fable-5-1`; everything else available is
-selectable but carries its profile's warning. Haiku is no longer offered: it
+first in picker order, and `claude-fable-5-1`. A new review starts on the
+model of the review created last while a probe vouches for it, else on the
+first in picker order that a probe vouches for, Opus 5.5 when one vouches
+for it, and on none when no probe vouches for a model (`defaultModel` in
+`lib/models/availability.ts`). Everything else available is selectable,
+and its row on the new-review screen says "Accuracy may fall on this
+model." and, when a probe vouches for a recommended model, names the first
+such (D-187). Haiku is no longer offered: it
 was mechanical-only and could never run a review, and its row is removed at
 start. A candidate's description is taken again at every start, its probe
 result kept.
@@ -180,15 +200,24 @@ by D-123). max is refused on cost: the CLI's own index prices it at up to
 stages that call a model (every stage but Prepare and the audit) and as many batches as the profile calls for, unattended. It was first refused as
 the tier that spawns workflows; in 2.1.301 that is ultracode, a separate
 setting no review reads (D-124, D-125). It stays in the enum so reviews
-created before the rule still parse; it is simply never selectable and is
-refused at the API for every model.
+created before the rule still parse. The new-review screen does not offer
+it, and a create that names it is refused at the API whatever the model.
+A review stored at max before the rule is not refused later: Start, Resume
+and a verify-again do not check the effort, and a headless one passes
+`--effort max` to its calls. Refusing it there is not built.
 
 ### The second verifier
 
-Every finding the first verifier proves is proven again on the other strong
-family (PG-1 (a), D-185): an Opus review by claude-fable-5-1, any other by
-claude-opus-5-5 (`lib/models/pairing.ts`), frozen on the review when it
-first runs. A review, headless or Mode B, is refused at create and at Start,
+Every finding the first verifier proves is put to a second verifier, meant
+to be of the other strong family (PG-1 (a), D-185): claude-fable-5-1 for a
+review whose model the registry files under Opus, claude-opus-5-5 for any
+other (`lib/models/pairing.ts`), frozen on the review when it first runs.
+A headless review passes that model to the CLI. A Mode B review names it
+in the second verifier's printed command and reads the answer saved,
+without seeing which model wrote it. A model with no row in the registry
+has no family there, so an Opus id sent to the API from outside the
+registry is paired with claude-opus-5-5, its own family: pairing by the id
+is not built. A review, headless or Mode B, is refused at create and at Start,
 and a verify-again before its first paid call, 409 SecondVerifierUnavailable,
 while that model has no probe vouching for it now; the new-review screen
 keeps Start off with a Probe button for it beside the reason (WP-E1, review
@@ -221,7 +250,7 @@ Each model carries a `profileId`. Profiles are declarative config:
 
 | Profile           | Intended models                                                           | Rule delivery                                                                                                                                                                                                              | Batching                                                                                                      | Verification                      |
 | ----------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `full-context`    | claude-opus-5-5, claude-fable-5-1, claude-fable-5[1m], claude-opus-5[1m]  | Entire ruleset verbatim in one prompt                                                                                                                                                                                      | Whole change set in one comprehension and one adversarial pass; split only if the estimate exceeds the window | All findings in one fresh session, then the proven ones in another (S5b) |
+| `full-context`    | claude-opus-5-5, claude-fable-5-1, claude-fable-5[1m], claude-opus-5[1m]  | Entire ruleset verbatim in one prompt                                                                                                                                                                                      | Whole change set in one comprehension and one adversarial pass; split only if the estimate exceeds the window | All findings in one fresh session, then the proven ones in another (S5b). In Mode B each is a printed command, and the app does not see the session that answers it |
 | `chunked`         | claude-sonnet-5-5, claude-fable-5, claude-opus-5, claude-sonnet-5[1m]     | Full ruleset verbatim, but the adversarial pass runs once per rule theme (typescript, react, async, database, security, numeric, testing, organisation, general) with that theme's rules in the prompt                   | File groups sized to the window                                                                               | As full-context                   |
 | `decomposed`      | claude-sonnet-5, other mid-tier                                           | Theme chunks as above, further narrowed: only the themes a file's path suggests reach that file's prompt, and the plan names each (rule, file) pair left out, with its reason; the run keeps their count and the first twenty | Per file                                                                                                      | As full-context                   |
 | `mechanical-only` | anything untrusted for judgment; Haiku is retired (D-184)                 | Not offered for judgment stages                                                                                                                                                                                            | Meant for non-judgment helpers (e.g. summarising a sweep hit list); none is built                                      | Never                             |

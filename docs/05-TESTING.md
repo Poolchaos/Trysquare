@@ -13,8 +13,18 @@ one owned it while that plan ran; the plan is closed, and what is still
 unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
 - Flow 3 of section 3 is now in a browser for the limit pause with resume
-  and for cancel mid-stage; stage failure stays at the integration layer,
+  and for cancel mid-stage, and a failed stage's real error with Resume
+  offered is there for an interactive answer in the wrong shape
+  (`e2e/failure-paths.spec.ts`); a resume that carries a failed review on
+  stays at the integration layer (`tests/server/review/service.test.ts`),
   and D-55 keeps restart recovery there. U12.
+- Flow 4 of section 3: a review's frozen rules staying as they were after
+  its ruleset is edited is held at the integration layer
+  (`tests/server/db/rule-toggle.test.ts`,
+  `tests/server/api/rule-edit.test.ts`), not in a browser.
+- Section 2's composition snapshot tests per stage: `composeSystemPrompt`
+  is held by assertions on parts of the composed text for S2, S3 and S5
+  (`tests/lib/rulesets/compose.test.ts`), with no snapshot.
 
 ## 1. verify.sh (lands with the first code commit, WP-A)
 
@@ -42,8 +52,11 @@ marker first, then last, then absent, and a 65,600-byte output with the
 marker absent, then last. It runs in a child process limited to 60
 seconds, so a scan that hangs fails the gate instead of hanging it: with the
 here-string scan swapped back in, it failed at 60 seconds (D-135). The gate
-fails unless all five read correctly. The check took about 0.3s on Windows
-(three runs, 318 to 321 ms).
+fails unless all five read correctly. Run in the gate's own shell, as it
+was before the child process, the check took about 0.3s on Windows (three
+runs, 318 to 321 ms, 7a2eb0d, 2026-10-18); the change that moved it into
+the child process recorded it as passing in under a second, with no figure
+(920682b, 2026-10-18).
 
 ## 2. Unit and integration (vitest)
 
@@ -61,9 +74,13 @@ fails unless all five read correctly. The check took about 0.3s on Windows
   and turns the single definition of "verified" into something only one
   machine can produce. Importing a real private protocol is an optional local
   check, run by pointing the same importer at a path given on the command
-  line, never a committed test. Composition snapshot tests per stage.
-- `lib/review`: ledger invariants, finding state machine, report renderer
+  line, never a committed test. Composition (`composeSystemPrompt`) is held
+  by assertions on parts of the composed text for S2, S3 and S5, not by
+  snapshots (03 section 4); a snapshot test per stage is not built.
+- `lib/review`: ledger invariants, report renderer
   (including a test that a rendered report holds no em dash of its own), mechanical quote-match check (S5).
+- `lib/domain`: the review and finding state machines
+  (`tests/lib/state-machines.test.ts`).
 - `server/gitops` (integration, real git in tmp dirs): clone, fetch,
   worktree add/prune, bundle build, worktree-untouched assertion after a
   full pipeline run.
@@ -86,7 +103,8 @@ outputs), on a generated fixture project:
 3. Failure paths: stage failure surfaces real error and a resume carries on (D-50); limit
    pause and resume; cancel; server-restart interruption resume.
 4. Ruleset import UI shows fidelity report; edit bumps version; old review
-   snapshot unchanged.
+   snapshot unchanged (this last held at the integration layer, not in a
+   browser: Not built yet above).
 5. Both themes screenshotted per screen; axe accessibility checks pass.
 
 ## 3b. Proof for anything a person sees
@@ -96,10 +114,14 @@ set 2026-10-23, recorded here 2026-11-03 so it travels with the repository).
 
 1. **Driven in the browser.** An e2e test drives each screen and each state
    the change touches (open, closed, empty, failed, and so on) and saves a
-   screenshot of each, in the light and dark projects, at desktop width and
-   at 360px for phone. `e2e/themes.spec.ts` runs in both theme projects and
-   shows the pattern: `photograph()`, `settled()` before axe, and
-   `setViewportSize` for phone. Screenshots land in `review/<date>-e2e/`.
+   screenshot of each, in light and dark, at desktop width and at phone
+   width. `e2e/themes.spec.ts` runs in both theme projects and shows the
+   pattern: `photograph()`, `settled()` before axe, and `setViewportSize`
+   for phone, at 360 by 780. The journey and failure-path specs each run
+   in one project, in the light scheme; their helpers, `shootInThree` in
+   the journey and `shootAll` in the failure paths, switch the theme with
+   `page.emulateMedia` and take the phone shot at 390 by 844. Screenshots
+   land in `review/<date>-e2e/`.
 2. **Measured, not only pictured.** What a picture hides is asserted: axe
    finds nothing at WCAG 2.1 AA, the page does not scroll sideways, and text
    meant to be read sits inside the screen.
@@ -123,10 +145,13 @@ bug. It does not block the change; only the maintainer defers one.
 ## 4. The seeded-bug fixture (engine quality gate)
 
 Neither repository below is kept in this one: `tests/fixtures/build-seeded-repos.mjs`
-builds both, with `seed-manifest.json`, into a directory its caller names.
+builds both into a directory its caller names and returns the manifest;
+run from the command line, it also writes the manifest there as
+`seed-manifest.json`.
 
-`seeded-repo/`: a small realistic TypeScript/React app with
-a `main` and a `feature` branch. The feature branch seeds defects mapped to
+`seeded-repo/`: a small TypeScript app with a `main` and a
+`feature/rename-prefs` branch, and `rename-prefs-migrated`, the feature
+branch with the contract bugs fixed. The feature branch seeds defects mapped to
 protocol rules, at minimum: an id-vs-_id lookup mismatch behind an index
 signature (the canonical bug), a deleted await, a swallowed error, a
 floating-point money calc, a timezone boundary bug, a duplicated merge

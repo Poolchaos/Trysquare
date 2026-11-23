@@ -8090,3 +8090,121 @@ verified evidence, in writing, here.
   fetch time, the service test expects no result folder after a run with
   the checks off, the manager test expects the abandoned-request words,
   and the interactive engine test expects the note word for word.
+- 2026-11-23 D-319 Corrections to earlier entries: statements the sweep
+  of the records against the code (D-317) found untrue of the code, the
+  tests or the commits they name, each read again at 6f339d8. The
+  entries stand as written; this says what is so.
+  D-242 said that in Mode B the app starts no CLI. It starts none for a
+  stage (`createInteractiveEngine` looks the CLI up and does not run
+  it). Its sign-in check runs the CLI (`readCliStatus`,
+  `src/server/engine/probe.ts`) on a request to `/api/auth`, which the
+  new-review screen makes as it opens and a review's page makes while
+  its review is a draft or can be resumed and is neither running nor in
+  line, whichever its engine (`src/app/reviews/new/page.tsx`,
+  `src/app/reviews/[id]/page.tsx`).
+  D-244's list of when the app runs that check left out
+  `npm run claude:auth`, which runs it and, when a sign-in it started
+  exits 0, runs it again (`scripts/lib/claude-auth.ts`), and the demo
+  scripts, which run it before a review that is not on the fake CLI
+  (`readyForReview`, `scripts/lib/demo-cli.ts`).
+  D-253 said the killed are counted in the tile. The Proofs discarded
+  tile counts a killed finding where `killedBy` is `quote_check`
+  (`src/server/db/repositories/scoreboard.ts`). A finding the verifier
+  refuted, or whose rule it found not to apply, is killed as
+  `verification` (`src/server/review/verification.ts`) and is not in
+  that count.
+  D-254 said the server takes any full model id for a review, probed
+  or not. The create route asks no probe of the review's own model. It
+  refuses the retired `claude-haiku-4-5-20251001` (`reviewModelSchema`,
+  `src/lib/models/model-id.ts`) and a review whose paired second
+  verifier a fresh probe does not vouch for (`secondVerifierNotReady`,
+  `src/server/db/repositories/models.ts`).
+  D-265 said a rule saved in the app is refused unless it is one rule
+  with no line lost, "so what the model is given stays the person's
+  words". Where a stage is given a rule's text it is the app's
+  rendering (`renderRule`, `src/lib/rulesets/compose.ts`): a heading,
+  the stored severity, and what the importer read as the rule's text
+  and under the Violation Example, Correct Pattern, Detection and Why
+  This Matters labels. A field ends at a heading or at a line outside
+  a code fence that starts with `**` and a capital letter
+  (`fieldAfterLabel`, `src/lib/rulesets/import.ts`), so in a rule with
+  a `**Rule:**` label a part under `**Exceptions:**`, a label no field
+  is read from, passes the check (`parseRuleBlock`,
+  `src/lib/rulesets/rule-edit.ts`), is kept in the rule's markdown, and
+  is not in that rendering.
+  D-267 said a duplicate goes through an export. `duplicateRuleset`
+  (`src/server/db/repositories/rulesets.ts`) copies the stored rows,
+  each rule's stored severity and sweep patterns with them, and reads
+  no export.
+  D-278 said the suite has no test that starts a script through tsx.
+  `tests/scripts/npm-entrypoints.test.ts` runs `npm run dev`, whose
+  `predev` is `tsx scripts/doctor.ts`, and `npm run rules:seed`,
+  `tsx scripts/seed-rules.ts`. No file under `tests` or `e2e` names
+  `demo:template`.
+  D-279 said two rules of the TypeScript template say when to report
+  nothing. One rule does, the indexed value taken as present (28
+  today), of `noUncheckedIndexedAccess`; the other place is the
+  template's Purpose, a directive (`templates/typescript.md`).
+  D-280 said the General fixture's four checks were unchanged in what
+  they ask once moved onto the shared checks. The old test also held
+  the removed guard's key to line 5; `tests/templates/fixture-checks.ts`
+  holds that the removed line is in the diff and holds no line number
+  for it.
+  D-281 said the React template's sections are named so every rule is
+  put to component files and to no other. That is the `decomposed`
+  profile, where a rule tagged `react` alone, as each of the
+  template's is, goes to `.tsx` and `.jsx` paths and to no other
+  (`themesForPath`). On `full-context`, the profile of the first
+  candidate model (`src/server/engine/probe.ts`), and on `chunked`,
+  `planRuleBatches` (`src/lib/rulesets/compose.ts`) puts each of the
+  template's rules to each file it is given.
+  D-286 said a To header is built from an address. In `src` the
+  `resultAddresses` setting is named by the Settings route, the
+  Settings page, its schema and the settings' key list; the sender is
+  EM-3 of `plans/EMAIL-REPORT-PLAN.md`, which reads TODO.
+  Review round 26 said the two demo commands keep no author.
+  `package.json` has three (`demo:fixture`, `demo:template`,
+  `demo:design`) over two scripts, each of which creates its review
+  with no author (`scripts/demo-fixture.ts`,
+  `scripts/lib/design-demo.ts`).
+  Review round 27 said it was over the code changed on 2026-11-22 and
+  gave the range 6b2bb8c to a56b369. Two commits of that day made
+  before the round's own (6187f99) change `src` and are outside that
+  range: d40a707 (D-302) and 88bd874 (D-303).
+  D-307 rejected clearing the bundle on Resume as throwing away answers
+  the pipeline accepted. On a Resume an answer with a succeeded row is
+  replayed from that row by its prompt hash before the engine, which
+  reads the file, is asked
+  (`src/server/review/checkpointing-runner.ts`). An answer a clear
+  would discard is one saved after its stage timed out, which the
+  timeout's words ask for (`waitForAnswer`,
+  `src/server/engine/interactive.ts`).
+  D-312 said of AL8 that nothing hands S2's uncertainties to S3. No
+  prompt of S3's names them: in `src` the word is in S2's answer schema
+  alone (`src/lib/review/stage-schemas.ts`), which S2's own system
+  prompt carries as the shape of its answer. A headless S3's first
+  request is started as a resume of the session S2 ended on
+  (`CHAINED_STAGES`, `src/server/review/engine-runner.ts`).
+  Decided by the session.
+- 2026-11-23 D-320 The documents are corrected against the code, by a
+  workflow. Of the sweep's 226 findings (D-317), 140 were in the
+  documents. Eight agents each owned a group of documents, read every
+  finding against the code at 6f339d8 and reworded what was false; eight
+  more, independent, tried each new sentence against the code and
+  narrowed what was too wide. The 22 in this log are answered by D-319:
+  thirteen statements corrected there, two more said there as the code
+  falling short, and seven left out because a later entry had already
+  corrected them. Of the 118 in eighteen other documents, 117 are
+  reworded in place: the checkers let 90 stand, corrected 25, and left
+  two open that were written against 6f339d8 and made untrue by D-318,
+  which the session then corrected (04, a resume with the checks off).
+  Fifteen of them say a behaviour the document claimed as not built,
+  the code falling short of the stated design, in place and in that
+  document's Not built yet list where it has one. One is in CLAUDE.md
+  (section 8, `lib/` is pure): the charter is the maintainer's to word,
+  and the question is in the inbox. Rejected: rewording the documents
+  inline over several sessions, the same checks at a tenth of the pace.
+  Decided by the session, on the maintainer's word of 2026-11-23 to use
+  a workflow where the session judged it best. Not proven by a test: a
+  document has none. The gate holds their form, and the twenty-sixth
+  grade reads them against the code.

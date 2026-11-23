@@ -18,9 +18,10 @@ the same way (D-306).
   (`e2e/themes.spec.ts`); a phone is 360 by 780 there, and 390 by 844 in the
   shots of single regions.
 - **The data.** Every shot is of the browser suite's fixture: one project,
-  `app`, its seeded branch, and the reviews the suite ran against the fake
-  CLI. Seventeen reviews of one branch pair is the suite's doing, not a
-  design.
+  `app`, its seeded branch, and the reviews the suite ran: headless ones
+  against the fake CLI, and interactive ones, where a stage that is answered
+  is answered by the test saving its answer file as a person would.
+  Seventeen reviews of one branch pair is the suite's doing, not a design.
 - **The grades.** A to D as `05-TESTING.md` section 3b defines them. Only A
   and B pass. A grade is given only for a shot looked at on 2026-11-22;
   what was not looked at is listed at the end.
@@ -47,11 +48,12 @@ person.
 What a template could not have decided: every figure is counted from this
 machine's reviews and says its own denominator ("confirmed of the proven
 findings decided", "by the quotation check, of findings raised"). Needs you
-lists what goes on only when a person acts, oldest wait first (a running
-interactive review and one a restart interrupted last, with no age), each
-row saying what it waits for. Rule yield is sorted with the rules confirmed
-least often first, because the question it answers is which rule costs
-attention for nothing.
+lists a review awaiting its decisions, one paused, interrupted or failed
+that waits on a Resume, and a running interactive review, oldest wait first
+(a running interactive review and one a restart interrupted last, with no
+age), each row saying what it waits for. A draft is not listed. Rule yield
+is sorted with the rules confirmed least often first, because the question
+it answers is which rule costs attention for nothing.
 
 Grades: `light-dashboard` A, `dark-dashboard` A, `light-dashboard-phone` B.
 On a phone Recent reviews shows its branch pair column alone; the other
@@ -67,7 +69,8 @@ What a template could not have decided: the list's one line under its
 title, "Cloned read-only. Trysquare never writes to a project's code", is
 the app's first law said where a repository is handed over. A project's
 branches carry ahead, behind and the last commit's subject, with Review on
-each, and Mine narrows them by the git emails that count as the person's.
+each but the default branch, and Mine narrows them by the git emails that
+count as the person's.
 Tests and design is off until turned on, and says what off means.
 
 Grades: `light-projects` A, `dark-projects` A, `light-project-detail` A,
@@ -123,8 +126,12 @@ What it is for: deciding each finding, with the proof in sight.
 
 What a template could not have decided: a finding is shown with the code it
 quotes as the checked-out file has it, the failure mechanism, what it was
-proven from, which guards were searched, and which two models proved it.
-Confirm is offered only for a finding proven by both. Dismiss takes a
+proven from, which guards were searched, and which two models proved it
+(for an interactive review, which two models its commands named: the app
+does not see what answered in the person's sessions). In the list Confirm
+is offered only for a finding proven by both. A project's own command that
+failed has a card above the list, and Confirm is offered there too: the app
+records it proven from its exit code or its time limit. Dismiss takes a
 reason first. The count above the list is what is left to decide.
 
 Grades: `dark-queue` A, `light-queue-phone` B, `dark-queue-phone` B. On a

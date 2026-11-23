@@ -54,8 +54,9 @@ from 2026-11-03.
   third slice, D-297), which finishes WP-L: a review keeps the name and
   email its branch's newest commit was authored with (migration 0020),
   and Recent reviews has an Author column, "You" by the emails a branch
-  list goes by, else that name, a dash for a review made before the
-  author was kept. A git config that cannot be read is said under the
+  list goes by, else that name (the email where the commit has no name),
+  a dash for a review made before the author was kept.
+  A git config that cannot be read is said under the
   table in git's words, the board shown all the same.
   `./verify.sh --e2e` exits 0 with 1697 unit tests passing, 8 skipped,
   and 172 browser tests.
@@ -69,7 +70,9 @@ from 2026-11-03.
   seventeenth's. All are logged as AF1 to AF16 in the audit file and
   corrected the same day (D-298): the three lines say what the code does,
   Rule yield is tallied by ruleset and number with the ruleset named on
-  each row, and the Rulesets list and the picker say "9 of 12 rules on"
+  a row filed under one (a number that is a rule of none of the rulesets
+  its review froze is filed under no ruleset and its row names none,
+  D-316), and the Rulesets list and the picker say "9 of 12 rules on"
   where some are switched off.
   The nineteenth grade, at d878af3 the same day, was C on two lines: the
   sentence that corrected the Delete ruleset card said "the first ruleset
@@ -147,7 +150,12 @@ from 2026-11-03.
   contract change can be closed by a no-consumers-found verdict on the
   stage's word. Twelve immaterial lines came with them, two written too
   wide that day (AM1 to AM14 in the audit file). Corrected the same day
-  (D-313), in words. A twenty-sixth grade is owed.
+  (D-313), in words. A twenty-sixth grade is owed. Before it, on
+  2026-11-23, the documents and screens were read against the code by a
+  sweep whose every finding was put to refuters: 226 stood (D-317). Of
+  the 140 in the documents, 139 are answered (D-319, D-320) and one, in
+  CLAUDE.md, is the maintainer's; eight in the code are fixed (D-316 to
+  D-318); 78 in the code and on the screens are open.
   `./verify.sh --e2e` exits 0 with 1731 unit tests passing, 8 skipped,
   and 176 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
@@ -173,7 +181,7 @@ from 2026-11-03.
   from a starting block in the protocol's shape: it goes to the end of a
   section of the ruleset's document, and its section, tags and sweep
   patterns are what the importer reads there, so an export imports back
-  as what is stored. `./verify.sh --e2e` exits 0 with 1590 unit tests
+  with those as they are stored. `./verify.sh --e2e` exits 0 with 1590 unit tests
   passing, 8 skipped, and 157 browser tests.
   A rule switched off is set back by its title's colour and its badge's:
   its row was drawn at 55% opacity, which put its tags, its badge and
@@ -198,10 +206,13 @@ from 2026-11-03.
   that is its heading alone says it has no text, and a section whose last
   rule was removed is no longer where a new rule goes. `./verify.sh --e2e`
   exits 0 with 1598 unit tests passing, 8 skipped, and 160 browser tests.
-  A ruleset changed in the app exports a document that reads back as what
-  is stored (RA-5, D-271): a save, an add and a removal each read the
+  A ruleset changed in the app exports a document that reads back with
+  every block where it is stored and each rule's section, tags and sweep
+  patterns as stored (RA-5, D-271): a save, an add and a removal each read the
   document back with the importer and store where every block stands and
   each rule's section, tags and sweep patterns from that reading. A rule
+  switched off, and a severity changed with the picker and not in the
+  rule's own text, are set beside the text and are not in the document. A rule
   saved longer had left the blocks after it at their old line numbers, so
   importing one's own export asked to replace the ruleset. A table row in
   a rule's text is a sweep row for the rule it names, as an import reads
@@ -489,9 +500,13 @@ from 2026-11-03.
 - 2026-10-24: WP-I is built (I1 to I6, three review rounds in DECISIONS):
   a project may turn its own install, tests and e2e on, run on a
   throwaway copy of the branch; a failing command is a finding the app
-  proves, and every screenshot its e2e saves is graded A to D by the
+  proves, and the PNG screenshots its e2e saves under the project's
+  screenshots folder (200 at most, taken by name, each of 8 MiB at most;
+  what a limit leaves out is said in a run note) are graded A to D by the
   review's model and again, for a C or D, by the paired one, both needing
-  to fail it. WP-J ran the design fixture on Opus 5.5 with Fable 5.1
+  to fail it; in an interactive review each grade is read from the answer
+  to a command that names that model. WP-J ran the design fixture on Opus 5.5
+  with Fable 5.1
   second (D-200): 5/5 planted screenshots found, none of the 7 clean ones
   failed. Both wait on the maintainer's verdict. The code fixture, run
   again since D-194 on the same pair, gave 11/11 by the key, all proven by
@@ -502,12 +517,17 @@ from 2026-11-03.
   is in build (D-186): WP-A to WP-G are DONE, with five review rounds
   over them (in DECISIONS). Opus 5.5 is the recommended default and Haiku
   is retired; a verified finding carries a proof the app checks step by
-  step, and is proven again by a second verifier on the other strong
-  family, both agreeing; an open question cannot be confirmed, can be
-  verified again as a paid request said before it is sent, and one left
+  step, and is proven again by a second verifier, both agreeing: on the
+  other strong family in a headless review, and in an interactive one by
+  the answer to a command that names that family's model; an open
+  question cannot be confirmed; Verify again asks about one anew in a
+  headless review waiting on decisions, as a paid request said before it
+  is sent, and is refused in an interactive review; and one left
   out is reported apart from the dismissed (D-190). The picker and
-  pre-flight say what each model gets and count every request a review
-  makes; the run is shown as five steps, live and once finished. WP-H ran
+  pre-flight say what each model gets and count the requests a review's
+  stages are planned to make (the grading stages' are counted as none,
+  and a repair of an answer in the wrong shape is not counted); the run
+  is shown as five steps, live and once finished. WP-H ran
   the fixture on Opus 5.5 with Fable 5.1 second (D-193): all 11 defects
   raised, 8 proven by both, 3 open questions where Fable 5.1 ended its
   proof off the cited lines, 7/11 by the key. Next is WP-I, the design of
@@ -607,7 +627,7 @@ the single gate. At fe22a19 it passes with `--e2e` on Linux, 1477 unit
 tests passing and 8 skipped, plus 137 browser tests (the journey, the
 failure paths, the theme and screenshot pass, the phone-width pass, axe
 over every screen in both themes, and the shutdown pass, which runs on
-Linux and macOS only). `--e2e` implies `--build` since 2026-08-18, because
+Linux and macOS only). `--e2e` implies `--build` since 2026-08-17, because
 Playwright serves the last build and without it the browser gate can pass
 against output that predates the change under test (D-70). CI runs
 `./verify.sh --build --e2e` and then the five fake demos (the seeded fixture and the four templates') on Ubuntu, Windows and
@@ -637,8 +657,10 @@ workers with a 1 GB heap each (`vitest.config.ts`): 0.8 GB at the peak and
   CLI path kept on Settings (the `claudePath` setting, read as each run
   starts and each check runs, D-152), then the
   Claude Code CLI installed as a dependency (`@anthropic-ai/claude-code`
-  2.1.301, D-92), then `claude` on PATH. Every run records which one it used
-  as a run note. Resolved by
+  2.1.301, D-92), then `claude` on PATH. A headless run records which one
+  it used as a run note; an interactive run's note says it was answered in
+  the person's own session and names no binary, and its printed commands
+  name the CLI found the same way, or `claude` where none is. Resolved by
   `src/server/engine/cli.ts`: a bare name is looked up on PATH (PATHEXT order
   on Windows), a `.js`/`.mjs` runs under Node, and on Windows an npm `.cmd`
   shim is read for the program it launches; anything else that cannot be
@@ -646,7 +668,8 @@ workers with a 1 GB heap each (`vitest.config.ts`): 0.8 GB at the peak and
 
 ## Settings
 
-Stored in the `settings` table, edited on the settings screen. Only these keys
+Stored in the `settings` table, edited on the settings screen but for
+`defaultRulesetId`. Only these keys
 are accepted; anything else is refused by name.
 
 - `maxConcurrentReviews` (default 1). Two reviews share one usage limit.
@@ -656,7 +679,8 @@ are accepted; anything else is refused by name.
 - `claudePath` (default empty). The CLI reviews run through, which
   `TRYSQUARE_CLAUDE_PATH` wins over (D-152).
 - `defaultRulesetId` (default empty). The ruleset a new review starts on
-  (D-225).
+  (D-225). Set on a ruleset's page ("Use by default for new reviews"); the
+  settings screen has no field for it.
 - `identities` (default empty). The git emails that count as the person's,
   for the Mine filter on a project's branches and in a new review's
   branch picker. Empty goes by `user.email`
@@ -689,7 +713,8 @@ are accepted; anything else is refused by name.
   addresses a result goes to); and
   paths, ids and matching an error by the
   name its class sets.
-- `src/server/db/` - schema (16 tables), client, migrations 0000 to 0020, and
+- `src/server/db/` - schema (16 tables), client, the runner for the
+  migrations in `drizzle/` (0000 to 0020), and
   repositories for projects, reviews, ledger, findings, models, rulesets,
   settings, stage executions, the scoreboard, a project's checks and what
   they found.
@@ -815,6 +840,10 @@ own now (D-75, D-81).
   a lexical scan of TypeScript files finds.
 - More than one dependency per review: the model and the screens take a
   single linked project.
+- The sign-in asked again as a review leaves the queue: it is asked as
+  Start is pressed, so one changed while a headless review waits in line
+  is not said before that review runs (External services; idea inbox,
+  2026-10-21).
 - Emailing a review's result: in scope since D-251, planned in
   `plans/EMAIL-REPORT-PLAN.md` (D-264). The addresses a result goes to are
   kept on Settings (EM-2a, D-286), and the card says nothing is sent yet.
@@ -848,10 +877,17 @@ None. Reviews run through the local Claude Code CLI, installed with the app
 (D-92), on the claude.ai subscription sign-in it shares with the editor's
 Claude Code, by default: API keys and paid providers in the server's
 environment are kept from it, a sign-in that bills per token, or may, is
-said on Settings and before Start, and a headless review on one starts
-only once its page has said so (D-161, D-162). The CLI gets only what it needs to
-run and the sign-in (D-174); a managed Claude Code policy, which no flag
-keeps out, is said where one is found (D-175); see
+said on Settings and before Start, and a headless review's Create and
+Start are refused on one until its page has said so (D-161, D-162). The
+sign-in is asked as Start is pressed and not again as a review put in
+line leaves the queue, so one changed while it waits is not said before
+that review runs (not built: idea inbox, 2026-10-21). A CLI the app
+starts gets only what it needs to run and the sign-in (D-174). The
+commands an interactive review prints set no environment: they run in the
+person's own terminal with that terminal's, which the app does not see,
+and the card that prints them says an API key or another provider set
+there wins over the sign-in and bills per token. A managed Claude Code
+policy, which no flag keeps out, is said where one is found (D-175); see
 `06-MODELS-AND-PROFILES.md`.
 The Claude Code CLI's own telemetry and error reports are off for every CLI
 the app starts (`src/lib/engine/command.ts`, D-240): a test runs the

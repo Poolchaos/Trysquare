@@ -10,6 +10,8 @@ pulled deliberately.
   means storing a credential, which SECURITY.md says the app never does.
   Consider the no-credential route first (export the report and hand it to the
   user's own mail client) with real SMTP as a clearly labelled opt-in.
+  PULLED 2026-11-20 (D-264) into `plans/EMAIL-REPORT-PLAN.md`. Of it the
+  addresses on Settings are built (EM-2a, D-286); its sender (EM-3) is not.
 - 2026-08-04: retag unmigrated-consumer from rule 4 (index signature, which
   the Prefs interface does not have) to a rule that names the class, possibly
   a new rule 15.
@@ -159,8 +161,10 @@ pulled deliberately.
   passed that test there on the same browser code. Parked with the other
   Windows entries (D-232).
 - 2026-11-19: only the picker keeps a review to a model a fresh probe
-  vouches for. `POST /api/reviews` takes any full model id, and Start does
-  not ask either; the second verifier alone is refused on the server
+  vouches for. `POST /api/reviews` does not ask whether a probe vouches for
+  the review's own model: it checks that its id is a full one and not the
+  retired Haiku's (`reviewModelSchema`), and Start does not ask either. For
+  want of a fresh probe the server refuses the second verifier alone
   (D-244). Should the server refuse the review's own model too?
   DECIDED 2026-11-20 (D-254): no, a probe is a paid request.
 - 2026-11-19: the report of a `decomposed` review says each hunk was
@@ -288,9 +292,12 @@ pulled deliberately.
   check the maintainer's protocol first.
 - 2026-11-21: the sweep table edited in the app, so a rule's code can
   change and a removed rule's rows go with it (D-271 holds both back).
-- 2026-11-21: no `color-scheme` is declared, so native checkboxes, selects
-  and scrollbars are drawn for the light theme on the dark one. Declaring
-  it changes every screen's dark shots. RA-6's two radios declare their own.
+- 2026-11-21: no `color-scheme` is declared for the page, so a native
+  checkbox, select or scrollbar that declares none of its own is drawn for
+  the light theme on the dark one. Declaring it changes every screen's dark
+  shots. The Rulesets screen's Start from radios and its template radios,
+  and the ruleset picker's checkboxes, declare their own
+  (`scheme-light-dark`).
 - 2026-11-21: a ruleset with no directive is given to a model with an
   empty `# Protocol` section (`composeSystemPrompt`). Leaving the heading
   out changes a prompt, so it wants a measured run.
@@ -348,18 +355,26 @@ pulled deliberately.
   the lists, the report); "requests" there are commands the app printed
   and never sent; and it holds its place in the line for as long as the
   person takes, up to the timeout of each stage. DONE 2026-11-22 (D-311):
-  the review's page and its scan view say the first two, its report the
-  first alone, and the new review form the third. The reviews list and the dashboard's
-  rows give a time with no such word.
+  the review's page, while it awaits its decisions or is complete, and its
+  scan view say the first two, its report the first alone, and the new
+  review form the third. The reviews list and the dashboard's rows give a
+  time with no such word. So does the page of an interactive review that
+  failed or was cancelled: its header and Duration tile give the run's
+  time, and the row of a stage with more than one request its count, with
+  neither said, though the row of a stage that was answered says its time
+  includes the person's.
 - 2026-11-22: a linked package's imports are not resolved through
   `links.json`: the file is written to the bundle and nothing reads it,
   no stage being given the mapping or the package's name, so the Package
   name a person enters for a link feeds nothing in a review (the
   twenty-fourth grade, AL7; 03, Not built yet). Giving it to a stage
   changes a prompt, so it wants a measured run.
-- 2026-11-22: S2's uncertainties reach nothing: the pipeline keeps only
-  the files its answer says it read, and S3 is neither told of them nor
-  has a place to answer them (AL8; 03, Not built yet).
+- 2026-11-22: nothing acts on S2's uncertainties: of S2's answer the
+  pipeline uses the files it says it read, no instruction hands the
+  uncertainties to S3, and S3's answer has no place for them. In a headless
+  review S3's request resumes the session S2 answered in, so they are in
+  that session; an interactive stage's command resumes none (AL8; 03, Not
+  built yet).
 - 2026-11-22: a timed-out interactive stage fails the review and removes
   the checkout the person's session may still be reading
   (`src/server/review/service.ts`, `recordFailure`), and the timeout's
@@ -378,6 +393,11 @@ pulled deliberately.
   and no accounting, and the pre-flight shows its "Changed exports" row
   only above zero, so a person is not told that none was found (the
   twenty-fifth grade, AM1; 03, Not built yet).
+- 2026-11-23, a question for the maintainer: CLAUDE.md section 8 says
+  `lib/` is pure and I/O-free, and `src/lib/ids.ts` reads the clock and
+  makes random ids while `src/lib/models/availability.ts` defaults to the
+  clock (the sweep, D-320). The charter is the maintainer's to word:
+  either the law says no file, process or network I/O, or those two move.
 
 ## Retired
 

@@ -40,7 +40,7 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/BUILD-PLAN.md](plans/BUILD-PLAN.md)       | Work packages WP-A..L, milestones, founder gates, standing rails. |
 | [plans/EXECUTION-ORDER.md](plans/EXECUTION-ORDER.md) | The execution order of 2026-07-30: work T1-T19, dependencies, founder gates, pre-resolved decisions D-1..D-20. Superseded for anything not DONE by `MVP-PLAN.md` (its own closing note), and now by `COMPLETION-PLAN.md`. |
 | [plans/M2-FINISH-PLAN.md](plans/M2-FINISH-PLAN.md) | Implementation plan for T8, T9 and the FG-2 demo: commit map W1-W8, the resume design, decisions D-21..D-26. |
-| [plans/FG2-CHECKLIST.md](plans/FG2-CHECKLIST.md) | What the maintainer judges at founder gate FG-2, where the evidence lives, and what each verdict means. |
+| [plans/FG2-CHECKLIST.md](plans/FG2-CHECKLIST.md) | What the maintainer judges at founder gate FG-2, where the earlier runs' evidence was kept (folders made on a machine the maintainer no longer has; the run to judge is the fresh one of `COMPLETION-PLAN.md` CP-7, D-232), and what each verdict means. |
 | [plans/M3-FINISH-PLAN.md](plans/M3-FINISH-PLAN.md) | Implementation plan for the usable app (T10-T17 remainder plus W8 leftovers): commit map V1-V9, spend-safety and confirmation-loop design, decisions D-30..D-44. |
 | [plans/M4-FINISH-PLAN.md](plans/M4-FINISH-PLAN.md) | The v1 close-out plan from the 2026-08-03 full audit: verified gap inventory, commit map U1-U13, decisions D-45..D-56. |
 | [plans/U12-FIXTURE-GAPS.md](plans/U12-FIXTURE-GAPS.md) | The four seeded-fixture defects that U12 still owed, planned against the live tree and adversarially verified. EXECUTED 2026-08-04, all phases. |
@@ -49,7 +49,7 @@ then `GATES.md`, then only what the active gate needs.
 | [plans/DASHBOARD-SHELL-PLAN.md](plans/DASHBOARD-SHELL-PLAN.md) | D-81 executed in detail: the widget dashboard, the top bar, the rail's retirement; work packages M0-M6 with the verified e2e blast radius. |
 | [plans/PLAN-TEMPLATE.md](plans/PLAN-TEMPLATE.md) | Template for multi-step plan docs (work packages, decision gates, done tracking).            |
 | [plans/idea-inbox.md](plans/idea-inbox.md)       | One-line dated idea capture. Ideas are not expanded until the active gate passes.            |
-| [plans/AUDIT-2026-10-16-GLM.md](plans/AUDIT-2026-10-16-GLM.md) | The 2026-10-16 audit: gate results on Windows, the unit-failure taxonomy, security findings, open work, and a cross-check against the parallel audit. Read-only report; nothing in it was fixed. |
+| [plans/AUDIT-2026-10-16-GLM.md](plans/AUDIT-2026-10-16-GLM.md) | The 2026-10-16 audit: gate results on Windows, the unit-failure taxonomy, security findings, open work, and a cross-check against the parallel audit. Read-only report: the audit changed no code. |
 | [plans/AUDIT-2026-10-16.md](plans/AUDIT-2026-10-16.md) | The parallel 2026-10-16 audit: finding IDs W, S, E, A, U, T, R, D with proof per finding, and the evidence behind each disagreement with the GLM report. Read-only report. |
 | [plans/MVP-PLAN.md](plans/MVP-PLAN.md) | The MVP: three-OS support, security, engine fixes, spend safety, Claude connect, then the G1 and G2 verdicts. Seven phases, decision gates MG-1..MG-10. RATIFIED 2026-10-16 (D-86). |
 | [plans/PROOF-AND-STEPS-PLAN.md](plans/PROOF-AND-STEPS-PLAN.md) | After the MVP: the 5.5 models, proof a finding must carry and a second verifier, and the run shown as five steps, then the design of what a branch builds. BUILT 2026-10-24 (D-184, D-186); the verdicts on WP-I and WP-J are the maintainer's. |

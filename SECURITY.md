@@ -46,9 +46,11 @@ whole categories of vulnerability, but it leaves some that matter:
   do, once you turn them on, is that project's code (see the trust model).
 - **Reaching the app from a web page.** A page in your browser can address
   127.0.0.1 directly or rebind its own domain to it. The server refuses
-  requests addressed to anything but this machine and API requests sent by
-  another site. A way past that, a request the app acts on that a page you
-  merely visited sent, is in scope and serious.
+  requests addressed to anything but this machine, apart from ones for a
+  path the matcher in `src/proxy.ts` leaves out of its guard (those that
+  start with `/_next/static`, `/_next/image` or `/favicon.ico` among them),
+  and API requests sent by another site. A way past that, a request the app
+  acts on that a page you merely visited sent, is in scope and serious.
 - **Exposure of credentials.** The app relies on the credentials your Claude
   Code CLI and your git already hold, and should never read, copy, or log
   them. It refuses a repository address carrying a password or token (and,

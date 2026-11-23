@@ -17,12 +17,16 @@ change.
    build and `--e2e` for the browser suite (which implies the build). Never
    pipe it into anything that hides its exit code.
 4. Tests never spend usage unasked: `tests/helpers/no-real-cli.ts` refuses
-   any CLI that is not a fake (`tests/fixtures/fake-claude.mjs`, or a Node
-   script under the temp directory, as a test's own copy is). The fake is
-   driven by `FAKE_CLAUDE_*` variables; read its header. Two files start the
-   real CLI: `stand-in-api.test.ts`, on every run, against a local stand-in
-   for the API, and `real-cli.test.ts`, only with `TRYSQUARE_REAL_CLI=1`,
-   which does spend.
+   a CLI that is not a fake (a program under `tests/`, as
+   `tests/fixtures/fake-claude.mjs` is, or a Node script under the temp
+   directory, as a test's own copy is; nothing under a `node_modules`
+   folder) when it is resolved with no CLI environment handed in, except
+   in `real-cli.test.ts` run with `TRYSQUARE_REAL_CLI=1`. A call that hands
+   one in is left alone, which is how `stand-in-api.test.ts` reaches the
+   real CLI. The fake is driven by `FAKE_CLAUDE_*` variables; read its
+   header. Two files start the real CLI: `stand-in-api.test.ts`, on every
+   run, against a local stand-in for the API, and `real-cli.test.ts`, only
+   with `TRYSQUARE_REAL_CLI=1`, which does spend.
 5. Measure the session before each change: `node scripts/session-context.mjs`.
    At 450,000 tokens it says `HANDOVER DUE`, and the session writes its
    handover instead of starting anything; it does the same sooner when the
@@ -34,14 +38,16 @@ A request: the browser calls a route under `src/app/api/`, behind the
 request guard in `src/proxy.ts`. The route takes the database and the job
 manager from `runtime()` (`src/server/runtime.ts`), validates its body with
 zod, and answers through `handler`, `ok` and `readJson` in
-`src/server/api/respond.ts`. All database access goes through
-`src/server/db/repositories/`.
+`src/server/api/respond.ts`. Within `src/`, database access goes through
+`src/server/db/repositories/`; the doctor (`scripts/lib/doctor.ts`) counts
+the stored rulesets with a read-only query of its own.
 
 A review:
 
 1. Adding a project clones it bare in the background
-   (`src/server/projects/clone.ts`); the project's page polls until it is
-   ready.
+   (`src/server/projects/clone.ts`); the project's page polls while the
+   clone is pending or cloning, and reads the page whole once it has
+   ended, ready or failed.
 2. `POST /api/reviews` fetches, pins both commits and creates the review row.
    `POST /api/reviews/preflight` says what would be examined before anything
    is spent.
@@ -50,8 +56,10 @@ A review:
    `src/server/review/service.ts`: S0 prepare (worktree, diff, sweeps), then
    the stages S1 to S6 in `src/server/review/pipeline.ts`, of which S6,
    the audit, asks no model. Only
-   `src/server/engine/` starts `claude`; stage prompts are composed in
-   `src/lib/rulesets/compose.ts`.
+   `src/server/engine/` starts `claude`; a stage's system prompt is
+   composed in `src/lib/rulesets/compose.ts` and what it is shown in
+   `src/server/review/content.ts`, and the two grading stages take both
+   from `src/lib/review/design.ts`.
 4. The review page follows `GET /api/reviews/[id]/events` (server-sent
    events, `src/server/jobs/stream.ts`).
 5. A person confirms or dismisses each finding (S7,
@@ -75,7 +83,7 @@ Stage contracts: `03-REVIEW-PIPELINE.md`. Tables and state machines:
 | Report and export                                          | `reviews/[id]/page.tsx`                              | `reviews/[id]/report`, `reviews/[id]/export`                                                  | `server/review/report-input.ts`, `lib/review/report.ts`                                                   | 03 S8                      |
 | Rulesets: import, start one with no document, view each rule, on/off, severity, default, a rule's text edited, a rule added, a rule removed, a ruleset deleted | `src/app/rulesets/page.tsx`, `rulesets/[id]/page.tsx` | `rulesets`, `rulesets/import`, `rulesets/[id]`, `rulesets/[id]/rules`, `rulesets/[id]/rules/[code]`, `.../default`, `.../duplicate`, `.../export` | `lib/rulesets/import.ts`, `lib/rulesets/rule-edit.ts`, `db/repositories/rulesets.ts`                                                            | 04 section 3, Rulesets     |
 | Ruleset templates: the shelf listed, a ruleset started from one | `src/app/rulesets/page.tsx` | `ruleset-templates`, `ruleset-templates/[slug]/use` | `lib/rulesets/template-bar.ts`, `server/rulesets/shelf.ts`, `templates/` | `plans/RULESET-TEMPLATES-PLAN.md` |
-| Settings: CLI path, Check the CLI, models, delete everything | `src/app/settings/page.tsx`                          | `settings`, `auth`, `models`, `system`, `system/data`                                         | `server/cli-path.ts`, `server/cli-readiness.ts`, `server/engine/probe.ts`                                          | 04 section 3, Settings     |
+| Settings: CLI path, Check the CLI, models, delete projects, reviews and rulesets (exported reports kept) | `src/app/settings/page.tsx`                          | `settings`, `auth`, `models`, `system`, `system/data`                                         | `server/cli-path.ts`, `server/cli-readiness.ts`, `server/engine/probe.ts`                                          | 04 section 3, Settings     |
 | The Claude CLI and its sign-in                             | billing and policy notices in `src/components/`      | `auth`                                                                                        | `server/engine/cli.ts` (which binary), `server/engine/probe.ts` (`readCliStatus`), `lib/engine/command.ts` (argv and env) | 06, D-152 to D-176         |
 | Interactive mode (a review run from files in a terminal)   | chosen in `reviews/new/page.tsx`, run on `reviews/[id]/page.tsx` | `reviews` (`engineMode`), `reviews/[id]/start`                                    | `server/engine/interactive.ts`                                                                                     | 01, engine adapter         |
 | Setup: doctor, sign-in, seeding rules                      | none                                                 | none                                                                                          | `scripts/doctor.ts`, `scripts/claude-auth.ts`, `scripts/seed-rules.ts`, their logic in `scripts/lib/`              | README, D-226              |
@@ -94,7 +102,9 @@ list is in `PROJECT-STATE.md`, Structure.
   schema, and take the database from `runtime()`. Test it by calling the
   exported function, as `tests/server/api/routes.test.ts` does.
 - **A column or table.** Change `src/server/db/schema.ts`, run
-  `npm run db:generate`, and commit the new file under `drizzle/`. Reads and
+  `npm run db:generate`, and commit what it adds under `drizzle/`, as
+  migration 0020 was committed: the SQL file, its snapshot under `meta/`
+  and the entry added to `meta/_journal.json`. Reads and
   writes go in a repository under `src/server/db/repositories/`. Update
   `02-DATA-MODEL.md` in the same change.
 - **A screen or anything a person sees.** Pages are client components that
@@ -105,8 +115,10 @@ list is in `PROJECT-STATE.md`, Structure.
   `05-TESTING.md` section 3b; only A and B pass.
 - **A review stage or its prompt.** The stage is in
   `src/server/review/pipeline.ts`, its answer schema in
-  `src/lib/review/stage-schemas.ts`, its prompt in
-  `src/lib/rulesets/compose.ts`. Coverage rules are enforced in code
+  `src/lib/review/stage-schemas.ts`, its system prompt in
+  `src/lib/rulesets/compose.ts` and what it is shown in
+  `src/server/review/content.ts`; the two grading stages take both from
+  `src/lib/review/design.ts`. Coverage rules are enforced in code
   (`lib/review/coverage.ts` and `db/repositories/ledger.ts`), never by asking the
   model.
 - **A setup check.** Add it to `runDoctor` in `scripts/lib/doctor.ts` and a
@@ -116,13 +128,17 @@ list is in `PROJECT-STATE.md`, Structure.
   as a sign-in missing or billing per token, is a warning.
 - **A ruleset template.** Put the protocol document at
   `templates/<slug>.md` and its entry in `templates/shelf.json`; the shelf's
-  reader refuses one under the bar (`lib/rulesets/template-bar.ts`). Add
-  the slug to the list in `tests/server/rulesets/shelf.test.ts`, hold what
-  the importer reads from it in `tests/templates/<slug>.test.ts` (the tags
+  reader refuses one under the bar (`lib/rulesets/template-bar.ts`). Number
+  its rules in a range no template on the shelf uses (D-288), and add the
+  template to the hand-kept lists in `tests/server/rulesets/shelf.test.ts`,
+  `tests/templates/shelf-codes.test.ts`,
+  `tests/server/api/ruleset-templates.test.ts` and the shelf test in
+  `e2e/failure-paths.spec.ts`. Hold what the importer reads from it in
+  `tests/templates/<slug>.test.ts` (the tags
   decide which files a rule is put to), and build its fixture as
   `tests/fixtures/build-<slug>-fixture.mjs`: the files, the plants and the
   look-alikes as data handed to `template-fixture.mjs`, exported as
-  `buildFixture`, with a test that calls `tests/templates/fixture-checks.ts`. `npm run demo:template -- <slug> --fake`
+  `buildFixture`, with a test, `tests/templates/<slug>-fixture.test.ts`, that calls `tests/templates/fixture-checks.ts`. `npm run demo:template -- <slug> --fake`
   then reviews it. Every rule cites a source read that day.
 - **Seeing it run.** `npm run demo:fixture -- --fake` reviews a seeded
   fixture end to end with the fake CLI and spends nothing.

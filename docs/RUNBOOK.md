@@ -1,8 +1,8 @@
 # Runbook: install, start, first review
 
 One page, for the person operating the app rather than building it. Written
-on 2026-08-03 from commands run or read from the code that day; a line added
-since names the decision that added it.
+on 2026-08-03 from commands run or read from the code that day, and added to
+since; some of the lines added name the decision that added them.
 
 The rule that matters most is at the bottom of this section: **almost nothing
 in this app spends model usage, and the few things that do are listed.** A
@@ -30,12 +30,16 @@ anything, and what else is paid is listed under "What spends model usage" below.
   Code CLI the reviews run through (D-92); sign it in with
   `npm run claude:auth`, which checks the CLI and signs in only when it is
   signed out (or `npm run claude -- auth login` directly). It shares the `~/.claude` sign-in of any
-  other Claude Code on the machine. Of the server's environment it gets only
-  what it needs to run and the sign-in (D-174): an API key, a paid provider
-  or any other Claude setting there never reaches it, so reviews draw on
-  that subscription sign-in (D-161), unless the CLI is given a token of its
-  own in `CLAUDE_CODE_OAUTH_TOKEN` or a config folder in `CLAUDE_CONFIG_DIR`,
-  which pass. A different CLI,
+  other Claude Code on the machine. A CLI the app starts gets a closed list
+  of the server's environment (D-174): what it needs to run and to find the
+  sign-in, Windows' Git Bash path in `CLAUDE_CODE_GIT_BASH_PATH`, a token of
+  its own in `CLAUDE_CODE_OAUTH_TOKEN` or a config folder in
+  `CLAUDE_CONFIG_DIR`, and the `FAKE_CLAUDE_` variables the tests' stand-in
+  CLI reads. An API key or a paid provider set there is not on the list and
+  does not reach it (D-161). An interactive review's commands are not
+  started by the app: they run in your own terminal, with its environment,
+  and the app's note beside them says an API key or another provider set
+  there wins over the sign-in and bills per token. A different CLI,
   which must be 2.1.301 or newer, is picked by the CLI path on Settings, or by
   `TRYSQUARE_CLAUDE_PATH`, which wins over it (D-152); Check the CLI on
   Settings says which CLI that is, its version and how it is signed in.
@@ -45,8 +49,12 @@ anything, and what else is paid is listed under "What spends model usage" below.
   terminal, so it also gets the terminal and display variables the CLI
   reads to open a browser for the sign-in (D-176). Signed out, Check
   the CLI on Settings shows the command for the CLI reviews use (D-159).
-- **Chromium**, only if you intend to run `./verify.sh --e2e`:
-  `npx playwright install chromium`.
+- **Chromium**, if you intend to run `./verify.sh`, with or without
+  `--e2e`, or `npm run demo:design`: `npx playwright install chromium`.
+  Two of the unit test files start it
+  (`tests/server/projectrun/design-fixture.test.ts` and, through the design
+  fixture's own e2e, `tests/scripts/design-demo.test.ts`), and the design
+  demo runs that same e2e.
 
 ## Install
 
@@ -82,7 +90,9 @@ machine; that is deliberate (MVP-PLAN WP 2.2). A second `-H` given after
 `--` does override it (`npm run start -- -H 127.0.0.2` bound there and left
 127.0.0.1 refusing, 2026-11-17), so never pass one; the request guard still
 answers 403 to a request addressed to anything but 127.0.0.1, localhost or
-[::1]. For a
+[::1], bar one for a path the matcher in `src/proxy.ts` leaves out of the
+guard, those that start with `/_next/static`, `/_next/image` or
+`/favicon.ico` among them. For a
 production server, `npm run build` first, then
 `npm run start -- --port <n>`. Starting without building serves stale output
 or fails, so build first.
@@ -197,8 +207,13 @@ Probe press in step 4, a real but tiny paid call.
    and as you: the branch's own code runs with your privileges, so turn it
    on only for a repository you would run yourself. A command that fails is
    a finding. An e2e command needs the Screenshots folder it saves to, inside
-   the repository; the screenshots there, up to 200, are graded A to D,
-   against the Design standard, a file in the repository, if you name one.
+   the repository; the PNG files there, the first 200 by name, are graded A
+   to D, against the Design standard, a file in the repository, if you name
+   one. A file there whose name does not end in `.png` is not looked at. A
+   PNG over 8 MiB, or one with a line break, `: `, a backslash, a drive or a
+   space at either end in its name, is not graded and is not counted in the
+   200; where fewer than 200 before it by name were graded, a note on the
+   review names it.
    The New review pre-flight lists the commands before Start.
 3. **Start a ruleset.** Rulesets screen. The form opens on A template: Use
    this template starts one from the template chosen: General, twelve rules

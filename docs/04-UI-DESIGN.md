@@ -25,7 +25,18 @@ chosen per review in the advanced fold.
 - New review: the preview drawer per ruleset that section 3 describes.
   Each ruleset's count of rules links to its page. Several rulesets are
   ticked for one review since 2026-11-22, on New review and on a draft's
-  own Start (RS-4a, RS-4b, D-294, D-295).
+  own Start (RS-4a, RS-4b, D-294, D-295). A cue on the "Include
+  <dependency>" box when the dependency has a branch of the from-branch's
+  name: the branch is suggested once the box is ticked (2026-11-23).
+- Review run: the file a tool call reads, in the activity feed, which
+  shows a tool call by the tool's name (2026-11-23).
+- Design language (section 1), where the code falls short of it
+  (2026-11-23): the dashboard has two glowing elements while a review
+  runs, against a budget of one; a review's status chip and the top bar's
+  awaiting badge take the open-question blue on the page whose queue marks
+  an open question in it; hashes and branch names are in the UI face in
+  the pre-flight's commit rows, the branch selects on New review and the
+  top bar's chip.
 - Rulesets: process directives written or edited in the app (they come
   with an imported document or a template), and a Firebase template,
   which waits on the maintainer's word (`plans/RULESET-TEMPLATES-PLAN.md`). A ruleset is started
@@ -54,46 +65,62 @@ chosen per review in the advanced fold.
   findings), calm elsewhere. No marketing surfaces, no hero sections, no
   decorative illustration, no emoji.
 - **Typography:** one UI face (system-adjacent grotesk) + one monospace for
-  code, paths, hashes, branch names. Type scale defined in tokens; code is
-  never rendered in the UI face.
+  code, paths, hashes, branch names. Hashes and branch names are drawn in
+  the UI face in the pre-flight's commit rows, the branch selects on New
+  review and the top bar's chip: the monospace is not applied there. Type
+  scale defined in tokens; code is never rendered in the UI face.
 - **Color:** the restrained night instrument (D-68, 2026-08-17, chosen
   from generated mocks). Dark leads and light is derived; both stay
   first-class and both are e2e-screenshotted. Near-black blue-gray matte
   surfaces, thin 1px borders, one cyan-teal accent reserved for
   interactive elements and progress, and a glow budget of at most one live
-  element per screen. Within review content, severity is the only place
+  element per screen. The dashboard is over that budget while a review
+  runs: the live pulse, which carries the glow, is then on the top bar's
+  chip and on the live scan's current stage. Within review content, severity is the only place
   strong color appears (CRITICAL red, WARNING amber, open-question blue),
   used consistently in badges, borders, and counts. Outside it, the good
   and critical tokens also mark a run's own state: a status chip, a clone
   that failed, a confirmation that landed (D-56, 2026-08-04). The rule
   that matters is that no finding's severity competes with chrome for the
   same colour on the same screen; the rejected full-neon mock round is the
-  standing proof of why.
+  standing proof of why. The code does not hold it on the page of a review
+  that awaits a decision and has an open question: the status chip in its
+  header and the top bar's awaiting badge are the open-question blue, and
+  so are the fill of the summary's Open question gauge and the badge on
+  an open question in front in the queue. A paused or interrupted
+  review's chip is the warning amber.
 - **Honest numbers:** a figure that is not measured from this machine's own
-  data does not render. No predictions, no confidence percentages, no
+  data does not render. The pre-flight is an exception: it shows the
+  requests a run not yet made is counted to make and an estimate of the
+  rules and the change in tokens ("about"), and says its counts are a
+  preview rather than a promise. No confidence percentages, no
   invented currencies (D-68 lists the banned widgets with reasons).
 - **Responsive:** every screen lays out at phone width. Monitoring a run
   and deciding findings are first-class on a phone (single-column queue,
   thumb-height Confirm and Dismiss); setup flows stay desktop-first
   (D-69).
-- **Density and rhythm:** 4px spacing grid, tabular numerals for counts and
-  tokens, fixed-width columns for hashes and dates. Tables scroll within
+- **Density and rhythm:** spacing on Tailwind's own scale, the 4px grid
+  (with half steps of 2px, 6px and 10px in the top bar and elsewhere, and
+  an 18px inset in a review's stage list), tabular numerals for
+  counts and tokens, fixed-width columns for hashes and dates. Tables scroll within
   their container; the page never scrolls horizontally.
 - **Motion:** functional only (progress, state transitions), 150-200ms,
   none of it blocking. Live states (running review) use a steady pulse, not
   spinners scattered per widget.
 - **States:** every screen designs empty, loading, error, and long-content
   states explicitly. Errors show the real message, and the log path where a log was written.
-  First-run empty state teaches the flow (add project, pick branches,
-  choose rules, run).
+  First-run empty state teaches the flow (add a project, start a ruleset,
+  pick two branches, run).
 
 ## 2. Navigation
 
 Top bar (D-81, replacing the left rail): the try-square mark and wordmark
 linking home, then Dashboard, Projects, Reviews, Rulesets, Settings. The
 current destination is marked by `aria-current` and an accent underline, and
-exactly one is marked on every screen: the dashboard matches its path
-exactly rather than by prefix, since every path begins with a slash. On the
+exactly one is marked on each screen under a destination's path: the
+dashboard matches its path exactly rather than by prefix, since every path
+begins with a slash. The not-found screen, at an address under no
+destination, marks none. On the
 right, a count badge linking to the reviews list when any review awaits a
 decision, because the state that needs a human is the one navigation must
 never hide, and a status chip while a review is running or paused, following
@@ -122,7 +149,7 @@ precision is a claim about findings somebody judged.
   history; it needs two points to be a line and draws nothing below that.
 - **Needs you:** every review that goes on only when a person acts, oldest
   wait first: one awaiting a decision, a running interactive review, whose stages wait for its commands to be run, and one waiting on a Resume (paused
-  at the usage limit, interrupted, failed; D-259). A running interactive review has no wait to date, each of its stages waiting in turn, and a review a restart interrupted has no run that ended: each comes last and shows no age. Every other row carries its age. Each row carries its
+  at the usage limit, interrupted, failed; D-259). A running interactive review has no wait to date, each of its stages waiting in turn, and a review the server found still marked running or verifying when it started, and interrupted then, has no run that ended: each comes last and shows no age. A row whose run's end was recorded carries its age, among them a review whose interruption the server's own stop recorded before it exited. Each row carries its
   branch pair and project, and says which it is: decided-of-total, or
   the stop and the button to press. A row links straight into its review.
   The count in the bar is of decisions alone; this says where the work is.
@@ -150,8 +177,8 @@ precision is a claim about findings somebody judged.
   review a branch. Projects are matched to their reviews by id, never by
   name: two remotes can end in the same repository name.
 
-First run shows the teaching empty state (add a project, pick branches,
-choose rules, run).
+First run shows the teaching empty state (add a project, start a ruleset,
+pick two branches, run).
 
 ### Projects
 
@@ -168,7 +195,9 @@ choose rules, run).
   and names the address to add instead (D-223). An address that
   is already a project is refused with a link to it. A failed clone opens like
   any project: its page shows git's error and offers Retry clone, which
-  removes what git left and clones again.
+  removes what git left and clones again. Where the address kept carries
+  credentials, the clone is not run again: the address check refuses it,
+  and the refusal is recorded as the clone's error (D-223).
 - Detail: branches (live list, filterable, ahead/behind vs default, and a
   Mine filter matching the tip commit author against the identities in
   settings),
@@ -217,10 +246,13 @@ request for each eight and one for each eight graded C or D, counted once
 the e2e has saved them (WP-I step 5).
 
 **Linked project section:** when the project has a dependency link (e.g.
-app -> shared-core), an optional "Include <dependency>" toggle appears with
-its own from/into pickers. If the dependency repo has a branch with the
-same name as the selected from-branch, the toggle is pre-suggested with
-that branch preselected (suggested, never auto-enabled), following the
+app -> shared-core), an optional "Include <dependency>" box appears,
+unticked, and reads the same whatever branches the dependency has: a cue
+on the box for a branch of the same name is not built. Once the box is
+ticked, the dependency's branches are read and, where it has more than
+one, its own from/into pickers appear. If the dependency repo has a branch
+with the same name as the selected from-branch, that branch is preselected
+and said to be suggested (suggested, never auto-enabled), following the
 from-branch until the dependency's branch is chosen by hand. When enabled,
 the pre-flight shows each repo's changed files and the changed-exported-
 symbols count from the dependency diff. A side with no change is said, and
@@ -243,7 +275,7 @@ refuses one too.
   climbing live. Not built: risk tags per file and the chain files read.
   A run note names the first five risk-tagged files with their tags, and
   nothing shows the chain files.
-- Activity feed: current stage's tool activity (file being read), errors. An interactive review's feed has the stages and the run's notes alone: its sessions are the person's, and the app sees no tool they use.
+- Activity feed: the current stage's tool calls, each by the tool's name alone (the file being read is not shown: not built), errors. An interactive review's feed has the stages and the run's notes alone: its sessions are the person's, and the app sees no tool they use.
 - Usage meter: cumulative tokens and cost-equivalent; for an interactive review, that they were not recorded.
 - Your turn: the command of an interactive stage that waits on the person, with where to save the answer, above the feed and on the review's page whenever either is opened (D-301). The card names the stage as the rest of the page does, gives the command for the machine's own shell in a box of its own with a Copy, folds the other shell's command under a line with a Copy of its own, and gives the answer's path a Copy too; a copy the browser refuses is said, with what to do (D-315). The command's box takes the keyboard's focus, so one taller than the box is scrolled to its end without a mouse (D-302). The feed says in a line that the stage is waiting, never the command a second time, and keeps its height under the card (D-304).
 - Controls: cancel, which asks first and says when it failed (5.1); start,
@@ -278,7 +310,7 @@ review waits on them too. Read only once the review is complete, and
 while it has not run to its end: running, paused, interrupted, failed or
 cancelled, the section is shown beside the run's detail, saying that they
 are decided once the review has run to its end and that a resume keeps the
-result (the checks run again only where the project's checks were changed since, and with the checks switched off since the result is dropped), or, of a cancelled review, that it is not decided.
+result (the checks run again only where the project's checks were changed since, and with the checks switched off since the result is dropped), or, of a cancelled review, that it is not decided. With the checks switched off since, the resume removes the review's Tests and design findings and the kept result with them, and makes none again (D-318).
 
 Above the queue, and above the report once complete, the finished review in
 its five steps (WP-G; at phone width, while findings wait to be decided, it
@@ -294,7 +326,8 @@ alike, as the queue's n of m does.
 
 ### Report
 
-Rendered report (protocol output format), typeset in-app rather than shown
+Rendered report, in the app's own shape (D-38: a ruleset's prose about
+output format is not parsed), typeset in-app rather than shown
 as raw markdown: title, one bold summary sentence, prose-first finding
 cards grouped by severity with the code excerpt subordinate, and a
 provenance footer (model, effort where one was passed, profile, ruleset and version, commit,
@@ -309,10 +342,18 @@ are (D-190), and What was examined says how each of its commands ended
 and whether the screens were graded, or why the design was not checked:
 no e2e command, an e2e that did not run, one that saved no screenshot, or
 one whose screenshots were all left out, and that some were left out when
-the rest were graded, never a grade (WP-I, D-197). A screen is shown whole
-in the report while its screenshots, counted as the base64 they are
-carried as, come to under 24 MiB, spent in the report's order (confirmed,
-left out unproven, dismissed), and named after that. Past reviews are
+the rest were graded, never a grade (WP-I, D-197). It says this from the
+result file the review kept, and "graded" where that file holds
+screenshots. A resume with the project's checks switched off since removes
+the Tests and design findings and that file, and asks neither grading
+stage, so the report then says nothing of the commands or the screens
+(D-318). A screen is
+shown whole in the page and the HTML while the screenshots carried before
+it and its own, counted as the base64 they are carried as, come to at most
+24 MiB, tried in the report's order (confirmed, left out unproven,
+dismissed); one that does not fit, or whose file cannot be read, is named
+and not shown. The markdown
+names a screen and carries none. Past reviews are
 listed on Reviews, which can be narrowed to a project, each with a merged
 badge once its branch is found merged; delete per 02 rules.
 
@@ -355,8 +396,11 @@ badge once its branch is found merged; delete per 02 rules.
   report (mapped headings, unmapped lines = import blocked). A different
   document under a name already in use is asked about (Replace / Keep it),
   since the import replaces its rules and undoes its edits; the same
-  document is not, nor is one under the name of a ruleset that holds no
-  rule and no directive (review round 19). Export to markdown: every
+  document is not, unless a rule's severity was changed with the picker
+  and now differs from the document's: the comparison takes each rule's
+  stored severity, so that import is asked about in the same words ("this
+  document differs from it"); nor is one under the name of a ruleset that
+  holds no rule and no directive (review round 19). Export to markdown: every
   rule's text and every directive, byte for byte, and not what is set
   beside the text, a rule switched off or a severity changed with the
   picker.
@@ -397,15 +441,19 @@ none is kept, the `user.email` of the person's git config, which the card
 names, D-243), where results are sent (the addresses a result is to be
 emailed to, one a line, the first the default; the card says on a line
 of its own that no mail account is set up yet and nothing is sent,
-D-286), danger zone (delete all data, two-step).
+D-286), danger zone (two-step: deletes the projects, reviews and rulesets;
+the card says exported reports and the settings on the page are kept).
 
 ## 4. Accessibility
 
 Full keyboard operability, visible focus, WCAG AA contrast in both themes
-(checked in e2e via axe), prefers-reduced-motion honoured. Buttons and
-text fields and selects are at least 40px tall (the `--hit-target` token); a bare checkbox, the rule switch on a ruleset's page among them, is the size the browser draws it; the top
+(checked in e2e via axe), prefers-reduced-motion honoured. The kit's
+Button, Input, Textarea and Select are at least 40px tall (the `--hit-target` token); a bare checkbox, the rule switch on a ruleset's page among them, is the size the browser draws it; the top
 bar's links and the underlined text buttons and links are shorter, the
-height of their text and padding. Screen-reader labels on all icon
+height of their text and padding, and so are the text buttons on a
+ruleset's page that underline or change colour on hover alone: a rule's
+title, the line that shows or hides the process directives, and a
+directive's title. Screen-reader labels on all icon
 buttons.
 
 ## 5. Proof

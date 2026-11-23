@@ -1,14 +1,29 @@
 # 02 Data model
 
 Status: RATIFIED 2026-07-30 at G0. SQLite via Drizzle;
-migrations checked in from the first table. All ids are ULIDs (sortable),
-all timestamps are ISO-8601 UTC strings. JSON columns are validated with zod
-on read and write.
+migrations checked in from the first table. A row's `id` is a ULID
+(sortable), but for models, whose id is the full model id; settings is
+keyed by its key, project_checks by its project's id, and review_rulesets
+by its review's and ruleset's ids. All timestamps are ISO-8601 UTC
+strings. The JSON columns of rules, reviews, review_rulesets, ledger_files
+and settings are parsed through zod in the repositories
+(`parseJsonColumn`). A stage's `outputJson` is read back by the
+checkpointing runner with `JSON.parse` and no schema, and a finding's two
+proof columns are parsed with zod by the confirmation screen. On write,
+the two ledger_files columns are checked against their schema
+(`serialiseJsonColumn`); the other JSON columns are written with no schema
+passed, or with `JSON.stringify`.
 
 ## Not built yet
 
-Nothing, verified against the code on 2026-10-22. The two parts listed here
-on 2026-08-03 are built: a project's name and default branch are edited from
+One part, read against the code on 2026-11-23: a zod check of a JSON column
+as it is written, beside the one on read. The two ledger_files columns
+have it; tags, sweepPatterns, runNotes, snapshotJson, outputJson,
+proofJson, secondProofJson and a setting's value are written without.
+
+Otherwise nothing, verified against the code on 2026-10-22. The two parts
+listed here on 2026-08-03 are built: a project's name and default branch
+are edited from
 its page through PATCH /api/projects/:id (D-51, MVP 7.1), and a refused
 project delete offers to delete the reviews that block it (U9).
 
@@ -24,7 +39,7 @@ columns added since this was written were missing from the tables below.
 | id            | text PK     |                                     |
 | name          | text        | display name, editable              |
 | gitUrl        | text unique | as entered                          |
-| defaultBranch | text        | detected from origin/HEAD, editable |
+| defaultBranch | text        | `main` when the project is added; once its clone is made, the bare clone's HEAD when that names a branch, else the first of main, master, develop and trunk the clone has, else the first branch listed; editable |
 | clonePath     | text        | absolute path to bare repo          |
 | cloneStatus   | text        | pending, cloning, ready, failed     |
 | cloneError    | text null   |                                     |
@@ -91,7 +106,7 @@ review prepares, as code findings are from the stages' answers.
 | exitCode         | integer null | null when stopped                                        |
 | timedOut         | integer bool | stopped at its time limit                                |
 | logPath          | text null    | the command's whole output                               |
-| screenshotPath   | text null    | a design grade's screenshot, its name under the review's checks/screenshots, never a path (round 8) |
+| screenshotPath   | text null    | a design grade's screenshot, written as its name under the review's checks/screenshots (round 8); a row from before round 8 can hold an absolute path, which is read as a name when it lies inside that folder |
 | grade            | text null    | C or D (a design grade)                                  |
 | severity         | text         | CRITICAL for a failing command                           |
 | issue            | text         | e.g. "The tests fail on this branch."                    |
@@ -139,7 +154,11 @@ review prepares, as code findings are from the stages' answers.
 
 ### process_directives
 
-Ruleset-scoped non-rule content composed into every review prompt.
+Ruleset-scoped non-rule content composed into the system prompt of the
+code-review stages S1 to S5b (`composeSystemPrompt`). The two
+design-grading stages, S4b and S5c, are sent none of it: their system
+prompt is how to grade, with the scale, the project's design standard
+when it has one, and the output contract.
 
 | Column        | Type | Notes                                                                                          |
 | ------------- | ---- | ---------------------------------------------------------------------------------------------- |
@@ -176,9 +195,9 @@ Ruleset-scoped non-rule content composed into every review prompt.
 | currentStage                        | text null    |                                            |
 | pausedReason                        | text null    | limit message etc.                         |
 | pausedResetsAt                      | int null     | Unix seconds, when the limit resets, as the CLI reports it |
-| usageInputTokens, usageOutputTokens | int          | summed across stages                       |
-| usageCacheCreationTokens, usageCacheReadTokens | int | summed across stages                     |
-| costEquivalentUsd                   | real         | informational, from CLI results            |
+| usageInputTokens, usageOutputTokens | int          | summed across stages; an interactive stage adds 0, which is no measurement |
+| usageCacheCreationTokens, usageCacheReadTokens | int | summed across stages; an interactive stage adds 0 |
+| costEquivalentUsd                   | real         | informational, from CLI results; an interactive stage adds 0 |
 | runNotes                            | text JSON    | dated notes on how the run was carried out, append-only |
 | mergedDetectedAt                    | text null    | set when into-branch contains fromCommit   |
 | createdAt, startedAt, completedAt   | text         | startedAt is stamped on every entry into running (D-77); completedAt when the review is complete, failed or cancelled |
@@ -215,11 +234,11 @@ their rules, so it runs with each as it stands when its turn comes
 | stage                                        | text      | one of the nine in `src/lib/domain/enums.ts`, s1_risk to s6_audit                   |
 | attempt                                      | int       |                                                                                    |
 | promptHash                                   | text      | identifies the request, so a resumed run finds the stored answer and replays it    |
-| sessionId                                    | text null | CLI session id for resume                                                          |
+| sessionId                                    | text null | CLI session id for resume; an interactive stage has no session of the app's, and its row holds an empty string or null |
 | outputJson                                   | text null | the stage's validated answer, kept so a resume can replay it                       |
-| cacheCreationTokens, cacheReadTokens         | int       | from result event                                                                  |
+| cacheCreationTokens, cacheReadTokens         | int       | from result event; 0 for an interactive stage, which has no result event (not a measurement) |
 | status                                       | text      | succeeded or failed. The enum also carries running and cancelled; nothing writes them, because a row is written only once a stage settles |
-| inputTokens, outputTokens, costEquivalentUsd |           | from result event                                                                  |
+| inputTokens, outputTokens, costEquivalentUsd |           | from result event; 0 for an interactive stage, as above                            |
 | errorClass, errorText, logPath               |           |                                                                                    |
 | startedAt, endedAt                           | text      |                                                                                    |
 | findingId                                    | text null | the one finding a verify-again asked about; such rows are not the stage's run       |
@@ -243,7 +262,8 @@ their rules, so it runs with each as it stands when its turn comes
 status: pending, cleared, has_findings; clearReason text null). A
 has_findings hunk keeps a clearReason when another request of a divided
 stage cleared it (D-102).
-Invariant: a review cannot leave `verifying` while any hunk is pending. The
+Invariant: a run moves a review to `awaiting_confirmation` after S6 found
+no hunk pending; S6 throws on one, which ends the run before that move. The
 invariant is checked in code (S6) and by unit test, not by prompt trust.
 
 ### sweep_hits
@@ -328,4 +348,8 @@ owed (`04-UI-DESIGN.md`, Not built yet).
 Deleting a review deletes its run folder (worktrees, bundle, logs and what its project's checks saved) and its rows (cascade).
 Deleting a project requires zero reviews (UI offers bulk-delete first) and
 then removes the bare clone. Both are two-step confirmed in the UI, never
-cascading silently from a single click.
+cascading silently from a single click, except the unstarted draft a
+refused Start left on the New review screen: the next press of Start
+removes it without asking (`DELETE /api/reviews/:id?unstarted=1`, refused
+once the review is no longer a draft or is in line) before it makes a new
+one.

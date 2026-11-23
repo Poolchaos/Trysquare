@@ -30,8 +30,10 @@ Think "local PR reviewer": no hosting, no login, single user.
    folder. The app NEVER modifies project code; clones are read-only review
    material.
 2. **Review setup.** Select project, filter/select the branch to review,
-   select the branch to compare against (default: the repo's main/master,
-   auto-detected). Select the ruleset.
+   select the branch to compare against (default: the project's default
+   branch, auto-detected when it is cloned: the branch the clone's HEAD
+   names, else main, master, develop or trunk, else the first branch
+   listed; changeable on the project's page). Select the ruleset.
 3. **Rulesets.** Configurable rules/standards to check violations against.
    Three tiers, composable per review:
    - Global rules: apply to any and all development.
