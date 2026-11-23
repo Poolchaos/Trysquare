@@ -9,8 +9,10 @@
  * document. CLAUDE.md's meta-rule says every quality rule that CAN be an
  * executable gate becomes one, so this is that gate.
  *
- * It inspects the files git actually tracks or has staged, not the working
- * tree, because those are the ones that can reach a remote.
+ * It lists the files git tracks, has staged, or would add (untracked and not
+ * ignored), and reads each one's copy in the working tree. A staged version
+ * that differs from that copy is not read, so the gate is run again after
+ * `git add`.
  */
 
 import { execFileSync } from "node:child_process";
@@ -126,7 +128,7 @@ const HOME_FORMS = (() => {
  */
 const SELF_REFERENTIAL = new Set(["scripts/check-no-private.mjs"]);
 
-/** Binary or generated files that are not prose and would produce noise. */
+/** Binary or generated files that are not prose and would produce noise: their contents are not read. */
 const SKIP_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".ico", ".sqlite", ".lock"]);
 
 function git(args) {
@@ -162,14 +164,16 @@ const violations = [];
 for (const file of files) {
   const definesMarkers = SELF_REFERENTIAL.has(file);
 
-  const dot = file.lastIndexOf(".");
-  if (dot !== -1 && SKIP_EXTENSIONS.has(file.slice(dot).toLowerCase())) continue;
-
+  // The path is checked of every file, before the skip: an image or a
+  // database in a private directory passed, the skip coming first (D-317).
   for (const { pattern, why } of FORBIDDEN_PATHS) {
     if (pattern.test(file)) {
       violations.push(`${file}: must never be committed (${why})`);
     }
   }
+
+  const dot = file.lastIndexOf(".");
+  if (dot !== -1 && SKIP_EXTENSIONS.has(file.slice(dot).toLowerCase())) continue;
 
   let contents;
   try {

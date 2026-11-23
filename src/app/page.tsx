@@ -85,7 +85,7 @@ interface Scoreboard {
   recent: Row[];
   ruleYield: {
     ruleCode: string;
-    /** The ruleset the rule is in; null where its review froze none. */
+    /** The ruleset the rule is in; null where its review froze none, or none that holds the code. */
     rulesetName?: string | null;
     confirmed: number;
     total: number;

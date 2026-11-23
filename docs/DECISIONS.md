@@ -8052,3 +8052,20 @@ verified evidence, in writing, here.
   a scoreboard test with one ruleset holding rule 1 and findings citing 1
   and 99 expects 99 under no ruleset; on the old code it found 99 under
   the ruleset's name.
+- 2026-11-23 D-317 The private-material gate checks a file's path before
+  it skips the file's contents. A sweep of the documents and screens
+  against the code, 26 readers with each finding put to independent
+  refuters, read at 5f9f1ca, returned 226 findings that stood, 13 refuted
+  and 7 duplicates; they are worked through in batches, this the first.
+  `scripts/check-no-private.mjs` skipped a file with an extension whose
+  contents are not prose (.png, .jpg, .jpeg, .webp, .ico, .sqlite, .lock)
+  before the rule that refuses a path in a private directory, so
+  `git add -f docs/private/shot.png` passed the gate that exists for
+  exactly that mistake. The path rule now runs on every file and the skip
+  covers the reading of contents alone. The file's header said it reads
+  what git tracks or has staged and not the working tree; it lists
+  untracked files too and reads each file's working copy, and now says
+  so. Decided by the session. Proven: a test builds a repository,
+  force-adds an image, a database and a document from `docs/private/`,
+  and expects each refused; on the old script the image and the database
+  passed.
