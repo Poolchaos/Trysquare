@@ -34,9 +34,14 @@ export function secondVerifierReadiness(
   return { model, usable: reason === null, reason };
 }
 
-export function secondVerifierRefusal(verifier: SecondVerifier): string {
+/**
+ * @param retry What to do once it is probed, finishing "Probe it, then ...".
+ *   A verify-again is refused by this too, on a review awaiting
+ *   confirmation, which has no Start to press.
+ */
+export function secondVerifierRefusal(verifier: SecondVerifier, retry = "start again"): string {
   return (
     `Every verified finding is checked again by ${verifier.model}, which ${verifier.reason}. ` +
-    "Probe it, then start again."
+    `Probe it, then ${retry}.`
   );
 }

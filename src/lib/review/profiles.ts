@@ -88,6 +88,11 @@ export function resolveProfile(input: ResolveProfileInput): ProfileResolution {
   if (profileRank(input.requested) < profileRank(modelProfile)) {
     // The suggestion is honest because this branch is only reachable for a
     // judgment-capable model, whose own profile is always an allowed answer.
+    // Named one by one, not "or weaker": mechanical-only is weaker than
+    // each of them and is refused above.
+    const allowed = REVIEW_PROFILES.filter(
+      (profile) => isJudgmentProfile(profile) && profileRank(profile) >= profileRank(modelProfile),
+    );
     return {
       ok: false,
       code: "ProfileStrongerThanModel",
@@ -95,7 +100,7 @@ export function resolveProfile(input: ResolveProfileInput): ProfileResolution {
         `${input.model} is registered for the ${modelProfile} profile, so it cannot run ` +
         `${input.requested}. A stronger profile sends more of the protocol per request than ` +
         "this model is known to hold, and the result would read as a clean review rather " +
-        `than as a failure. ${modelProfile} or weaker is allowed.`,
+        `than as a failure. Allowed for it: ${allowed.join(", ")}.`,
     };
   }
 

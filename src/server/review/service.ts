@@ -329,9 +329,12 @@ export async function prepareAndRun(
     if (sides.length === 2 && repoSlug(project.name) === repoSlug(linkedProject?.name ?? "")) {
       appendRunNote(db, reviewId, {
         kind: "note",
+        // The folder names were compared, not the names: "My App" and
+        // "my-app" make the same one.
         message:
-          `Both repositories are named ${project.name}, so the dependency is checked out ` +
-          `as ${sides[1]?.slug} to keep the two apart in every path the model sees.`,
+          `Both repositories' names make the same folder name, ${sides[0]?.slug}, so the ` +
+          `dependency is checked out as ${sides[1]?.slug} to keep the two apart in every ` +
+          "path the model sees.",
       });
     }
 
@@ -627,7 +630,9 @@ export async function verifyAgain(
         prompt: renderVerificationFor(
           held.map((proven) => proven.finding),
           context,
-          held.map((proven) => proven.ref),
+          {
+            refs: held.map((proven) => proven.ref),
+          },
         ),
         model: verifierModel,
         fresh: true,
@@ -861,6 +866,12 @@ function buildRunner(
           ...(options.signal === undefined ? {} : { signal: options.signal }),
           ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
           onStageComplete: (info) => built.wrapper?.noteAttempt(info),
+          // A row names a transcript only once its file is open. The
+          // interactive engine writes none and reports none (the
+          // twenty-first grade, AI5), and a headless stage that fails
+          // before its log is created, its CLI not resolving, reports none
+          // either.
+          onTranscript: (logPath) => built.wrapper?.noteTranscript(logPath),
         });
 
   const wrapper = createCheckpointingRunner({
@@ -869,14 +880,6 @@ function buildRunner(
     inner: engine.run,
     onLiveAttempt: (stage, batch) => noteStage(stage, "live", batch),
     onReplay: (stage) => noteStage(stage, "replayed"),
-    // Only a headless stage writes a transcript. Named on an interactive
-    // stage's row too, a stage that timed out pointed at a file that was
-    // never there (the twenty-first grade, AI5).
-    ...(engine.mode === "interactive"
-      ? {}
-      : {
-          logPathFor: (stage: ReviewStage) => join(logsDirFor(dataDir, reviewId), `${stage}.log`),
-        }),
   });
   // An interactive answer is a file as well as a row. Struck from the
   // checkpoints alone, the file stayed, and a Resume read it back (AJ1).

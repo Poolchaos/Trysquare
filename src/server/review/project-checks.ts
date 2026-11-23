@@ -79,8 +79,11 @@ export function describeCommand(result: CommandResult): string {
   if (result.timedOut) {
     return `${name} was stopped at its time limit after ${seconds(result.durationMs)}; its output is in ${result.logPath}.`;
   }
-  return result.exitCode === 0
-    ? `${name} passed in ${seconds(result.durationMs)}.`
+  if (result.exitCode === 0) return `${name} passed in ${seconds(result.durationMs)}.`;
+  // No code, and neither the time limit nor a cancel stopped it: the shell
+  // never started, or a signal the app did not send ended the command.
+  return result.exitCode === null
+    ? `${name} ended with no exit code after ${seconds(result.durationMs)}: it could not be started, or a signal stopped it; its output is in ${result.logPath}.`
     : `${name} failed with exit code ${result.exitCode} in ${seconds(result.durationMs)}; its output is in ${result.logPath}.`;
 }
 
@@ -187,7 +190,7 @@ export async function runChecksForReview(
           ? `The e2e saved ${run.screenshots.length} screenshot(s) to grade.`
           : run.screenshotsLeft.length > 0
             ? "None of the e2e's screenshots could be graded, so the design was not checked."
-            : `The e2e saved no screenshot in ${options.checks.screenshotDir}, so the design was not checked.`,
+            : `No PNG screenshot was found in ${options.checks.screenshotDir}, so the design was not checked.`,
     });
   }
   for (const message of [...run.screenshotsLeft, ...run.screenshotsScaled]) {

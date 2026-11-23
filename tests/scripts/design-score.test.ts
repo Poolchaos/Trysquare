@@ -80,10 +80,12 @@ describe("a design fixture review's score", () => {
         why: "the second grader did not fail it",
       },
     ]);
+    // No row is a screen the first grader passed, and also one it never
+    // graded: a run that failed before it, or a screenshot never taken.
     expect(scoreDesign([], key).missed.map((miss) => miss.why)).toEqual([
-      "the first grader passed it",
-      "the first grader passed it",
-      "the first grader passed it",
+      "the first grader did not fail it, or never graded it",
+      "the first grader did not fail it, or never graded it",
+      "the first grader did not fail it, or never graded it",
     ]);
   });
 

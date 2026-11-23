@@ -5,8 +5,10 @@
  *
  * Navigation moved off the left edge so the dashboard can use the full width
  * and the drafting-board ground can run edge to edge (D-81). What the bar
- * owes every screen is three things: where you are, what is running, and
- * what is waiting on you.
+ * owes every screen is three things: where you are, one review that is
+ * running or paused at the usage limit, and how many reviews await a
+ * decision. A review interrupted or failed is on the dashboard's Needs you,
+ * not here.
  *
  * Dashboard is a real destination rather than the wordmark's job, because
  * every screen must mark exactly one current link and `/` is a screen.

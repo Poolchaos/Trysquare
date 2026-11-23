@@ -277,8 +277,10 @@ export function readScoreboard(db: Db, recentLimit = 12): Scoreboard {
 
   return {
     spendUsd: reviewRows.reduce((total, review) => total + review.cost, 0),
+    // By its start, not its status: a draft cancelled before it ran is past
+    // draft and has no usage the cost leaves out.
     interactiveReviews: reviewRows.filter(
-      (review) => review.engineMode === "interactive" && review.status !== "draft",
+      (review) => review.engineMode === "interactive" && review.startedAt !== null,
     ).length,
     reviewsCompleted: completed.length,
     reviewsTotal: reviewRows.length,

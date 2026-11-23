@@ -178,12 +178,14 @@ export function secondVerifierNotReady(
   db: Db,
   model: string,
   frozen?: string | null,
+  /** What the refusal says to do once it is probed, where that is not starting a review. */
+  retry?: string,
 ): Response | null {
   const verifier = secondVerifierOf(db, model, frozen);
   if (verifier.usable) return null;
   return Response.json(
     {
-      error: secondVerifierRefusal(verifier),
+      error: secondVerifierRefusal(verifier, retry),
       code: "SecondVerifierUnavailable",
       model: verifier.model,
     },

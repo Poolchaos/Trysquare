@@ -48,4 +48,14 @@ describe("whether it can run", () => {
         "Probe it, then start again.",
     );
   });
+
+  it("names the press to repeat where there is no review to start", () => {
+    // A verify-again is refused by it too, on a review awaiting
+    // confirmation, which has no Start: "then start again" named nothing.
+    const readiness = secondVerifierReadiness("claude-opus-5-5", "stale");
+    expect(secondVerifierRefusal(readiness, "press Send request again")).toBe(
+      "Every verified finding is checked again by claude-opus-5-5, which was probed too long " +
+        "ago to be vouched for now. Probe it, then press Send request again.",
+    );
+  });
 });

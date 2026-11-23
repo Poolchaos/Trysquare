@@ -340,9 +340,10 @@ section of its own, Tests and design, in the page, the markdown and the
 HTML alike, confirmed, left out unproven and dismissed apart as the code's
 are (D-190), and What was examined says how each of its commands ended
 and whether the screens were graded, or why the design was not checked:
-no e2e command, an e2e that did not run, one that saved no screenshot, or
-one whose screenshots were all left out, and that some were left out when
-the rest were graded, never a grade (WP-I, D-197). It says this from the
+no e2e command, an e2e that did not run, one in whose screenshots folder
+no PNG was found, or one whose screenshots were all left out, and that
+some were left out when the rest were graded, never a grade (WP-I,
+D-197). It says this from the
 result file the review kept, and "graded" where that file holds
 screenshots. A resume with the project's checks switched off since removes
 the Tests and design findings and that file, and asks neither grading

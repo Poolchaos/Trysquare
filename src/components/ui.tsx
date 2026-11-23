@@ -78,7 +78,11 @@ export function Button({
       {...props}
       className={
         `inline-flex min-h-[var(--hit-target)] items-center gap-2 rounded-md border px-3 py-2 ` +
-        `text-sm font-medium transition-all disabled:cursor-not-allowed ` +
+        // Colours and the disabled fade alone: with every property in the
+        // transition, a button whose least height differs by width eased to
+        // it after a resize and moved what sat under it for 150ms.
+        `text-sm font-medium transition-[color,background-color,border-color,opacity] ` +
+        `disabled:cursor-not-allowed ` +
         `disabled:opacity-45 ${styles} ${props.className ?? ""}`
       }
     />
@@ -140,8 +144,8 @@ export function Badge({
 
 /**
  * The stat tile the ratified mocks are built around: an uppercase
- * micro-label over a large tabular numeral. One shape for every measured
- * figure in the app, so a number always looks like a number.
+ * micro-label over a large tabular numeral. The shape for a headline
+ * figure, so a summary number looks like one.
  */
 export function StatTile({
   label,
@@ -190,7 +194,9 @@ export function statusTone(status: string): keyof typeof TONES {
  * A review's status as a person would say it.
  *
  * "awaiting confirmation" describes the machine's state; a reader wants to
- * know it is their turn, so the one status that needs a human says so.
+ * know it is their turn to decide, so the status that waits on their
+ * decision says so. The ones that wait on a Resume keep the name of what
+ * stopped them.
  */
 export function statusLabel(status: string): string {
   if (status === "awaiting_confirmation") return "awaiting your decision";

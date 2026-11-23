@@ -899,7 +899,13 @@ describe("deleting a project", () => {
         params(project.id),
       );
       expect(held.status).toBe(409);
-      expect(((await held.json()) as { code: string }).code).toBe("ReviewStillRunning");
+      // The manager answers running for a verify-again too, so that is named.
+      expect(await held.json()).toEqual({
+        error:
+          `Review ${made.id} is still ending its run, verifying a finding again, or being ` +
+          "deleted. Try again in a moment.",
+        code: "ReviewStillRunning",
+      });
       expect(await exists()).toBe(true);
     } finally {
       ending.mockRestore();

@@ -3,9 +3,11 @@
 /**
  * Setting up a review: four decisions in the order a person makes them.
  *
- * The branch pickers list what the remote has now, because this screen fetches
- * before it lists. Everything else on the page is a choice with a sensible
- * default, so the fastest path is: pick a branch, press start.
+ * The branch pickers list what the remote had at a fetch made before the
+ * list, or the refs from an earlier fetch when that one fails, which the
+ * branch card says and the dependency's picker does not. Everything else on
+ * the page is a choice with a sensible default, so the fastest path is: pick
+ * a branch, press start.
  */
 
 import Link from "next/link";
@@ -116,7 +118,11 @@ interface Preflight {
   } | null;
 }
 
-/** The stages that ask a model, as the run screen names them. */
+/**
+ * The stages whose requests are counted before Start, as the run screen
+ * names them. The grading stages ask a model too; theirs are said in words,
+ * with the project's checks.
+ */
 const REQUEST_STAGES = [
   ["s1_risk", "Risk"],
   ["s2_comprehension", "Comprehension"],
@@ -180,6 +186,9 @@ function NewReview() {
   // Not read is not empty: an unread list claimed there were no rulesets
   // and said to make one first (D-137).
   const [rulesetReadFailed, setRulesetReadFailed] = useState(false);
+  // Nor is a list still being read: it arrives with the branches, behind
+  // their fetch from the remote, and the same two lines stood until then.
+  const [rulesetsRead, setRulesetsRead] = useState(false);
   // No such project, from a stale bookmark or one deleted in another tab:
   // the way back, not a Try again that could never work (D-139).
   const [projectMissing, setProjectMissing] = useState(false);
@@ -276,11 +285,12 @@ function NewReview() {
 
   // Asked once as the screen opens, and with no prompt sent: a sign-in that bills per token
   // is said before Start, while it can still be changed, not in a run note
-  // on a review already billing (D-161). Anything else the CLI cannot do is
-  // refused at Start, with its reason (MVP 6.2). What was shown is sent with
-  // Create and Start, and the server refuses a billing sign-in this page did
-  // not show, so a check that failed, or a sign-in changed since, is shown
-  // then (review of D-161).
+  // on a review already billing (D-161). For a headless review, anything else
+  // the CLI cannot do is refused at Start, with its reason (MVP 6.2). What
+  // was shown is sent with Create and Start, and for a headless review the
+  // server refuses a billing sign-in this page did not show, so a check that
+  // failed, or a sign-in changed since, is shown then (review of D-161). An
+  // interactive review starts no CLI, so the server refuses it for neither.
   const [billing, setBilling] = useState<Billing | null>(null);
   const [managedPolicy, setManagedPolicy] = useState<ManagedPolicy | null>(null);
   const [refusedSignIn, setRefusedSignIn] = useState<SignIn | null>(null);
@@ -308,6 +318,7 @@ function NewReview() {
 
   function takeRulesets(read: { rulesets: PickableRuleset[]; defaultRulesetId?: string | null }) {
     setRulesets(read.rulesets);
+    setRulesetsRead(true);
     // The default chosen on a ruleset's page, else the first the list draws (D-225).
     const preferred = read.rulesets.find((row) => row.id === read.defaultRulesetId);
     const first = preferred ?? firstListed(read.rulesets);
@@ -443,7 +454,10 @@ function NewReview() {
     setError("");
     setProbing(id);
     try {
-      const probing = await send<{ model: Omit<Model, "availability"> }>(
+      const probing = await send<{
+        outcome?: { status?: string; error?: string };
+        model: Omit<Model, "availability">;
+      }>(
         `/api/models/${encodeURIComponent(id)}/probe`,
         { method: "POST" },
         "The probe did not complete",
@@ -453,6 +467,15 @@ function NewReview() {
         // unknown with no reason, so the only thing to do was press it again.
         setError(probing.error);
         return;
+      }
+      // So is a probe that reached no verdict, with no CLI to start say, or
+      // no answer in time: the route answers it as a success, the reason in
+      // its outcome. A reason can be empty, as when the CLI fails with only
+      // white space on stderr, and shown as it is would say nothing.
+      if (probing.body.outcome?.status === "indeterminate") {
+        setError(
+          probing.body.outcome.error || "The probe could not tell whether this model is available.",
+        );
       }
       const probed = probing.body.model;
       const listed = await send<{ models: Model[] }>(
@@ -547,7 +570,8 @@ function NewReview() {
   const noRulesetTicked = rulesetsChosen.noneTicked;
 
   // The size of the review, recomputed whenever the decisions that change it
-  // do. Free, and all it writes is git's fetch, so it can run on every change without a thought.
+  // do. Free, and all it writes is git's fetch and when that fetch was, so it
+  // can run on every change without a thought.
   const readyToPreflight =
     projectId !== "" &&
     fromBranch !== "" &&
@@ -881,7 +905,7 @@ function NewReview() {
               {branchesAsOf && !branchProblem ? (
                 <p className="mb-2 flex items-center gap-2 text-xs text-[var(--color-ink-muted)]">
                   {stale
-                    ? "Cached refs, shown because the remote could not be reached."
+                    ? "Cached refs, shown because the fetch from the remote failed."
                     : `Fetched from the remote at ${branchesAsOf.toLocaleTimeString()}.`}
                   <button
                     type="button"
@@ -1010,7 +1034,11 @@ function NewReview() {
               </p>
               {rulesets.length === 0 ? (
                 <p className="text-sm text-[var(--color-ink-muted)]">
-                  {rulesetReadFailed ? "The rulesets could not be read" : "No rulesets yet"}
+                  {rulesetReadFailed
+                    ? "The rulesets could not be read"
+                    : rulesetsRead
+                      ? "No rulesets yet"
+                      : "Reading the rulesets..."}
                 </p>
               ) : (
                 <RulesetPicker
@@ -1066,7 +1094,11 @@ function NewReview() {
                                   ? null
                                   : `${row.contextWindow.toLocaleString("en-US")} token window`,
                                 `${row.profileId} profile`,
-                                probeAgeInWords(row.lastProbedAt),
+                                // A probe that reached no verdict stores its
+                                // reason and no time.
+                                row.lastProbedAt === null && row.lastError !== null
+                                  ? "no probe has reached a verdict"
+                                  : probeAgeInWords(row.lastProbedAt),
                               ]
                                 .filter(Boolean)
                                 .join(", ")}
@@ -1417,8 +1449,10 @@ function NewReview() {
 
                   {preflight.contextWindow === null ? (
                     <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
-                      This model has not been probed, so its context window is unknown and the
-                      review will send each batch as one request without splitting.
+                      No probe vouches for this model now: none has reached a verdict on it, or the
+                      last verdict is more than a day old or found it unavailable. Its context
+                      window is not used, so a review started while that is so sends each batch as
+                      one request without splitting.
                     </p>
                   ) : preflight.requestsSplit ? (
                     <p className="mt-3 text-xs text-[var(--color-warning)]">
@@ -1497,7 +1531,7 @@ function NewReview() {
             >
               {starting ? "Starting..." : "Start review"}
             </Button>
-            {rulesets.length === 0 && !rulesetReadFailed ? (
+            {rulesets.length === 0 && rulesetsRead && !rulesetReadFailed ? (
               <span className="text-sm text-[var(--color-ink-muted)]">
                 Start a ruleset first:{" "}
                 <Link href="/rulesets" className="underline">

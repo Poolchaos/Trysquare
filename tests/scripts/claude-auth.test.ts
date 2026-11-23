@@ -83,7 +83,32 @@ describe("npm run claude:auth", () => {
 
     expect(await run(login)).toBe(0);
     expect(login).not.toHaveBeenCalled();
-    expect(err.join("\n")).toMatch(/may bill per token/);
+    expect(err).toEqual([
+      "This is not a Claude subscription sign-in, so reviews may bill per token. Settings says which one a review uses.",
+    ]);
+  });
+
+  it("does not call a token no subscription sign-in: one from claude setup-token is", async () => {
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({
+      loggedIn: true,
+      authMethod: "oauth_token",
+    });
+
+    expect(await run(() => 0)).toBe(0);
+    expect(out).toContain("Signed in (oauth_token).");
+    expect(err).toEqual([
+      "A token made by claude setup-token draws on a Claude subscription, and any other may bill per token. Settings says which sign-in a review uses.",
+    ]);
+  });
+
+  it("says a sign-in the CLI names no method for may be a subscription or may not", async () => {
+    process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({ loggedIn: true });
+
+    expect(await run(() => 0)).toBe(0);
+    expect(out).toContain("Signed in.");
+    expect(err).toEqual([
+      "This may not be a Claude subscription sign-in: unless it is, reviews may bill per token. Settings says which sign-in a review uses.",
+    ]);
   });
 
   it("fails, and names the path, when no CLI is there", async () => {

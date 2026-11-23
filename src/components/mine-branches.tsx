@@ -50,7 +50,7 @@ export function NoBranchOfYours({ identities }: { identities: readonly string[] 
   }
   return (
     <Empty title="No branch here is yours">
-      None ends on a commit authored as{" "}
+      No branch&apos;s newest commit was authored as{" "}
       {/* Each email in a box with the mark that follows it: the box moves to
           the next line whole. One wider than the line, as in a new review's
           picker on a phone, is broken after its @ before anywhere else, and
@@ -72,7 +72,8 @@ export function NoBranchOfYours({ identities }: { identities: readonly string[] 
           </span>
         );
       })}{" "}
-      The emails that count as yours are set in {settings}.
+      The emails that count as yours are the ones entered in {settings}, or your git config&apos;s
+      user.email when none is entered there.
     </Empty>
   );
 }

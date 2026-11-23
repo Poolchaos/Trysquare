@@ -140,6 +140,11 @@ export interface EngineRunnerOptions {
   claudePath?: string | undefined;
   signal?: AbortSignal | undefined;
   onEvent?: ((stage: ReviewStage, event: EngineEvent) => void) | undefined;
+  /**
+   * Called with a call's transcript once that file is open, the repair's
+   * too. Not called for a call that failed before opening one.
+   */
+  onTranscript?: ((logPath: string) => void) | undefined;
   /** Called after every stage, so usage is recorded even if a later one fails. */
   onStageComplete?:
     | ((info: {
@@ -196,6 +201,7 @@ export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
       cwd: options.worktreeRoot,
       timeoutMs: options.timeoutMs,
       logPath: join(options.logsDir, `${request.stage}.log`),
+      ...(options.onTranscript === undefined ? {} : { onLogOpened: options.onTranscript }),
       ...(options.claudePath === undefined ? {} : { claudePath: options.claudePath }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
       ...(resume === undefined ? {} : { resumeSessionId: resume }),
@@ -249,6 +255,7 @@ export function createEngineRunner(options: EngineRunnerOptions): ReviewEngine {
       cwd: options.worktreeRoot,
       timeoutMs: options.timeoutMs,
       logPath: join(options.logsDir, `${request.stage}.repair.log`),
+      ...(options.onTranscript === undefined ? {} : { onLogOpened: options.onTranscript }),
       resumeSessionId: outcome.sessionId,
       ...(options.claudePath === undefined ? {} : { claudePath: options.claudePath }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),

@@ -70,3 +70,38 @@ it("gives the review that is running before an older one left paused", async () 
 
   expect(await active()).toMatchObject({ id: started.id, status: "running" });
 });
+
+it("names each review in flight, so one stopping beside the review reported is seen", async () => {
+  // With two running at once, the dashboard went by the one review reported
+  // and the count awaiting a decision: the other failed, neither changed,
+  // and the scoreboard was not read again.
+  const { db, manager } = runtime.runtime();
+  const reported = seedReview(db, seedProject(db, "reported").id);
+  transitionReview(db, reported.id, "running");
+  const beside = seedReview(db, seedProject(db, "beside").id);
+  transitionReview(db, beside.id, "running");
+  vi.spyOn(manager, "isRunning").mockImplementation((id) => id === reported.id);
+  const answer = async () =>
+    (await (await route.GET()).json()) as {
+      active: { id: string } | null;
+      inFlight: string;
+      awaiting: number;
+    };
+
+  const before = await answer();
+  expect(before.active?.id).toBe(reported.id);
+  expect(before.inFlight.split(",")).toEqual(
+    expect.arrayContaining([`${reported.id}:running`, `${beside.id}:running`]),
+  );
+
+  transitionReview(db, beside.id, "failed");
+  const after = await answer();
+  expect(after.active?.id).toBe(reported.id);
+  expect(after.awaiting).toBe(before.awaiting);
+  expect(after.inFlight).not.toBe(before.inFlight);
+  expect(after.inFlight.split(",")).not.toContain(`${beside.id}:running`);
+
+  // A pause is a change of status under the same id.
+  transitionReview(db, reported.id, "paused_limit", { pausedReason: "Usage limit reached." });
+  expect((await answer()).inFlight.split(",")).toContain(`${reported.id}:paused_limit`);
+});

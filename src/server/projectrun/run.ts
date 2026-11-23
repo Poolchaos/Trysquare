@@ -18,7 +18,10 @@ export interface CommandResult {
   /** install, tests or e2e. */
   step: "install" | "tests" | "e2e";
   command: string;
-  /** Null when it was stopped, by its time limit or a cancel. */
+  /**
+   * Null when it was stopped, by its time limit or a cancel, and when it
+   * gave none: a shell that could not be started, or one a signal ended.
+   */
   exitCode: number | null;
   timedOut: boolean;
   cancelled: boolean;

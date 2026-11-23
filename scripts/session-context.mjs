@@ -62,7 +62,13 @@ function transcriptOfThisSession() {
     "projects",
   );
   if (!existsSync(projects)) fail(`no transcripts folder at ${projects}`);
-  const found = readdirSync(projects, { withFileTypes: true })
+  let folders;
+  try {
+    folders = readdirSync(projects, { withFileTypes: true });
+  } catch (error) {
+    fail(`could not read ${projects}: ${error.message}`);
+  }
+  const found = folders
     .filter((entry) => entry.isDirectory())
     .map((entry) => join(projects, entry.name, `${id}.jsonl`))
     .filter((file) => existsSync(file));
@@ -112,7 +118,10 @@ const count = (n) => n.toLocaleString("en-US");
 const file = transcriptFromArgs(process.argv.slice(2)) ?? transcriptOfThisSession();
 if (!existsSync(file)) fail(`no transcript at ${file}`);
 
-const { tokens, unread } = await newestReading(file);
+const { tokens, unread } = await newestReading(file).catch((error) =>
+  // Uncaught, Node exits 1, which here means the handover is due.
+  fail(`could not read ${file}: ${error.message}`),
+);
 if (tokens === null) {
   fail(
     `${file} holds no request with its token usage` +

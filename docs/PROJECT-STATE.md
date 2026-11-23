@@ -155,9 +155,11 @@ from 2026-11-03.
   sweep whose every finding was put to refuters: 226 stood (D-317). Of
   the 140 in the documents, 139 are answered (D-319, D-320) and one, in
   CLAUDE.md, is the maintainer's; eight in the code are fixed (D-316 to
-  D-318); 78 in the code and on the screens are open.
-  `./verify.sh --e2e` exits 0 with 1731 unit tests passing, 8 skipped,
-  and 176 browser tests.
+  D-318); the other 78 in the code and on the screens are answered
+  (D-321): 24 fixed at the code, 42 reworded and 12 comments corrected,
+  with the code halves left and the browser tests owed in the idea inbox.
+  `./verify.sh --e2e` exits 0 with 1765 unit tests passing, 8 skipped,
+  and 178 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside
   those awaiting a decision, each row saying which it is and what to press
@@ -864,8 +866,9 @@ own now (D-75, D-81).
   directives are not written in the app: they come with an imported
   document or a template.
 - A viewer for a failed stage's transcript: the review page names the file
-  of a headless stage (an interactive stage writes none) and renders
-  nothing of it (`01-ARCHITECTURE.md`, Not built yet).
+  a headless stage's call opened (an interactive stage writes none, and a
+  headless stage that failed before its log was opened names none) and
+  renders nothing of it (`01-ARCHITECTURE.md`, Not built yet).
 - The live output of git while a project clones: a failure's stderr is
   shown, the running output is not (`04-UI-DESIGN.md`, Not built yet, which
   lists the screens' other unbuilt parts).

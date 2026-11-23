@@ -11,8 +11,9 @@ than being edited away. An item of `plans/M4-FINISH-PLAN.md` named beside
 one owned it while that plan ran; the plan is closed, and what is still
 unbuilt is listed here and in `PROJECT-STATE.md`, Not built.
 
-- The read-only log viewer (section 8). A failed headless stage now names
-  its transcript path, but nothing renders the file. U10.
+- The read-only log viewer (section 8). A failed headless stage names its
+  transcript's path when its call opened one, but nothing renders the
+  file. U10.
 - Failing a headless stage on its exit code, or on a runtime-error marker
   in its stderr, when its result event reports success (section 6). Both
   are read to class a stage that failed over its result event. Read

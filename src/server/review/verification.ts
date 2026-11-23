@@ -53,14 +53,15 @@ function indexOfRef(ref: string): number {
 }
 
 /**
- * @param refs Each candidate's label, when not its position: the second
- *   verifier is asked under the first's labels, so a candidate keeps its
- *   label through both (WP-E).
+ * @param second Given for the second verifier, and for it alone. It is
+ *   asked under the first's labels, `refs`, so a candidate keeps its label
+ *   through both (WP-E), and in the words that say what its own verdict
+ *   does.
  */
 export function renderVerificationFor(
   candidates: readonly Finding[],
   context: VerificationContext,
-  refs?: readonly string[],
+  second?: { refs: readonly string[] },
 ): string {
   return renderVerificationPrompt(
     candidates.map((finding, index) => ({
@@ -68,7 +69,7 @@ export function renderVerificationFor(
       // answers that produced it, and those are replayed byte for byte.
       // A database id here would change on every resume and the
       // verification stage could never be replayed.
-      ref: refs?.[index] ?? refFor(index),
+      ref: second?.refs[index] ?? refFor(index),
       path: finding.filePath,
       lineStart: finding.lineStart,
       lineEnd: finding.lineEnd,
@@ -93,6 +94,7 @@ export function renderVerificationFor(
         .filter((rule) => candidates.some((finding) => finding.ruleCode === rule.code))
         .map((rule) => [rule.code, renderRule(rule)]),
     ),
+    second !== undefined,
   );
 }
 

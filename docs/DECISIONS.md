@@ -8208,3 +8208,139 @@ verified evidence, in writing, here.
   a workflow where the session judged it best. Not proven by a test: a
   document has none. The gate holds their form, and the twenty-sixth
   grade reads them against the code.
+- 2026-11-23 D-321 The 78 findings the sweep left in the code and on the
+  screens (D-317) are answered, by a workflow. Seven agents each owned a
+  group of files and read each finding against the code as it stood
+  after D-320; seven more, independent, tried each change against the
+  code; one then made the tests and the documents agree. 24 are fixed at
+  the code, 42 are reworded and 12 are comments corrected. None was
+  already true, none did not hold, and none is deferred whole: where a
+  rewording made a sentence true at a smaller change than the code
+  fix, the code half is in the inbox. The checkers let 67 stand,
+  corrected ten, and left one for a decision (the file pane's read is
+  kept by finding, so a verify-again that moves a finding's line leaves
+  the pane on the old one: inbox).
+  The code fixes, one by one. The Stages card read the verifier model
+  alone, so a review from before the second verifier that a verify-again
+  had since named a model on said verification proved no finding;
+  `ranBeforeSecondVerifier` reads the findings too
+  (`src/lib/review/steps.ts`). On a cancelled review an interactive
+  stage said "For you to answer", the Coverage card said its candidates
+  await verification, and the read-only list said "Dismissed:" under a
+  "left out" badge; each now says what a cancel left
+  (`src/app/reviews/[id]/page.tsx`). The scan view's empty feed said the
+  run was fetching under a later stage's name; past Prepare it says
+  earlier activity is not shown (same file). New review said "No
+  rulesets yet" while the rulesets were being read, and a probe that
+  reached no verdict ended with no word under a row saying "never
+  probed"; it says "Reading the rulesets...", shows the probe's reason
+  and words the row (`src/app/reviews/new/page.tsx`). A failed poll over
+  a dashboard already shown said nothing; it has the scoreboard read
+  again, whose own error then says a server that answers neither
+  (`src/app/page.tsx`). The dashboard read its scoreboard again only
+  when the one review reported, or the count waiting, changed;
+  `/api/reviews/attention` answers each review in flight and the
+  dashboard keeps that (`src/app/api/reviews/attention/route.ts`). An
+  interactive draft cancelled before it ran was counted among the
+  reviews the cost leaves out; they are counted by their start
+  (`src/server/db/repositories/scoreboard.ts`). The reviews list and a
+  ruleset's page cut the stored UTC text; both show the reader's own
+  date (`src/app/reviews/page.tsx`, `src/app/rulesets/[id]/page.tsx`).
+  A project's header showed a fetch time one fetch behind its branch
+  list, as UTC text, and "default main" before the clone had found a
+  default; it takes the later of the two answers, in the reader's zone,
+  and shows no default until the clone is ready
+  (`src/app/projects/[id]/page.tsx`). After a Delete everything that
+  failed, the counts beside the question stood as before; they are read
+  again (`src/app/settings/page.tsx`). Show code headed the file's first
+  hunk "What the change did here" when no hunk held the cited line; the
+  context route answers `atLine` and the pane heads it as elsewhere in
+  the file (`src/lib/git/diff.ts`, `src/components/confirmation.tsx`).
+  After a verify-again removed the last finding the queue read "Finding
+  3 of 2" and marked no row, and the d hint was drawn on a decided
+  finding; the place is the clamped one and the hint follows the key
+  (`src/components/confirmation.tsx`). A command that ended with no
+  exit code was noted "Exited with code null"; the finding's note and
+  the run note say it had none
+  (`src/server/db/repositories/check-findings.ts`,
+  `src/server/review/project-checks.ts`). The second verifier was told a
+  finding it kills is discarded; its prompt says the finding is left an
+  open question (`src/server/review/content.ts`). A verify-again's
+  refusals said to start the review again; they name the request and
+  its Send request button (`src/server/cli-readiness.ts`,
+  `src/lib/models/pairing.ts`). A stage's row named a transcript that
+  was never opened; a row names one only when its call opened it, and
+  `logPathFor` is gone (`src/server/engine/headless.ts`,
+  `src/server/review/checkpointing-runner.ts`). `npm run rules:seed`
+  printed the tier asked for over an unchanged ruleset; it prints the
+  tier stored and says the other was not set (`scripts/seed-rules.ts`).
+  `scripts/session-context.mjs` exited 1, the handover's code, on a
+  transcript it could not read; it exits 2 with the reason.
+  D-300 said that between two commands of an interactive review the app
+  works for a second or two. Before the first it runs the project's own
+  commands where they are on, each held to twenty minutes
+  (`COMMAND_TIME_LIMIT_MS`, `src/server/projectrun/run.ts`), and no
+  command is printed then. The Needs you row now reads "its page prints
+  the command when a stage waits for you".
+  Two rewordings change what a model is sent, so their prompts hash
+  anew: the description is "As described by whoever started the
+  review", under a `<change-description>` tag, and the second verifier
+  has the words above. A review interrupted before this asks S1 to S4
+  again, when it has a description, and S5b, at its next resume, once.
+  Rejected: the code fix where the words could be made true at a
+  smaller change (hiding candidates until they are verified, carrying a
+  failed log out of the project's run, reading whether a failed clone
+  left a folder, telling a graded screen from an ungraded one in the
+  design demo's score).
+  Decided by the session. Proven: each code fix a unit test reaches has
+  one that failed before it and passes now (`steps`, `attention`,
+  `scoreboard`, `diff` and `confirmation` for `atLine`,
+  `check-findings`, `project-checks-cleanup`, `content` and `pipeline`
+  for the second verifier, `cli-readiness`, `pairing`, `status-codes`,
+  `service`, `checkpointing-runner`, `headless` and `engine-runner` for
+  the transcript, `seed-rules`, `npm-entrypoints`, `session-context`),
+  and the rewordings a unit test holds are asserted word for word. The
+  suite: 1765 passing, 8 skipped; the type check and lint exit 0. The
+  fixes that live in a page's drawing have no unit test. Browser tests
+  hold five of them (the rulesets being read, the change elsewhere in
+  the file, a cancelled review's candidates, the dashboard's two
+  re-reads) and eighteen assertions carry the new words; the rest are
+  owed, one inbox line each.
+  The browser suite then ran on the whole of it, and the tests added
+  or extended were run against a build of the code before: six failed
+  there. Two of the six stopped before the line this entry added (the
+  cancelled review's candidates, at the tile's new label; the change
+  elsewhere in the file, for want of a review the tests left out of
+  that run would have made), so those two rest on the words they
+  assert, which the code before did not hold.
+  The shots were graded by three readers apart from the change
+  (`DESIGN-NOTES.md`). What they sent back, and what was done: the
+  scan view's first tile, worded "proven by the first verifier, not
+  since an open question", wrapped and is "proven and still standing";
+  eight sentences this entry had written needed a second read and are
+  written again (the empty Mine list, the empty dashboard, which no
+  longer speaks of cost, three lines of the Settings sign-in card, a
+  project's two paragraphs, the kept-credentials notice); on a phone
+  the reviews list's time and Delete, and a model's chip and Probe on
+  Settings, stood in a different place from card to card and now take
+  a line of their own, the control at its right; the two dates the
+  entry above left cut from the stored UTC text (a project's review
+  rows, a model's "probed") are the reader's own day; Settings writes
+  "1 project" and "2 rulesets", not "project(s)". Two shots were
+  wrong as photographs. The journey's Stages card was shot as an
+  element taller than the screen, with the sticky bar over its
+  heading, the day before too; it is cut from a picture of the whole
+  page. A card was 2 to 7px off its picture: a probe showed buttons
+  easing their least height for 150ms after the width changed,
+  `transition-all` on `Button`, while the card under them was measured.
+  `Button` now eases colours and opacity alone, and the shot helper
+  reads a box until two readings agree. A first form of that wait, on
+  each transition's `finished`, never settled after the theme changed
+  and hung the suite; why is not known, and a probe showed every
+  transition on that screen over within a second, so the app has none
+  that runs on. One fault was this entry's own: the "probed" date kept
+  to one line made a model's row 3px wider than a phone, which the
+  suite's sideways measure caught, and the row wraps.
+  Proven: `./verify.sh --e2e` exits 0 on the tree as fixed, 1765 unit
+  tests passing, 8 skipped, and 178 browser tests; the third reading
+  gave no shot a C or D.

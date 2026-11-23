@@ -64,6 +64,29 @@ describe("a failed command, as a finding", () => {
     expect(install.issue).toBe("The install fails on this branch.");
   });
 
+  it("says a command that ended with no exit code had none", () => {
+    // A command the shell could not start, or one a signal stopped, ends
+    // with no code and is recorded as failed. Its note read "Exited with
+    // code null, as the app ran it."
+    const noCode = recordFailedCommand(ctx.db, reviewId, {
+      ...failed,
+      step: "tests",
+      exitCode: null,
+      timedOut: false,
+    });
+    expect(noCode.issue).toBe("The tests fail on this branch.");
+    expect(noCode.verificationNote).toBe(
+      "Ended with no exit code, as the app ran it: it could not be started, or a signal stopped it.",
+    );
+    const withCode = recordFailedCommand(ctx.db, reviewId, {
+      ...failed,
+      step: "tests",
+      exitCode: 2,
+      timedOut: false,
+    });
+    expect(withCode.verificationNote).toBe("Exited with code 2, as the app ran it.");
+  });
+
   it("is listed by its review, and goes when cleared", () => {
     recordFailedCommand(ctx.db, reviewId, failed);
     recordFailedCommand(ctx.db, reviewId, { ...failed, step: "tests" });

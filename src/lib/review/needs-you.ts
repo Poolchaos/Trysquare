@@ -31,12 +31,15 @@ export function needsYouLine(row: {
       return "paused at the usage limit: Resume once it clears";
     case "interrupted":
       return "interrupted: Resume to go on";
-    // Said of the review, not of this moment: between two commands the app
-    // is at work for a second or two.
+    // Said of the review, not of this moment: no command is printed while
+    // the app is at work between stages, or while it runs the project's own
+    // commands before the first.
     case "interactive":
-      return "runs in your terminal: its page prints the command to run";
+      return "runs in your terminal: its page prints the command when a stage waits for you";
+    // Not "Resume to go on": a failure whose note says to start the review
+    // again fails the same way when resumed, while its cause stands.
     case "failed":
-      return "failed: Resume to go on";
+      return "failed: Resume to try again";
   }
 }
 

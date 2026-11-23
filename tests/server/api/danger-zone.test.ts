@@ -151,6 +151,11 @@ it("refuses while a review is running, rather than orphaning its process", async
   try {
     const held = await routes.wipe.DELETE();
     expect(held.status).toBe(409);
+    // The manager answers running for a verify-again too, so that is named.
+    expect(((await held.json()) as { error: string }).error).toBe(
+      `Review ${row.id} is still ending its run, verifying a finding again, or being deleted. ` +
+        "Try again in a moment.",
+    );
     expect(await counts()).toBe(1);
   } finally {
     ending.mockRestore();

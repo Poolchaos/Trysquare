@@ -84,7 +84,8 @@ interface SnapshotRule {
 
 interface FileContext {
   lines: { number: number; text: string }[];
-  hunk: { header: string; lines: string[] } | null;
+  /** atLine is false for the file's first hunk, sent when no hunk holds the cited line. */
+  hunk: { header: string; lines: string[]; atLine: boolean } | null;
   /** The change deleted the file, so the checkout has no copy of it. */
   deleted?: boolean;
   /** Why the checkout's copy could not be read, its hunk still shown. */
@@ -270,7 +271,11 @@ export function ConfirmationQueue({
     setSelected(next);
   }, []);
 
-  const current = queue[Math.min(selected, Math.max(queue.length - 1, 0))];
+  // Clamped once, for the finding shown, its row and its place as read out: a
+  // verify-again that kills the last finding in the queue leaves `selected`
+  // past the end, and the place was read as one more than the queue holds.
+  const at = Math.min(selected, Math.max(queue.length - 1, 0));
+  const current = queue[at];
   const currentProof = current ? proofOf(current.proofJson) : null;
   const secondProof = current ? proofOf(current.secondProofJson) : null;
   // An open question is left out unproven, not judged harmless (D-190).
@@ -429,7 +434,7 @@ export function ConfirmationQueue({
                 `check found is ${listed}.`
               : `Refuted by the verifier: ${named}. It has left the queue, and the ` +
                 `verifier's reason is ${listed}.`
-            : `Still not settled: ${named}. The verifier's newer note is on the card.`,
+            : `Still not settled: ${named}. The newer note is on the card.`,
       );
       await onChanged();
     } finally {
@@ -700,9 +705,9 @@ export function ConfirmationQueue({
           announce which finding is now active, not recite its whole card. */}
       <p className="sr-only" aria-live="polite">
         {current
-          ? `Finding ${selected + 1} of ${queue.length}. ${current.severity}. ` +
+          ? `Finding ${at + 1} of ${queue.length}. ${current.severity}. ` +
             `${current.filePath} line ${current.lineStart}. ${current.issue}`
-          : "No findings."}
+          : "No code findings."}
       </p>
 
       {/* With none, said in a line: an empty list, a tab stop with nothing
@@ -740,9 +745,9 @@ export function ConfirmationQueue({
                           <button
                             type="button"
                             onClick={() => moveTo(index)}
-                            aria-current={index === selected ? "true" : undefined}
+                            aria-current={index === at ? "true" : undefined}
                             className={`flex w-full items-stretch gap-2 overflow-hidden rounded-md border pr-2.5 text-left text-xs transition-colors ${
-                              index === selected
+                              index === at
                                 ? "border-[var(--color-accent)] bg-[var(--color-surface-raised)]"
                                 : "border-transparent hover:bg-[var(--color-surface-sunken)]"
                             }`}
@@ -1024,11 +1029,25 @@ export function ConfirmationQueue({
                   <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3">
                     {shownContext?.hunk ? (
                       <div>
-                        <h4 className="mb-1 text-xs font-medium">What the change did here</h4>
+                        <h4 className="mb-1 text-xs font-medium">
+                          {shownContext.hunk.atLine
+                            ? "What the change did here"
+                            : "What the change did elsewhere in this file"}
+                        </h4>
+                        {shownContext.hunk.atLine ? null : (
+                          <p className="mb-1 text-xs text-[var(--color-ink-muted)]">
+                            Line {current.lineStart} is outside the lines the change touched. This
+                            is the first place it changed the file.
+                          </p>
+                        )}
                         <pre
                           tabIndex={0}
                           role="group"
-                          aria-label="The change at this line"
+                          aria-label={
+                            shownContext.hunk.atLine
+                              ? "The change at this line"
+                              : "The change elsewhere in this file"
+                          }
                           className="max-h-64 overflow-auto rounded border border-[var(--color-border)] bg-[var(--color-surface-sunken)] p-3 text-xs"
                         >
                           <code className="font-[family-name:var(--font-mono)]">
@@ -1279,11 +1298,12 @@ export function ConfirmationQueue({
           <footer className="mt-4 hidden flex-wrap items-center sm:flex gap-x-4 gap-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-aside text-[var(--color-ink-faint)]">
             <Key label="j / k" action="next / previous" />
             {/* Only what works on the finding in front: an open question has no
-            confirm and no comment to edit (PG-2 (a), D-185). */}
+            confirm and no comment to edit (PG-2 (a), D-185), and a decided
+            finding no dismissal either. */}
             {current && !CONFIRMABLE.has(current.status) ? null : (
               <Key label="Shift+C" action="confirm" />
             )}
-            <Key label="d" action="dismiss" />
+            {current && !UNDECIDED.has(current.status) ? null : <Key label="d" action="dismiss" />}
             {current && !CONFIRMABLE.has(current.status) ? null : (
               <Key label="e" action="edit comment" />
             )}

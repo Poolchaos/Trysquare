@@ -748,7 +748,7 @@ test("Mine leaves the branches I last committed to, and an empty one says whose 
     await expect(none).toBeVisible();
     await expect(
       page.getByText(
-        "None ends on a commit authored as someone-else@example.invalid. The emails that count as yours are set in Settings.",
+        "No branch's newest commit was authored as someone-else@example.invalid. The emails that count as yours are the ones entered in Settings, or your git config's user.email when none is entered there.",
       ),
     ).toBeVisible();
     await expect(page.getByRole("main").getByRole("table")).toHaveCount(0);
@@ -776,7 +776,7 @@ test("Mine leaves the branches I last committed to, and an empty one says whose 
     await expect(picker.getByText("No branch here is yours")).toBeVisible();
     await expect(
       picker.getByText(
-        "None ends on a commit authored as someone-else@example.invalid. The emails that count as yours are set in Settings.",
+        "No branch's newest commit was authored as someone-else@example.invalid. The emails that count as yours are the ones entered in Settings, or your git config's user.email when none is entered there.",
       ),
     ).toBeVisible();
     await expect(choices).toHaveCount(0);

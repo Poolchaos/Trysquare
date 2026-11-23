@@ -126,6 +126,19 @@ describe("npm run rules:seed", () => {
     expect(result.status).toBe(0);
   });
 
+  it("says the tier the ruleset keeps when an unchanged file asks for another", async () => {
+    const seed = ["run", "rules:seed", "--", EXAMPLE, "--name", "Base"];
+    await npm([...seed, "--tier", "tech"], {});
+
+    const again = await npm([...seed, "--tier", "project"], {});
+
+    expect(again.stdout).toMatch(/Unchanged: "Base" \(tech\), version 1, \d+ rules/);
+    expect(again.stdout).toContain(
+      "Tier project was not set: an unchanged document leaves the ruleset as it is.",
+    );
+    expect(again.status).toBe(0);
+  });
+
   it("exits 2 with the usage when the name is missing", async () => {
     const result = await npm(["run", "rules:seed", "--", EXAMPLE], {});
 

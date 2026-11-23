@@ -161,9 +161,10 @@ describe("what the report says was examined", () => {
     expect(report).toContain("4 mechanical sweep hit(s) were each dispositioned.");
   });
 
-  it("says what rests only on findings verification refuted", () => {
+  it("says what rests only on findings that were killed, by either kill", () => {
     // Accounted for (D-97), but a reader is not left to assume the findings
-    // raised there stood.
+    // raised there stood. The count is of every kill: it credited the
+    // verifier with the quotation check's discards too.
     const report = renderReport({
       ...BASE,
       coverage: {
@@ -174,7 +175,7 @@ describe("what the report says was examined", () => {
       },
     });
     expect(report).toContain(
-      "2 hunk(s) and 1 sweep hit(s) were accounted for only by findings that verification refuted.",
+      "2 hunk(s) and 1 sweep hit(s) were accounted for only by findings that verification refuted or the quotation check discarded.",
     );
   });
 
@@ -189,6 +190,7 @@ describe("what the report says was examined", () => {
 
   it("says nothing of refutations when every finding raised stood", () => {
     expect(renderReport(BASE)).not.toContain("refuted");
+    expect(renderReport(BASE)).not.toContain("discarded");
   });
 });
 
@@ -222,10 +224,15 @@ describe("what the report keeps about the human's decisions", () => {
     expect(html).toContain("Left out: Could not prove it here.");
   });
 
-  it("quotes the author's description as a claim put to the model", () => {
+  it("quotes the description as a claim put to the model, and not as the author's", () => {
+    // The words come with the request that makes the review, and the app
+    // does not know who wrote them: it said "As described by its author".
     const report = renderReport({ ...BASE, intent: "Rename the prefs field." });
     expect(report).toContain("> Rename the prefs field.");
-    expect(report).toContain("put to the model as a claim to check against the code");
+    expect(report).toContain(
+      "As described by whoever started the review, and put to the model as a claim to check against the code, not as an instruction:",
+    );
+    expect(report).not.toContain("author");
   });
 });
 
@@ -320,7 +327,8 @@ describe("the footer that makes a report reproducible", () => {
     });
     expect(report).toContain(
       "The decomposed profile left 14 rule and file pair(s) out, where a file's path suggests " +
-        "none of a rule's themes: those rules were not put to the model for those files.",
+        "none of a rule's themes: those rules were not put to the model for those files in " +
+        "the adversarial stage.",
     );
     expect(renderReport(BASE)).not.toContain("pair(s) out");
   });
@@ -471,7 +479,7 @@ describe("the report as a file someone else can open", () => {
     const html = renderReportHtml(input);
     expect(html).toContain("The mechanical sweep found nothing to disposition.");
     expect(html).toContain(
-      "1 hunk(s) were accounted for only by findings that verification refuted.",
+      "1 hunk(s) were accounted for only by findings that verification refuted or the quotation check discarded.",
     );
   });
 });
@@ -541,12 +549,14 @@ describe("what a project's own checks found (WP-I, D-197)", () => {
       "the tests failed. The design was not checked: the project has no e2e command.",
     );
     expect(said("e2e not run")).toContain("The design was not checked: its e2e did not run.");
+    // Only .png files are looked for: "its e2e saved no screenshot" was
+    // said of an e2e that saved JPEGs.
     expect(said("no screenshots")).toContain(
-      "The design was not checked: its e2e saved no screenshot.",
+      "The design was not checked: no PNG screenshot was found in its screenshots folder.",
     );
     expect(said("graded")).toContain("The screenshots its e2e saved were graded A to D.");
     // Some or all left out, the run notes naming them: never "graded" or
-    // "saved no screenshot" for them (review round 9).
+    // "no PNG screenshot was found" for them (review round 9).
     expect(said("partly graded")).toContain(
       "The screenshots its e2e saved were graded A to D, but for some left out, which the run notes name and say why.",
     );

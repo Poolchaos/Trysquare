@@ -156,7 +156,7 @@ export interface PipelineInput {
   rules: readonly ImportedRule[];
   /** Decides how the adversarial work is divided. See docs/06. */
   profile: ReviewProfile;
-  /** What the author says the change was meant to do, if they said. */
+  /** What whoever started the review says the change was meant to do, if they said. */
   intent?: string | undefined;
   /**
    * The model's probed context window. Given, the pipeline splits a stage
@@ -793,7 +793,9 @@ export async function runReviewPipeline(input: PipelineInput): Promise<PipelineR
       prompt: renderVerificationFor(
         held.map((proven) => proven.finding),
         verifying,
-        held.map((proven) => proven.ref),
+        {
+          refs: held.map((proven) => proven.ref),
+        },
       ),
       model: input.secondVerifier,
     });

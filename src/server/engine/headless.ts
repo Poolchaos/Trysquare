@@ -42,6 +42,13 @@ export interface StageRunOptions extends StageCommandOptions {
   timeoutMs: number;
   /** Transcript destination. Written as it arrives so a crash keeps evidence. */
   logPath: string;
+  /**
+   * Called with `logPath` once that file is open. A stage that fails before
+   * then (an alias refused, a CLI that will not resolve or fails its version
+   * check) leaves no transcript, so a caller that names one on a record
+   * names it from here, not from the path it asked for.
+   */
+  onLogOpened?: (logPath: string) => void;
   /** Path to the CLI, overridable so tests can substitute a fake. */
   claudePath?: string;
   /** How long a stopped CLI gets before the next, harder step. Default 5s. */
@@ -114,6 +121,7 @@ export async function runStage(options: StageRunOptions): Promise<StageOutcome> 
   await mkdir(dirname(options.logPath), { recursive: true });
   await writeFile(systemPromptFile, options.systemPrompt, "utf8");
   const log = createWriteStream(options.logPath, { flags: "a" });
+  log.once("open", () => options.onLogOpened?.(options.logPath));
 
   // A write stream opens asynchronously and can fail at any point: the disk
   // fills, the path is not writable, the directory disappears. Without a

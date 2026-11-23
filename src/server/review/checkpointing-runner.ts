@@ -73,11 +73,6 @@ export interface CheckpointingRunnerOptions {
     ((stage: ReviewStage, batch?: { number: number; count: number }) => void) | undefined;
   /** Called instead when a stored answer is replayed, which costs nothing. */
   onReplay?: ((stage: ReviewStage) => void) | undefined;
-  /**
-   * Where a stage's log file is written, recorded on the row. Left out
-   * where none is written, as for an interactive stage.
-   */
-  logPathFor?: ((stage: ReviewStage) => string) | undefined;
 }
 
 export interface CheckpointingRunner {
@@ -90,6 +85,17 @@ export interface CheckpointingRunner {
    * here is what keeps the recorded usage equal to what was actually spent.
    */
   noteAttempt: (report: AttemptReport) => void;
+  /**
+   * Wire this to the engine runner's `onTranscript`.
+   *
+   * A row names the transcript its call opened, the first when a repair
+   * opened a second. It names none for a call that failed before opening
+   * one, an alias refused or a CLI that would not resolve, or for an engine
+   * that writes none, as the interactive one: named from the stage alone,
+   * such a row pointed at a file that was never there (the twenty-first
+   * grade, AI5, for interactive rows).
+   */
+  noteTranscript: (logPath: string) => void;
   /**
    * The pipeline rejected this stage's answer after it was stored.
    *
@@ -135,9 +141,14 @@ export function createCheckpointingRunner(
   let pending: AttemptReport[] = [];
   let inFlight: ReviewStage | null = null;
   let aboutFinding: string | null = null;
+  let transcript: string | null = null;
 
   const noteAttempt = (report: AttemptReport): void => {
     pending.push(report);
+  };
+
+  const noteTranscript = (logPath: string): void => {
+    transcript ??= logPath;
   };
 
   const writeRow = (input: {
@@ -163,7 +174,7 @@ export function createCheckpointingRunner(
       ...(input.usage === undefined ? {} : { usage: input.usage }),
       errorClass: input.errorClass ?? null,
       errorText: input.errorText ?? null,
-      logPath: options.logPathFor?.(input.stage) ?? null,
+      logPath: transcript,
       startedAt: input.startedAt,
       findingId: aboutFinding,
     });
@@ -203,6 +214,7 @@ export function createCheckpointingRunner(
     const startedAt = nowIso();
     const firstAttempt = nextAttemptNumber(db, reviewId, request.stage, promptHash);
     pending = [];
+    transcript = null;
     inFlight = request.stage;
     const { findingId, ...asked } = request;
     aboutFinding = findingId ?? null;
@@ -295,6 +307,7 @@ export function createCheckpointingRunner(
     } finally {
       inFlight = null;
       pending = [];
+      transcript = null;
     }
   };
 
@@ -302,7 +315,7 @@ export function createCheckpointingRunner(
     rejectSucceededAnswers(db, reviewId, stage, reason);
   };
 
-  return { run, noteAttempt, invalidate };
+  return { run, noteAttempt, noteTranscript, invalidate };
 }
 
 function classOf(error: unknown): StageErrorClass {

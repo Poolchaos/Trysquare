@@ -14,7 +14,12 @@ export function StoredCredentialsNotice({
 }: {
   /** What the stored address carries, as the API serves it; null when nothing. */
   stored: { kind: string; address: string } | null | undefined;
-  /** A failed clone left no clone behind, so its settings hold nothing. */
+  /**
+   * The clone is ready. One that failed, or still runs, may have written a
+   * clone before it stopped, with the address in its settings: git clone
+   * writes them ahead of the steps that can still fail, and the app removes
+   * nothing when one does.
+   */
   cloned: boolean;
   className?: string;
 }) {
@@ -27,9 +32,10 @@ export function StoredCredentialsNotice({
       <p className="font-medium">{kind} is still kept for this address.</p>
       <p className="mt-1 text-xs">
         It was added before Trysquare refused them, so it stays on this machine, in Trysquare&apos;s
-        database{cloned ? <> and in the clone&apos;s settings</> : null}. Delete this project and
-        add <Mono className="[overflow-wrap:anywhere]">{stored.address}</Mono> instead to be rid of
-        it.
+        database and in{" "}
+        {cloned ? "the clone's settings." : "the settings of any clone left on disk."} Delete this
+        project and add <Mono className="[overflow-wrap:anywhere]">{stored.address}</Mono> instead
+        to be rid of it.
       </p>
     </div>
   );

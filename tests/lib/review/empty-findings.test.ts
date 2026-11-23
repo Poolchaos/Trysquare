@@ -38,6 +38,16 @@ describe("an empty findings list", () => {
     }
   });
 
+  it("says a running review lists its findings before verification, not after", () => {
+    // A candidate is listed from the end of the stage that raised it; the
+    // list said it showed findings once each was checked against the file.
+    expect(emptyFindings("running", true, false).text).toBe(
+      "Findings appear once the adversarial or the deletions stage has raised them, before " +
+        "verification. One that verification then refutes, or the quotation check discards, " +
+        "leaves the list.",
+    );
+  });
+
   it("says a review that stopped short reported none before it stopped", () => {
     for (const status of ["paused_limit", "interrupted", "failed", "cancelled"] as const) {
       expect(emptyFindings(status, false, false).text).toBe(
@@ -60,8 +70,9 @@ describe("an empty findings list", () => {
     expect(emptyFindings("running", true, false, true)).toEqual({
       title: "No code findings yet",
       text:
-        "Code findings appear once the adversarial pass has run and each one has been " +
-        "checked against the file. What the project's own checks found is above.",
+        "Code findings appear once the adversarial or the deletions stage has raised them, " +
+        "before verification. One that verification then refutes, or the quotation check " +
+        "discards, leaves the list. What the project's own checks found is above.",
     });
     expect(emptyFindings("paused_limit", false, true, true)).toEqual({
       title: "No code findings yet",

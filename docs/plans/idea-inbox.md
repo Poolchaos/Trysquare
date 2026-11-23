@@ -151,10 +151,6 @@ pulled deliberately.
   ("claudePath: holds a control character"), as the emails were until
   WP-L's grade. `refusedAs` in `api/settings/route.ts` is the way to name
   it as its card does.
-- 2026-11-18: a project's "fetched" time and the reviews list's time are
-  the stored UTC time cut to the minute, shown with no zone: 06:04 at 08:04
-  in the maintainer's (seen in WP-L's shots). Dates cut the same way can be
-  a day off near midnight.
 - 2026-11-18: on `windows-latest` alone, CI run 44251352949 failed "the
   confirmation queue has no accessibility violations" in the light theme,
   30 seconds waiting for an element that did not come; the run before it
@@ -398,6 +394,114 @@ pulled deliberately.
   makes random ids while `src/lib/models/availability.ts` defaults to the
   clock (the sweep, D-320). The charter is the maintainer's to word:
   either the law says no file, process or network I/O, or those two move.
+- 2026-11-23: the file pane keeps its read by finding id
+  (`src/components/confirmation.tsx`), so a verify-again that proves an
+  open question at other lines leaves the pane, its heading and its "Line
+  N is outside" note on the read made for the old line. Hold the line
+  beside the id so a changed line reads again; a browser test then stages
+  a verify-again whose snapshot moves the line and expects a second
+  request to the context route (D-321, the one finding its checker left
+  for a decision).
+- 2026-11-23: New review does not ask the pre-flight again when the
+  chosen model's probe lapses or fails while the page is open, so an
+  answer taken while the probe was fresh can say "split into N requests"
+  of a run that will not split. What should ask again is undecided
+  (D-321).
+- 2026-11-23: "interrupted: Resume to go on" on Needs you is untrue where
+  the failure will meet the resume again, a project renamed since say:
+  the ledger check runs at each resume (`src/lib/review/needs-you.ts`;
+  the failed row was reworded for the same reason, D-321).
+- 2026-11-23: a failed command's row keeps its log's path when the log
+  could not be written (`logFailed`, `src/server/projectrun/run.ts`); the
+  card now says "The log of its output" and not the whole of it. Carry
+  the failure out and store no path (D-321).
+- 2026-11-23: the kept-credentials notice says a failed clone "may have
+  left" a clone on disk. The projects routes could say whether the folder
+  is there (D-321).
+- 2026-11-23: the design demo's score says of a planted screen with no
+  design row that the first grader "did not fail it, or never graded it".
+  Reading the S4b rows would tell the two apart, where a succeeded row
+  whose answer the pipeline then refused is neither (D-321).
+- 2026-11-23: a probe that ends with no verdict and an empty reason
+  stores the empty reason, and Settings' own Probe drops an indeterminate
+  outcome, so Settings says nothing of it. New review says a fallback
+  sentence (D-321).
+- 2026-11-23: `npm run rules:seed` over an unchanged ruleset stored under
+  another tier prints "Tier global was not set" when no `--tier` was
+  typed, the default being global. Tell a typed tier from the default, or
+  decide that an unchanged re-seed moves the tier (D-321).
+- 2026-11-23: a dependency's branch picker on New review drops the
+  route's `stale`, so it can list refs from an earlier fetch with no word;
+  the branch card says it (D-321).
+- 2026-11-23: after a verify-again removes the queue's last finding, the
+  first press of k moves the index onto the row already shown and looks
+  like a key that did nothing. Clamp inside the k updater (D-321).
+- 2026-11-23: the dashboard's poll says nothing of a change between two
+  statuses outside what is in flight, interrupted to failed or a failed
+  review deleted in another tab, so Needs you can lag by such a change
+  (D-321).
+- 2026-11-23: two browser stand-ins for a signed-out refusal write "in
+  this project's directory, with the command below", with a comma the
+  server does not write (`e2e/failure-paths.spec.ts`, the two that stage
+  `CliNotReady` at Create and Start).
+- 2026-11-23, from the readers who graded D-321's shots, each short of
+  an A and none from that change: on a phone a project's branch table
+  is cut inside its Last commit column, its Review link off the screen
+  and nothing saying it scrolls; a path in the monospace breaks
+  mid-word on Settings at phone width (`break-all`); the Stages card's
+  usage line names no unit and its Audit line says "undispositioned";
+  "the other strong family" on the scan view; "protocol" on the empty
+  dashboard, before the app has said what one is; `user.email` and a
+  project header's default branch in the interface's face; "It was
+  added before Trysquare refused them"; the reviews list's "awaiting
+  your decision" filter 13px in from the title above it; "Show 8
+  model(s)" on New review and "file(s)", "hunk(s)" in the report.
+- 2026-11-23, browser test owed (D-321): on New review, a probe answered
+  as indeterminate shows its reason above Start and the row says "no
+  probe has reached a verdict", not "never probed"; with an empty reason
+  the fallback sentence shows.
+- 2026-11-23, browser test owed (D-321): a pre-flight answered with no
+  context window shows "No probe vouches for this model now" and the rest
+  of that sentence.
+- 2026-11-23, browser test owed (D-321): a verify-again that removes the
+  queue's last finding reads "Finding N of N" and leaves one row marked
+  current.
+- 2026-11-23, browser test owed (D-321): the key hints under the queue
+  hold no "dismiss" while a confirmed finding is in front, and hold it on
+  an undecided one.
+- 2026-11-23, browser test owed (D-321): a review from before the second
+  verifier (a verifier model set, no second-verifier row, one finding
+  verified with no second proof) says "Not asked: this review is from
+  before the second verifier."
+- 2026-11-23, browser test owed (D-321): the Tokens card of an
+  interactive review that is a draft, or running, says "An interactive
+  review is answered in your own session" and not "was answered".
+- 2026-11-23, browser test owed (D-321): an interactive review cancelled
+  while a stage waits says "Not finished when the review was cancelled"
+  on that stage's row, and not "For you to answer".
+- 2026-11-23, browser test owed (D-321): a review cancelled after an
+  open question was left out shows "Left out: <reason>" under the "left
+  out" badge in its Findings list, not "Dismissed:".
+- 2026-11-23, browser test owed (D-321): a review page opened past
+  Prepare with nothing in the feed yet says "Earlier activity is not
+  shown here." and not "Fetching and checking out".
+- 2026-11-23, browser test owed (D-321): with the browser's time zone
+  away from UTC, a reviews list row's time element holds the stored time
+  and shows it as the browser words it, and a ruleset page's two dates,
+  a project's review rows and a model's "probed" on Settings are the
+  reader's days.
+- 2026-11-23, browser test owed (D-321): a project's header shows the
+  later of the project's and the branch list's fetch times, in the
+  reader's zone, and not "never fetched" when the list has one.
+- 2026-11-23, browser test owed (D-321): after Delete everything is
+  refused part way, the counts beside "Yes, delete them" are the ones a
+  new read gives.
+- 2026-11-23, browser test owed (D-321): a project whose clone is not
+  ready shows no "default main" in its header, and its form's select
+  says "Not known yet" with its hint.
+- 2026-11-23, browser test owed (D-321): a verify-again refused for a
+  CLI that is signed out shows "so the request was not sent" in the
+  dialog, with Send request still there.
 
 ## Retired
 
@@ -498,3 +602,12 @@ the line entirely would lose the trail.
   rulesets it is filed under none (review round 27). DONE 2026-11-23
   (D-316): the one ruleset's frozen copy is read too, and such a code is
   filed under none.
+- 2026-11-18 a project's "fetched" time and the reviews list's time were
+  the stored UTC time cut to the minute, shown with no zone, and dates
+  cut the same way could be a day off near midnight. DONE 2026-11-23
+  (D-321): each is the reader's own time or day, the project header, the
+  reviews list, a ruleset's two dates, a project's review rows and a
+  model's "probed" on Settings.
+- 2026-11-23 the shots of D-321's screens to grade. DONE the same day:
+  graded by three readers, the grades in `DESIGN-NOTES.md`, what they
+  found short of an A in the line above Retired.

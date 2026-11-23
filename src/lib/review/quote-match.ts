@@ -120,7 +120,7 @@ export function describeMismatch(reason: QuoteMismatch): string {
     case "empty-quote":
       return "the finding quoted no code, so there is nothing to check it against";
     case "out-of-range":
-      return `the cited lines are outside the file, which has ${reason.fileLines} lines`;
+      return `the cited lines are not a range inside the file, which has ${reason.fileLines} lines`;
     case "content-differs":
       return "the code at the cited lines is not what the finding quoted";
   }

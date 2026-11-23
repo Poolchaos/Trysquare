@@ -401,7 +401,9 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     ).toBeVisible();
     // Accounted for, but a refutation is said, not folded away with the rest.
     await expect(
-      page.getByText("1 hunk(s) were accounted for only by findings that verification refuted."),
+      page.getByText(
+        "1 hunk(s) were accounted for only by findings that verification refuted or the quotation check discarded.",
+      ),
     ).toBeVisible();
 
     await page.getByText("Run detail", { exact: true }).click();
@@ -425,16 +427,27 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
     await expect(stages.getByText("Second verifier", { exact: true })).toBeVisible();
     mkdirSync(EVIDENCE, { recursive: true });
     const desktop = page.viewportSize();
-    for (const [scheme, name] of [
-      ["light", "stages-light"],
-      ["dark", "stages-dark"],
-    ] as const) {
+    // Cut from a picture of the whole page, scrolled to its top. The card is
+    // taller than the screen less the top bar, so a picture of the element
+    // alone was taken with the sticky bar over the card's heading.
+    const shootStages = async (name: string) => {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const box = await stages.boundingBox();
+      if (!box) throw new Error("The Stages card has no box to photograph.");
+      await page.screenshot({
+        path: join(EVIDENCE, `${name}.png`),
+        fullPage: true,
+        clip: box,
+        animations: "disabled",
+      });
+    };
+    for (const scheme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme: scheme });
-      await stages.screenshot({ path: join(EVIDENCE, `${name}.png`), animations: "disabled" });
+      await shootStages(`stages-${scheme}`);
     }
     await page.emulateMedia({ colorScheme: "light" });
     await page.setViewportSize({ width: 390, height: 844 });
-    await stages.screenshot({ path: join(EVIDENCE, "stages-phone.png"), animations: "disabled" });
+    await shootStages("stages-phone");
     if (desktop) await page.setViewportSize(desktop);
 
     // Left as a reader finds it, so the screenshot below photographs the
@@ -1003,7 +1016,7 @@ test("a review, from an empty app to an exported report", async ({ page }) => {
 
     // A refuted finding is counted in what was examined and is not reported.
     expect(report).toContain(
-      "1 hunk(s) were accounted for only by findings that verification refuted.",
+      "1 hunk(s) were accounted for only by findings that verification refuted or the quotation check discarded.",
     );
     expect(report).not.toContain(REFUTED_ISSUE);
   });

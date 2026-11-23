@@ -61,8 +61,13 @@ try {
   });
   const verb = result.changed ? "Stored" : "Unchanged";
   console.log(
-    `${verb}: "${values.name}" (${tier.data}), version ${result.version}, ${result.ruleCount} rules, in ${dataDir}`,
+    `${verb}: "${values.name}" (${result.tier}), version ${result.version}, ${result.ruleCount} rules, in ${dataDir}`,
   );
+  if (result.tier !== tier.data) {
+    console.log(
+      `Tier ${tier.data} was not set: an unchanged document leaves the ruleset as it is.`,
+    );
+  }
 } catch (error) {
   if (error instanceof SeedRefusedError || error instanceof DataDirLockError) {
     fail(error.message);

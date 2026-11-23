@@ -20,7 +20,7 @@ export const STEPS = [
   },
   {
     title: "Find issues",
-    what: "Each change goes to the model with the rules sent for its file, every change and deletion must come back accounted for, and the project's screens are graded when its e2e saved any.",
+    what: "Each change goes to the model with the rules sent for its file, every change and deletion must come back accounted for, and the screenshots copied from the project's e2e are graded.",
     stages: ["s3_adversarial", "s4_deletions", "s4b_design_grading"],
   },
   {
@@ -119,6 +119,33 @@ export function findingTallies(
     withSecond: count((finding) => finding.status === "candidate" && Boolean(finding.proofJson)),
     toProve: count((finding) => finding.status === "candidate" && !finding.proofJson),
   };
+}
+
+/**
+ * Whether a review ran before there was a second verifier (WP-E), for a
+ * review that reached a person with no request sent to one. Its verifier
+ * model alone does not say: verifying an open question again names one on a
+ * review that had none. A finding verified with one proof does: since the
+ * second verifier, a run and a verify-again both verify a finding only with
+ * the second's proof kept beside the first's. A candidate held for the
+ * second verifier mid-run has one proof too, so the finding's status is read.
+ */
+export function ranBeforeSecondVerifier(
+  verifierModel: string | null | undefined,
+  findings: readonly {
+    status: string;
+    dismissedFrom?: string | null;
+    secondProofJson?: string | null;
+  }[],
+): boolean {
+  if (!verifierModel) return true;
+  return findings.some(
+    (finding) =>
+      !finding.secondProofJson &&
+      (finding.status === "verified" ||
+        finding.status === "confirmed" ||
+        (finding.status === "dismissed" && finding.dismissedFrom === "verified")),
+  );
 }
 
 export interface StepFacts {

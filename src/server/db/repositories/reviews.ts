@@ -59,7 +59,7 @@ export interface CreateReviewInput {
   model: string;
   profileId: ReviewProfile;
   effort?: ReviewEffort;
-  /** What the author says the change was meant to do. */
+  /** What whoever started the review says the change was meant to do. */
   intent?: string;
   engineMode: EngineMode;
   linked?: {

@@ -57,9 +57,13 @@ export function recordFailedCommand(
     issue: failed.timedOut ? TIMED_OUT[failed.step]! : FAILED[failed.step]!,
     evidence: failed.tail,
     status: "verified",
+    // No code and no time limit: the shell never started, or a signal the
+    // app did not send ended the command.
     verificationNote: failed.timedOut
       ? "Stopped at its time limit, by the app."
-      : `Exited with code ${failed.exitCode}, as the app ran it.`,
+      : failed.exitCode === null
+        ? "Ended with no exit code, as the app ran it: it could not be started, or a signal stopped it."
+        : `Exited with code ${failed.exitCode}, as the app ran it.`,
     dismissReason: null,
     dismissedFrom: null,
     createdAt: nowIso(),

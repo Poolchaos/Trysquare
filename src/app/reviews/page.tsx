@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Every review this app has run, newest first.
+ * The reviews this app keeps, newest first: a draft never run is one, and a
+ * deleted review is not.
  *
  * A review that is still running is not deletable from here: it owns a process
  * and a checked-out worktree, and the run screen is where it can be stopped.
@@ -60,8 +61,8 @@ function ReviewsList() {
   const [reviews, setReviews] = useState<Row[] | null>(null);
   const [project, setProject] = useState("");
   // Seeded from the URL so the awaiting badge in the top bar can land on the
-  // filtered list rather than on every review ever run, which is the list
-  // someone pressing a count of three is least interested in.
+  // filtered list rather than on the whole one, which is the list someone
+  // pressing a count of three is least interested in.
   const [status, setStatus] = useState(() =>
     search.get("status") === "awaiting" ? "awaiting" : "",
   );
@@ -150,9 +151,9 @@ function ReviewsList() {
         title="Reviews"
         actions={
           <span className="flex flex-wrap items-center gap-3">
-            {/* The one filter worth reaching for first: which of these still
-                want something from me. Offered only when the answer is not
-                none, so it never advertises an empty set. */}
+            {/* The one filter worth reaching for first: which of these wait
+                on my decision. Offered only when the answer is not none, so
+                it never advertises an empty set. */}
             {awaiting > 0 ? (
               <Button
                 variant={status === "awaiting" ? "primary" : "quiet"}
@@ -233,7 +234,11 @@ function ReviewsList() {
                       {review.fromBranch} into {review.intoBranch}
                     </Mono>
                   </Link>
-                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {/* The row's width on a phone, where the time and Delete
+                      take the last line, the time at its left and Delete at
+                      its right: after a run of figures that wraps, each
+                      stood in a different place from card to card. */}
+                  <span className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 sm:w-auto">
                     {/* What the review actually produced. Without these a
                         three-hour run that confirmed twelve criticals read
                         exactly like a cancelled one. */}
@@ -255,27 +260,42 @@ function ReviewsList() {
                     <span className="hidden text-xs text-[var(--color-ink-faint)] sm:inline">
                       {review.model}
                     </span>
-                    <span className="text-xs text-[var(--color-ink-muted)]">
-                      {review.createdAt.slice(0, 16).replace("T", " ")}
+                    <span className="flex w-full items-center gap-x-3 sm:w-auto">
+                      {/* Stored in UTC, shown in the reader's own zone: cut
+                        from the stored text, it was UTC's clock under no
+                        zone's name. */}
+                      <time
+                        dateTime={review.createdAt}
+                        className="text-xs text-[var(--color-ink-muted)]"
+                      >
+                        {new Date(review.createdAt).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </time>
+                      {RUNNING.has(review.status) ? null : (
+                        <span className="ml-auto flex items-center gap-x-3">
+                          {confirming === review.id ? (
+                            <>
+                              <Button
+                                variant="primary"
+                                disabled={busy !== ""}
+                                onClick={() => void remove(review.id)}
+                              >
+                                Yes, delete
+                              </Button>
+                              <Button variant="quiet" onClick={() => setConfirming("")}>
+                                Keep
+                              </Button>
+                            </>
+                          ) : (
+                            <Button variant="quiet" onClick={() => setConfirming(review.id)}>
+                              Delete
+                            </Button>
+                          )}
+                        </span>
+                      )}
                     </span>
-                    {RUNNING.has(review.status) ? null : confirming === review.id ? (
-                      <>
-                        <Button
-                          variant="primary"
-                          disabled={busy !== ""}
-                          onClick={() => void remove(review.id)}
-                        >
-                          Yes, delete
-                        </Button>
-                        <Button variant="quiet" onClick={() => setConfirming("")}>
-                          Keep
-                        </Button>
-                      </>
-                    ) : (
-                      <Button variant="quiet" onClick={() => setConfirming(review.id)}>
-                        Delete
-                      </Button>
-                    )}
                   </span>
                 </Card>
               </li>

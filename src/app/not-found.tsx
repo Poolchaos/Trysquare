@@ -1,9 +1,9 @@
 /**
- * A URL that names nothing.
+ * A path no route matches.
  *
- * Most often a bookmarked review that has since been deleted, so the copy
- * says that rather than the usual shrug: the app deletes reviews on purpose
- * and a dead link is the expected aftermath, not a fault.
+ * A deleted review, project or ruleset does not land here: its id still
+ * matches its page's route, and that page reads the 404 and offers the way
+ * back (D-138). So the copy does not blame a deletion.
  */
 
 import Link from "next/link";
@@ -17,9 +17,7 @@ export default function NotFound() {
       <PageBody>
         <Card className="max-w-2xl p-4">
           <p className="text-sm text-[var(--color-ink-muted)]">
-            The page may name a review, project or ruleset that has since been deleted. Deleting a
-            review removes its run folder, with its worktrees, bundle and logs; an exported report
-            outlives all of that and stays under your data directory.
+            Check the address, or start from Projects or Reviews.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href="/projects">

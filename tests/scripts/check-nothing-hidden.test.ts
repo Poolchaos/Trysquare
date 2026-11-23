@@ -72,6 +72,27 @@ describe("the nothing-hidden gate", () => {
     }
   });
 
+  it("passes over files ignored on purpose without saying nothing is ignored", () => {
+    const clean = mkdtempSync(join(tmpdir(), "trysquare-nothing-hidden-clean-"));
+    try {
+      spawnSync("git", ["init", "-q"], { cwd: clean });
+      writeFileSync(join(clean, ".gitignore"), "next-env.d.ts\ndocs/private/\n");
+      mkdirSync(join(clean, "docs", "private"), { recursive: true });
+      writeFileSync(join(clean, "next-env.d.ts"), "x");
+      writeFileSync(join(clean, "docs", "private", "secret.md"), "x");
+
+      const run = spawnSync(process.execPath, [GATE], { cwd: clean, encoding: "utf8" });
+
+      expect(run.stdout).toBe(
+        "check-nothing-hidden: clean (git ignores nothing among the root's own files or under " +
+          "src, tests, e2e, scripts, drizzle, docs, .github beyond what is meant to be ignored).\n",
+      );
+      expect(run.status).toBe(0);
+    } finally {
+      rmSync(clean, { recursive: true, force: true });
+    }
+  });
+
   it("still sees the root when git is told to read pathspecs literally", () => {
     // With GIT_LITERAL_PATHSPECS set, the root's glob matched nothing and
     // the gate passed having looked at nothing (review round 11).

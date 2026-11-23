@@ -440,10 +440,12 @@ function renderScore(
 
   if (score.falsePositives.length > 0) {
     log();
-    log(`  ${score.falsePositives.length} finding(s) in files that are deliberately fine:`);
+    log(
+      `  ${score.falsePositives.length} verified finding(s) in files that are deliberately fine:`,
+    );
     for (const wrong of score.falsePositives) log(`    ${wrong.file}:${wrong.line} ${wrong.issue}`);
   } else {
-    log(`  No findings in the files that are deliberately fine.`);
+    log(`  No verified findings in the files that are deliberately fine.`);
   }
 
   log();

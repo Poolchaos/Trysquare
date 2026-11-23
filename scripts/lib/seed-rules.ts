@@ -14,6 +14,7 @@ import { acquireDataDirLock } from "@/server/data-dir-lock";
 import { createDb } from "@/server/db/client";
 import { runMigrations } from "@/server/db/migrate";
 import {
+  requireRuleset,
   rulesetAnImportWouldReplace,
   saveImportedRuleset,
 } from "@/server/db/repositories/rulesets";
@@ -40,6 +41,11 @@ export interface SeedResult {
   changed: boolean;
   version: number;
   ruleCount: number;
+  /**
+   * The tier the ruleset is stored under. An unchanged document leaves the
+   * ruleset as it is, so this is the tier it had, whatever tier was asked for.
+   */
+  tier: string;
 }
 
 export function seedRuleset(options: SeedOptions): SeedResult {
@@ -74,7 +80,12 @@ export function seedRuleset(options: SeedOptions): SeedResult {
       imported,
       sourceDoc: options.sourceDoc,
     });
-    return { changed: saved.changed, version: saved.version, ruleCount: imported.rules.length };
+    return {
+      changed: saved.changed,
+      version: saved.version,
+      ruleCount: imported.rules.length,
+      tier: requireRuleset(db, saved.rulesetId).tier,
+    };
   } finally {
     db.$client.close();
     release();

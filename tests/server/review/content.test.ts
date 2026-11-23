@@ -405,6 +405,29 @@ describe("the verification prompt", () => {
     expect(prompt.indexOf("{")).toBe(prompt.indexOf("```json") + 8);
   });
 
+  it("tells the second verifier what its verdict does, which is not what the first's does", () => {
+    // Given the first verifier's words, it read that a finding it refutes
+    // is killed and one it proves badly discarded. Either leaves the finding
+    // an open question, the first proof kept (applySecondVerdicts).
+    const first = renderVerificationPrompt(candidates).replace(/\s+/g, " ");
+    expect(first).toContain("false refutes it.");
+    expect(first).toContain("the finding is discarded.");
+    expect(first).not.toContain("Another verifier");
+
+    const second = renderVerificationPrompt(candidates, {}, {}, true).replace(/\s+/g, " ");
+    expect(second).toContain(
+      "Another verifier has proven each of these, so one you kill is not removed: it is left " +
+        "an open question that says you refuted it, and why.",
+    );
+    expect(second).toContain("false leaves the finding an open question.");
+    expect(second).toContain("the finding is left an open question.");
+    expect(second).not.toContain("false refutes it.");
+    expect(second).not.toContain("discarded");
+    // The verdict to give for a refutation is the first verifier's too.
+    expect(second).toContain("Kill a finding you refute");
+    expect(second.indexOf("{")).toBe(second.indexOf("```json") + 8);
+  });
+
   it("handles having nothing to verify", () => {
     expect(renderVerificationPrompt([])).toContain("no candidate findings");
   });
@@ -419,12 +442,22 @@ describe("sweep hit rendering", () => {
   });
 });
 
-describe("what the author says the change was for", () => {
+describe("what whoever started the review says the change was for", () => {
   const base = { files: [], sweepHits: [] };
 
   it("says nothing at all when nobody described the change", () => {
-    expect(renderChangeSummary(base)).not.toContain("author");
-    expect(renderChangeSummary({ ...base, intent: "   " })).not.toContain("author");
+    expect(renderChangeSummary(base)).not.toContain("describes the change");
+    expect(renderChangeSummary({ ...base, intent: "   " })).not.toContain("describes the change");
+  });
+
+  it("says who described it, and not that they wrote the change", () => {
+    // It said "the author", of words the app keeps as they were sent with
+    // the review and ties to nobody.
+    const summary = renderChangeSummary({ ...base, intent: "Rename the prefs field." });
+    expect(summary).toContain(
+      "The person who started this review describes the change as follows.",
+    );
+    expect(summary).not.toContain("author");
   });
 
   it("passes the description on to the stages that judge the code", () => {
@@ -433,7 +466,7 @@ describe("what the author says the change was for", () => {
     // was for.
     const summary = renderChangeSummary({ ...base, intent: "Rename the prefs field." });
     expect(summary).toContain("Rename the prefs field.");
-    expect(summary).toContain("<author-description>");
+    expect(summary).toContain("<change-description>");
   });
 
   it("frames it as a claim to check, not as instructions", () => {
@@ -454,10 +487,10 @@ describe("what the author says the change was for", () => {
     }
   });
 
-  it("stays out of verification, which must not hear the author's case", () => {
+  it("stays out of verification, which must not hear the case for the change", () => {
     // Verification exists to check a quotation against the file. Handing it the
-    // author's narrative would give it a reason to believe a finding it is
-    // supposed to be trying to refute.
+    // description would give it a reason to believe a finding it is supposed
+    // to be trying to refute.
     const prompt = renderVerificationPrompt([
       {
         ref: "C1",
@@ -471,6 +504,6 @@ describe("what the author says the change was for", () => {
         comment: "",
       },
     ]);
-    expect(prompt).not.toContain("author-description");
+    expect(prompt).not.toContain("change-description");
   });
 });

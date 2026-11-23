@@ -80,7 +80,9 @@ export function scoreDesign(
           defect: screen.defect,
           why:
             row === undefined
-              ? "the first grader passed it"
+              ? // A row is made for a C or D alone, so none is a pass, a run
+                // that ended before the first grader, or no screenshot.
+                "the first grader did not fail it, or never graded it"
               : row.status === "candidate"
                 ? // S5c never answered: a failed or stopped run, not a grade.
                   "the second grader never answered"

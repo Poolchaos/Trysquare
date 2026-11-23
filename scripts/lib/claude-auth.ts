@@ -49,10 +49,16 @@ export async function runClaudeAuth(options: ClaudeAuthOptions): Promise<number>
   }
   if (status.state === "signedOut") return 1;
   // Signed in some other way: reviews may bill per token. Said, and the run passes.
-  const method = "authMethod" in status && status.authMethod ? ` (${status.authMethod})` : "";
-  options.out(`Signed in${method}.`);
+  const authMethod = "authMethod" in status ? status.authMethod : undefined;
+  options.out(`Signed in${authMethod ? ` (${authMethod})` : ""}.`);
   options.err(
-    "This is not a Claude subscription sign-in, so reviews may bill per token. Settings says which one a review uses.",
+    status.state === "perToken"
+      ? "This is not a Claude subscription sign-in, so reviews may bill per token. Settings says which one a review uses."
+      : // The CLI reports oauth_token for a subscription's setup-token and for
+        // any other token alike, and an unknown method or none tells no more.
+        authMethod === "oauth_token"
+        ? "A token made by claude setup-token draws on a Claude subscription, and any other may bill per token. Settings says which sign-in a review uses."
+        : "This may not be a Claude subscription sign-in: unless it is, reviews may bill per token. Settings says which sign-in a review uses.",
   );
   return 0;
 }

@@ -155,10 +155,10 @@ function RuleEditor({
 /**
  * A new rule, written from a starting block in the protocol's shape (RA-3).
  *
- * It goes to the end of a section of the ruleset's document, the last one
- * unless another is picked: a rule takes its tags from the section it sits
- * under and from its title, so where it goes is said, with the tags the text
- * as it stands would get, before anything is saved.
+ * It goes after the last rule of a section of the ruleset's document, the
+ * last section unless another is picked: a rule takes its tags from the
+ * section it sits under and from its title, so where it goes is said, with
+ * the tags the text as it stands would get, before anything is saved.
  */
 function NewRule({
   rulesetId,
@@ -220,7 +220,7 @@ function NewRule({
             ) : null}
             <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
               {sections.length > 1
-                ? "The rule goes to the end of this section of the ruleset's document."
+                ? "The rule goes after the last rule of this section of the ruleset's document."
                 : sections.length === 1
                   ? "The rule goes after the last rule of the ruleset's document."
                   : "The rule goes to the end of the ruleset's document."}
@@ -299,6 +299,15 @@ function RemovedNote({ code, moved }: { code: string; moved: Moved[] }) {
       {moved.length > 0 ? ` ${sweepsMovedText(moved)}` : ""}
     </p>
   );
+}
+
+/**
+ * The day a stored time fell on where the reader is. The stored text is UTC,
+ * and cut to its first ten characters it named the day before or after for a
+ * reader away from UTC.
+ */
+function dayOf(stored: string): string {
+  return new Date(stored).toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
 export default function RulesetPage({ params }: { params: Promise<{ id: string }> }) {
@@ -665,8 +674,7 @@ export default function RulesetPage({ params }: { params: Promise<{ id: string }
         </p>
         <p className="mb-4 text-xs text-[var(--color-ink-faint)]">
           {detail.ruleset.sourceDoc ? `Imported from ${detail.ruleset.sourceDoc}. ` : ""}
-          Created {detail.ruleset.createdAt.slice(0, 10)}, last changed{" "}
-          {detail.ruleset.updatedAt.slice(0, 10)}.
+          Created {dayOf(detail.ruleset.createdAt)}, last changed {dayOf(detail.ruleset.updatedAt)}.
         </p>
 
         <div data-testid="rules">

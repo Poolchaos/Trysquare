@@ -1,5 +1,6 @@
 /**
- * The two things the top bar needs, and nothing else.
+ * The two things the top bar needs, and for the dashboard, which polls it
+ * too, the id and status of each review in flight.
  *
  * The bar polls every four seconds on every screen, and it was asking the
  * full reviews list for it: every review of every project, a merged-branch
@@ -30,6 +31,14 @@ export function GET(): Promise<Response> {
       inFlight.find((row) => row.status === "paused_limit") ??
       null;
 
-    return ok({ active, awaiting: countAwaitingConfirmation(db) });
+    // For the dashboard, which reads its scoreboard again when this changes.
+    // `active` is one review: with two running at once, the other stopped
+    // or paused and nothing in the answer changed.
+    const inFlightSaid = inFlight
+      .map((row) => `${row.id}:${row.status}`)
+      .sort()
+      .join(",");
+
+    return ok({ active, inFlight: inFlightSaid, awaiting: countAwaitingConfirmation(db) });
   });
 }

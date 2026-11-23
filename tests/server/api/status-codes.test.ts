@@ -334,7 +334,29 @@ describe("a step the state machine does not allow", () => {
     mkdirSync(worktreeRootDir(dataDir, review.id), { recursive: true });
     const unverifiable = await asked(unproven.id, { costShown: true });
     expect(unverifiable.status).toBe(409);
-    expect(await codeOf(unverifiable)).toBe("SecondVerifierUnavailable");
+    // Told what to press again: this review is awaiting confirmation and has
+    // no Start, which "then start again" pointed at.
+    const unverifiableBody = (await unverifiable.json()) as { code: string; error: string };
+    expect(unverifiableBody.code).toBe("SecondVerifierUnavailable");
+    expect(unverifiableBody.error).toMatch(/Probe it, then press Send request again\.$/);
+    // And with the second verifier probed, refused for a CLI that is not
+    // there, in words about this request: it read "so the review cannot run".
+    const { probeSecondVerifier } = await import("../db/helpers");
+    probeSecondVerifier(db);
+    const cliBefore = process.env.TRYSQUARE_CLAUDE_PATH;
+    process.env.TRYSQUARE_CLAUDE_PATH = "no-such-claude-anywhere";
+    try {
+      const noCli = await asked(unproven.id, { costShown: true });
+      expect(noCli.status).toBe(409);
+      const noCliBody = (await noCli.json()) as { code: string; error: string };
+      expect(noCliBody.code).toBe("CliNotReady");
+      expect(noCliBody.error).toMatch(
+        /^No Claude Code CLI was found, so the request was not sent\. .*no-such-claude-anywhere/,
+      );
+    } finally {
+      if (cliBefore === undefined) delete process.env.TRYSQUARE_CLAUDE_PATH;
+      else process.env.TRYSQUARE_CLAUDE_PATH = cliBefore;
+    }
 
     expect((await routes.confirm.POST(post(), params(finding.id))).status).toBe(200);
     const again = await routes.confirm.POST(post(), params(finding.id));

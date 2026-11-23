@@ -99,5 +99,6 @@ if (hidden.length > 0) {
 }
 
 console.log(
-  `check-nothing-hidden: clean (nothing ignored at the root or under ${WATCHED.join(", ")}).`,
+  "check-nothing-hidden: clean (git ignores nothing among the root's own files or under " +
+    `${WATCHED.join(", ")} beyond what is meant to be ignored).`,
 );

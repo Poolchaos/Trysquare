@@ -10,15 +10,15 @@
  * Two guards, both about not becoming a file server. The path must be one a
  * finding in this review actually cites, so a caller cannot walk the disk by
  * asking for something else. And the review must be awaiting confirmation,
- * which is the only status whose worktree is guaranteed to still exist
- * (D-12); afterwards the checkout is gone and the quoted code stored on each
- * finding is the record.
+ * the status its findings are decided in, with its checkout kept for that
+ * (D-12); completing the review removes the checkout, and the quoted code
+ * stored on each finding is the record.
  */
 
 import { lstat, readFile } from "node:fs/promises";
 import { join, sep } from "node:path";
 import { z } from "zod";
-import { formatHunkHeader, hunkForLine, parseUnifiedDiff } from "@/lib/git/diff";
+import { formatHunkHeader, hunkForLine, hunkHoldsLine, parseUnifiedDiff } from "@/lib/git/diff";
 import { bundleDir, insideRoot, worktreeRootDir } from "@/lib/paths";
 import { listFindings } from "@/server/db/repositories/findings";
 import { requireReview, statusOf } from "@/server/db/repositories/reviews";
@@ -62,8 +62,8 @@ export async function GET(
     const status = statusOf(requireReview(db, id));
     if (status !== "awaiting_confirmation") {
       return notFound(
-        `File context for a review that is ${status.replace(/_/g, " ")}. ` +
-          "The checkout only exists while the findings are being decided",
+        `File context for a review that is ${status.replace(/_/g, " ")}, ` +
+          "shown only while the findings are being decided,",
       );
     }
 
@@ -155,10 +155,17 @@ export async function GET(
 export interface HunkView {
   header: string;
   lines: string[];
+  /**
+   * Whether this hunk holds the cited line. False for the file's first hunk,
+   * sent when no hunk does, which the screen must not head as the change at
+   * that line.
+   */
+  atLine: boolean;
 }
 
 /**
- * The hunk of the change that contains a cited line.
+ * The hunk of the change that contains a cited line, or the file's first
+ * hunk when none does.
  *
  * Read from the bundle's patch, which survives the worktree by design: it is
  * the evidence a finding is explained from after the fact. Paths in the
@@ -194,9 +201,18 @@ async function hunkFor(
   if (!file) return { hunk: null, deleted: false };
 
   const hunk = hunkForLine(file, line);
+  const deleted = file.changeType === "deleted";
   return {
-    hunk: hunk ? { header: formatHunkHeader(hunk), lines: hunk.lines } : null,
-    deleted: file.changeType === "deleted",
+    hunk: hunk
+      ? {
+          header: formatHunkHeader(hunk),
+          lines: hunk.lines,
+          // A deletion's one hunk is the whole file, with no new numbering
+          // for a line to fall in: it is the change at whichever line is cited.
+          atLine: deleted || hunkHoldsLine(hunk, line),
+        }
+      : null,
+    deleted,
     ...(file.path !== withoutSlug ? { renamedTo: `${slug}/${file.path}` } : {}),
   };
 }

@@ -27,7 +27,8 @@ export async function GET(
         {
           error:
             `This review is ${status.replace(/_/g, " ")}. A report is the record of what a ` +
-            "person accepted, so it exists once every finding has been decided.",
+            "person accepted, so it exists once every finding has been decided and the " +
+            "review completed.",
           code: "NotComplete",
         },
         { status: 409 },

@@ -55,7 +55,7 @@ export async function DELETE(
       if (ending) {
         throw Response.json(
           {
-            error: `Review ${ending.id} is still ending its run, or being deleted. Try again in a moment.`,
+            error: `Review ${ending.id} is still ending its run, verifying a finding again, or being deleted. Try again in a moment.`,
             code: "ReviewStillRunning",
           },
           { status: 409 },

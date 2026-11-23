@@ -182,9 +182,10 @@ diff and parse in memory, then return:
 - Token estimate: `estimateTokens` over the composed adversarial system
   prompt and full prompt, against the model's registry `contextWindow` when
   its probe is current, with `null` otherwise and a plain sentence in the
-  UI (as built: "This model has not been probed, so its context window is
-  unknown and the review will send each batch as one request without
-  splitting.").
+  UI (as built: "No probe vouches for this model now: none has reached a
+  verdict on it, or the last verdict is more than a day old or found it
+  unavailable. Its context window is not used, so a review started while
+  that is so sends each batch as one request without splitting.").
 - Estimated request count: `planRuleBatches(...).batches.length`, split
   further with `splitToFit` only when a window is known.
 

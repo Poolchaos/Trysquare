@@ -103,9 +103,9 @@ review prepares, as code findings are from the stages' answers.
 | kind             | text         | test, design                                             |
 | step             | text null    | install, tests, e2e (a test)                             |
 | command          | text null    | as it was run                                            |
-| exitCode         | integer null | null when stopped                                        |
+| exitCode         | integer null | null when stopped, or when it could not be started       |
 | timedOut         | integer bool | stopped at its time limit                                |
-| logPath          | text null    | the command's whole output                               |
+| logPath          | text null    | the log of the command's output                          |
 | screenshotPath   | text null    | a design grade's screenshot, written as its name under the review's checks/screenshots (round 8); a row from before round 8 can hold an absolute path, which is read as a name when it lies inside that folder |
 | grade            | text null    | C or D (a design grade)                                  |
 | severity         | text         | CRITICAL for a failing command                           |
@@ -184,7 +184,7 @@ when it has one, and the output contract.
 | linkedFromBranch, linkedFromCommit  | text null    | pinned like the primary pair               |
 | linkedIntoBranch, linkedIntoCommit  | text null    |                                            |
 | linkedMergeBaseCommit               | text null    |                                            |
-| intent                              | text null    | what the author says the change was meant to do |
+| intent                              | text null    | what whoever started the review says the change was meant to do |
 | model                               | text         | full model id; a name in models.id, not a foreign key |
 | profileId                           | text         | review profile actually used (see 06)      |
 | effort                              | text         | reasoning effort, fixed at creation        |

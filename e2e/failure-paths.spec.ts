@@ -1115,7 +1115,7 @@ for (const held of [
     skip: 4,
     card: "10 to prove",
     tiles: [
-      ["proven by the first verifier", "0"],
+      ["proven and still standing", "0"],
       ["refuted", "0"],
       ["discarded by the quotation check", "0"],
       ["open question", "0"],
@@ -1130,7 +1130,7 @@ for (const held of [
     skip: 5,
     card: "9 with the second verifier",
     tiles: [
-      ["proven by the first verifier", "9"],
+      ["proven and still standing", "9"],
       ["refuted", "1"],
       ["discarded by the quotation check", "0"],
       ["open question", "0"],
@@ -1194,6 +1194,14 @@ for (const held of [
       await page.getByRole("button", { name: "Cancel", exact: true }).click();
       await page.getByRole("button", { name: "Yes, cancel", exact: true }).click();
       await expect(page.getByText("cancelled", { exact: true })).toBeVisible({ timeout: 60_000 });
+
+      // Cancelled with its candidates raised: they were left, and are not
+      // said to await a verification that will not come (D-321).
+      const coverage = page.getByRole("heading", { name: "Coverage" }).locator("..");
+      await expect(coverage).toContainText(
+        "candidate finding(s) left unverified when the review was cancelled.",
+      );
+      await expect(coverage).not.toContainText("awaiting verification");
 
       if (held.what === "the second") {
         // Cancelled with its findings raised: the read-only list and the run
@@ -1297,8 +1305,22 @@ async function shootAll(
   mkdirSync(evidence, { recursive: true });
   const shoot = async (file: string) => {
     await page.evaluate(() => window.scrollTo(0, 0));
-    const first = await region.boundingBox();
-    const last = through ? await through.boundingBox() : first;
+    // Measured once it holds still: a box read while a button above it still
+    // eased to its height after the resize was 2 to 7px off the picture,
+    // which is taken with every transition ended. Read until two readings
+    // 50ms apart agree, and no longer than two seconds.
+    const boxes = async () => {
+      const from = await region.boundingBox();
+      return { from, to: through ? await through.boundingBox() : from };
+    };
+    let { from: first, to: last } = await boxes();
+    for (let reading = 0; reading < 40; reading += 1) {
+      await page.waitForTimeout(50);
+      const again = await boxes();
+      const still = JSON.stringify(again) === JSON.stringify({ from: first, to: last });
+      ({ from: first, to: last } = again);
+      if (still) break;
+    }
     if (!first || !last) throw new Error(`${name} has no box to photograph.`);
     const left = Math.min(first.x, last.x);
     const right = Math.max(first.x + first.width, last.x + last.width);
@@ -1444,7 +1466,7 @@ test("a project's failing test is decided above the queue, and counted (WP-I)", 
     // shown passed (review round 8).
     await page.getByText("Run detail").click();
     const stages = page.getByRole("heading", { name: "Stages" }).locator("..");
-    await expect(stages).toContainText("Not asked: there were no screenshots to grade.");
+    await expect(stages).toContainText("Not asked: there were no screenshots it could grade.");
     await expect(stages).toContainText("Not asked: no screen was graded C or D.");
     await shootAll(page, stages, "stages-not-asked");
 
@@ -1882,7 +1904,7 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   expect(await page.getByText(/Claude usage limit reached/).count()).toBeGreaterThan(1);
   // And the half that makes a pause a wait rather than a hang: when to return.
   await expect(page.getByText(/The limit clears at/)).toBeVisible();
-  await expect(page.getByText(/resuming before then will pause again/i)).toBeVisible();
+  await expect(page.getByText(/a resume before then may pause again/i)).toBeVisible();
 
   // The dashboard meanwhile (the seventeenth grade, AE1): it drew the pause
   // as a live scan, its clock counting on. The bar says Paused, the review
@@ -2016,7 +2038,7 @@ test("a usage limit pauses the review, says when it clears, and resumes to the e
   // A run note says its day as well as its time (the seventeenth grade,
   // AE24): this review ran, paused and ran again, and one resumed on a later
   // day keeps the notes of both. Worded as the reader's own browser words it.
-  const notes = page.getByRole("heading", { name: "What this run recorded" }).locator("..");
+  const notes = page.getByRole("heading", { name: "Run notes" }).locator("..");
   const stamp = notes.locator("time").first();
   const at = await stamp.getAttribute("datetime");
   expect(Number.isNaN(Date.parse(at!))).toBe(false);
@@ -2417,16 +2439,26 @@ test("a quiet dashboard keeps its times and its waiting list current", async ({ 
     if (new URL(request.url()).pathname === "/api/scoreboard") boards += 1;
   });
   let awaiting: number | null = null;
+  // Which reviews are in flight is the test's own too, so nothing else
+  // running on the server asks for a read.
+  let inFlight: string | null = null;
+  // Both reads refused, as a server that has stopped answers neither.
+  let down = false;
   const stop = await routeUntilStopped(page, "**/api/reviews/attention", async (route) => {
+    if (down) {
+      await route.fulfill({ status: 500, json: { error: "What is running could not be read." } });
+      return;
+    }
     const response = await route.fetch();
-    const body = (await response.json()) as { awaiting: number };
+    const body = (await response.json()) as { awaiting: number; inFlight: string };
     awaiting ??= body.awaiting;
-    await route.fulfill({ response, json: { ...body, active: null, awaiting } });
+    inFlight ??= body.inFlight;
+    await route.fulfill({ response, json: { ...body, active: null, awaiting, inFlight } });
   });
   // One re-read of the scoreboard is answered as a failure when asked to.
   let failNext = false;
   const failOnce = async (route: import("@playwright/test").Route) => {
-    if (!failNext) return route.fallback();
+    if (!failNext && !down) return route.fallback();
     failNext = false;
     await route.fulfill({ status: 500, json: { error: "The scoreboard could not be read." } });
   };
@@ -2467,6 +2499,29 @@ test("a quiet dashboard keeps its times and its waiting list current", async ({ 
     await shootAll(page, stale, "scoreboard-reread-failed");
     await page.clock.fastForward("00:05");
     await expect.poll(() => boards).toBeGreaterThan(again + 1);
+    await expect(stale).toHaveCount(0);
+
+    // A review in flight beside the one reported stops, with the reported
+    // one and the count waiting as they were: the board is read again. Only
+    // the reported review and the count were kept, so nothing asked (D-321).
+    const beside = boards;
+    const readAgain = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/scoreboard",
+    );
+    inFlight = `${inFlight ?? ""},STAGED:running`;
+    await page.clock.fastForward("00:05");
+    await expect.poll(() => boards).toBeGreaterThan(beside);
+    await readAgain;
+
+    // A poll that fails over a board already shown has the scoreboard read
+    // again, so a server that answers neither is said here. A failed poll
+    // returned, and the old figures stood with no word (D-321).
+    await expect(region).toHaveText("");
+    down = true;
+    await page.clock.fastForward("00:05");
+    await expect(stale).toBeVisible();
+    down = false;
+    await page.clock.fastForward("00:05");
     await expect(stale).toHaveCount(0);
   } finally {
     await page.unroute("**/api/scoreboard", failOnce);
@@ -3917,7 +3972,7 @@ test("refs from last time go while the branches are read again", async ({ page, 
   );
   await page.goto(`/reviews/new?projectId=${app!.id}`);
   const lastTime = page.getByText(/these are the refs from last time/);
-  const cachedLine = page.getByText("Cached refs, shown because the remote could not be reached.");
+  const cachedLine = page.getByText("Cached refs, shown because the fetch from the remote failed.");
   const fetching = page.getByText("Fetching the latest branches...");
   await expect(lastTime).toBeVisible({ timeout: 30_000 });
   await expect(cachedLine).toBeVisible();
@@ -3941,6 +3996,37 @@ test("refs from last time go while the branches are read again", async ({ page, 
   refreshed.release();
   await expect(cachedLine).toBeVisible({ timeout: 30_000 });
   await refreshed.stop();
+});
+
+test("a new review says the rulesets are being read, not that there are none", async ({
+  page,
+  request,
+}) => {
+  // The Rules card said "No rulesets yet", and the line beside Start "Start
+  // a ruleset first", for as long as the reads the screen opens with were
+  // out: a list not read yet is not an empty one (D-321). The read of the
+  // rulesets is held while the screen is checked.
+  const listed = (await (await request.get("/api/projects")).json()) as {
+    projects: { id: string; name: string }[];
+  };
+  const app = listed.projects.find((project) => project.name === "app");
+  expect(app).toBeDefined();
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const stopHolding = await answerOnce(page, "**/api/rulesets", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto(`/reviews/new?projectId=${app!.id}`);
+  const reading = page.getByText("Reading the rulesets...");
+  await expect(reading).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/No rulesets yet|Start a ruleset first/)).toHaveCount(0);
+  release();
+  await expect(page.getByTestId("ruleset-picker")).toBeVisible({ timeout: 30_000 });
+  await expect(reading).toHaveCount(0);
+  await stopHolding();
 });
 
 test("a report that could not be read says so, and is read again on Try again", async ({
@@ -4862,7 +4948,9 @@ test("the dashboard lists a running interactive review under Needs you, and says
   await page.goto("/");
   const needsYou = page.getByRole("list", { name: "Needs you" });
   await expect(needsYou.getByRole("listitem")).toHaveCount(1, { timeout: 30_000 });
-  await expect(needsYou).toContainText("runs in your terminal: its page prints the command to run");
+  await expect(needsYou).toContainText(
+    "runs in your terminal: its page prints the command when a stage waits for you",
+  );
   await expect(page.getByText("Nothing is waiting on you.")).toHaveCount(0);
   const cost = page.getByText("1 interactive review not counted", { exact: true });
   await expect(cost).toBeVisible();
@@ -5044,7 +5132,7 @@ test("an interactive review's command is on its page whenever the page is opened
     // And the dashboard sends the person there, as a review that needs them.
     await page.goto("/");
     await expect(page.getByRole("list", { name: "Needs you" })).toContainText(
-      "runs in your terminal: its page prints the command to run",
+      "runs in your terminal: its page prints the command when a stage waits for you",
       { timeout: 30_000 },
     );
 
@@ -5423,8 +5511,8 @@ test("a project kept with a token in its address says so, and how to be rid of i
   // the screens, which no longer show it, said nothing of it. The fixture's
   // address carries none, so the server's answer is made to read as one that
   // does; what the server serves is a unit test. The list reads it as a clone
-  // that failed, which left no clone to hold it, and the page as one whose
-  // address carries a user name alone (review round 13).
+  // that failed, which may have left a clone on disk, and the page as one
+  // whose address carries a user name alone (review round 13).
   type Served = {
     name: string;
     gitUrl: string;
@@ -5476,9 +5564,10 @@ test("a project kept with a token in its address says so, and how to be rid of i
     await expect(
       card.getByText("A password or token is still kept for this address."),
     ).toBeVisible();
-    // No clone, so only the database holds it.
+    // A failed clone may have left a clone on disk, so what it left is named too.
     await expect(card).toContainText(
-      "it stays on this machine, in Trysquare's database. Delete this project and add " +
+      "it stays on this machine, in Trysquare's database and in the settings of any clone left " +
+        "on disk. Delete this project and add " +
         "https://github.com/acme/app.git instead to be rid of it.",
     );
     expect(await accessibilityViolations(page)).toEqual([]);
@@ -6415,7 +6504,7 @@ test("a file the change deleted is said to be deleted, not the checkout gone", a
   // (D-141). Each answer is the route's own shape for a deleted file.
   const answers = [
     {
-      hunk: { header: "@@ -1,2 +0,0 @@", lines: ["-gone", "-also gone"] },
+      hunk: { header: "@@ -1,2 +0,0 @@", lines: ["-gone", "-also gone"], atLine: true },
       said: "the change deleted it, and the change above is all there is of it.",
     },
     { hunk: null, said: "This file is not in the review's checkout: the change deleted it." },
@@ -6445,7 +6534,11 @@ test("a link the change made out of the checkout shows its hunk, not where it le
       status: 200,
       json: {
         lines: [],
-        hunk: { header: "@@ -0,0 +1 @@", lines: ["+/somewhere/outside/secret.txt"] },
+        hunk: {
+          header: "@@ -0,0 +1 @@",
+          lines: ["+/somewhere/outside/secret.txt"],
+          atLine: true,
+        },
         outside: true,
       },
     }),
@@ -6470,7 +6563,7 @@ test("a link the change made to nothing is said as that, with no Try again", asy
       status: 200,
       json: {
         lines: [],
-        hunk: { header: "@@ -0,0 +1 @@", lines: ["+../nowhere"] },
+        hunk: { header: "@@ -0,0 +1 @@", lines: ["+../nowhere"], atLine: true },
         brokenLink: true,
       },
     }),
@@ -6496,7 +6589,7 @@ test("a file the checkout could not give up is said as that, not as deleted", as
       status: 200,
       json: {
         lines: [],
-        hunk: { header: "@@ -1,2 +1,2 @@", lines: ["-before", "+after"] },
+        hunk: { header: "@@ -1,2 +1,2 @@", lines: ["-before", "+after"], atLine: true },
         readError: "EBUSY: resource busy or locked, open 'guard.ts'",
       },
     }),
@@ -6542,6 +6635,7 @@ test("a file the change renamed is said to be renamed, and shown from its new na
         hunk: {
           header: "@@ -1,1 +1,1 @@",
           lines: ["-export const renamed = false;", "+export const renamed = true;"],
+          atLine: true,
         },
         renamedTo: "app/src/new-name.ts",
       },
@@ -6554,6 +6648,51 @@ test("a file the change renamed is said to be renamed, and shown from its new na
   await expect(page.getByText("The change renamed this file to app/src/new-name.ts")).toBeVisible();
   await expect(page.getByRole("group", { name: "The file around this finding" })).toContainText(
     "export const renamed = true;",
+  );
+  await stopAnswering();
+});
+
+test("a change elsewhere in the file is not shown as the change at the finding's line", async ({
+  page,
+}) => {
+  // With no hunk holding the cited line the route sends the file's first,
+  // and the pane headed it "What the change did here" (D-321). The answer is
+  // the route's own shape for a line outside every hunk.
+  const stopAnswering = await answerOnce(page, "**/api/reviews/*/context*", (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        path: "app/src/elsewhere.ts",
+        start: 1,
+        end: 1,
+        total: 1,
+        lines: [{ number: 1, text: "export const untouched = true;" }],
+        hunk: { header: "@@ -1,2 +1,2 @@", lines: ["-before", "+after"], atLine: false },
+      },
+    }),
+  );
+  await page.goto("/reviews?status=awaiting");
+  await page.getByRole("main").locator("ul > li").first().getByRole("link").click();
+  await expect(page.getByText(/\d+ of \d+ decided/)).toBeVisible({ timeout: 30_000 });
+  await page.locator("body").press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "What the change did elsewhere in this file" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      /^Line \d+ is outside the lines the change touched\. This is the first place it changed the file\.$/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "The change elsewhere in this file" }),
+  ).toContainText("+after");
+  await expect(page.getByRole("heading", { name: "What the change did here" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "The change at this line" })).toHaveCount(0);
+  await shootAll(
+    page,
+    page.getByRole("heading", { name: "What the change did elsewhere in this file" }),
+    "change-elsewhere",
+    page.getByRole("group", { name: "The change elsewhere in this file" }),
   );
   await stopAnswering();
 });
@@ -6593,7 +6732,11 @@ test("the CLI's check names the CLI, its version and how it is signed in", async
   const status = page.getByTestId("cli-status");
   await expect(status).toContainText("fake-claude.mjs, 2.1.301 (Claude Code)");
   await expect(status).toContainText(
-    "Reviews draw on your Max plan's usage limits rather than billing per token.",
+    "Model calls made by this app draw on your Max plan's usage limits rather than billing per token.",
+  );
+  // An interactive review's commands run where the check does not look.
+  await expect(status).toContainText(
+    "This check does not cover an interactive review: its commands run in your own terminal and use the sign-in there.",
   );
 });
 
@@ -6746,7 +6889,7 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
     [{ state: "signedOut", path: "/opt/claude", version: "2.1.301" }, "Not signed in."],
     [
       { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "api_key" },
-      "Signed in (api_key) some other way than your Claude subscription: reviews will cost API usage, billed per token.",
+      "Signed in (api_key) some other way than your Claude subscription: model calls made by this app will cost API usage, billed per token.",
     ],
     [
       // No method named: how it bills is not claimed (review of the D-153 fixes).
@@ -6770,7 +6913,7 @@ test("the CLI's check says each way it cannot run a review, and a check that fai
     ],
     [
       { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "third_party" },
-      "Signed in (third_party) some other way than your Claude subscription: reviews will cost API usage, billed per token.",
+      "Signed in (third_party) some other way than your Claude subscription: model calls made by this app will cost API usage, billed per token.",
     ],
     [
       { state: "perToken", path: "/opt/claude", version: "2.1.301", authMethod: "third_party" },
@@ -7572,7 +7715,7 @@ test("a rule is added from a starting block: Add off until it is written, a refu
     const section = region.getByLabel("Section");
     await expect(section).toHaveValue("Dependency Anti-Patterns");
     await expect(region).toContainText(
-      "The rule goes to the end of this section of the ruleset's document. Tagged general, from the section's name and the rule's title.",
+      "The rule goes after the last rule of this section of the ruleset's document. Tagged general, from the section's name and the rule's title.",
     );
     await bothThemes();
     await shootAll(page, region, "rule-add-starting");
@@ -8414,7 +8557,7 @@ test("with no ruleset yet, a new review and the dashboard say to start one, wher
     }),
   );
   await page.goto("/");
-  await expect(page.getByText("Nothing has been reviewed yet", { exact: true })).toBeVisible();
+  await expect(page.getByText("No reviews yet", { exact: true })).toBeVisible();
   await expect(
     page.getByText(
       "Add a project, start a ruleset from a template or from your own protocol, then pick two branches and run a review.",

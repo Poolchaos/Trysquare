@@ -67,6 +67,28 @@ describe("resolving a review's profile", () => {
     expect(result.message).toContain("would read as a clean review");
   });
 
+  it("names the profiles the model is allowed, mechanical-only never among them", () => {
+    // It said "decomposed or weaker is allowed": the one profile weaker than
+    // decomposed is mechanical-only, which is refused.
+    const messageFor = (modelProfile: "chunked" | "decomposed") => {
+      const result = resolveProfile({
+        model: "claude-sonnet-5",
+        modelProfile,
+        requested: "full-context",
+      });
+      if (result.ok) throw new Error("unreachable");
+      return result.message;
+    };
+    expect(messageFor("decomposed")).toMatch(/Allowed for it: decomposed\.$/);
+    expect(messageFor("chunked")).toMatch(/Allowed for it: chunked, decomposed\.$/);
+    // Each one named is accepted when asked for.
+    for (const requested of ["chunked", "decomposed"] as const) {
+      expect(
+        resolveProfile({ model: "claude-sonnet-5", modelProfile: "chunked", requested }).ok,
+      ).toBe(true);
+    }
+  });
+
   it("refuses a mechanical-only model outright", () => {
     // Its batch plan contains no judgment requests at all, so the run would
     // raise nothing and then fail reconciliation with every hunk unaccounted.

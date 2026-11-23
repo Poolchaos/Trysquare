@@ -261,6 +261,34 @@ describe("the repair round", () => {
     expect(attempts).toEqual([1, 2]);
   });
 
+  it("says each transcript a call opened, the stage's and then the repair's", async () => {
+    process.env.FAKE_CLAUDE_SCENARIO = "then-valid";
+    process.env.FAKE_CLAUDE_RESULT = JSON.stringify({ wrong: "shape" });
+    process.env.FAKE_CLAUDE_RESULT_2 = JSON.stringify({ files: [] });
+
+    const transcripts: string[] = [];
+    const runner = makeRunner({ onTranscript: (logPath) => transcripts.push(logPath) });
+    await runner.run({ stage: "s1_risk", systemPrompt: "s", prompt: "p" });
+
+    expect(transcripts).toEqual([
+      join(workDir, "logs", "s1_risk.log"),
+      join(workDir, "logs", "s1_risk.repair.log"),
+    ]);
+  });
+
+  it("says no transcript for a call whose CLI could not be started", async () => {
+    const transcripts: string[] = [];
+    const runner = makeRunner({
+      claudePath: join(workDir, "no-such-claude.mjs"),
+      onTranscript: (logPath) => transcripts.push(logPath),
+    });
+
+    await expect(runner.run({ stage: "s1_risk", systemPrompt: "s", prompt: "p" })).rejects.toThrow(
+      /Could not start the CLI/,
+    );
+    expect(transcripts).toEqual([]);
+  });
+
   it("sums the usage of both attempts, so the cost is not understated", async () => {
     process.env.FAKE_CLAUDE_SCENARIO = "then-valid";
     process.env.FAKE_CLAUDE_RESULT = "not json at all";

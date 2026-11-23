@@ -77,6 +77,26 @@ function planName(subscriptionType: string | undefined): string {
   return `${subscriptionType.charAt(0).toUpperCase()}${subscriptionType.slice(1)} plan's`;
 }
 
+/**
+ * Said beside a sign-in the card reads as what model calls cost: the check
+ * asks from the server's surroundings, and an interactive review's commands
+ * run in the person's terminal, which it never sees (D-174).
+ */
+function TerminalNotRead() {
+  return (
+    <p className="text-xs text-[var(--color-ink-muted)]">
+      This check does not cover an interactive review: its commands run in your own terminal and use
+      the sign-in there. An API key or another provider set in that terminal is used instead of the
+      sign-in, and bills per token.
+    </p>
+  );
+}
+
+/** "1 project", "2 projects": a count with its noun, where "(s)" was written for both. */
+function counted(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 const FIELDS = [
   {
     key: "maxConcurrentReviews",
@@ -443,14 +463,15 @@ export default function SettingsPage() {
           <Card className="p-4">
             <h2 className="mb-1 text-heading font-semibold">Claude Code</h2>
             <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
-              Finds the CLI reviews run through and runs its own version and sign-in checks. The
-              sign-in check contacts Anthropic&apos;s API; neither check sends a model a prompt.
+              Finds the CLI that reviews run through, and runs the CLI&apos;s own version and
+              sign-in checks. The sign-in check contacts Anthropic&apos;s API; neither check sends a
+              model a prompt.
             </p>
             {settings === null ? null : (
               <div className="mb-3 grid gap-1">
                 <Field
                   label="CLI path"
-                  hint="Empty uses the CLI npm install put in node_modules, then claude on PATH. Saved when you leave the field, and checked again once saved."
+                  hint="Empty uses the CLI that this app's npm install brought, then the claude on your PATH. Saved when you leave the field, and checked again once saved."
                 >
                   <Input
                     defaultValue={String(settings.claudePath ?? "")}
@@ -521,13 +542,14 @@ export default function SettingsPage() {
                   <>
                     <p className="font-medium text-[var(--color-warning)]">
                       {cli.state === "perToken"
-                        ? `Signed in (${cli.authMethod}) some other way than your Claude subscription: reviews will cost API usage, billed per token.`
+                        ? `Signed in (${cli.authMethod}) some other way than your Claude subscription: model calls made by this app will cost API usage, billed per token.`
                         : cli.authMethod === "oauth_token"
                           ? "Signed in with a token (oauth_token): one made by claude setup-token draws on your Claude subscription, and any other may cost API usage, billed per token."
                           : cli.authMethod === undefined
                             ? "Signed in, but the CLI did not say how: unless it is your Claude subscription, reviews may cost API usage, billed per token."
                             : `Signed in (${cli.authMethod}), a way this app does not know: unless it is your Claude subscription, reviews may cost API usage, billed per token.`}
                     </p>
+                    {cli.state === "perToken" ? <TerminalNotRead /> : null}
                     {settingOverSignIn(cli.authMethod) === null ? null : (
                       <p className="text-xs">{settingOverSignIn(cli.authMethod)}</p>
                     )}
@@ -544,12 +566,15 @@ export default function SettingsPage() {
                     )}
                   </>
                 ) : (
-                  <p className="text-[var(--color-good)]">
-                    {/* What the CLI's support article says of headless runs, and no more:
-                        they draw on the plan's usage limits (DECISIONS, 2026-07-30). */}
-                    Signed in. Reviews draw on your {planName(cli.subscriptionType)} usage limits
-                    rather than billing per token.
-                  </p>
+                  <>
+                    <p className="text-[var(--color-good)]">
+                      {/* What the CLI's support article says of headless runs, and no more:
+                          they draw on the plan's usage limits (DECISIONS, 2026-07-30). */}
+                      Signed in. Model calls made by this app draw on your{" "}
+                      {planName(cli.subscriptionType)} usage limits rather than billing per token.
+                    </p>
+                    <TerminalNotRead />
+                  </>
                 )}
               </div>
             ) : null}
@@ -660,8 +685,9 @@ export default function SettingsPage() {
                 </p>
                 <Mono className="block break-all text-sm">{system.dataDir}</Mono>
                 <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
-                  Holding {system.counts.projects} project(s), {system.counts.reviews} review(s) and{" "}
-                  {system.counts.rulesets} ruleset(s). Exported reports are written to{" "}
+                  Holding {counted(system.counts.projects, "project")},{" "}
+                  {counted(system.counts.reviews, "review")} and{" "}
+                  {counted(system.counts.rulesets, "ruleset")}. Exported reports are written to{" "}
                   <Mono className="break-all">{system.exportsDir}</Mono> and survive deleting any of
                   it.
                 </p>
@@ -726,22 +752,38 @@ export default function SettingsPage() {
                       </span>
                     ) : null}
                   </span>
-                  <span className="flex items-center gap-3 text-xs text-[var(--color-ink-muted)]">
+                  {/* The row's width on a phone, the chip and Probe at its
+                      right edge: beside the name, under it or a line lower
+                      by the name's length, they stood in three places down
+                      the list. */}
+                  <span className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-ink-muted)] sm:w-auto">
                     {model.contextWindow ? (
                       <span>{model.contextWindow.toLocaleString("en-US")} tokens</span>
                     ) : null}
                     {model.lastProbedAt ? (
-                      <span>probed {model.lastProbedAt.slice(0, 10)}</span>
+                      // The reader's own day, as the reviews list words its
+                      // times, and kept on one line: beside the chip on a
+                      // phone the stored text broke inside the date.
+                      <span className="whitespace-nowrap">
+                        probed{" "}
+                        <time dateTime={model.lastProbedAt}>
+                          {new Date(model.lastProbedAt).toLocaleDateString(undefined, {
+                            dateStyle: "medium",
+                          })}
+                        </time>
+                      </span>
                     ) : null}
-                    <Badge tone={model.availability === "available" ? "good" : "neutral"}>
-                      {model.availability}
-                    </Badge>
-                    <Button
-                      disabled={probing !== "" || checkingCli}
-                      onClick={() => void probe(model.id)}
-                    >
-                      {probing === model.id ? "Probing..." : "Probe"}
-                    </Button>
+                    <span className="ml-auto flex items-center gap-3">
+                      <Badge tone={model.availability === "available" ? "good" : "neutral"}>
+                        {model.availability}
+                      </Badge>
+                      <Button
+                        disabled={probing !== "" || checkingCli}
+                        onClick={() => void probe(model.id)}
+                      >
+                        {probing === model.id ? "Probing..." : "Probe"}
+                      </Button>
+                    </span>
                   </span>
                 </Card>
               </li>
@@ -783,11 +825,26 @@ export default function SettingsPage() {
                     };
                     if (!sent.ok || !body.deleted) {
                       setWipeError(sent.ok ? "The data could not be deleted." : sent.error);
+                      // A delete that stopped part way has removed some of
+                      // them, so the counts beside the question are read
+                      // again. One that cannot be read is taken down with its
+                      // reason, in its own card, rather than left standing.
+                      const recounted = await send<SystemInfo>(
+                        "/api/system",
+                        {},
+                        "What is kept could not be counted again",
+                      );
+                      if (recounted.ok) setSystem(recounted.body);
+                      else {
+                        setSystem(null);
+                        setReadErrors((errors) => ({ ...errors, system: recounted.error }));
+                      }
                       return;
                     }
                     setWiped(
-                      `Deleted ${body.deleted.projects} project(s), ${body.deleted.reviews} ` +
-                        `review(s) and ${body.deleted.rulesets} ruleset(s). Exports and settings were kept.`,
+                      `Deleted ${counted(body.deleted.projects, "project")}, ` +
+                        `${counted(body.deleted.reviews, "review")} and ` +
+                        `${counted(body.deleted.rulesets, "ruleset")}. Exports and the settings on this page were kept.`,
                     );
                     setConfirmingWipe(false);
                     const refreshed = await send<SystemInfo>(
@@ -816,7 +873,7 @@ export default function SettingsPage() {
               </Button>
               <span className="text-xs text-[var(--color-ink-muted)]">
                 {system
-                  ? `${system.counts.projects} project(s), ${system.counts.reviews} review(s), ${system.counts.rulesets} ruleset(s).`
+                  ? `${counted(system.counts.projects, "project")}, ${counted(system.counts.reviews, "review")}, ${counted(system.counts.rulesets, "ruleset")}.`
                   : ""}
               </span>
             </div>

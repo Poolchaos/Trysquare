@@ -86,6 +86,17 @@ describe("the CLI path kept in Settings", () => {
     expect((await read()).settings.claudePath).toBe("");
   });
 
+  it("is refused past 1024 characters, naming that limit as the app's own", async () => {
+    // It said "longer than any path the CLI could be at", and Linux allows
+    // paths four times as long: the limit is this schema's.
+    const response = await save({ claudePath: `/${"a".repeat(1024)}` });
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { error: string }).error).toBe(
+      "claudePath: is longer than the 1024 characters kept for a CLI path",
+    );
+    expect((await save({ claudePath: `/${"a".repeat(1023)}` })).status).toBe(200);
+  });
+
   it("is the one the next check asks, with no restart", async () => {
     process.env.FAKE_CLAUDE_AUTH_STATUS = JSON.stringify({
       loggedIn: true,

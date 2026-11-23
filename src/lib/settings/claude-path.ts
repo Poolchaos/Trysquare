@@ -13,6 +13,6 @@ export const claudePathSchema = z
   .pipe(
     z
       .string()
-      .max(1024, "is longer than any path the CLI could be at")
+      .max(1024, "is longer than the 1024 characters kept for a CLI path")
       .refine((value) => !/[\u0000-\u001f\u007f]/.test(value), "holds a control character"),
   );

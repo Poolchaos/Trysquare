@@ -1102,6 +1102,12 @@ describe("the second verifier (WP-E, D-188)", () => {
     expect(second.prompt).toContain('"ref": "C1"');
     // Not shown the first's proof, which is what makes it independent.
     expect(second.prompt).not.toContain("A request body reaches total() as payload.");
+    // Told what its own verdict does: an open question, where the first
+    // verifier's kills or discards.
+    const first = asked.find((request) => request.stage === "s5_verification")!;
+    expect(first.prompt).toContain("finding is discarded.");
+    expect(second.prompt).toContain("finding is left an open question.");
+    expect(second.prompt).not.toContain("discarded");
   });
 
   it("verifies a finding both prove, the first's severity standing, the second's kept", async () => {

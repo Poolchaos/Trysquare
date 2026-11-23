@@ -484,3 +484,44 @@ describe("transcript failures", () => {
     expect(outcome.transcriptError).toBeDefined();
   });
 });
+
+describe("saying the transcript is there", () => {
+  // A caller records the transcript's path beside a stage's result. It is
+  // told when the file is open, so it names no file that was never made.
+  it("reports the log once it is open, for a stage that ran or failed after", async () => {
+    const opened: string[] = [];
+    const onLogOpened = (path: string) => opened.push(path);
+
+    await run("success", { onLogOpened });
+    await run("hang", { timeoutMs: 300, onLogOpened }).catch(() => undefined);
+
+    const logPath = join(workDir, "logs", "stage.log");
+    expect(opened).toEqual([logPath, logPath]);
+    expect(existsSync(logPath)).toBe(true);
+  });
+
+  it("reports none for a stage that failed before its log was created", async () => {
+    const opened: string[] = [];
+    const onLogOpened = (path: string) => opened.push(path);
+
+    // No CLI at that path, and a model alias: each refused before the log.
+    const missing = run("success", { claudePath: "/nonexistent/claude", onLogOpened });
+    await expect(missing).rejects.toThrow(/Could not start/);
+    const alias = run("success", { model: "opus", onLogOpened });
+    await expect(alias).rejects.toThrow(/does not name a single model/);
+
+    expect(opened).toEqual([]);
+    expect(existsSync(join(workDir, "logs", "stage.log"))).toBe(false);
+  });
+
+  it("reports none for a log that could not be opened", async () => {
+    const opened: string[] = [];
+    const logPath = join(workDir, "logs-is-a-directory");
+    mkdirSync(logPath);
+
+    const outcome = await run("success", { logPath, onLogOpened: (path) => opened.push(path) });
+
+    expect(outcome.transcriptError).toBeDefined();
+    expect(opened).toEqual([]);
+  });
+});

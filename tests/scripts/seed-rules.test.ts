@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { RulesetTier } from "@/lib/domain/enums";
 import { dbPath } from "@/lib/paths";
 import { importProtocol } from "@/lib/rulesets/import";
 import { DataDirLockError } from "@/server/data-dir-lock";
@@ -53,12 +54,15 @@ function storedRulesetNames(dir: string): string[] {
   }
 }
 
-function seed(markdown: string, options: { name?: string; replace?: boolean } = {}) {
+function seed(
+  markdown: string,
+  options: { name?: string; replace?: boolean; tier?: RulesetTier } = {},
+) {
   return seedRuleset({
     dataDir,
     markdown,
     name: options.name ?? "Company base rules",
-    tier: "global",
+    tier: options.tier ?? "global",
     replace: options.replace ?? false,
     sourceDoc: "example-protocol.md",
   });
@@ -70,14 +74,25 @@ describe("seeding a protocol", () => {
 
     const result = seed(example);
 
-    expect(result).toEqual({ changed: true, version: 1, ruleCount });
+    expect(result).toEqual({ changed: true, version: 1, ruleCount, tier: "global" });
     expect(storedRulesetNames(dataDir)).toEqual(["Company base rules"]);
   });
 
   it("changes nothing when the same document is seeded again", () => {
     seed(example);
 
-    expect(seed(example)).toEqual({ changed: false, version: 1, ruleCount });
+    expect(seed(example)).toEqual({ changed: false, version: 1, ruleCount, tier: "global" });
+  });
+
+  it("reports the tier the ruleset is stored under, not the one an unchanged document asked for", () => {
+    seed(example, { tier: "tech" });
+
+    expect(seed(example, { tier: "project" })).toEqual({
+      changed: false,
+      version: 1,
+      ruleCount,
+      tier: "tech",
+    });
   });
 
   it("refuses a different document under a name already taken, unless told to replace it", () => {
@@ -87,7 +102,7 @@ describe("seeding a protocol", () => {
     expect(() => seed(edited)).toThrow(SeedRefusedError);
     expect(() => seed(edited)).toThrow(/Re-run with --replace/);
     // Refused means refused: the stored version is still the first.
-    expect(seed(example)).toEqual({ changed: false, version: 1, ruleCount });
+    expect(seed(example)).toEqual({ changed: false, version: 1, ruleCount, tier: "global" });
   });
 
   it("replaces the rules of a taken name when told to, and bumps the version", () => {

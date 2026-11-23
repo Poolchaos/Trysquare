@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The scoreboard: what this machine has measured, across every review it ran.
+ * The scoreboard: what this machine has measured, across the reviews it keeps.
  *
  * The root used to redirect to Projects, so the app opened on a list of
  * repositories and never once said what any of the work had produced. Every
@@ -193,11 +193,11 @@ function duration(ms: number | null, earlierRun: boolean): string[] {
 }
 
 /**
- * The shape of what each completed review cost, drawn from the costs
- * themselves.
+ * The shape of what each completed headless review cost, drawn from the
+ * costs themselves. An interactive review records no cost and is left out.
  *
  * Deliberately not a trend line or a projection: it is one mark per review,
- * in the order they ran. Fewer than two reviews draws nothing, because a line
+ * oldest first. Fewer than two reviews draws nothing, because a line
  * through one point is a shape invented for decoration.
  */
 function Sparkline({ values }: { values: number[] }) {
@@ -233,15 +233,21 @@ export default function HomePage() {
   // without a second source of truth about what is running. What it says is
   // kept, so the scoreboard is read again when it changes, a run started or
   // ended or a review newly waiting on a person: read once, its Needs you
-  // list drifted from the bar's (audit finding U3).
+  // list drifted from the bar's (audit finding U3). Kept of each review in
+  // flight, not of the one reported alone: with two running at once, the
+  // other stopped and nothing kept had changed.
   const lastAttention = useRef<string | null>(null);
+  // A read of the scoreboard is out. A failed poll starts none beside it:
+  // each new read drops the one before it unanswered, so against a server
+  // slow to fail no failure would land.
+  const boardReading = useRef(false);
   useEffect(() => {
     let cancelled = false;
     let asked = 0;
     let shown = 0;
     const check = async () => {
       const mine = ++asked;
-      const sent = await send<{ active: LiveRun | null; awaiting: number }>(
+      const sent = await send<{ active: LiveRun | null; inFlight: string; awaiting: number }>(
         "/api/reviews/attention",
         {},
         "What is running could not be read",
@@ -251,13 +257,20 @@ export default function HomePage() {
       // back (audit finding U4). Older than shown, not than asked: dropped
       // once a later poll was sent, a server slower than the poll showed
       // nothing at all (review round 15).
-      if (mine < shown) return;
-      // A dashboard that cannot reach the server says so through the
-      // scoreboard's own error, not twice.
-      if (!sent.ok || cancelled) return;
+      if (mine < shown || cancelled) return;
+      // A failed poll shows no error of its own. Over a board already shown
+      // it has the scoreboard read again: a server that cannot be reached
+      // fails that read too, and the scoreboard's error says so, once. A
+      // board not yet shown waits for Try again (D-138).
+      if (!sent.ok) {
+        if (boardShown.current && !boardReading.current) {
+          setBoardAttempt((attempt) => attempt + 1);
+        }
+        return;
+      }
       shown = mine;
       setLive(sent.body.active);
-      const said = `${sent.body.active?.id ?? ""}|${sent.body.active?.status ?? ""}|${sent.body.awaiting}`;
+      const said = `${sent.body.active?.id ?? ""}|${sent.body.inFlight}|${sent.body.awaiting}`;
       if (lastAttention.current !== null && lastAttention.current !== said) {
         setBoardAttempt((attempt) => attempt + 1);
       }
@@ -289,6 +302,7 @@ export default function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
+    boardReading.current = true;
     void (async () => {
       // The server's words, with Try again: a fixed sentence and no way to
       // read again was all a failure said (D-138).
@@ -298,6 +312,7 @@ export default function HomePage() {
         "The scoreboard could not be read",
       );
       if (cancelled) return;
+      boardReading.current = false;
       if (sent.ok) {
         boardShown.current = true;
         setError("");
@@ -322,7 +337,7 @@ export default function HomePage() {
     <>
       <PageHeader
         title="Review scoreboard"
-        subtitle="Everything here is counted from reviews this machine has run."
+        subtitle="Counted from the reviews stored on this machine."
       />
       <PageBody>
         {/* Said above what it could not refresh: retried at the next poll, a
@@ -349,10 +364,10 @@ export default function HomePage() {
             }}
           />
         ) : board.reviewsTotal === 0 ? (
-          <Empty title="Nothing has been reviewed yet">
+          <Empty title="No reviews yet">
             Add a project, start a ruleset from a template or from your own protocol, then pick two
-            branches and run a review. What it finds, what it costs and which rules earn their place
-            all appear here.
+            branches and run a review. This page then shows what your reviews found and which rules
+            earn their place.
           </Empty>
         ) : (
           <div className="grid gap-6">
@@ -407,10 +422,11 @@ export default function HomePage() {
               />
             </div>
 
-            {/* Live before archive: something happening now outranks
-                everything that already did. Hidden entirely when nothing is
-                running, because an empty "live" panel is a dashboard
-                claiming to have something to watch. */}
+            {/* Live before the lists: something happening now sits under the
+                summary tiles and above Needs you and the lists below it.
+                Hidden entirely when nothing is running, because an empty
+                "live" panel is a dashboard claiming to have something to
+                watch. */}
             {scan ? (
               <Widget
                 label="Live scan"

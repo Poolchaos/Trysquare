@@ -69,6 +69,7 @@ import {
   STEPS,
   designTallies,
   findingTallies,
+  ranBeforeSecondVerifier,
   stageUsage,
   stepCount,
   stepResult,
@@ -98,7 +99,11 @@ const STAGES = [
   ["s2_comprehension", "Comprehension", "Read the code, including what it calls into"],
   ["s3_adversarial", "Adversarial", "Hunt against the rules"],
   ["s4_deletions", "Deletions", "Account for what the change removed"],
-  ["s4b_design_grading", "Design grading", "Grade each screenshot the project's e2e saved, A to D"],
+  [
+    "s4b_design_grading",
+    "Design grading",
+    "Grade the screenshots copied from the project's e2e, A to D",
+  ],
   ["s5_verification", "Verification", "Re-check every candidate in a fresh session"],
   [
     "s5b_second_verification",
@@ -122,7 +127,7 @@ const DETERMINISTIC_STAGES = new Set(["s0_prepare", "s6_audit"]);
  * pass (review round 8).
  */
 const NOT_ASKED = new Map<string, string>([
-  ["s4b_design_grading", "Not asked: there were no screenshots to grade."],
+  ["s4b_design_grading", "Not asked: there were no screenshots it could grade."],
   ["s5b_second_verification", "Not asked: verification proved no finding."],
   ["s5c_design_second", "Not asked: no screen was graded C or D."],
 ]);
@@ -130,8 +135,8 @@ const NOT_ASKED = new Map<string, string>([
 const STAGE_LABELS = new Map<string, string>(STAGES.map(([stage, label]) => [stage, label]));
 
 /**
- * What a stage does, in a line. Two of the lines say what the app arranges
- * for a headless review alone, a fresh session and the model that answers.
+ * What a stage does, in a line. Three of the lines say what the app arranges
+ * for a headless review alone, a fresh session or the model that answers.
  * Of an interactive review it knows only what the printed command does (the
  * twenty-first grade, AI8).
  */
@@ -158,6 +163,15 @@ const INTERACTIVE_MEANS_RUNNING =
   "This review is answered in your own sessions. Where this view says the model, a verifier " +
   "or a grader, it means the session you run on that stage's command. A request is one such " +
   "command, and the time a stage or the run took includes yours.";
+
+/**
+ * What stands in the Tokens card of an interactive review, whatever its
+ * status. The report's words (USAGE_NOT_RECORDED) say the review was
+ * answered, which a draft, a queued or a running one has not been.
+ */
+const INTERACTIVE_USAGE =
+  "not recorded. An interactive review is answered in your own session, whose usage the app " +
+  "does not see.";
 
 function stageDescription(stage: string, interactive: boolean): string | undefined {
   return (
@@ -258,7 +272,7 @@ interface Snapshot {
   ranBefore?: boolean;
   /** Null only if the project was deleted out from under the review. */
   project: { id: string; name: string } | null;
-  /** Median milliseconds per stage for this model, measured on this machine. */
+  /** Median milliseconds of one request, per stage, for this model, measured on this machine. */
   stageMedians: Record<string, number>;
   /** Rules the review is frozen with; null before (WP-G). */
   rules?: number | null;
@@ -426,11 +440,14 @@ function formatMs(ms: number): string {
 function CoveragePanel({
   coverage,
   running,
+  /** A cancelled review is terminal: its candidates are never verified. */
+  cancelled,
   /** False when the caller already states it above the fold, so it is said once. */
   withSentence = true,
 }: {
   coverage: Snapshot["coverage"];
   running: boolean;
+  cancelled: boolean;
   withSentence?: boolean;
 }) {
   if (coverage.totalFiles === 0) {
@@ -478,7 +495,8 @@ function CoveragePanel({
       ) : null}
       {coverage.unresolvedCandidates > 0 ? (
         <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-          {coverage.unresolvedCandidates} candidate finding(s) awaiting verification.
+          {coverage.unresolvedCandidates} candidate finding(s){" "}
+          {cancelled ? "left unverified when the review was cancelled." : "awaiting verification."}
         </p>
       ) : null}
     </Card>
@@ -1086,10 +1104,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
   /**
    * The findings as a list you can only read.
    *
-   * Used whenever there is nothing to decide: before a review runs, while it
-   * runs, once it stopped short, and once it finished with nothing on the
-   * table. The confirmation queue takes over while findings wait on a person,
-   * and the report once the review is complete.
+   * Used before a review runs, while it runs, and once it stopped short. The
+   * confirmation queue takes over while a finished run waits on a person,
+   * with findings to decide or with none, and the report once the review is
+   * complete.
    */
   const renderReadOnly = () =>
     reported.length === 0 ? (
@@ -1120,7 +1138,10 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               </p>
               {finding.dismissReason ? (
                 <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
-                  Dismissed: {finding.dismissReason}
+                  {/* An open question left out unproven is not a dismissal
+                      (D-190), and the report words the two apart. */}
+                  {finding.dismissedFrom === "open_question" ? "Left out" : "Dismissed"}:{" "}
+                  {finding.dismissReason}
                 </p>
               ) : null}
               {finding.quotedCode ? (
@@ -1364,8 +1385,8 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               {review.pausedResetsAt === null ? null : (
                 <>
                   {" "}
-                  The limit clears at {formatResetTime(review.pausedResetsAt)}; resuming before then
-                  will pause again.
+                  The limit clears at {formatResetTime(review.pausedResetsAt)}; a resume before then
+                  may pause again.
                 </>
               )}
             </Problem>
@@ -1569,7 +1590,7 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
                   nothing (AH1). */}
               {review.engineMode === "interactive" ? (
                 <p className="text-dense text-[var(--color-ink-muted)]">
-                  Tokens and cost: {USAGE_NOT_RECORDED}
+                  Tokens and cost: {INTERACTIVE_USAGE}
                 </p>
               ) : (
                 <dl className="grid gap-1.5 text-dense">
@@ -1607,8 +1628,9 @@ export default function ReviewPage({ params }: { params: Promise<{ id: string }>
               <Card className="mb-6 p-4">
                 <p className="text-xs text-[var(--color-ink-muted)]">
                   The live stream dropped, so this checks every two seconds while the stream is
-                  opened again. The run itself is unaffected; only this page lost its connection to
-                  it.
+                  opened again. If the connection alone dropped, the review is unaffected. If the
+                  server stopped, its runs stopped and its line emptied with it, and this page shows
+                  where that left the review once the server is back.
                 </p>
               </Card>
             ) : null}
@@ -2012,16 +2034,18 @@ function RunDetail({
                   ) : null}
                   <span className="ml-auto shrink-0 text-xs text-[var(--color-ink-muted)]">
                     {/* A stage in flight says what this machine has measured
-                        it taking before, so a slow stage is distinguishable
-                        from a stuck one. Nothing is shown until the same
-                        stage has been timed enough times for a median to
-                        mean something. */}
+                        one request of it taking before, so a slow stage is
+                        distinguishable from a stuck one. A request, not the
+                        stage: the median is over rows, and a stage that
+                        splits its work writes several. Nothing is shown
+                        until the same stage has been timed enough times for
+                        a median to mean something. */}
                     {last
                       ? spent.ms === null
                         ? null
                         : formatMs(spent.ms)
                       : current && usualFor(stage) !== null
-                        ? `usually ${usualFor(stage)}`
+                        ? `usually ${usualFor(stage)} a request`
                         : null}
                   </span>
                 </div>
@@ -2033,10 +2057,14 @@ function RunDetail({
                   // is recorded as zero and was never measured (AH1).
                   // "Answered" only of a stage whose answer was taken: one
                   // that timed out with none said it too (review round 27).
+                  // Nor "for you to answer" on a cancelled review, which is
+                  // terminal and asks for no answer again.
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
                     {last.status === "succeeded"
                       ? "Answered in your own session: its usage is not recorded, and its time includes yours."
-                      : "For you to answer in your own session: its usage is not recorded."}
+                      : snapshot.review.status === "cancelled"
+                        ? "Not finished when the review was cancelled: its usage is not recorded."
+                        : "For you to answer in your own session: its usage is not recorded."}
                   </p>
                 ) : last && !DETERMINISTIC_STAGES.has(stage) ? (
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
@@ -2048,7 +2076,8 @@ function RunDetail({
                 ) : (
                   <p className="mt-1 pl-[1.125rem] text-xs text-[var(--color-ink-muted)]">
                     {notAsked
-                      ? stage === "s5b_second_verification" && !snapshot.review.verifierModel
+                      ? stage === "s5b_second_verification" &&
+                        ranBeforeSecondVerifier(snapshot.review.verifierModel, snapshot.findings)
                         ? "Not asked: this review is from before the second verifier."
                         : NOT_ASKED.get(stage)
                       : stageDescription(stage, snapshot.review.engineMode === "interactive")}
@@ -2087,6 +2116,7 @@ function RunDetail({
       <CoveragePanel
         coverage={snapshot.coverage}
         running={snapshot.running}
+        cancelled={snapshot.review.status === "cancelled"}
         withSentence={!folded}
       />
 
@@ -2120,7 +2150,9 @@ function RunDetail({
 
       {snapshot.notes.length > 0 ? (
         <Card className="mb-6 p-4">
-          <h2 className="mb-2 text-heading font-medium">What this run recorded</h2>
+          {/* Not "this run": the list keeps each run's notes, and those a
+              verify-again or completing the review wrote after one. */}
+          <h2 className="mb-2 text-heading font-medium">Run notes</h2>
           {/* Persisted, unlike the live activity tail, so how a run
               divided its work survives a reload. */}
           <ul className="grid gap-2">
@@ -2436,9 +2468,10 @@ function RenderedReport({ data }: { data: ReportData }) {
  * A review is minutes of real work, and the ordinary page showed it as one
  * pulsing dot beside a sidebar log. While a run is live this takes over:
  * the five steps a person reads across the top, the current stage named large
- * with what it usually takes on this machine, the engine's activity
- * streaming center-stage, and the clock and the meter running where they can
- * be seen from across a room. Every figure on it is the run's own.
+ * with what a request of it usually takes on this machine, the engine's
+ * activity streaming center-stage, and the clock and the meter running where
+ * they can be seen from across a room. The clock is the run's own; the cost
+ * is every run's so far.
  *
  * It covers the top bar deliberately. Watching a scan is a mode, not a
  * page, and Escape or Hide steps back out without touching the run.
@@ -2810,7 +2843,7 @@ function ScanTheater({
               {/* A stage that divides its work says which division is in
                 flight, so nine requests do not look like one long one. */}
               {batch ? ` · request ${batch.number} of ${batch.count}` : ""}
-              {usual !== undefined ? ` · usually ${elapsedBetween(0, usual)} here` : ""}
+              {usual !== undefined ? ` · usually ${elapsedBetween(0, usual)} a request here` : ""}
             </span>
           ) : null}
           {stageIndex !== -1 ? (
@@ -2821,8 +2854,10 @@ function ScanTheater({
         </div>
         {/* What proving has found so far, kept apart as the mockup has them:
           proven, refuted, discarded by the quotation check, open, and
-          what is left, which add up to what was raised. Only once there is
-          something to prove. */}
+          what is left, which add up to what was raised. So the first tile
+          leaves out a finding the second verifier has since made an open
+          question: its label says standing, not proven by the first
+          verifier. Only once there is something to prove. */}
         {states[3] !== "next" && tallies.raised > 0 ? (
           <dl
             role="group"
@@ -2832,7 +2867,7 @@ function ScanTheater({
             {(
               [
                 [
-                  "proven by the first verifier",
+                  "proven and still standing",
                   tallies.proven,
                   "bg-[var(--color-good-soft)]",
                   "text-[var(--color-good)]",
@@ -2888,7 +2923,9 @@ function ScanTheater({
           // Here too, where a run is watched: the feed below stops while the
           // stream is down, and it used to stop without a word (5.12, U8).
           <p className="mt-5 text-aside text-[var(--color-ink-muted)]">
-            The live stream dropped and is being opened again. The run itself is unaffected.
+            The live stream dropped and is being opened again. If the connection alone dropped, the
+            run is unaffected. If the server stopped, the run stopped with it, and the page shows
+            that once the server is back.
           </p>
         )}
         {/* An interactive stage waiting on the person: its command, above the
@@ -2917,10 +2954,15 @@ function ScanTheater({
         >
           {live.length === 0 ? (
             <p className="text-body text-[var(--color-ink-muted)]">
-              {/* With a stage waiting on the person, the fetch is long done. */}
+              {/* With a stage waiting on the person, the fetch is long done.
+                  Past Prepare it is done too: the feed holds what the
+                  stream sent since this page opened, so one opened mid-run
+                  is empty, and it said the run was fetching. */}
               {snapshot.waiting
                 ? "Waiting for your answer to the command above."
-                : "Fetching and checking out the pinned commits, then the project's own checks where they are on..."}
+                : executing === "s0_prepare"
+                  ? "Fetching and checking out the pinned commits, then the project's own checks where they are on..."
+                  : "Earlier activity is not shown here. What the run does next appears as it arrives."}
             </p>
           ) : (
             <ul className="grid gap-0.5 text-dense">

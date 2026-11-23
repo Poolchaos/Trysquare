@@ -39,9 +39,16 @@ export async function POST(
       const { review } = assertCanVerifyAgain(db, id, dataDir);
       // Both verifiers are asked; the second must be able to answer before the
       // first is paid for (review round 3).
-      const unverifiable = secondVerifierNotReady(db, review.model, review.verifierModel);
+      // These two refusals are worded for this request, not for a review's
+      // Start: the review is awaiting confirmation and has none to press.
+      const unverifiable = secondVerifierNotReady(
+        db,
+        review.model,
+        review.verifierModel,
+        "press Send request again",
+      );
       if (unverifiable !== null) throw unverifiable;
-      const readiness = await cliReadiness(db);
+      const readiness = await cliReadiness(db, "verifyAgain");
       if (readiness.refusal) throw cliNotReady(readiness);
       const unshown = billingNotShown(readiness, input.billingShown, "This request");
       if (unshown !== null) throw unshown;

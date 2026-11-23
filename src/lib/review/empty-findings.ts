@@ -27,7 +27,9 @@ export function emptyFindings(
   if (running) {
     return {
       title: yet,
-      text: `${appear} once the adversarial pass has run and each one has been checked against the file.${above}`,
+      // Listed as candidates from the end of the stage that raised them,
+      // before S5 has ruled on one or checked a quotation.
+      text: `${appear} once the adversarial or the deletions stage has raised them, before verification. One that verification then refutes, or the quotation check discards, leaves the list.${above}`,
     };
   }
   if (status === "draft") {

@@ -118,7 +118,8 @@ the path; on a phone the refusal wraps under the path's label and its
 Copy stands alone on the next line. `interactive-your-turn-focused-phone-light`
 B, `-dark` B. Short of A: the path's Copy is on its label's line at the
 far edge, a card's width from the path it copies at desk width.
-A headless review's scan view was not looked at for these notes.
+A headless review's scan view is graded with the screens D-321 changed,
+below.
 
 ### Confirmation (a review awaiting its decisions)
 
@@ -198,8 +199,80 @@ how the sign-in is billed. "Where results are sent" says no mail account is
 set up and nothing is sent. The danger zone names what it deletes and what
 it keeps.
 
-Grades: `light-settings` A, `dark-settings` A, `dark-settings-phone` B. On
-a phone the model rows break differently by the length of a model's name.
+Grades: `light-settings` A, `dark-settings` A, `dark-settings-phone` B,
+until 2026-11-23, when the section below graded them again. On a phone the
+model rows broke differently by the length of a model's name; since D-321
+the chip and Probe stand at the right of a row of their own in every card.
+
+## The screens D-321 changed, graded on 2026-11-23
+
+D-321 reworded sentences on most screens and fixed small faults of
+drawing. Its shots were graded by three readers apart from the change, each
+given the standard and the shots and no earlier grade. The first read 69
+shots and gave eight groups a C or D; those were fixed and shot again; the
+second read 32 and gave four groups a C; those were fixed and shot again;
+the third read the thirteen left and gave no C or D. Where a shot is graded
+here and in a section above, this grade is the later one. Each line is as
+the last reader of that shot gave it.
+
+- The scan view of a headless review: `steps-proving-light` B, `-dark` B,
+  `-phone` B, `steps-second-light` B, `-dark` B, `-phone` B. The first
+  tile reads "proven and still standing" on one line beside its four
+  neighbours. Short of A: on a phone "discarded by the quotation check"
+  wraps and makes its row taller, and "the other strong family" is not
+  plain.
+- Dashboard: `light-dashboard` A, `dark-dashboard` A,
+  `light-dashboard-phone` A, `dark-dashboard-phone` A, for the subtitle.
+  `dashboard-nothing-reviewed-light` B, `-dark` B, `-phone` B: "protocol"
+  is a word the app has not yet introduced there.
+  `needs-you-interactive-light` B, `-dark` B, `-phone` B: "waits for you"
+  and the "waiting" beside it say one thing twice.
+  `scoreboard-reread-failed-light` B, `-dark` B, `-phone` B.
+- The empty Mine list: `light-new-review-mine-none` B, `-phone` B,
+  `dark-new-review-mine-none` B, `-phone` B, `light-project-mine-none` B,
+  `-phone` B, `dark-project-mine-none` B, `-phone` B. Short of A:
+  `user.email` is in the interface's face, and in a new review's picker on
+  a phone the address breaks after its @.
+- Reviews: `light-reviews` B, `dark-reviews` B, `light-reviews-phone` B,
+  `dark-reviews-phone` B. On a phone the time and Delete take each card's
+  last line, the time at its left and Delete at its right. Short of A: at
+  desk width the figures left of the time are a ragged run, and on a phone
+  a card with no figures keeps an empty band above that line.
+- Settings: `light-settings` B, `dark-settings` B, `light-settings-phone`
+  B, `dark-settings-phone` B. Short of A: the CLI path's hint is
+  compressed, and on a phone a path in the monospace breaks mid-word.
+- A project's page: `light-project-detail` B, `dark-project-detail` B,
+  `light-project-detail-phone` B, `dark-project-detail-phone` B,
+  `project-header-phone` B. Short of A: the Dependencies paragraph is
+  dense, and the default branch in the header is in the interface's face.
+  Said apart from the grade by two readers: on a phone the branch table is
+  cut inside its Last commit column with nothing to say it scrolls
+  (`plans/idea-inbox.md`).
+- The Stages card: `stages-light` B, `stages-dark` B, `stages-phone` B,
+  `stages-not-asked-light` B, `-dark` B, `-phone` B,
+  `stages-two-requests-light` B, `-dark` B, `-phone` B. Short of A: the
+  usage line names no unit, and "undispositioned" is jargon.
+- Confirmation: `change-elsewhere-light` B, `-dark` B, `-phone` B,
+  `show-code-light` B, `-dark` B, `-phone` B.
+- New review: `second-verifier-light` B, `-dark` B, `-phone` A,
+  `new-review-no-ruleset-light` B, `-dark` B, `-phone` B: the way to
+  start a ruleset is at the foot of the page, not in the card that has
+  none.
+- The kept-credentials notice: `project-token-kept-card-light` B, `-dark`
+  B, `-phone` B, `project-token-kept-page-light` B, `-dark` B, `-phone` B.
+  Short of A: "It was added before Trysquare refused them" goes from one
+  to many.
+- A ruleset's page: `light-ruleset-detail` A, `dark-ruleset-detail` A, for
+  the two dates.
+
+Two faults were of the photograph and are fixed in the tests that take it.
+`stages-light` and `stages-dark` had the top bar over the card's heading,
+on 2026-11-22 too: the card is taller than the screen less the bar and was
+shot as an element. `stages-two-requests-light` and `-phone` were 2 to 7px
+off their card: measured with a probe, buttons with a larger least height
+on a phone eased to it for 150ms after the width changed, under a
+transition of every property, and the card under them was measured while
+they moved.
 
 ## Across every screen
 
@@ -216,11 +289,10 @@ a phone the model rows break differently by the length of a model's name.
 
 `dark-new-review`, `light-queue`, the lower two thirds of `light-review`
 and `dark-review` beyond the report's findings, the last third of
-`dark-review-phone`, `light-projects-phone`, `light-settings-phone`, and
-the dark phone shots of the dashboard, the reviews list, the rulesets list,
-a project's page, the projects list, a new review and a ruleset's page. A
-headless review's scan view. The screens of a rule being added, edited or
-removed, which the browser tests shoot region by region.
+`dark-review-phone`, `light-projects-phone`, and the dark phone shots of
+the rulesets list, the projects list, a new review and a ruleset's page.
+The screens of a rule being added, edited or removed, which the browser
+tests shoot region by region.
 
 ## For the maintainer
 

@@ -60,13 +60,19 @@ const ask = (overrides: Partial<StageRequest> = {}): StageRequest => ({
  */
 function fakeEngine(
   answer: (request: StageRequest) => Promise<StageResponse> | StageResponse,
-  options: { reportAttempts?: AttemptReport[] } = {},
+  options: {
+    reportAttempts?: AttemptReport[];
+    /** The transcripts a call opens, in order, each reported as the engine runner does. */
+    transcripts?: (request: StageRequest) => string[];
+  } = {},
 ) {
   const asked: StageRequest[] = [];
   let notify: ((report: AttemptReport) => void) | undefined;
+  let opened: ((logPath: string) => void) | undefined;
 
   const inner = async (request: StageRequest): Promise<StageResponse> => {
     asked.push(request);
+    for (const logPath of options.transcripts?.(request) ?? []) opened?.(logPath);
     for (const report of options.reportAttempts ?? []) notify?.(report);
     return answer(request);
   };
@@ -76,6 +82,7 @@ function fakeEngine(
     asked,
     attach(runner: CheckpointingRunner): CheckpointingRunner {
       notify = runner.noteAttempt;
+      opened = runner.noteTranscript;
       return runner;
     },
   };
@@ -383,24 +390,48 @@ describe("the record it leaves behind", () => {
     expect(rows[0]?.errorClass).toBe("invalid_output");
     expect(rows[0]?.errorText).toContain("the shape was wrong");
     expect(rows[0]?.inputTokens).toBe(0);
-    // And no log is named where the caller says none is written.
+    // And no log is named where the engine opened none.
     expect(rows[0]?.logPath).toBeNull();
   });
 
-  it("names the stage's log on its row where the caller says one is written", async () => {
-    const engine = fakeEngine(() => {
-      throw new StageFailedError("timeout", "It took too long.");
-    });
-    const runner = createCheckpointingRunner({
-      db,
-      reviewId,
-      inner: engine.inner,
-      logPathFor: (stage) => `/logs/${stage}.log`,
-    });
+  it("names on a row the transcript its call opened, the first of two", async () => {
+    const engine = fakeEngine(
+      () => {
+        throw new StageFailedError("timeout", "It took too long.");
+      },
+      { transcripts: (request) => [`/logs/${request.stage}.log`, "/logs/s1_risk.repair.log"] },
+    );
+    const runner = engine.attach(createCheckpointingRunner({ db, reviewId, inner: engine.inner }));
 
     await expect(runner.run(ask())).rejects.toThrow();
 
     expect(listForReview(db, reviewId)[0]?.logPath).toBe("/logs/s1_risk.log");
+  });
+
+  it("names no transcript on the row of a call that failed before opening one", async () => {
+    // An alias refused, or a CLI that will not resolve, fails a headless
+    // stage before its log is created. Its row named logs/<stage>.log all
+    // the same, a file that was never written. Nor does the call before
+    // it lend its transcript.
+    const engine = fakeEngine(
+      (request) => {
+        if (request.stage === "s2_comprehension") {
+          throw new StageFailedError("spawn", "Could not start the CLI: it was not found.");
+        }
+        return { output: {}, sessionId: "s-1", usage };
+      },
+      { transcripts: (request) => (request.stage === "s1_risk" ? ["/logs/s1_risk.log"] : []) },
+    );
+    const runner = engine.attach(createCheckpointingRunner({ db, reviewId, inner: engine.inner }));
+
+    await runner.run(ask());
+    await expect(runner.run(ask({ stage: "s2_comprehension" }))).rejects.toThrow();
+
+    const rows = listForReview(db, reviewId);
+    expect(rows.map((row) => [row.stage, row.status, row.logPath])).toEqual([
+      ["s1_risk", "succeeded", "/logs/s1_risk.log"],
+      ["s2_comprehension", "failed", null],
+    ]);
   });
 
   it("records the cost of a call that answered before a later one died", async () => {

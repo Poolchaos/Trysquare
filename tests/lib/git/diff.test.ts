@@ -14,6 +14,7 @@ import {
   addedLinesOf,
   formatHunkHeader,
   hunkForLine,
+  hunkHoldsLine,
   parseUnifiedDiff,
   removedLinesOf,
   summariseDiff,
@@ -477,6 +478,18 @@ describe("finding the hunk a citation falls in", () => {
     // A line the change did not touch still sits in a changed file, and the
     // change is more use to a reader than an empty pane.
     expect(hunkForLine(fileOf("modified.ts"), 999)?.hunkIndex).toBe(0);
+  });
+
+  it("says whether a hunk holds a line, so a fallback is not shown as the change there", () => {
+    // The screen heads the hunk "What the change did here". Over the first
+    // hunk of a file whose cited line no hunk holds, that was untrue.
+    const file = fileOf("modified.ts");
+    const late = file.hunks[1]!;
+    expect(hunkHoldsLine(late, late.newStart)).toBe(true);
+    expect(hunkHoldsLine(late, late.newStart + late.newLines - 1)).toBe(true);
+    expect(hunkHoldsLine(late, late.newStart + late.newLines)).toBe(false);
+    expect(hunkHoldsLine(late, late.newStart - 1)).toBe(false);
+    expect(hunkHoldsLine(hunkForLine(file, 999)!, 999)).toBe(false);
   });
 
   it("has nothing to show for a file with no hunks", () => {

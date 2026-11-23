@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
  */
 export const metadata: Metadata = {
   title: "Reviews",
-  description: "Every review this app has run.",
+  description: "The reviews this app keeps.",
 };
 
 export default function Layout({ children }: { children: ReactNode }) {

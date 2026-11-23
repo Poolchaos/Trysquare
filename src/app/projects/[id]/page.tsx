@@ -5,8 +5,8 @@
  *
  * The branch table is the point of the page. Everything a person needs to
  * decide which branch is worth reviewing is in the row: how far it has moved
- * from the default branch, what the last commit said, and when. Reviewing one
- * is a link from that row rather than a separate screen you arrive at empty.
+ * from the default branch, and what the last commit said. Reviewing one is a
+ * link from that row rather than a separate screen you arrive at empty.
  */
 
 import Link from "next/link";
@@ -243,6 +243,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const all = listed?.branches ?? [];
   const mine = all.filter((branch) => branch.mine);
   const shown = (mineOnly ? mine : all).filter((branch) => branch.name.includes(filter));
+  // The branches' route fetches before it answers, and the project is read
+  // beside it, before that fetch is recorded: the header was one fetch
+  // behind the list under it. The later of the two, since a list kept from
+  // an earlier read can be the older one. Stored times sort as text (ids.ts).
+  const listedAt = listed?.lastFetchedAt ?? null;
+  const fetchedAt =
+    listedAt !== null && (project.lastFetchedAt === null || listedAt > project.lastFetchedAt)
+      ? listedAt
+      : project.lastFetchedAt;
+  const cloned = project.cloneStatus === "ready";
 
   return (
     <>
@@ -251,11 +261,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         subtitle={
           <span className="flex flex-wrap items-center gap-3">
             <Mono className="min-w-0 text-xs break-all">{project.gitUrl}</Mono>
-            <span>default {project.defaultBranch}</span>
+            {/* Until a clone finishes, the row holds the placeholder it was
+                made with, not a branch read from the remote. */}
+            {cloned ? <span>default {project.defaultBranch}</span> : null}
             <span>
-              {project.lastFetchedAt
-                ? `fetched ${project.lastFetchedAt.slice(0, 16).replace("T", " ")}`
-                : "never fetched"}
+              {/* Stored in UTC, shown in the reader's own zone. */}
+              {fetchedAt === null
+                ? "never fetched"
+                : `fetched ${new Date(fetchedAt).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}`}
             </span>
           </span>
         }
@@ -300,7 +316,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         ) : null}
         <StoredCredentialsNotice
           stored={project.storedCredentials}
-          cloned={project.cloneStatus === "ready"}
+          cloned={cloned}
           className="mb-4"
         />
         {project.cloneError ? (
@@ -411,9 +427,17 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                         <Mono className="text-xs text-[var(--color-ink-muted)]">
                           {review.fromBranch} into {review.intoBranch}
                         </Mono>
-                        <span className="ml-auto text-xs text-[var(--color-ink-faint)]">
-                          {review.createdAt.slice(0, 10)}
-                        </span>
+                        {/* The reader's own day, as the header words its fetch
+                            time: the stored text cut to ten characters was
+                            UTC's day beside it. */}
+                        <time
+                          dateTime={review.createdAt}
+                          className="ml-auto text-xs text-[var(--color-ink-faint)]"
+                        >
+                          {new Date(review.createdAt).toLocaleDateString(undefined, {
+                            dateStyle: "medium",
+                          })}
+                        </time>
                       </Card>
                     </Link>
                   </li>
@@ -427,12 +451,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               <h2 className="mb-1 text-heading font-semibold">Name and default branch</h2>
               <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
                 A new review compares against the default branch unless told otherwise. It is
-                guessed from the remote when the project is added, and is what you save here after.
+                guessed from the remote when the project is cloned, and after that it is what you
+                save here.
               </p>
               <ProjectEditForm
                 key={`${project.name}\u0000${project.defaultBranch}`}
                 name={project.name}
                 defaultBranch={project.defaultBranch}
+                cloned={cloned}
                 branches={listed ? listed.branches.map((branch) => branch.name) : null}
                 busy={busy}
                 onSave={(changed) =>
@@ -447,8 +473,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <Card className="p-4">
               <h2 className="mb-1 text-heading font-semibold">Dependencies</h2>
               <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
-                A linked project can be reviewed alongside this one, so a changed type is traced to
-                the consumer that never migrated.
+                A linked project can be reviewed alongside this one. Where its change touches an
+                export in a TypeScript file, the review is asked to check what uses that export
+                here. Nothing is asked about a change in another language, or about an export the
+                app does not find.
               </p>
 
               {detail.links.length > 0 ? (
@@ -481,8 +509,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               {detail.linkable.length === 0 ? (
                 <p className="text-xs text-[var(--color-ink-faint)]">
                   {detail.links.length === 0
-                    ? "Add another project first, then link it here."
-                    : "Every other project is already linked."}
+                    ? "No other project has a ready clone. A project is offered here once its clone is ready."
+                    : "Every other project with a ready clone is already linked."}
                 </p>
               ) : (
                 <form
@@ -642,17 +670,20 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
  * the first branch listed, the newest, when the list arrived after the
  * page was drawn, and a save meant as a rename moved the default to it
  * (review of the 7.1 changes). The stored one stays an option even when
- * the clone lacks it.
+ * the clone lacks it. Until a clone finishes, the stored one is the
+ * placeholder the row was made with, so it is not shown as a branch.
  */
 function ProjectEditForm({
   name: storedName,
   defaultBranch: storedBranch,
+  cloned,
   branches,
   busy,
   onSave,
 }: {
   name: string;
   defaultBranch: string;
+  cloned: boolean;
   branches: string[] | null;
   busy: boolean;
   onSave: (changed: { name?: string; defaultBranch?: string }) => void;
@@ -682,7 +713,11 @@ function ProjectEditForm({
       </Field>
       <Field
         label="Default branch"
-        {...(branches === null ? { hint: "Chosen once the branches are read." } : {})}
+        {...(!cloned
+          ? { hint: "Guessed from the remote once the project is cloned." }
+          : branches === null
+            ? { hint: "Chosen once the branches are read." }
+            : {})}
       >
         <Select
           name="defaultBranch"
@@ -690,11 +725,15 @@ function ProjectEditForm({
           disabled={branches === null}
           onChange={(event) => setBranch(event.target.value)}
         >
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
+          {cloned ? (
+            options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))
+          ) : (
+            <option value={storedBranch}>Not known yet</option>
+          )}
         </Select>
       </Field>
       <div>

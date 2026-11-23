@@ -1304,6 +1304,23 @@ describe("when a review cannot finish", () => {
     expect(review.pausedReason).toMatch(/usage limit/i);
   }, 120_000);
 
+  it("names no transcript on the row of a stage that failed before one was opened", async () => {
+    // The CLI is resolved as each stage starts, before the stage's log is
+    // created, and a review that waited in line starts with no check of it.
+    // The row named logs/s1_risk.log all the same, and the page shows that
+    // path under the failure as the transcript behind it.
+    const reviewId = seedReview();
+
+    const outcome = await run(reviewId, { claudePath: join(dataDir, "no-such-claude.mjs") });
+
+    expect(outcome.kind).toBe("failed");
+    const rows = listForReview(db, reviewId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ stage: "s1_risk", status: "failed", errorClass: "spawn" });
+    expect(existsSync(join(logsDir(dataDir, reviewId), "s1_risk.log"))).toBe(false);
+    expect(rows[0]?.logPath).toBeNull();
+  }, 120_000);
+
   it("records when the limit clears, so the pause has an end rather than reading as a hang", async () => {
     const reviewId = seedReview();
     writeIdealAnswers();
@@ -1839,7 +1856,7 @@ describe("telling the reviewer what the change was for", () => {
     await run(reviewId);
 
     const prompt = recordedPrompts()[2] ?? "";
-    expect(prompt).not.toContain("author-description");
+    expect(prompt).not.toContain("change-description");
   }, 120_000);
 
   it("makes the description part of the question, so changing it asks again", async () => {

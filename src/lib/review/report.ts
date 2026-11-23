@@ -70,7 +70,10 @@ const DESIGN_SAID: Record<DesignChecked, string> = {
     "The design was not checked: none of the screenshots its e2e saved could be graded, and the run notes say why.",
   "no e2e command": "The design was not checked: the project has no e2e command.",
   "e2e not run": "The design was not checked: its e2e did not run.",
-  "no screenshots": "The design was not checked: its e2e saved no screenshot.",
+  // Only .png files are looked for, so an e2e that saved another kind of
+  // image saved something.
+  "no screenshots":
+    "The design was not checked: no PNG screenshot was found in its screenshots folder.",
 };
 
 /** How each of a project's own commands ended in this review's copy. */
@@ -236,7 +239,9 @@ export function renderReport(input: ReportInput): string {
     lines.push("## What the change was for");
     lines.push("");
     lines.push(
-      "As described by its author, and put to the model as a claim to check against the code, not as an instruction:",
+      // Not "its author": the description comes with the request that makes
+      // the review, with nothing tying it to who wrote the change.
+      "As described by whoever started the review, and put to the model as a claim to check against the code, not as an instruction:",
     );
     lines.push("");
     lines.push(...input.intent.split(/\r\n?|\n/).map((line) => `> ${md(line)}`));
@@ -406,6 +411,10 @@ export function checksRan(input: Pick<ReportInput, "checks">): string | null {
  * have finished with a hunk unaccounted for. The last, the files read outside
  * the change, is the comprehension answer's list, and the sentence says so.
  *
+ * The pairs a profile left out are said of the adversarial stage alone. The
+ * deletion stage and the verifiers are given every rule's title, for every
+ * file, and a verifier the text of a rule a finding cites.
+ *
  * Exported for the page's typeset report, so the two cannot say different
  * things about what was examined.
  */
@@ -425,7 +434,7 @@ export function completeness(
     (input.coverage.excludedPairs > 0
       ? `The ${input.profile} profile left ${input.coverage.excludedPairs} rule and file pair(s) ` +
         "out, where a file's path suggests none of a rule's themes: those rules were not put to " +
-        "the model for those files. "
+        "the model for those files in the adversarial stage. "
       : "") +
     `By the model's own account it read ${input.chainFilesRead} file(s) outside the change set ` +
     "to follow what the change calls into."
@@ -433,11 +442,12 @@ export function completeness(
 }
 
 /**
- * What rests only on refuted findings (D-97), or null when nothing does.
+ * What rests only on killed findings (D-97), or null when nothing does.
  *
- * Such a hunk or hit counts as accounted for, since verification gave its
+ * Such a hunk or hit counts as accounted for, since each kill has its
  * reason, but a reader is told rather than left to assume every finding
- * raised there stood.
+ * raised there stood. The counts are of every kill, the verifier's
+ * refutations and the quotation check's discards alike.
  */
 export function refutedOnlySentence(coverage: {
   refutedOnlyHunks: number;
@@ -449,7 +459,7 @@ export function refutedOnlySentence(coverage: {
   ];
   return parts.length === 0
     ? null
-    : `${parts.join(" and ")} were accounted for only by findings that verification refuted.`;
+    : `${parts.join(" and ")} were accounted for only by findings that verification refuted or the quotation check discarded.`;
 }
 
 /**

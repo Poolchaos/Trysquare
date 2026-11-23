@@ -33,7 +33,9 @@ describe("what a Needs you row says", () => {
       "paused at the usage limit: Resume once it clears",
     );
     expect(needsYouLine({ status: "interrupted", ...found })).toBe("interrupted: Resume to go on");
-    expect(needsYouLine({ status: "failed", ...found })).toBe("failed: Resume to go on");
+    // A failure that asks for the review to be started again fails when
+    // resumed while its cause stands, so the row does not say it goes on.
+    expect(needsYouLine({ status: "failed", ...found })).toBe("failed: Resume to try again");
   });
 });
 
@@ -42,7 +44,7 @@ describe("a review answered in the person's own session (the twentieth grade, AH
     expect(needsYouKind({ status: "running", engineMode: "interactive" })).toBe("interactive");
     expect(needsYouKind({ status: "verifying", engineMode: "interactive" })).toBe("interactive");
     expect(needsYouLine({ status: "interactive", decided: 0, total: 0 })).toBe(
-      "runs in your terminal: its page prints the command to run",
+      "runs in your terminal: its page prints the command when a stage waits for you",
     );
   });
 

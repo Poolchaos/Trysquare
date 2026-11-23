@@ -200,6 +200,19 @@ describe("a review waiting on a person", () => {
     expect(body.error).toMatch(/is awaiting confirmation, which cannot be started or resumed/);
     expect((await snapshot()).review.status).toBe("awaiting_confirmation");
   }, 120_000);
+
+  it("has no report yet, and says the review must be completed for one", async () => {
+    // Every finding decided is not enough: the review stays awaiting
+    // confirmation, and has no report, until it is completed.
+    const response = await routes.report.GET(new Request("http://localhost"), params(reviewId));
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { error: string; code: string };
+    expect(body.code).toBe("NotComplete");
+    expect(body.error).toBe(
+      "This review is awaiting confirmation. A report is the record of what a person accepted, " +
+        "so it exists once every finding has been decided and the review completed.",
+    );
+  }, 120_000);
 });
 
 describe("reading the code a finding is about", () => {
@@ -234,6 +247,34 @@ describe("reading the code a finding is about", () => {
     expect(body.hunk!.lines.some((line) => line.startsWith("+") || line.startsWith("-"))).toBe(
       true,
     );
+  }, 120_000);
+
+  it("says whether the hunk it sends holds the cited line", async () => {
+    // A line no hunk holds is answered with the file's first hunk, and the
+    // screen headed that "What the change did here": the answer now says
+    // which it is, so the screen can head it as what it is.
+    const finding = (await snapshot()).findings.find((entry) => entry.filePath !== callerPath());
+    const ask = async (line: number) => {
+      const response = await routes.fileContext.GET(
+        new Request(
+          `http://localhost/x?path=${encodeURIComponent(finding!.filePath)}&line=${line}`,
+        ),
+        params(reviewId),
+      );
+      expect(response.status).toBe(200);
+      return (await response.json()) as { hunk: { header: string; atLine: boolean } | null };
+    };
+
+    const cited = await ask(finding!.lineStart);
+    const [, start, count] = /\+(\d+),(\d+) @@/.exec(cited.hunk!.header)!.map(Number);
+    expect(finding!.lineStart).toBeGreaterThanOrEqual(start!);
+    expect(finding!.lineStart).toBeLessThan(start! + count!);
+    expect(cited.hunk!.atLine).toBe(true);
+
+    // Far past every hunk: the same file's first hunk, said not to hold it.
+    const far = await ask(100_000);
+    expect(far.hunk).not.toBeNull();
+    expect(far.hunk!.atLine).toBe(false);
   }, 120_000);
 
   it("serves the file alone when the finding is in code the change never touched", async () => {
@@ -357,6 +398,9 @@ describe("reading the code a finding is about", () => {
       const deleted = await ask();
       expect(deleted.deleted).toBe(true);
       expect(deleted.readError).toBeUndefined();
+      // Its one hunk is the change at the cited line, though a deletion has
+      // no new numbering for the line to fall in.
+      expect(deleted.hunk).toMatchObject({ atLine: true });
 
       // Deleted with no hunk to show, as a binary file is: still deleted.
       writeFileSync(

@@ -383,7 +383,8 @@ npm run rules:seed -- /path/to/REVIEW_PROTOCOL.md --name "Company base rules"
 whose rules differ; one that holds nothing yet is filled without it. A file
 that has no rules, or has lines the importer cannot
 place, is refused, and the reason is printed. Running it again with the same
-file changes nothing. Stop the app first: the seed takes the same lock the app
+file changes nothing, the tier included: the line it prints names the tier
+the ruleset keeps. Stop the app first: the seed takes the same lock the app
 holds, and refuses while it is running.
 
 The seed reads the file where it is and does not copy it into this repository.

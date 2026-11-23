@@ -139,6 +139,31 @@ describe("the session meter", () => {
     expect(result.status).toBe(2);
   });
 
+  it("refuses a transcript that is there and cannot be read, as not measured", () => {
+    // A folder exists and reads as no file. Uncaught, the read error left
+    // Node to exit 1, the code for a session at or past the handover point.
+    const folder = join(configDir, "projects");
+    mkdirSync(folder, { recursive: true });
+
+    const result = meter(["--transcript", folder]);
+
+    expect(result.stderr).toContain(`session-context: could not read ${folder}: EISDIR`);
+    expect(result.stdout).toBe("");
+    expect(result.status).toBe(2);
+  });
+
+  it("refuses a transcripts folder it cannot list, as not measured", () => {
+    // A file where the folder belongs exists and lists as nothing.
+    const projects = join(configDir, "projects");
+    writeFileSync(projects, "");
+
+    const result = meter([], SESSION);
+
+    expect(result.stderr).toContain(`session-context: could not read ${projects}: ENOTDIR`);
+    expect(result.stdout).toBe("");
+    expect(result.status).toBe(2);
+  });
+
   it("takes an entry of zeros, written for a failed request, as no reading", () => {
     const file = transcript([
       assistant({ input: 2, read: 80_000 }),

@@ -25,7 +25,15 @@ export interface CliReadiness {
   refusal: string | null;
 }
 
-export async function cliReadiness(db: Db): Promise<CliReadiness> {
+/**
+ * What was asked when the CLI was checked, which a refusal's words follow. A
+ * verify-again is asked of a review awaiting confirmation: that review has
+ * no Start, so "the review cannot run" and "start the review again" named
+ * an action its person had not taken and has no button for.
+ */
+export type CliAsk = "review" | "verifyAgain";
+
+export async function cliReadiness(db: Db, ask: CliAsk = "review"): Promise<CliReadiness> {
   const claudePath = configuredClaudePath(db);
   const cli = await readCliStatus(claudePath === undefined ? {} : { claudePath });
   // A configured CLI is signed in by the path it resolved to, which the
@@ -35,7 +43,7 @@ export async function cliReadiness(db: Db): Promise<CliReadiness> {
     claudePath === undefined ? undefined : (resolved ?? claudePath),
     process.platform,
   );
-  return { cli, signIn, refusal: refusalOf(cli, signIn) };
+  return { cli, signIn, refusal: refusalOf(cli, signIn, ask) };
 }
 
 /**
@@ -85,16 +93,20 @@ export function billingNotShown(
 /**
  * The run note for a review that started on a sign-in billing per token, or
  * that may. One put in line says so: it may be cancelled before it runs, and
- * the sign-in is not asked again as it leaves the queue.
+ * the sign-in is not asked again as it leaves the queue. So its "will cost"
+ * is said on the sign-in staying as it was read, and the note says it is not
+ * checked again as the review leaves the queue.
  */
 export function billingNote(cli: CliStatus, queued = false): string | null {
   const when = queued ? " once it leaves the queue" : "";
   if (cli.state === "perToken") {
     // As strict as the notice beside Start (D-161).
-    return (
-      `This review ${queued ? "will cost" : "costs"} API usage${when}, billed per token: the CLI is signed in ` +
-      `(${cli.authMethod}) some other way than a Claude subscription.`
-    );
+    return queued
+      ? `This review will cost API usage${when}, billed per token, if the CLI is still signed ` +
+          `in as it is now (${cli.authMethod}), some other way than a Claude subscription. ` +
+          "The sign-in is not checked again as it leaves the queue."
+      : "This review costs API usage, billed per token: the CLI is signed in " +
+          `(${cli.authMethod}) some other way than a Claude subscription.`;
   }
   if (cli.state !== "maybePerToken") return null;
   if (cli.authMethod === "oauth_token") {
@@ -113,20 +125,30 @@ export function billingNote(cli: CliStatus, queued = false): string | null {
   );
 }
 
-function refusalOf(cli: CliStatus, signIn: SignIn): string | null {
+/** Exported for its test, which reads the words for each thing asked without starting a CLI. */
+export function refusalOf(cli: CliStatus, signIn: SignIn, ask: CliAsk = "review"): string | null {
+  const again = ask === "verifyAgain";
   switch (cli.state) {
     case "notFound":
-      return `No Claude Code CLI was found, so the review cannot run. ${cli.message}`;
+      return again
+        ? `No Claude Code CLI was found, so the request was not sent. ${cli.message}`
+        : `No Claude Code CLI was found, so the review cannot run. ${cli.message}`;
     case "cannotRun":
-      return `The Claude Code CLI cannot run the review: ${cli.message} Check the CLI on Settings.`;
+      return again
+        ? `The request was not sent: the Claude Code CLI did not pass its check. ${cli.message} Check the CLI on Settings.`
+        : `The Claude Code CLI cannot run the review: ${cli.message} Check the CLI on Settings.`;
     case "signedOut":
       // Said where to run it, as Settings says it. The command itself is in
-      // the refusal's body, not run into these words (review of D-161).
-      return (
-        `The Claude Code CLI at ${cli.path} is not signed in, so the review cannot run. ` +
-        `Sign it in ${signInPlaceWords(signIn.place)} with the command below, then start ` +
-        "the review again."
-      );
+      // the refusal's body, not run into these words (review of D-161). The
+      // verify-again dialog sets no command under its refusal, so its words
+      // point at Settings, which shows the same one.
+      return again
+        ? `The Claude Code CLI at ${cli.path} is not signed in, so the request was not sent. ` +
+            `Sign it in ${signInPlaceWords(signIn.place)} with the command Settings shows, ` +
+            "then press Send request again."
+        : `The Claude Code CLI at ${cli.path} is not signed in, so the review cannot run. ` +
+            `Sign it in ${signInPlaceWords(signIn.place)} with the command below, then start ` +
+            "the review again.";
     case "perToken":
     case "maybePerToken":
     case "subscription":

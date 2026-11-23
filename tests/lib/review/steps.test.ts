@@ -9,6 +9,7 @@ import {
   STEPS,
   designTallies,
   findingTallies,
+  ranBeforeSecondVerifier,
   stageUsage,
   stepCount,
   stepResult,
@@ -124,6 +125,50 @@ describe("what became of the findings", () => {
     expect(
       tallies.proven + tallies.refuted + tallies.discarded + tallies.open + tallies.toProve,
     ).toBe(tallies.raised);
+  });
+});
+
+describe("whether a review ran before the second verifier", () => {
+  it("is one with no verifier model", () => {
+    expect(ranBeforeSecondVerifier(null, [finding({ proofJson: "{}" })])).toBe(true);
+    expect(ranBeforeSecondVerifier(undefined, [])).toBe(true);
+  });
+
+  it("is one with a finding proven once and standing, though a verify-again has since named a model", () => {
+    // Verifying an open question again names a verifier model on a review
+    // that had none; its Second verifier line then read "verification
+    // proved no finding" beside the findings its run had proven.
+    expect(
+      ranBeforeSecondVerifier("claude-second", [
+        finding({ proofJson: "{}" }),
+        // The one verified again since, proven by both.
+        finding({ proofJson: "{}", secondProofJson: "{}" }),
+      ]),
+    ).toBe(true);
+    // From before proofs were kept (0012), and decided since.
+    const decided = [finding({ status: "confirmed" })];
+    expect(ranBeforeSecondVerifier("claude-second", decided)).toBe(true);
+    expect(
+      ranBeforeSecondVerifier("claude-second", [
+        finding({ status: "dismissed", dismissedFrom: "verified", proofJson: "{}" }),
+      ]),
+    ).toBe(true);
+  });
+
+  it("is not one whose proven findings each carry both proofs, or which has none proven", () => {
+    expect(ranBeforeSecondVerifier("claude-second", [])).toBe(false);
+    expect(
+      ranBeforeSecondVerifier("claude-second", [
+        finding({ proofJson: "{}", secondProofJson: "{}" }),
+        finding({ status: "confirmed", proofJson: "{}", secondProofJson: "{}" }),
+        // The first proved it and the second did not: open, with one proof.
+        finding({ status: "open_question", proofJson: "{}" }),
+        finding({ status: "dismissed", dismissedFrom: "open_question", proofJson: "{}" }),
+        // Held for the second verifier while a run is still proving.
+        finding({ status: "candidate", proofJson: "{}" }),
+        finding({ status: "killed", killedBy: "verification", proofJson: "{}" }),
+      ]),
+    ).toBe(false);
   });
 });
 

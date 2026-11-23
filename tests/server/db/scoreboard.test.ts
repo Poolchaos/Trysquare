@@ -558,4 +558,17 @@ describe("a review answered in the person's own session (the twentieth grade)", 
     }
     expect(readScoreboard(db).spendHistory).toEqual([]);
   });
+
+  it("is not counted when cancelled before it started: it left no usage out", () => {
+    // Counted by its status alone, a draft cancelled before it ran was one
+    // more review "not counted" in a cost it never added to.
+    const id = interactiveReview();
+    transitionReview(db, id, "cancelled");
+    expect(readScoreboard(db).interactiveReviews).toBe(0);
+    // One cancelled after it started is still counted.
+    const started = interactiveReview();
+    transitionReview(db, started, "running");
+    transitionReview(db, started, "cancelled");
+    expect(readScoreboard(db).interactiveReviews).toBe(1);
+  });
 });

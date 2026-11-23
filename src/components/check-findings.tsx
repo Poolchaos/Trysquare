@@ -151,7 +151,7 @@ function CheckFindingCard({
       ) : null}
       {row.logPath ? (
         <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
-          The whole output: <Mono className="break-all">{row.logPath}</Mono>
+          The log of its output: <Mono className="break-all">{row.logPath}</Mono>
         </p>
       ) : null}
       {row.dismissReason ? (
