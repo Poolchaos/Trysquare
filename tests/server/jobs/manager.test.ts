@@ -713,7 +713,11 @@ describe("verifying an open question again (WP-D2, review round 2)", () => {
     const gone = new AbortController();
     gone.abort();
 
-    await expect(manager.verifyAgain(findingId, gone.signal)).rejects.toThrow();
+    // And the note says what stopped: the request, not the review, which
+    // nobody cancelled (D-318).
+    await expect(manager.verifyAgain(findingId, gone.signal)).rejects.toThrow(
+      "The request was abandoned before the verifier was asked: its tab closed or the server stopped.",
+    );
     expect(readFileSync(join(dataDir, "calls.txt"), "utf8")).toBe("6");
   }, 120_000);
 });

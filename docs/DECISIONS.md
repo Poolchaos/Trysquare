@@ -8069,3 +8069,24 @@ verified evidence, in writing, here.
   force-adds an image, a database and a document from `docs/private/`,
   and expects each refused; on the old script the image and the database
   passed.
+- 2026-11-23 D-318 Four faults the sweep found in the server's own code
+  and words (D-317), each fixed at the code. (1) A clone ends with a
+  fetch of every branch and recorded none, so the projects list read
+  "never fetched" of a project just cloned until its branch list was
+  opened: `cloneProjectInBackground` now records the fetch. (2) A run
+  that does not run a project's checks, because they were switched off
+  since, removed the check findings and left the earlier result on disk,
+  and the report read it and said the tests failed with no finding
+  listed (the nineteenth grade's AG4, derived then and reproduced now):
+  such a run removes the earlier result. (3) A verify-again abandoned
+  before it asked anything, its tab closed or the server draining, wrote
+  the run note "The review was cancelled." of a review that was awaiting
+  confirmation and that nobody cancelled: the note says the request was
+  abandoned. (4) An interactive review's first run note read "answered in
+  your own session, model X", naming a model the app never saw answer:
+  it says each stage's command is printed, and which model the commands
+  name. Decided by the session. Proven, each by a test that failed on
+  the old code or asserted the old words: the clone test expects a
+  fetch time, the service test expects no result folder after a run with
+  the checks off, the manager test expects the abandoned-request words,
+  and the interactive engine test expects the note word for word.

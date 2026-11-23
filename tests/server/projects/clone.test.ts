@@ -53,6 +53,9 @@ it("clones, detects the default branch, and lands ready", async () => {
   const project = getProject(db, id);
   expect(project?.cloneStatus).toBe("ready");
   expect(project?.defaultBranch).toBe("trunk");
+  // The clone fetched every branch, so the project has been fetched: the
+  // list read "never fetched" until a branch list was opened (D-318).
+  expect(project?.lastFetchedAt).toEqual(expect.any(String));
 });
 
 it("records a clone that failed, with git's own words", async () => {

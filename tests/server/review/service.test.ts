@@ -838,7 +838,14 @@ describe("the interactive engine", () => {
     const note = readRunNotes(requireReview(db, reviewId)).find((entry) =>
       entry.message.startsWith("Engine:"),
     );
-    expect(note?.message).toContain("interactive, answered in your own session");
+    // It names the model the commands name, not one that answered: the app
+    // sees no session (D-318).
+    expect(note?.message).toBe(
+      "Engine: interactive. Each stage's command is printed for you to run in your own " +
+        "session. The commands name model claude-fable-5[1m], but for any the second verifier " +
+        `or the second grader is given, which name ${requireReview(db, reviewId).verifierModel}.`,
+    );
+    expect(requireReview(db, reviewId).verifierModel).not.toBeNull();
     // Mode B passes no effort to anyone, so the record does not claim one.
     expect(note?.message).not.toContain("effort");
   }, 180_000);
@@ -2089,6 +2096,30 @@ describe("a project's own checks (WP-I, step 2)", () => {
     writeIdealAnswers();
     expect((await run(reviewId)).kind).toBe("completed");
     expect(existsSync(checksDir(dataDir, reviewId))).toBe(false);
+  }, 120_000);
+
+  it("drops an earlier run's result when the checks are off for this one", async () => {
+    // The checks ran, were switched off, and the review ran again: the
+    // check findings were removed and the kept result was not, so the
+    // report said the tests failed with no finding listed (the nineteenth
+    // grade, AG4; D-318).
+    const reviewId = seedReview();
+    writeIdealAnswers();
+    turnOn({ testCommand: script("failing", "process.exit(1);") });
+    const project = listProjects(db).find((p) => p.name === "app")!;
+    await runChecksForReview(db, {
+      reviewId,
+      dataDir,
+      clonePath: appClone,
+      commit: appHead,
+      checks: getProjectChecks(db, project.id),
+    });
+    expect(existsSync(join(checksDir(dataDir, reviewId), "result.json"))).toBe(true);
+
+    setProjectChecks(db, project.id, { ...getProjectChecks(db, project.id), enabled: false });
+    expect((await run(reviewId)).kind).toBe("completed");
+    expect(existsSync(checksDir(dataDir, reviewId))).toBe(false);
+    expect(buildReportInput(db, reviewId, dataDir).checks!.ran).toEqual([]);
   }, 120_000);
 
   it("reuses a result for the same commit and checks on a resume", async () => {

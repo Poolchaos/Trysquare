@@ -46,6 +46,7 @@ import {
 import { repoSlug } from "@/lib/git/url";
 import {
   bundleDir as bundleDirFor,
+  checksDir as checksDirFor,
   logsDir as logsDirFor,
   resolveDataDir,
   runDir as runDirFor,
@@ -314,7 +315,11 @@ export async function prepareAndRun(
   appendRunNote(db, reviewId, {
     kind: "note",
     message: interactive
-      ? `Engine: interactive, answered in your own session, model ${review.model}.`
+      ? // The app starts no session and sees none: it knows the model each
+        // command names, not the one that answers (D-318).
+        `Engine: interactive. Each stage's command is printed for you to run in your own ` +
+        `session. The commands name model ${review.model}, but for any the second verifier ` +
+        `or the second grader is given, which name ${verifierModel}.`
       : `Engine: ${await describeCli(options.claudePath)}, ` +
         `model ${review.model}, effort ${review.effort}.`,
   });
@@ -424,6 +429,11 @@ export async function prepareAndRun(
         recordFailedCommand(db, reviewId, command);
       }
       ranChecks = ran;
+    } else {
+      // Not run this time, so nothing an earlier run kept is this run's:
+      // its check findings are gone above, and left on disk its result had
+      // the report say the tests failed with no finding listed (D-318).
+      await rm(checksDirFor(dataDir, reviewId), REMOVE_RETRYING);
     }
 
     // Candidates and their verdicts are derived entirely from stage answers,
@@ -575,7 +585,7 @@ export async function verifyAgain(
     });
     // A request abandoned before the CLI started, a tab closed or a drain,
     // asks nothing: the engine stops a call in flight, not one not yet made.
-    assertNotCancelled(options.signal);
+    assertNotCancelled(options.signal, REQUEST_ABANDONED);
     const response = await runner.run({
       stage: "s5_verification",
       systemPrompt: composeSystemPrompt({
@@ -604,7 +614,7 @@ export async function verifyAgain(
         review.verifierModel ?? pairedVerifierFor(getModel(db, review.model)?.family);
       // Frozen now if it was not, so the card can name it afterwards.
       if (review.verifierModel === null) setVerifierModel(db, review.id, verifierModel);
-      assertNotCancelled(options.signal);
+      assertNotCancelled(options.signal, REQUEST_ABANDONED);
       const second = await runner.run({
         stage: "s5b_second_verification",
         systemPrompt: composeSystemPrompt({
@@ -897,9 +907,21 @@ function cancellableRunner(runner: CheckpointingRunner, signal: AbortSignal | un
   };
 }
 
-function assertNotCancelled(signal: AbortSignal | undefined): void {
+/**
+ * What stopped a verify-again before it asked anything. Its signal is the
+ * request's, aborted when the tab closes or the server drains: the review
+ * itself is awaiting confirmation throughout and nobody cancelled it, which
+ * is what the run note said (D-318).
+ */
+const REQUEST_ABANDONED =
+  "The request was abandoned before the verifier was asked: its tab closed or the server stopped.";
+
+function assertNotCancelled(
+  signal: AbortSignal | undefined,
+  message = "The review was cancelled.",
+): void {
   if (signal?.aborted !== true) return;
-  throw new StageFailedError("cancelled", "The review was cancelled.");
+  throw new StageFailedError("cancelled", message);
 }
 
 /** Moves a running review into verifying, and does nothing if it is already. */

@@ -316,7 +316,9 @@ pulled deliberately.
   listed (`src/server/review/report-input.ts:37-71`,
   `src/server/review/service.ts:401-407`). And the scan's first line
   stands through the whole of a project's checks, up to 20 minutes each,
-  since run notes reach the feed only at a stage's lifecycle. Neither is
+  since run notes reach the feed only at a stage's lifecycle. The first
+  was reproduced and fixed on 2026-11-23 (D-318): a run that does not run
+  the checks removes an earlier run's result. The second is not
   reproduced.
 - 2026-11-22: only the Windows job failed in CI run 45027321596 at d40a707
   (Ubuntu and macOS passed): `e2e/failure-paths.spec.ts`, "a review

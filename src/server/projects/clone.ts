@@ -15,6 +15,7 @@ import { projectDir } from "@/lib/paths";
 import type { Db } from "../db/client";
 import {
   ProjectNotFoundError,
+  recordFetch,
   setCloneStatus,
   setDefaultBranch,
   type Project,
@@ -30,6 +31,9 @@ export async function cloneProjectInBackground(
   try {
     setCloneStatus(db, projectId, "cloning");
     await cloneBare(url, clonePath);
+    // A clone ends with a fetch of every branch, and that is a fetch: the
+    // projects list said "never fetched" of a project just cloned (D-318).
+    recordFetch(db, projectId);
     setDefaultBranch(db, projectId, await detectDefaultBranch(clonePath));
     setCloneStatus(db, projectId, "ready");
   } catch (error) {
