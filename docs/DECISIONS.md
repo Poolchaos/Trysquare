@@ -8036,3 +8036,19 @@ verified evidence, in writing, here.
   command, opens the fold, has a refused copy said, and asserts the
   dialog has nothing to scroll, which failed with 871 on the build
   without the fix; grades in `DESIGN-NOTES.md`.
+- 2026-11-23 D-316 Rule yield files a code that is a rule of none of a
+  review's rulesets under no ruleset, on a review with one ruleset as on
+  one with several. A finding keeps a code the model wrote that resolves
+  to no rule (`ruleCodeReader` in `src/lib/review/rule-codes.ts`). On a
+  review that froze one ruleset, `frozenRuleOwners`
+  (`src/server/db/repositories/scoreboard.ts`) answered with that ruleset
+  without reading its frozen copy, so the dashboard listed "Rule 99 in
+  Only" for a ruleset with no rule 99 (review round 27's inbox line). The
+  one copy's numbers are now read as several copies' already were, and
+  the row names no ruleset, as the row of a review that froze none does.
+  Rejected: dropping such a finding from Rule yield, since the count of
+  what a rule raised would then be short of the findings table by a
+  finding the confirmation screen shows. Decided by the session. Proven:
+  a scoreboard test with one ruleset holding rule 1 and findings citing 1
+  and 99 expects 99 under no ruleset; on the old code it found 99 under
+  the ruleset's name.

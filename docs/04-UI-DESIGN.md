@@ -143,7 +143,9 @@ precision is a claim about findings somebody judged.
 - **Rule yield:** the eight rules, each named with its ruleset since a number names a rule in one ruleset only, with the lowest share of their findings
   that survived to confirmation, worst first, because a rule that only ever
   produces dismissals is costing review attention for nothing. With more
-  than eight cited, a line under the list says how many there are.
+  than eight cited, a line under the list says how many there are. A row
+  names no ruleset where its review froze none, or where the code a
+  finding cites is a rule of none of those it froze (D-316).
 - **Projects:** each project with its last review's outcome and a way to
   review a branch. Projects are matched to their reviews by id, never by
   name: two remotes can end in the same repository name.

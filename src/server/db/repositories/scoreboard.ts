@@ -52,7 +52,8 @@ export interface RuleYield {
   /**
    * The ruleset the rule is in, by the name the review froze it under. A
    * number names a rule within one ruleset and not across them, so two
-   * rulesets' rule 1 are two rows. Null where the review froze no ruleset.
+   * rulesets' rule 1 are two rows. Null where the review froze no ruleset,
+   * and where the code is a rule of none of those it froze.
    */
   rulesetName: string | null;
   /** Findings under this rule that a person put in a report. */
@@ -126,9 +127,11 @@ const frozenCodesSchema = z.object({ rules: z.array(z.object({ code: z.string() 
 /**
  * Which of a review's frozen rulesets holds a rule, by its number. The
  * rulesets of one review share no number (RS-2b), so within a review the
- * number is enough. A review on one ruleset is answered without reading its
- * frozen copy; one on several has each copy's numbers read once. The name
- * is the one its newest review froze it under.
+ * number is enough. Each frozen copy's numbers are read once, a review on
+ * one ruleset too: a finding keeps a code the model wrote that resolves to
+ * no rule (`ruleCodeReader`), and answered without the copy such a code was
+ * filed as a rule of that ruleset (D-316). The name is the one its newest
+ * review froze it under.
  */
 function frozenRuleOwners(
   db: Db,
@@ -153,26 +156,20 @@ function frozenRuleOwners(
   }
   const codes = new Map<string, Map<string, string>>();
   return (reviewId, code) => {
-    const held = frozen.get(reviewId) ?? [];
-    let rulesetId: string | undefined;
-    if (held.length === 1) {
-      rulesetId = held[0]!.rulesetId;
-    } else if (held.length > 1) {
-      let owners = codes.get(reviewId);
-      if (owners === undefined) {
-        owners = new Map();
-        for (const row of held) {
-          const copy = parseJsonColumn(
-            "review_rulesets.snapshot_json",
-            row.snapshotJson,
-            frozenCodesSchema,
-          );
-          for (const rule of copy.rules) owners.set(rule.code, row.rulesetId);
-        }
-        codes.set(reviewId, owners);
+    let owners = codes.get(reviewId);
+    if (owners === undefined) {
+      owners = new Map();
+      for (const row of frozen.get(reviewId) ?? []) {
+        const copy = parseJsonColumn(
+          "review_rulesets.snapshot_json",
+          row.snapshotJson,
+          frozenCodesSchema,
+        );
+        for (const rule of copy.rules) owners.set(rule.code, row.rulesetId);
       }
-      rulesetId = owners.get(code);
+      codes.set(reviewId, owners);
     }
+    const rulesetId = owners.get(code);
     return rulesetId === undefined ? null : { rulesetId, rulesetName: names.get(rulesetId) ?? "" };
   };
 }

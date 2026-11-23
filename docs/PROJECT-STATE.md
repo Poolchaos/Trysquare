@@ -148,7 +148,7 @@ from 2026-11-03.
   stage's word. Twelve immaterial lines came with them, two written too
   wide that day (AM1 to AM14 in the audit file). Corrected the same day
   (D-313), in words. A twenty-sixth grade is owed.
-  `./verify.sh --e2e` exits 0 with 1725 unit tests passing, 8 skipped,
+  `./verify.sh --e2e` exits 0 with 1726 unit tests passing, 8 skipped,
   and 176 browser tests.
 - 2026-11-21: the dashboard's Needs you lists a review that goes on only
   at a Resume (paused at the usage limit, interrupted, failed) beside

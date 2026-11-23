@@ -244,6 +244,32 @@ describe("which rules earn their keep", () => {
     );
   });
 
+  it("files a code that is no rule of the review's one ruleset under no ruleset", () => {
+    // A finding keeps a code the model wrote that resolves to no rule. A
+    // review on one ruleset was answered without reading its frozen copy,
+    // so "99" read as rule 99 of a ruleset that has no such rule (review
+    // round 27, D-316).
+    const only = saveImportedRuleset(db, {
+      name: "Only",
+      tier: "project",
+      imported: importProtocol("# Only\n\n## Rules\n\n### 1. Dates\n\n**Rule:** Stated.\n").ruleset,
+    }).rulesetId;
+    const { projectId } = db.select().from(reviews).where(eq(reviews.id, reviewId)).get()!;
+    const id = seedReview(db, projectId).id;
+    writeReviewSnapshot(db, id, only);
+    candidate({ reviewId: id, ruleCode: "1", issue: "A rule of it" });
+    candidate({ reviewId: id, ruleCode: "99", issue: "A rule of nothing" });
+
+    const rows = readScoreboard(db).ruleYield.map((rule) => [rule.rulesetName, rule.ruleCode]);
+    expect(rows).toHaveLength(2);
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        ["Only", "1"],
+        [null, "99"],
+      ]),
+    );
+  });
+
   it("leaves a finding that cited no rule out of the rule table", () => {
     // It still counts in the totals; there is simply no rule to credit, and
     // filing it under an invented code would be a measurement of nothing.

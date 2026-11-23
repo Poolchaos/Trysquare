@@ -318,12 +318,6 @@ pulled deliberately.
   stands through the whole of a project's checks, up to 20 minutes each,
   since run notes reach the feed only at a stage's lifecycle. Neither is
   reproduced.
-- 2026-11-22: Rule yield files a rule number that a review's one ruleset
-  does not hold under that ruleset's name: a review on one ruleset is
-  answered without reading its frozen copy (`frozenRuleOwners`,
-  `src/server/db/repositories/scoreboard.ts`), so a code the model wrote
-  that resolves to no rule reads as a rule of that ruleset. On several
-  rulesets it is filed under none (review round 27).
 - 2026-11-22: only the Windows job failed in CI run 45027321596 at d40a707
   (Ubuntu and macOS passed): `e2e/failure-paths.spec.ts`, "a review
   waiting its turn offers no Start of its own", 120 seconds waiting on
@@ -474,3 +468,11 @@ the line entirely would lose the trail.
   part done under D-309). DONE 2026-11-23 (D-315): each command in a box
   of its own with a Copy, the other shell's folded under a line, the
   answer's path with a Copy, and the stage by its name.
+- 2026-11-22: Rule yield files a rule number that a review's one ruleset
+  does not hold under that ruleset's name: a review on one ruleset is
+  answered without reading its frozen copy (`frozenRuleOwners`,
+  `src/server/db/repositories/scoreboard.ts`), so a code the model wrote
+  that resolves to no rule reads as a rule of that ruleset. On several
+  rulesets it is filed under none (review round 27). DONE 2026-11-23
+  (D-316): the one ruleset's frozen copy is read too, and such a code is
+  filed under none.
